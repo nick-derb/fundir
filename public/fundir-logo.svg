@@ -1,15 +1,24 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
-  <!-- Outer circle -->
-  <circle cx="50" cy="50" r="48" fill="#5a8f72"/>
-  <!-- Stylized F with arrow — white -->
-  <!-- Vertical bar of F -->
-  <rect x="28" y="22" width="12" height="56" rx="3" fill="white"/>
-  <!-- Top horizontal bar (longer, with arrow tip) -->
-  <path d="M28 22 H68 L76 30 L68 38 H40 V22Z" fill="white"/>
-  <!-- Middle horizontal bar -->
-  <rect x="28" y="44" width="30" height="12" rx="2" fill="white"/>
-  <!-- Arrow shaft going through middle -->
-  <rect x="54" y="47" width="22" height="6" rx="3" fill="white"/>
-  <!-- Arrow head -->
-  <path d="M72 40 L84 50 L72 60 L72 55 L66 55 L66 45 L72 45 Z" fill="white"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <!-- Sage green circle -->
+  <circle cx="100" cy="100" r="96" fill="#6b9e80"/>
+
+  <!-- F vertical bar -->
+  <rect x="48" y="36" width="20" height="128" rx="3" fill="white"/>
+
+  <!-- F top horizontal bar -->
+  <rect x="48" y="36" width="80" height="20" rx="3" fill="white"/>
+
+  <!-- Arrow shaft — enters from left edge of circle, exits right as arrowhead -->
+  <!-- Left shaft (outside and through circle left) -->
+  <rect x="0" y="90" width="152" height="20" rx="0" fill="white"/>
+
+  <!-- Arrowhead pointing right -->
+  <path d="M148 78 L172 100 L148 122 Z" fill="white"/>
+
+  <!-- Cover/clean the overlap between F vertical bar and arrow shaft -->
+  <rect x="48" y="90" width="20" height="20" fill="white"/>
+
+  <!-- F bottom descender (the P-like lower shape) -->
+  <rect x="48" y="130" width="54" height="16" rx="3" fill="white"/>
+  <rect x="68" y="146" width="16" height="18" rx="3" fill="white"/>
 </svg>
