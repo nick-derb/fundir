@@ -1,0 +1,43 @@
+export const CYC_PROFILE = {
+  name: "Chicago Youth Centers",
+  ein: "36-2344429",
+  entityType: "501(c)(3)",
+  city: "Chicago",
+  state: "IL",
+  mission: "Since 1956, Chicago Youth Centers has been the place Where Possibility Lives — a trusted partner on Chicago's South and West sides, ensuring that kids have a safe place to explore, discover, and envision a bright future. In early learning classrooms, afterschool programs, and summer day camps, youth ages 15 months to 18 years find joy in learning, grow socially and emotionally, and build skills for the jobs of tomorrow.",
+  programs: [
+    { name: "Early Learning / Head Start", areas: ["early childhood education", "head start", "pre-kindergarten", "school readiness"], ages: "15 months - 5 years" },
+    { name: "Afterschool Programs", areas: ["afterschool", "STEM", "STEAM", "arts", "academic enrichment", "social-emotional learning", "youth development", "college readiness"], ages: "6-18 years" },
+    { name: "Summer Day Camps", areas: ["summer learning", "enrichment", "violence prevention"], ages: "6-14 years" },
+    { name: "Teen Programming", areas: ["workforce development", "mentoring", "financial literacy", "civic engagement", "computer science"], ages: "14-18 years" },
+  ],
+  targetPopulations: ["youth", "children", "teens", "low-income families", "at-risk youth", "underserved communities"],
+  sites: 19,
+  annualBudget: 18_000_000,
+  gataRegistered: true,
+  federalFunding: {
+    total: 15_405_615,
+    programs: [
+      { name: "Head Start Cluster", aln: "93.600", amount: 13_362_962, risk: "elevated" as const, riskReason: "Draft elimination reversed; 5 of 10 regional offices closed including Chicago; payment delays; inflation erosion from level funding" },
+      { name: "21st Century Community Learning Centers", aln: "84.287", amount: 1_159_166, risk: "critical" as const, riskReason: "FY2026 and FY2027 budgets both propose complete elimination; $6.8B frozen July 2025; Congress restored but signal is clear" },
+      { name: "Child & Adult Care Food Program", aln: "10.558", amount: 661_687, risk: "moderate" as const, riskReason: "Not directly targeted but broader nutrition program cuts possible" },
+      { name: "HUD Moving to Work / OST", aln: "14.881", amount: 216_000, risk: "moderate" as const, riskReason: "HUD operational disruptions possible" },
+      { name: "Social Services Block Grant", aln: "93.667", amount: 5_800, risk: "low" as const, riskReason: "Block grants relatively protected" },
+    ],
+  },
+  historicalWinRates: {
+    "ED": 0.7,
+    "HHS": 0.6,
+    "HHS-ACF": 0.65,
+    "84.287": 0.8,
+    "93.575": 0.5,
+  } as Record<string, number>,
+  searchProfiles: [
+    { name: "Health & Human Services", params: { fundingCategories: "HL", oppStatuses: "forecasted|posted", rows: 50 } },
+    { name: "Education", params: { fundingCategories: "ED", oppStatuses: "forecasted|posted", rows: 50 } },
+    { name: "Income Security", params: { fundingCategories: "IS", oppStatuses: "forecasted|posted", rows: 50 } },
+    { name: "Community Development", params: { fundingCategories: "CD", oppStatuses: "forecasted|posted", rows: 50 } },
+    { name: "Youth Keywords", params: { keyword: "youth afterschool", oppStatuses: "forecasted|posted", rows: 25 } },
+    { name: "21st CCLC", params: { keyword: "21st century community learning", oppStatuses: "forecasted|posted", rows: 25 } },
+  ],
+} as const;
