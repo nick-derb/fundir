@@ -1,11 +1,12 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
 import {
   LayoutDashboard, Search, KanbanSquare, Settings, LogOut,
-  ChevronDown, Bell, Zap, BarChart3, CalendarDays, TrendingUp, Building2,
+  ChevronDown, Bell, BarChart3, CalendarDays, TrendingUp, Building2,
 } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/supabase';
 import { CommandPalette, CommandPaletteTrigger } from '@/components/command-palette';
@@ -73,11 +74,7 @@ export function AppShell({ children, orgName = 'Chicago Youth Centers', userEmai
         {/* Brand */}
         <div className="px-4 pt-4 pb-3 border-b border-[#e2e8f0]">
           <div className="flex items-center gap-2.5 mb-3">
-            {/* Gradient icon */}
-            <div className="w-7 h-7 rounded-[7px] flex items-center justify-center flex-shrink-0"
-              style={{ background: 'linear-gradient(135deg, #0d9488 0%, #0891b2 100%)' }}>
-              <Zap className="w-3.5 h-3.5 text-white" />
-            </div>
+            <Image src="/fundir-logo.svg" alt="Fundir" width={28} height={28} className="flex-shrink-0" />
             <div>
               <span className="font-bold text-[15px] text-[#0f172a] tracking-tight leading-none block">Fundir</span>
               <span className="text-[9px] text-[#94a3b8] font-medium tracking-widest uppercase leading-none">Grant Intelligence</span>
