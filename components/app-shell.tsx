@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
 import {
@@ -74,7 +73,8 @@ export function AppShell({ children, orgName = 'Chicago Youth Centers', userEmai
         {/* Brand */}
         <div className="px-4 pt-4 pb-3 border-b border-[#e2e8f0]">
           <div className="flex items-center gap-2.5 mb-3">
-            <Image src="/fundir-logo.svg" alt="Fundir" width={28} height={28} className="flex-shrink-0" />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/fundir-logo.svg" alt="Fundir" width={28} height={28} className="flex-shrink-0" />
             <div>
               <span className="font-bold text-[15px] text-[#0f172a] tracking-tight leading-none block">Fundir</span>
               <span className="text-[9px] text-[#94a3b8] font-medium tracking-widest uppercase leading-none">Grant Intelligence</span>

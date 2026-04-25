@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import Image from 'next/image';
 import {
   ArrowRight, ArrowDown, CheckCircle, Search, BarChart3,
   Shield, Brain, TrendingUp, FileText, Clock, Target, ChevronRight,
@@ -58,12 +57,8 @@ export default function LandingPage() {
       <header className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-8 h-16">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-3">
-          <Image
-            src="/fundir-logo.svg"
-            alt="Fundir"
-            width={36}
-            height={36}
-          />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/fundir-logo.svg" alt="Fundir" width={36} height={36} />
           <span className="text-[17px] font-semibold text-white tracking-tight">Fundir</span>
         </Link>
 
@@ -505,7 +500,8 @@ export default function LandingPage() {
       <footer className="border-t border-white/10 py-8 px-8 bg-[#0a0a0a]">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Image src="/fundir-logo.svg" alt="Fundir" width={24} height={24} className="opacity-50" />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/fundir-logo.svg" alt="Fundir" width={24} height={24} className="opacity-50" />
             <span className="text-[13px] font-bold text-white/60">Fundir</span>
             <span className="text-[12px] text-white/25 ml-1">· AI Grant Intelligence</span>
           </div>
