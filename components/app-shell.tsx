@@ -74,7 +74,7 @@ export function AppShell({ children, orgName = 'Chicago Youth Centers', userEmai
         <div className="px-4 pt-4 pb-3 border-b border-[#e2e8f0]">
           <div className="flex items-center gap-2.5 mb-3">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/fundir-logo.svg" alt="Fundir" width={28} height={28} className="flex-shrink-0" />
+            <img src="/fundir-logo.png" alt="Fundir" width={28} height={28} className="flex-shrink-0" />
             <div>
               <span className="font-bold text-[15px] text-[#0f172a] tracking-tight leading-none block">Fundir</span>
               <span className="text-[9px] text-[#94a3b8] font-medium tracking-widest uppercase leading-none">Grant Intelligence</span>
