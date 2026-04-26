@@ -20,7 +20,7 @@ export interface GrantOpportunity {
 
 export interface ExtractedFields {
   eligible_entity_types?: string[];
-  geographic_scope?: 'national' | 'state' | 'city' | null;
+  geographic_scope?: 'national' | 'state' | 'city' | 'international' | 'foreign' | null;
   geographic_states?: string[];
   target_population?: string[];
   program_areas?: string[];

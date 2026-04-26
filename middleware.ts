@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import type { CookieOptions } from '@supabase/ssr';
 
-const PROTECTED = ['/dashboard', '/discover', '/pipeline', '/settings', '/grant', '/financials', '/calendar', '/reports', '/org'];
+const PROTECTED = ['/dashboard', '/discover', '/pipeline', '/settings', '/grant', '/financials', '/calendar', '/reports', '/org', '/foundations'];
 const AUTH_ROUTES = ['/login', '/signup'];
 
 export async function middleware(request: NextRequest) {
@@ -57,6 +57,7 @@ export const config = {
     '/calendar/:path*',
     '/reports/:path*',
     '/org/:path*',
+    '/foundations/:path*',
     '/login',
     '/signup',
   ],

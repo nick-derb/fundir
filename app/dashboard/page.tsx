@@ -158,7 +158,7 @@ export default async function DashboardPage() {
             <div>
               <p className="text-[#0d9488] text-[12px] font-semibold tracking-widest uppercase mb-1">{today}</p>
               <h1 className="text-[28px] font-bold text-white leading-tight">
-                {getDayGreeting()}, {data.org?.name?.split(' ').slice(0, 2).join(' ') ?? 'Organization'}
+                {getDayGreeting()}, {data.org?.name ?? 'Organization'}
               </h1>
               <p className="text-[#94a3b8] text-[14px] mt-1">
                 {data.totalTracked} grants tracked · {data.pipelineActive} active in pipeline · {data.urgentGrants.length} urgent

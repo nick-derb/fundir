@@ -28,7 +28,7 @@ ${fullText.slice(0, 2500)}
 Return JSON:
 {
   "eligible_entity_types": ["nonprofit_501c3", ...],
-  "geographic_scope": "national" | "state" | "city" | null,
+  "geographic_scope": "national" | "state" | "city" | "international" | null,
   "geographic_states": ["IL", ...],
   "target_population": ["youth", "ages 6-18", ...],
   "program_areas": ["afterschool", "STEM", ...],

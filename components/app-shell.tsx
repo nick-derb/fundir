@@ -6,7 +6,7 @@ import { useState } from 'react';
 import {
   LayoutDashboard, Search, KanbanSquare, Settings, LogOut,
   Bell, BarChart3, CalendarDays, TrendingUp, Building2,
-  Sparkles, ChevronDown,
+  Sparkles, ChevronDown, Landmark,
 } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/supabase';
 import { CommandPalette, CommandPaletteTrigger } from '@/components/command-palette';
@@ -15,9 +15,10 @@ const navGroups = [
   {
     label: 'Intelligence',
     items: [
-      { href: '/dashboard',  label: 'Dashboard',  icon: LayoutDashboard },
-      { href: '/discover',   label: 'Discover',   icon: Search },
-      { href: '/financials', label: 'Financials', icon: BarChart3 },
+      { href: '/dashboard',    label: 'Dashboard',    icon: LayoutDashboard },
+      { href: '/discover',     label: 'Discover',     icon: Search },
+      { href: '/foundations',  label: 'Foundations',  icon: Landmark },
+      { href: '/financials',   label: 'Financials',   icon: BarChart3 },
     ],
   },
   {
