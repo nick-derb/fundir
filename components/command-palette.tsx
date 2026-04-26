@@ -281,13 +281,14 @@ export function CommandPaletteTrigger({ onClick }: { onClick: () => void }) {
   return (
     <button
       onClick={onClick}
-      className="flex items-center gap-2 px-3 py-1.5 bg-[#f8fafc] border border-[#e2e8f0] rounded-lg text-[12px] text-[#94a3b8] hover:border-[#cbd5e1] hover:text-[#475569] transition-all"
+      className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[12px] text-white/50 hover:text-white/80 transition-all border border-white/10 hover:border-white/20"
+      style={{ background: 'rgba(255,255,255,0.07)' }}
     >
       <Search className="w-3.5 h-3.5" />
       <span>Search…</span>
       <div className="flex items-center gap-0.5 ml-1">
-        <kbd className="px-1 py-0.5 bg-white border border-[#e2e8f0] rounded text-[10px] font-mono">⌘</kbd>
-        <kbd className="px-1 py-0.5 bg-white border border-[#e2e8f0] rounded text-[10px] font-mono">K</kbd>
+        <kbd className="px-1 py-0.5 rounded text-[10px] font-mono text-white/30 border border-white/10" style={{ background: 'rgba(255,255,255,0.06)' }}>⌘</kbd>
+        <kbd className="px-1 py-0.5 rounded text-[10px] font-mono text-white/30 border border-white/10" style={{ background: 'rgba(255,255,255,0.06)' }}>K</kbd>
       </div>
     </button>
   );

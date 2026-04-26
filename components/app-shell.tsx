@@ -228,18 +228,18 @@ export function AppShell({ children, orgName = 'Chicago Youth Centers', userEmai
 
       {/* ─── Content area ────────────────────────────────────── */}
       <div className="flex-1 ml-56 flex flex-col">
-        {/* Top bar */}
-        <header className="sticky top-0 z-40 border-b border-[#e2e8f0] h-12 flex items-center px-6 gap-4"
-          style={{ background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(12px)' }}>
-          <div className="flex-1">
+        {/* Top bar — Palantir-style: gradient from dark hero → transparent, floats over content */}
+        <header className="sticky top-0 z-40 h-14 flex items-center px-6 gap-4 pointer-events-none"
+          style={{ background: 'linear-gradient(to bottom, rgba(15,23,42,0.88) 0%, rgba(15,23,42,0.4) 60%, transparent 100%)' }}>
+          <div className="flex-1 pointer-events-auto">
             <CommandPaletteTrigger onClick={() => setPaletteOpen(true)} />
           </div>
-          <button className="relative p-1.5 rounded-[6px] hover:bg-[#f8fafc] text-[#64748b] hover:text-[#0f172a] transition-colors">
+          <button className="pointer-events-auto relative p-1.5 rounded-[6px] hover:bg-white/10 text-white/60 hover:text-white transition-colors">
             <Bell className="w-4 h-4" />
             <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-[#0d9488] rounded-full" />
           </button>
           <div
-            className="w-7 h-7 rounded-full flex items-center justify-center text-white text-[11px] font-bold cursor-default select-none flex-shrink-0"
+            className="pointer-events-auto w-7 h-7 rounded-full flex items-center justify-center text-white text-[11px] font-bold cursor-default select-none flex-shrink-0"
             style={{ background: 'linear-gradient(135deg, #0d9488 0%, #0891b2 100%)' }}
             title={userEmail}
           >
