@@ -6,7 +6,7 @@ import { FederalExposure } from '@/components/federal-exposure';
 import { GrantTable } from '@/components/grant-table';
 import { FinancialSnapshot } from '@/components/financial-snapshot';
 import { MatchResult } from '@/types';
-import { ComputedFinancials, Filing990 } from '@/lib/propublica';
+
 import Link from 'next/link';
 import {
   Target, AlertTriangle,
@@ -125,12 +125,6 @@ function DaysChip({ days }: { days: number }) {
 
 export default async function DashboardPage() {
   const data = await getDashboardData();
-
-  const financialData = data.org?.financial_data as {
-    computed: ComputedFinancials;
-    latest: Filing990;
-    history: Filing990[];
-  } | null;
 
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
@@ -401,32 +395,10 @@ export default async function DashboardPage() {
         </div>
 
         {/* ── Financial Snapshot ─────────────────────────────────── */}
-        {financialData ? (
-          <FinancialSnapshot
-            orgName={data.org?.name ?? 'Organization'}
-            ein={data.org?.ein ?? ''}
-            computed={financialData.computed}
-            latest={financialData.latest}
-            history={financialData.history ?? []}
-            fetchedAt={data.org?.financial_fetched_at ?? ''}
-            filingYear={data.org?.financial_year ?? 0}
-          />
-        ) : (
-          <div className="bg-white rounded-xl border border-dashed border-[#e2e8f0] p-6 flex items-center justify-between">
-            <div>
-              <p className="text-[14px] font-semibold text-[#0f172a]">990 Financial Analysis not yet synced</p>
-              <p className="text-[12px] text-[#64748b] mt-0.5">
-                Go to Settings → Sync from 990 to load your IRS financial data
-              </p>
-            </div>
-            <Link
-              href="/settings"
-              className="px-4 py-2 text-[13px] font-semibold text-[#0d9488] border border-[#0d9488]/30 rounded-[8px] hover:bg-[#f0fdfa] transition-colors whitespace-nowrap"
-            >
-              Sync 990 data →
-            </Link>
-          </div>
-        )}
+        <FinancialSnapshot
+          orgName={data.org?.name ?? 'Chicago Youth Centers'}
+          ein={data.org?.ein ?? '362196050'}
+        />
 
         {/* ── Federal Exposure Alert ──────────────────────────────── */}
         <FederalExposure />
