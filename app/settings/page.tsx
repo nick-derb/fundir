@@ -4,7 +4,11 @@ import { createServerClient } from '@/lib/supabase';
 import { AppShell } from '@/components/app-shell';
 import { CYC_PROFILE } from '@/lib/cyc-profile';
 import { formatCurrency } from '@/lib/utils';
-import { CheckCircle, XCircle, Settings } from 'lucide-react';
+import {
+  CheckCircle, XCircle, Settings, Database, Cpu,
+  Globe, Shield, RefreshCw, Building2, AlertTriangle,
+  Info, Zap, Activity,
+} from 'lucide-react';
 import { SyncFinancialsButton } from '@/components/sync-financials-button';
 import { Org990Search } from '@/components/org-990-search';
 
@@ -31,9 +35,9 @@ async function getOrgFinancialStatus() {
 
 async function checkConnections() {
   const checks = {
-    supabase: false,
+    supabase:  false,
     anthropic: !!process.env.ANTHROPIC_API_KEY,
-    openai: !!process.env.OPENAI_API_KEY,
+    openai:    !!process.env.OPENAI_API_KEY,
     grantsGov: false,
   };
   try {
@@ -53,6 +57,15 @@ async function checkConnections() {
   return checks;
 }
 
+function StatusDot({ ok }: { ok: boolean }) {
+  return (
+    <span className={`inline-flex items-center gap-1.5 text-[12px] font-semibold ${ok ? 'text-[#16a34a]' : 'text-[#94a3b8]'}`}>
+      <span className={`w-1.5 h-1.5 rounded-full ${ok ? 'bg-[#16a34a] animate-pulse' : 'bg-[#cbd5e1]'}`} />
+      {ok ? 'Connected' : 'Not configured'}
+    </span>
+  );
+}
+
 export default async function SettingsPage() {
   const [lastRun, connections, orgFinancial] = await Promise.all([
     getLastRun(),
@@ -60,156 +73,329 @@ export default async function SettingsPage() {
     getOrgFinancialStatus(),
   ]);
 
+  const allConnected = connections.supabase && connections.anthropic && connections.openai && connections.grantsGov;
+  const connectedCount = Object.values(connections).filter(Boolean).length;
+
   return (
     <AppShell>
-      <div className="px-8 py-6 max-w-4xl mx-auto">
-        <div className="flex items-center gap-2 mb-1">
-          <Settings className="w-4 h-4 text-[#0d9488]" />
-          <h1 className="text-[22px] font-bold text-[#0f172a]">Settings</h1>
-        </div>
-        <p className="text-[13px] text-[#64748b] mb-6">System configuration and connection status</p>
 
-        <div className="space-y-4">
-          {/* Connections */}
-          <div className="bg-white rounded-lg border border-[#e2e8f0] shadow-card overflow-hidden">
-            <div className="px-5 py-3.5 border-b border-[#e2e8f0] bg-[#f8fafc]">
-              <h2 className="text-[13px] font-semibold text-[#0f172a]">API Connections</h2>
+      {/* ── Dark Hero ── */}
+      <div className="relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)' }}>
+        <div className="absolute inset-0 opacity-5" style={{
+          backgroundImage: 'linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)',
+          backgroundSize: '40px 40px',
+        }} />
+        <div className="absolute top-0 left-1/4 w-96 h-48 rounded-full opacity-10 blur-3xl"
+          style={{ background: 'radial-gradient(circle, #6366f1, transparent)' }} />
+
+        <div className="relative px-8 py-8 max-w-7xl mx-auto">
+          <div className="flex items-start justify-between gap-6">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <Settings className="w-4 h-4 text-[#94a3b8]" />
+                <span className="text-[11px] font-bold text-[#94a3b8] uppercase tracking-widest">System Configuration</span>
+              </div>
+              <h1 className="text-[26px] font-bold text-white leading-tight">Settings</h1>
+              <p className="text-[#94a3b8] text-[13px] mt-1">
+                Fundir · Chicago Youth Centers · v2.0
+              </p>
             </div>
-            <div className="divide-y divide-[#f1f5f9]">
-              {[
-                { name: 'Supabase Database',   ok: connections.supabase },
-                { name: 'Anthropic Claude API', ok: connections.anthropic },
-                { name: 'OpenAI Embeddings',    ok: connections.openai },
-                { name: 'Grants.gov API',       ok: connections.grantsGov },
-                { name: 'ProPublica 990 API',   ok: true }, // free, always available
-              ].map(({ name, ok }) => (
-                <div key={name} className="flex items-center justify-between px-5 py-3">
-                  <span className="text-[13px] text-[#0f172a]">{name}</span>
-                  <div className="flex items-center gap-2">
-                    {ok
-                      ? <CheckCircle className="w-4 h-4 text-[#16a34a]" />
-                      : <XCircle className="w-4 h-4 text-red-400" />}
-                    <span className={`text-[12px] font-medium ${ok ? 'text-[#16a34a]' : 'text-[#94a3b8]'}`}>
-                      {ok
-                        ? name === 'ProPublica 990 API' ? 'Free · No key required'
-                        : name === 'Grants.gov API'     ? 'No key required'
-                        : 'Connected'
-                        : 'Not configured'}
-                    </span>
+            <div className="flex flex-col items-end gap-2">
+              <span className={`flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-full border ${
+                allConnected
+                  ? 'text-[#4ade80] bg-[#4ade80]/10 border-[#4ade80]/20'
+                  : 'text-[#fbbf24] bg-[#fbbf24]/10 border-[#fbbf24]/20'
+              }`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${allConnected ? 'bg-[#4ade80] animate-pulse' : 'bg-[#fbbf24]'}`} />
+                {connectedCount}/4 services online
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Body ── */}
+      <div className="px-8 py-6 max-w-4xl mx-auto space-y-5">
+
+        {/* System status banner if degraded */}
+        {!allConnected && (
+          <div className="flex items-start gap-3 p-4 rounded-[10px] bg-[#fffbeb] border border-[#fde68a]">
+            <AlertTriangle className="w-4 h-4 text-[#d97706] flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-[13px] font-bold text-[#92400e]">Some services are not configured</p>
+              <p className="text-[12px] text-[#78350f] mt-0.5">
+                AI matching requires Anthropic API key. Embedding requires OpenAI key. Add these in your Vercel environment variables.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* ── API Connections ── */}
+        <div className="bg-white rounded-xl border border-[#e2e8f0] overflow-hidden">
+          <div className="px-5 py-4 border-b border-[#e2e8f0] bg-[#f8fafc] flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 bg-[#f0fdfa] rounded-[6px] flex items-center justify-center">
+                <Activity className="w-3.5 h-3.5 text-[#0d9488]" />
+              </div>
+              <div>
+                <h2 className="text-[14px] font-bold text-[#0f172a]">API Connections</h2>
+                <p className="text-[11px] text-[#64748b]">{connectedCount} of 4 services connected</p>
+              </div>
+            </div>
+            <div className="h-1.5 w-32 bg-[#f1f5f9] rounded-full overflow-hidden">
+              <div className="h-full rounded-full bg-[#0d9488]" style={{ width: `${(connectedCount / 4) * 100}%` }} />
+            </div>
+          </div>
+          <div className="divide-y divide-[#f1f5f9]">
+            {[
+              {
+                name:    'Supabase',
+                desc:    'PostgreSQL database · match results, grant data, org profile',
+                ok:      connections.supabase,
+                icon:    Database,
+                color:   '#3ecf8e',
+                env:     'NEXT_PUBLIC_SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY',
+              },
+              {
+                name:    'Anthropic Claude',
+                desc:    'AI extraction · grant scoring · relevance analysis',
+                ok:      connections.anthropic,
+                icon:    Cpu,
+                color:   '#f97316',
+                env:     'ANTHROPIC_API_KEY',
+              },
+              {
+                name:    'OpenAI Embeddings',
+                desc:    'Semantic matching · cosine similarity scoring',
+                ok:      connections.openai,
+                icon:    Zap,
+                color:   '#10a37f',
+                env:     'OPENAI_API_KEY',
+              },
+              {
+                name:    'Grants.gov',
+                desc:    'Federal grant discovery · live opportunity feed · no key required',
+                ok:      connections.grantsGov,
+                icon:    Globe,
+                color:   '#2563eb',
+                env:     'No key required',
+              },
+              {
+                name:    'ProPublica 990 API',
+                desc:    'IRS Form 990 financial data · free · no key required',
+                ok:      true,
+                icon:    Shield,
+                color:   '#7c3aed',
+                env:     'No key required',
+              },
+            ].map(({ name, desc, ok, icon: Icon, color, env }) => (
+              <div key={name} className="flex items-center justify-between px-5 py-4 hover:bg-[#f8fafc] transition-colors group">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-[6px] flex items-center justify-center flex-shrink-0"
+                    style={{ background: color + '15' }}>
+                    <Icon className="w-4 h-4" style={{ color }} />
+                  </div>
+                  <div>
+                    <p className="text-[13px] font-semibold text-[#0f172a]">{name}</p>
+                    <p className="text-[11px] text-[#64748b]">{desc}</p>
                   </div>
                 </div>
-              ))}
-            </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-[10px] text-[#94a3b8] font-mono hidden group-hover:block">{env}</span>
+                  {ok
+                    ? <div className="flex items-center gap-1.5 text-[12px] font-semibold text-[#16a34a]">
+                        <CheckCircle className="w-4 h-4" />
+                        Connected
+                      </div>
+                    : <div className="flex items-center gap-1.5 text-[12px] font-semibold text-[#94a3b8]">
+                        <XCircle className="w-4 h-4" />
+                        Not configured
+                      </div>
+                  }
+                </div>
+              </div>
+            ))}
           </div>
+        </div>
 
-          {/* 990 Financial Sync */}
-          <div className="bg-white rounded-lg border border-[#e2e8f0] shadow-card overflow-hidden">
-            <div className="px-5 py-3.5 border-b border-[#e2e8f0] bg-[#f8fafc] flex items-center justify-between">
+        {/* ── 990 Financial Sync ── */}
+        <div className="bg-white rounded-xl border border-[#e2e8f0] overflow-hidden">
+          <div className="px-5 py-4 border-b border-[#e2e8f0] bg-[#f8fafc] flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 bg-[#f0fdfa] rounded-[6px] flex items-center justify-center">
+                <RefreshCw className="w-3.5 h-3.5 text-[#0d9488]" />
+              </div>
               <div>
-                <h2 className="text-[13px] font-semibold text-[#0f172a]">IRS Form 990 Financial Sync</h2>
-                <p className="text-[11px] text-[#64748b] mt-0.5">
-                  Pulls 990 data from ProPublica Nonprofit Explorer · auto-matched by EIN
+                <h2 className="text-[14px] font-bold text-[#0f172a]">IRS Form 990 Financial Sync</h2>
+                <p className="text-[11px] text-[#64748b]">ProPublica Nonprofit Explorer · auto-matched by EIN</p>
+              </div>
+            </div>
+            {orgFinancial?.financial_fetched_at && (
+              <div className="text-right">
+                <p className="text-[10px] text-[#94a3b8]">Last synced</p>
+                <p className="text-[12px] font-semibold text-[#0f172a]">
+                  {new Date(orgFinancial.financial_fetched_at).toLocaleDateString('en-US', {
+                    month: 'short', day: 'numeric', year: 'numeric',
+                  })}
                 </p>
               </div>
-              {orgFinancial?.financial_fetched_at && (
-                <span className="text-[11px] text-[#94a3b8]">
-                  Last synced: {new Date(orgFinancial.financial_fetched_at).toLocaleDateString()}
-                </span>
-              )}
-            </div>
-            <div className="p-5 space-y-5">
-              {/* Name search */}
-              <Org990Search orgCode="CYC2025" />
-
-              {/* Divider */}
-              <div className="flex items-center gap-3">
-                <div className="flex-1 h-px bg-[#f1f5f9]" />
-                <span className="text-[11px] text-[#94a3b8] font-medium">or sync by EIN on file</span>
-                <div className="flex-1 h-px bg-[#f1f5f9]" />
-              </div>
-
-              {/* Existing EIN sync */}
-              <div className="flex items-center justify-between gap-4">
-                <div className="space-y-1">
-                  {orgFinancial?.ein ? (
-                    <>
-                      <p className="text-[13px] text-[#0f172a]">
-                        <span className="font-medium">{orgFinancial.name}</span>
-                        <span className="ml-2 text-[#64748b]">
-                          EIN {orgFinancial.ein.replace(/(\d{2})(\d{7})/, '$1-$2')}
-                        </span>
-                      </p>
-                      {orgFinancial.financial_year ? (
-                        <p className="text-[12px] text-[#16a34a]">
-                          ✓ FY{orgFinancial.financial_year} data loaded
-                        </p>
-                      ) : (
-                        <p className="text-[12px] text-amber-600">
-                          EIN on file — click Sync to fetch 990 data
-                        </p>
-                      )}
-                    </>
-                  ) : (
-                    <p className="text-[12px] text-[#64748b]">
-                      No EIN on file — use the search above to find your organization.
-                    </p>
-                  )}
-                </div>
-                <SyncFinancialsButton orgCode="CYC2025" disabled={!orgFinancial?.ein} />
-              </div>
-            </div>
+            )}
           </div>
 
-          {/* Last run */}
-          {lastRun && (
-            <div className="bg-white rounded-lg border border-[#e2e8f0] shadow-card overflow-hidden">
-              <div className="px-5 py-3.5 border-b border-[#e2e8f0] bg-[#f8fafc]">
-                <h2 className="text-[13px] font-semibold text-[#0f172a]">Last Pipeline Run</h2>
-              </div>
-              <div className="p-5">
-                <div className="grid grid-cols-4 gap-3">
-                  {[
-                    { label: 'Discovered',      value: lastRun.grants_discovered },
-                    { label: 'New Grants',       value: lastRun.grants_new },
-                    { label: 'High Matches',     value: lastRun.high_matches },
-                    { label: 'Medium Matches',   value: lastRun.medium_matches },
-                  ].map(({ label, value }) => (
-                    <div key={label} className="p-3 bg-[#f8fafc] rounded-[6px] border border-[#e2e8f0] text-center">
-                      <div className="text-[24px] font-bold text-[#0f172a]">{value}</div>
-                      <div className="text-[11px] text-[#64748b] mt-0.5">{label}</div>
-                    </div>
-                  ))}
-                </div>
-                <p className="text-[11px] text-[#94a3b8] mt-3">
-                  Run at: {new Date(lastRun.started_at).toLocaleString()}
-                </p>
-              </div>
+          <div className="p-5 space-y-5">
+            {/* Status note */}
+            <div className="flex items-start gap-3 p-3 rounded-[8px] bg-[#f0f9ff] border border-[#bae6fd]">
+              <Info className="w-3.5 h-3.5 text-[#0284c7] flex-shrink-0 mt-0.5" />
+              <p className="text-[11px] text-[#0369a1] leading-relaxed">
+                <strong>Note:</strong> The dashboard Financials page uses real FY2025 audited data sourced directly
+                from the audit report (Kearney & Company, Jan 5, 2026). ProPublica data for CYC has known gaps
+                (zero values for government grants). The 990 sync is preserved for historical comparison.
+              </p>
             </div>
-          )}
 
-          {/* Org profile */}
-          <div className="bg-white rounded-lg border border-[#e2e8f0] shadow-card overflow-hidden">
-            <div className="px-5 py-3.5 border-b border-[#e2e8f0] bg-[#f8fafc]">
-              <h2 className="text-[13px] font-semibold text-[#0f172a]">Organization Profile</h2>
+            <Org990Search orgCode="CYC2025" />
+
+            <div className="flex items-center gap-3">
+              <div className="flex-1 h-px bg-[#f1f5f9]" />
+              <span className="text-[11px] text-[#94a3b8] font-medium">or sync by EIN on file</span>
+              <div className="flex-1 h-px bg-[#f1f5f9]" />
             </div>
-            <div className="divide-y divide-[#f1f5f9]">
-              {[
-                { label: 'Organization',    value: CYC_PROFILE.name },
-                { label: 'EIN',             value: CYC_PROFILE.ein },
-                { label: 'Entity Type',     value: CYC_PROFILE.entityType },
-                { label: 'Location',        value: `${CYC_PROFILE.city}, ${CYC_PROFILE.state}` },
-                { label: 'Sites',           value: `${CYC_PROFILE.sites} locations` },
-                { label: 'Annual Budget',   value: formatCurrency(CYC_PROFILE.annualBudget) },
-                { label: 'GATA Registered', value: CYC_PROFILE.gataRegistered ? 'Yes' : 'No' },
-              ].map(({ label, value }) => (
-                <div key={label} className="flex items-center justify-between px-5 py-2.5">
-                  <span className="text-[12px] text-[#64748b] w-40">{label}</span>
-                  <span className="text-[13px] font-medium text-[#0f172a]">{value}</span>
-                </div>
-              ))}
+
+            <div className="flex items-center justify-between gap-4">
+              <div className="space-y-1">
+                {orgFinancial?.ein ? (
+                  <>
+                    <p className="text-[13px] text-[#0f172a]">
+                      <span className="font-semibold">{orgFinancial.name}</span>
+                      <span className="ml-2 font-mono text-[#64748b] text-[12px]">
+                        EIN {orgFinancial.ein.replace(/(\d{2})(\d{7})/, '$1-$2')}
+                      </span>
+                    </p>
+                    {orgFinancial.financial_year ? (
+                      <p className="text-[12px] text-[#16a34a] flex items-center gap-1">
+                        <CheckCircle className="w-3.5 h-3.5" />
+                        FY{orgFinancial.financial_year} data loaded
+                      </p>
+                    ) : (
+                      <p className="text-[12px] text-amber-600">EIN on file — click Sync to fetch 990 data</p>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-[12px] text-[#64748b]">No EIN on file — use the search above.</p>
+                )}
+              </div>
+              <SyncFinancialsButton orgCode="CYC2025" disabled={!orgFinancial?.ein} />
             </div>
           </div>
         </div>
+
+        {/* ── Last Pipeline Run ── */}
+        {lastRun && (
+          <div className="bg-white rounded-xl border border-[#e2e8f0] overflow-hidden">
+            <div className="px-5 py-4 border-b border-[#e2e8f0] bg-[#f8fafc] flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 bg-[#f0fdfa] rounded-[6px] flex items-center justify-center">
+                  <Zap className="w-3.5 h-3.5 text-[#0d9488]" />
+                </div>
+                <div>
+                  <h2 className="text-[14px] font-bold text-[#0f172a]">Last Discovery Run</h2>
+                  <p className="text-[11px] text-[#64748b]">
+                    {new Date(lastRun.started_at).toLocaleString('en-US', {
+                      month: 'short', day: 'numeric', year: 'numeric',
+                      hour: '2-digit', minute: '2-digit',
+                    })}
+                    {lastRun.duration_seconds != null && ` · ${lastRun.duration_seconds}s`}
+                  </p>
+                </div>
+              </div>
+              <span className="text-[10px] font-bold px-2 py-0.5 bg-[#f0fdf4] text-[#16a34a] border border-[#bbf7d0] rounded-full">
+                Completed
+              </span>
+            </div>
+            <div className="p-5 grid grid-cols-2 md:grid-cols-4 gap-3">
+              {[
+                { label: 'Grants Scanned',   value: lastRun.grants_discovered, color: '#64748b' },
+                { label: 'New Stored',        value: lastRun.grants_new,        color: '#0d9488' },
+                { label: 'High Match',        value: lastRun.high_matches,      color: '#16a34a' },
+                { label: 'Medium Match',      value: lastRun.medium_matches,    color: '#d97706' },
+              ].map(({ label, value, color }) => (
+                <div key={label} className="p-4 bg-[#f8fafc] rounded-[8px] border border-[#f1f5f9] text-center">
+                  <div className="text-[28px] font-bold tabular-nums" style={{ color }}>{value}</div>
+                  <div className="text-[11px] text-[#64748b] mt-1">{label}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── Organization Profile ── */}
+        <div className="bg-white rounded-xl border border-[#e2e8f0] overflow-hidden">
+          <div className="px-5 py-4 border-b border-[#e2e8f0] bg-[#f8fafc] flex items-center gap-2">
+            <div className="w-7 h-7 bg-[#f0fdfa] rounded-[6px] flex items-center justify-center">
+              <Building2 className="w-3.5 h-3.5 text-[#0d9488]" />
+            </div>
+            <div>
+              <h2 className="text-[14px] font-bold text-[#0f172a]">Organization Profile</h2>
+              <p className="text-[11px] text-[#64748b]">Grant matching configuration · read-only</p>
+            </div>
+          </div>
+          <div className="divide-y divide-[#f1f5f9]">
+            {[
+              { label: 'Organization',           value: CYC_PROFILE.name },
+              { label: 'EIN',                    value: CYC_PROFILE.ein, mono: true },
+              { label: 'Entity Type',            value: CYC_PROFILE.entityType },
+              { label: 'Location',               value: `${CYC_PROFILE.city}, ${CYC_PROFILE.state}` },
+              { label: 'Service Sites',          value: `${CYC_PROFILE.sites} active centers` },
+              { label: 'Annual Budget',          value: formatCurrency(CYC_PROFILE.annualBudget) },
+              { label: 'GATA Registered',        value: CYC_PROFILE.gataRegistered ? 'Yes' : 'No' },
+            ].map(({ label, value, mono }) => (
+              <div key={label} className="flex items-center justify-between px-5 py-3 hover:bg-[#f8fafc] transition-colors">
+                <span className="text-[12px] text-[#64748b] w-44 flex-shrink-0">{label}</span>
+                <span className={`text-[13px] font-semibold text-[#0f172a] ${mono ? 'font-mono' : ''}`}>{value}</span>
+              </div>
+            ))}
+          </div>
+          <div className="px-5 py-3 border-t border-[#f1f5f9] bg-[#f8fafc]">
+            <p className="text-[11px] text-[#94a3b8]">
+              To update the matching profile, edit <code className="font-mono text-[#475569]">lib/cyc-profile.ts</code> and redeploy.
+              Future versions will support UI-based profile editing.
+            </p>
+          </div>
+        </div>
+
+        {/* ── Matching Configuration ── */}
+        <div className="bg-white rounded-xl border border-[#e2e8f0] overflow-hidden">
+          <div className="px-5 py-4 border-b border-[#e2e8f0] bg-[#f8fafc] flex items-center gap-2">
+            <div className="w-7 h-7 bg-[#eff6ff] rounded-[6px] flex items-center justify-center">
+              <Cpu className="w-3.5 h-3.5 text-[#2563eb]" />
+            </div>
+            <div>
+              <h2 className="text-[14px] font-bold text-[#0f172a]">AI Matching Configuration</h2>
+              <p className="text-[11px] text-[#64748b]">Score weights and exclusion rules</p>
+            </div>
+          </div>
+          <div className="divide-y divide-[#f1f5f9]">
+            {[
+              { label: 'Minimum Store Score',  value: '32 / 100',         desc: 'Grants below this are discarded' },
+              { label: 'Semantic Weight',      value: '40%',               desc: 'Embedding similarity' },
+              { label: 'Eligibility Weight',   value: '22%',               desc: 'Org-type and geographic fit' },
+              { label: 'Financial Weight',     value: '20%',               desc: '990 health signals' },
+              { label: 'Strategic Weight',     value: '12%',               desc: 'Mission keyword alignment' },
+              { label: 'Historical Weight',    value: '6%',                desc: 'Award track record' },
+              { label: 'Hard Exclusions',      value: 'Active',            desc: 'International, defense, foreign-aid' },
+              { label: 'Discovery Searches',   value: '11 targeted',       desc: 'Youth, STEM, afterschool, violence prevention…' },
+            ].map(({ label, value, desc }) => (
+              <div key={label} className="flex items-center justify-between px-5 py-3 hover:bg-[#f8fafc] transition-colors">
+                <div>
+                  <p className="text-[12px] font-semibold text-[#0f172a]">{label}</p>
+                  <p className="text-[11px] text-[#94a3b8]">{desc}</p>
+                </div>
+                <span className="text-[13px] font-bold text-[#0d9488] font-mono">{value}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
       </div>
     </AppShell>
   );

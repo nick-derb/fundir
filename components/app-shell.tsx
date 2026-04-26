@@ -137,7 +137,11 @@ export function AppShell({ children, orgName = 'Chicago Youth Centers', userEmai
           style={{ background: 'linear-gradient(135deg, rgba(13,148,136,0.15), rgba(8,145,178,0.10))' }}>
           <div className="flex items-center gap-2 mb-1.5">
             <Sparkles className="w-3.5 h-3.5 text-[#0d9488]" />
-            <span className="text-[11px] font-bold text-[#0d9488]">AI-Powered</span>
+            <span className="text-[11px] font-bold text-[#0d9488]">Fundir AI</span>
+            <span className="ml-auto flex items-center gap-1 text-[9px] text-[#4ade80] font-bold">
+              <span className="w-1 h-1 rounded-full bg-[#4ade80] animate-pulse" />
+              LIVE
+            </span>
           </div>
           <p className="text-[10px] text-[#475569] leading-relaxed">
             990 screening · Semantic matching · Pipeline intelligence
