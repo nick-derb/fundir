@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   LayoutDashboard, Search, KanbanSquare, Settings, LogOut,
   Bell, BarChart3, CalendarDays, TrendingUp, Building2,
@@ -15,30 +15,30 @@ const navGroups = [
   {
     label: 'Intelligence',
     items: [
-      { href: '/dashboard',    label: 'Dashboard',    icon: LayoutDashboard },
-      { href: '/discover',     label: 'Discover',     icon: Search },
-      { href: '/foundations',  label: 'Foundations',  icon: Landmark },
-      { href: '/financials',   label: 'Financials',   icon: BarChart3 },
+      { href: '/dashboard',    label: 'Dashboard',    icon: LayoutDashboard, shortcut: 'G D' },
+      { href: '/discover',     label: 'Discover',     icon: Search,          shortcut: 'G O' },
+      { href: '/foundations',  label: 'Foundations',  icon: Landmark,        shortcut: 'G F' },
+      { href: '/financials',   label: 'Financials',   icon: BarChart3,       shortcut: 'G $' },
     ],
   },
   {
     label: 'Manage',
     items: [
-      { href: '/pipeline', label: 'Pipeline', icon: KanbanSquare },
-      { href: '/calendar', label: 'Calendar', icon: CalendarDays },
+      { href: '/pipeline', label: 'Pipeline', icon: KanbanSquare, shortcut: 'G P' },
+      { href: '/calendar', label: 'Calendar', icon: CalendarDays, shortcut: 'G C' },
     ],
   },
   {
     label: 'Analyze',
     items: [
-      { href: '/reports', label: 'Reports', icon: TrendingUp },
+      { href: '/reports', label: 'Reports', icon: TrendingUp, shortcut: 'G R' },
     ],
   },
   {
     label: 'System',
     items: [
-      { href: '/org',      label: 'Org Profile', icon: Building2 },
-      { href: '/settings', label: 'Settings',    icon: Settings },
+      { href: '/org',      label: 'Org Profile', icon: Building2, shortcut: 'G I' },
+      { href: '/settings', label: 'Settings',    icon: Settings,  shortcut: 'G S' },
     ],
   },
 ];
@@ -49,10 +49,50 @@ interface AppShellProps {
   userEmail?: string;
 }
 
+// Shortcut map: second key → href
+const SHORTCUT_MAP: Record<string, string> = {
+  d: '/dashboard',
+  o: '/discover',
+  f: '/foundations',
+  '$': '/financials',
+  p: '/pipeline',
+  c: '/calendar',
+  r: '/reports',
+  i: '/org',
+  s: '/settings',
+};
+
 export function AppShell({ children, orgName = 'Chicago Youth Centers', userEmail }: AppShellProps) {
   const pathname    = usePathname();
   const router      = useRouter();
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [gPressed, setGPressed]       = useState(false);
+
+  // Keyboard shortcut handler: G → key
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout>;
+    function onKeyDown(e: KeyboardEvent) {
+      // Skip if focus is in an input/textarea
+      const tag = (e.target as HTMLElement).tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement).isContentEditable) return;
+
+      if (e.key === 'g' || e.key === 'G') {
+        setGPressed(true);
+        timer = setTimeout(() => setGPressed(false), 1500);
+        return;
+      }
+      if (gPressed) {
+        const dest = SHORTCUT_MAP[e.key.toLowerCase()] ?? SHORTCUT_MAP[e.key];
+        if (dest) {
+          router.push(dest);
+        }
+        setGPressed(false);
+        clearTimeout(timer);
+      }
+    }
+    window.addEventListener('keydown', onKeyDown);
+    return () => { window.removeEventListener('keydown', onKeyDown); clearTimeout(timer); };
+  }, [gPressed, router]);
 
   async function handleSignOut() {
     const supabase = getSupabaseClient();
@@ -109,21 +149,35 @@ export function AppShell({ children, orgName = 'Chicago Youth Centers', userEmai
                 {group.label}
               </p>
               <div className="space-y-0.5">
-                {group.items.map(({ href, label, icon: Icon }) => {
+                {group.items.map(({ href, label, icon: Icon, shortcut }) => {
                   const active = isActive(href);
                   return (
                     <Link
                       key={href}
                       href={href}
-                      className={`relative flex items-center gap-2.5 px-2.5 py-2 rounded-[7px] text-[13px] font-medium transition-all ${
+                      className={`group relative flex items-center gap-2.5 pl-3 pr-2.5 py-[7px] rounded-[7px] text-[13px] font-medium transition-all ${
                         active
-                          ? 'text-white'
+                          ? 'text-white bg-white/8'
                           : 'text-[#64748b] hover:text-[#94a3b8] hover:bg-white/5'
                       }`}
-                      style={active ? { background: 'linear-gradient(135deg, #0d9488 0%, #0891b2 100%)' } : {}}
                     >
-                      <Icon className={`w-3.5 h-3.5 flex-shrink-0 ${active ? 'text-white' : 'text-[#475569]'}`} />
-                      {label}
+                      {/* Left accent bar */}
+                      <span
+                        className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] rounded-r-full transition-all"
+                        style={{
+                          height:     active ? '60%' : '0%',
+                          background: '#0d9488',
+                          opacity:    active ? 1 : 0,
+                        }}
+                      />
+                      <Icon className={`w-3.5 h-3.5 flex-shrink-0 transition-colors ${
+                        active ? 'text-[#0d9488]' : 'text-[#475569] group-hover:text-[#64748b]'
+                      }`} />
+                      <span className="flex-1">{label}</span>
+                      {/* Keyboard shortcut — visible on hover */}
+                      <span className="opacity-0 group-hover:opacity-40 transition-opacity text-[9px] font-mono font-bold text-[#94a3b8] tracking-wider flex-shrink-0">
+                        {shortcut}
+                      </span>
                     </Link>
                   );
                 })}
@@ -131,6 +185,15 @@ export function AppShell({ children, orgName = 'Chicago Youth Centers', userEmai
             </div>
           ))}
         </nav>
+
+        {/* "G" mode indicator */}
+        {gPressed && (
+          <div className="mx-3 mb-2 px-2.5 py-1.5 rounded-[6px] border border-[#0d9488]/40 flex items-center gap-2"
+            style={{ background: 'rgba(13,148,136,0.12)' }}>
+            <span className="text-[10px] font-mono font-bold text-[#0d9488] tracking-wider">G</span>
+            <span className="text-[10px] text-[#0d9488]/70">→ press key to navigate</span>
+          </div>
+        )}
 
         {/* AI badge */}
         <div className="mx-3 mb-3 p-3 rounded-[8px] border border-white/10"

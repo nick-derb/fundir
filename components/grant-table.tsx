@@ -106,6 +106,33 @@ function DeadlineCell({ dateStr }: { dateStr?: string | null }) {
   );
 }
 
+/* ── Score weight bar ───────────────────────────────────── */
+function ScoreWeightBar({
+  label, score, weight, color, desc,
+}: { label: string; score: number; weight: number; color: string; desc: string }) {
+  const contribution = (score / 100) * weight;
+  const pct = score;
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-1">
+        <div className="flex items-center gap-1.5">
+          <span className="text-[11px] font-semibold text-[#0f172a]">{label}</span>
+          <span className="text-[10px] text-[#94a3b8]">({weight}% weight)</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] text-[#94a3b8] font-mono">+{contribution.toFixed(1)} pts</span>
+          <span className="text-[11px] font-bold font-mono" style={{ color }}>{pct.toFixed(0)}/100</span>
+        </div>
+      </div>
+      <div className="h-1.5 bg-[#f1f5f9] rounded-full overflow-hidden mb-1">
+        <div className="h-full rounded-full transition-all duration-700"
+          style={{ width: `${pct}%`, background: color }} />
+      </div>
+      <p className="text-[10px] text-[#94a3b8] leading-snug">{desc}</p>
+    </div>
+  );
+}
+
 /* ── Expanded row ───────────────────────────────────────── */
 function ExpandedRow({ match }: { match: MatchResult }) {
   const signals = match.financial_signals ?? [];
@@ -116,50 +143,140 @@ function ExpandedRow({ match }: { match: MatchResult }) {
     mismatch: { icon: XCircle,     color: '#dc2626' },
   };
 
+  // Score color helper
+  const sc = (s: number) => s >= 70 ? '#16a34a' : s >= 40 ? '#d97706' : '#dc2626';
+
+  // "Why matched?" dimensions from types — all scores are 0-100
+  const dims = [
+    {
+      label:  'Semantic Similarity',
+      score:  Math.round((match.semantic_similarity ?? 0) * 100),
+      weight: 40,
+      desc:   'AI embedding comparison between grant mission and org profile',
+    },
+    {
+      label:  'Eligibility Fit',
+      score:  Math.round((match.eligibility_score ?? 0) * 100),
+      weight: 22,
+      desc:   'Entity type, geography, nonprofit status, and grant structure',
+    },
+    {
+      label:  'Financial Health',
+      score:  Math.round((match.financial_score ?? 0.5) * 100),
+      weight: 20,
+      desc:   '990 reserves, govt dependency risk, net assets, liquidity',
+    },
+    {
+      label:  'Strategic Alignment',
+      score:  Math.round((match.strategic_score ?? 0) * 100),
+      weight: 12,
+      desc:   'Program area keyword overlap with org mission focus',
+    },
+    {
+      label:  'Historical Match',
+      score:  Math.round((match.historical_score ?? 0.35) * 100),
+      weight: 6,
+      desc:   'Prior award track record with this agency type',
+    },
+  ];
+
   return (
     <tr className="bg-[#fafbff]">
       <td colSpan={7} className="px-4 py-0">
-        <div className="py-4 grid grid-cols-2 gap-6 border-l-2 border-[#0d9488] pl-4 ml-2">
+        <div className="py-5 grid grid-cols-3 gap-5 border-l-2 border-[#0d9488] pl-5 ml-2">
 
-          {/* Recommendation */}
+          {/* Why Matched */}
           <div>
-            <div className="flex items-center gap-1.5 mb-2">
+            <div className="flex items-center gap-1.5 mb-3">
+              <Sparkles className="w-3 h-3 text-[#6366f1]" />
+              <p className="text-[10px] font-bold text-[#64748b] uppercase tracking-widest">Why This Matched</p>
+              <span className="ml-auto text-[10px] font-bold font-mono text-[#0f172a]">
+                {match.composite_score.toFixed(1)}/100
+              </span>
+            </div>
+            <div className="space-y-3">
+              {dims.map(d => (
+                <ScoreWeightBar
+                  key={d.label}
+                  label={d.label}
+                  score={d.score}
+                  weight={d.weight}
+                  color={sc(d.score)}
+                  desc={d.desc}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Fundir Assessment + flags */}
+          <div>
+            <div className="flex items-center gap-1.5 mb-3">
               <Sparkles className="w-3 h-3 text-[#0d9488]" />
               <p className="text-[10px] font-bold text-[#64748b] uppercase tracking-widest">Fundir Assessment</p>
             </div>
             {match.recommendation ? (
               <p className="text-[12px] text-[#475569] leading-relaxed">{match.recommendation}</p>
             ) : (
-              <p className="text-[12px] text-[#94a3b8] italic">No assessment available</p>
+              <p className="text-[12px] text-[#94a3b8] italic">No assessment available. Run discovery to generate AI analysis.</p>
             )}
 
             {match.eligibility_flags?.length > 0 && (
-              <div className="mt-3 space-y-1">
-                <p className="text-[10px] font-bold text-[#d97706] uppercase tracking-widest">Eligibility Flags</p>
+              <div className="mt-4 space-y-1.5">
+                <p className="text-[10px] font-bold text-[#d97706] uppercase tracking-widest mb-2">Eligibility Flags</p>
                 {(match.eligibility_flags as string[]).map((flag, i) => (
-                  <p key={i} className="text-[11px] text-amber-700 flex items-start gap-1.5">
-                    <span className="text-amber-400 mt-0.5">•</span>{flag}
+                  <p key={i} className="text-[11px] text-amber-700 flex items-start gap-1.5 leading-snug">
+                    <span className="text-amber-400 mt-0.5 flex-shrink-0">⚠</span>{flag}
                   </p>
                 ))}
+              </div>
+            )}
+
+            {/* Grant metadata */}
+            {match.grant?.extracted_fields && (
+              <div className="mt-4 pt-3 border-t border-[#f1f5f9] space-y-1.5">
+                <p className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-widest mb-2">Grant Details</p>
+                {match.grant.extracted_fields.eligible_entity_types?.length ? (
+                  <div className="text-[11px] text-[#64748b]">
+                    <span className="font-semibold text-[#0f172a]">Eligible: </span>
+                    {match.grant.extracted_fields.eligible_entity_types.slice(0, 3).join(', ')}
+                  </div>
+                ) : null}
+                {match.grant.extracted_fields.geographic_scope && (
+                  <div className="text-[11px] text-[#64748b]">
+                    <span className="font-semibold text-[#0f172a]">Scope: </span>
+                    {match.grant.extracted_fields.geographic_scope}
+                    {match.grant.extracted_fields.geographic_states?.length
+                      ? ` (${match.grant.extracted_fields.geographic_states.slice(0, 4).join(', ')})`
+                      : ''}
+                  </div>
+                )}
+                {match.grant.extracted_fields.program_areas?.length ? (
+                  <div className="text-[11px] text-[#64748b]">
+                    <span className="font-semibold text-[#0f172a]">Areas: </span>
+                    {match.grant.extracted_fields.program_areas.slice(0, 4).join(', ')}
+                  </div>
+                ) : null}
               </div>
             )}
           </div>
 
           {/* 990 Signals */}
           <div>
-            <p className="text-[10px] font-bold text-[#64748b] uppercase tracking-widest mb-2">990 Eligibility Signals</p>
+            <p className="text-[10px] font-bold text-[#64748b] uppercase tracking-widest mb-3">990 Eligibility Signals</p>
             {signals.length === 0 ? (
-              <p className="text-[12px] text-[#94a3b8] italic">990 screening not available</p>
+              <p className="text-[12px] text-[#94a3b8] italic">990 screening not available for this grant</p>
             ) : (
-              <div className="space-y-1.5">
-                {signals.slice(0, 5).map((s) => {
+              <div className="space-y-2">
+                {signals.slice(0, 6).map((s) => {
                   const cfg = signalConfig[s.status] || signalConfig.unknown;
                   const Icon = cfg.icon;
                   return (
-                    <div key={s.factor} className="flex items-center gap-2">
-                      <Icon className="w-3 h-3 flex-shrink-0" style={{ color: cfg.color }} />
-                      <span className="text-[11px] font-medium text-[#0f172a]">{s.factor}</span>
-                      <span className="text-[10px] text-[#94a3b8] flex-1 truncate">{s.headline}</span>
+                    <div key={s.factor} className="flex items-start gap-2">
+                      <Icon className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" style={{ color: cfg.color }} />
+                      <div className="min-w-0">
+                        <p className="text-[11px] font-semibold text-[#0f172a] leading-snug">{s.factor}</p>
+                        <p className="text-[10px] text-[#94a3b8] leading-snug">{s.headline}</p>
+                      </div>
                     </div>
                   );
                 })}
@@ -167,9 +284,9 @@ function ExpandedRow({ match }: { match: MatchResult }) {
             )}
             <Link
               href={`/grant/${match.grant_id}`}
-              className="inline-flex items-center gap-1 mt-3 text-[11px] font-semibold text-[#0d9488] hover:text-[#0f766e] transition-colors"
+              className="inline-flex items-center gap-1 mt-4 text-[11px] font-semibold text-[#0d9488] hover:text-[#0f766e] transition-colors"
             >
-              Full analysis <ChevronRight className="w-3 h-3" />
+              Full analysis & application guide <ChevronRight className="w-3 h-3" />
             </Link>
           </div>
         </div>
