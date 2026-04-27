@@ -6,8 +6,10 @@ import { AppShell } from '@/components/app-shell';
 import { ScoreBreakdownChart } from '@/components/score-breakdown';
 import { GrantTasks } from '@/components/grant-tasks';
 import { GrantNotes } from '@/components/grant-notes';
+import { GrantWorkspace } from '@/components/grant-workspace';
 import { getTasks } from '@/actions/tasks';
 import { getNote } from '@/actions/notes';
+import { getAllIntegrations } from '@/lib/oauth-tokens';
 import { ScoreBreakdown } from '@/types';
 import { formatDate, getDaysUntil, formatCurrency } from '@/lib/utils';
 import { notFound } from 'next/navigation';
@@ -16,7 +18,7 @@ import {
   ArrowLeft, DollarSign, Building2, Tag, AlertCircle,
   ExternalLink, CheckCircle, HelpCircle, XCircle, MinusCircle,
   ClipboardList, FileText, BarChart2, Info, Shield, Sparkles,
-  Clock, ChevronRight,
+  Clock, ChevronRight, FolderOpen,
 } from 'lucide-react';
 import type { EligibilitySignal, SignalStatus } from '@/lib/990-screener';
 
@@ -219,10 +221,11 @@ function LargeScoreArc({ score }: { score: number }) {
 // ── Tab definitions ───────────────────────────────────────────────────────────
 
 const TABS = [
-  { key: 'overview', label: 'Overview',   icon: Info },
-  { key: 'data',     label: 'Grant Data', icon: BarChart2 },
-  { key: 'tasks',    label: 'Tasks',      icon: ClipboardList },
-  { key: 'notes',    label: 'Notes',      icon: FileText },
+  { key: 'overview',   label: 'Overview',   icon: Info },
+  { key: 'data',       label: 'Grant Data', icon: BarChart2 },
+  { key: 'tasks',      label: 'Tasks',      icon: ClipboardList },
+  { key: 'notes',      label: 'Notes',      icon: FileText },
+  { key: 'workspace',  label: 'Documents',  icon: FolderOpen },
 ] as const;
 type TabKey = typeof TABS[number]['key'];
 
@@ -255,10 +258,14 @@ export default async function GrantDetailPage({
   const deadlineUrgent = days !== null && days >= 0 && days <= 14;
   const award         = fields.award_floor || fields.award_ceiling;
 
-  const [tasks, note] = await Promise.all([
+  const [tasks, note, integrations] = await Promise.all([
     getTasks(match.grant_id),
     getNote(match.grant_id),
+    getAllIntegrations('CYC2025'),
   ]);
+
+  const googleConnected    = integrations.some(i => i.provider === 'google');
+  const microsoftConnected = integrations.some(i => i.provider === 'microsoft');
 
   const openTasks = tasks.filter(t => !t.completed).length;
 
@@ -543,6 +550,32 @@ export default async function GrantDetailPage({
             {/* NOTES TAB */}
             {tab === 'notes' && (
               <GrantNotes grantId={match.grant_id} initialBody={note?.body ?? ''} updatedAt={note?.updated_at} />
+            )}
+
+            {/* WORKSPACE TAB */}
+            {tab === 'workspace' && (
+              <div className="bg-white rounded-xl border border-[#e2e8f0] shadow-card overflow-hidden">
+                <div className="px-5 py-4 border-b border-[#e2e8f0] bg-[#f8fafc] flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-[5px] bg-[#f0fdfa] flex items-center justify-center">
+                    <FolderOpen className="w-3.5 h-3.5 text-[#0d9488]" />
+                  </div>
+                  <div>
+                    <h2 className="text-[13px] font-bold text-[#0f172a]">Grant Documents</h2>
+                    <p className="text-[11px] text-[#64748b]">
+                      Cloud storage workspace · LOI, narrative, budget, cover letter
+                    </p>
+                  </div>
+                </div>
+                <div className="p-5">
+                  <GrantWorkspace
+                    matchId={id}
+                    grantTitle={grant?.title ?? 'Grant'}
+                    orgCode="CYC2025"
+                    googleConnected={googleConnected}
+                    microsoftConnected={microsoftConnected}
+                  />
+                </div>
+              </div>
             )}
           </div>
 

@@ -11,6 +11,8 @@ import {
 } from 'lucide-react';
 import { SyncFinancialsButton } from '@/components/sync-financials-button';
 import { Org990Search } from '@/components/org-990-search';
+import { IntegrationConnector } from '@/components/integration-connector';
+import { getAllIntegrations } from '@/lib/oauth-tokens';
 
 async function getLastRun() {
   const supabase = createServerClient();
@@ -57,21 +59,18 @@ async function checkConnections() {
   return checks;
 }
 
-function StatusDot({ ok }: { ok: boolean }) {
-  return (
-    <span className={`inline-flex items-center gap-1.5 text-[12px] font-semibold ${ok ? 'text-[#16a34a]' : 'text-[#94a3b8]'}`}>
-      <span className={`w-1.5 h-1.5 rounded-full ${ok ? 'bg-[#16a34a] animate-pulse' : 'bg-[#cbd5e1]'}`} />
-      {ok ? 'Connected' : 'Not configured'}
-    </span>
-  );
-}
-
 export default async function SettingsPage() {
-  const [lastRun, connections, orgFinancial] = await Promise.all([
+  const [lastRun, connections, orgFinancial, integrations] = await Promise.all([
     getLastRun(),
     checkConnections(),
     getOrgFinancialStatus(),
+    getAllIntegrations('CYC2025'),
   ]);
+
+  const googleConnected    = integrations.some(i => i.provider === 'google');
+  const microsoftConnected = integrations.some(i => i.provider === 'microsoft');
+  const googleEmail        = integrations.find(i => i.provider === 'google')?.user_email;
+  const microsoftEmail     = integrations.find(i => i.provider === 'microsoft')?.user_email;
 
   const allConnected = connections.supabase && connections.anthropic && connections.openai && connections.grantsGov;
   const connectedCount = Object.values(connections).filter(Boolean).length;
@@ -129,6 +128,44 @@ export default async function SettingsPage() {
             </div>
           </div>
         )}
+
+        {/* ── Cloud Integrations ── */}
+        <div className="bg-white rounded-xl border border-[#e2e8f0] overflow-hidden">
+          <div className="px-5 py-4 border-b border-[#e2e8f0] bg-[#f8fafc] flex items-center gap-2">
+            <div className="w-7 h-7 bg-[#f0fdfa] rounded-[6px] flex items-center justify-center">
+              <Database className="w-3.5 h-3.5 text-[#0d9488]" />
+            </div>
+            <div>
+              <h2 className="text-[14px] font-bold text-[#0f172a]">Cloud Storage & Documents</h2>
+              <p className="text-[11px] text-[#64748b]">
+                Import financials, manage grant documents · Google Drive and OneDrive
+              </p>
+            </div>
+            <div className="ml-auto flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-full"
+              style={
+                googleConnected || microsoftConnected
+                  ? { background: '#f0fdf4', color: '#16a34a' }
+                  : { background: '#f8fafc', color: '#94a3b8' }
+              }>
+              <span className={`w-1.5 h-1.5 rounded-full ${googleConnected || microsoftConnected ? 'bg-[#16a34a] animate-pulse' : 'bg-[#cbd5e1]'}`} />
+              {[googleConnected, microsoftConnected].filter(Boolean).length}/2 connected
+            </div>
+          </div>
+          <IntegrationConnector
+            orgCode="CYC2025"
+            status={{
+              google:    { connected: googleConnected,    email: googleEmail },
+              microsoft: { connected: microsoftConnected, email: microsoftEmail },
+            }}
+          />
+          <div className="px-5 py-3 border-t border-[#f1f5f9] bg-[#f8fafc]">
+            <p className="text-[11px] text-[#94a3b8]">
+              Once connected, import financial spreadsheets for AI analysis on the{' '}
+              <a href="/financials" className="text-[#0d9488] hover:underline">Financials page</a>,
+              and manage grant documents from any grant detail page under the Documents tab.
+            </p>
+          </div>
+        </div>
 
         {/* ── API Connections ── */}
         <div className="bg-white rounded-xl border border-[#e2e8f0] overflow-hidden">

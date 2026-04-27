@@ -1,6 +1,8 @@
 export const dynamic = 'force-dynamic';
 
 import { AppShell } from '@/components/app-shell';
+import { FinancialAnalyzer } from '@/components/financial-analyzer';
+import { getAllIntegrations } from '@/lib/oauth-tokens';
 import Link from 'next/link';
 import {
   BarChart3, TrendingDown, Shield, AlertTriangle,
@@ -218,7 +220,11 @@ function SiteCard({
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 
-export default function FinancialsPage() {
+export default async function FinancialsPage() {
+  const integrations       = await getAllIntegrations('CYC2025');
+  const googleConnected    = integrations.some(i => i.provider === 'google');
+  const microsoftConnected = integrations.some(i => i.provider === 'microsoft');
+
   const inc  = CYC_INCOME_STATEMENT;
   const bal  = CYC_BALANCE_SHEET;
   const liq  = CYC_LIQUIDITY;
@@ -890,6 +896,29 @@ export default function FinancialsPage() {
             className="flex items-center gap-1 text-[11px] text-[#0d9488] hover:underline">
             Back to dashboard <ChevronRight className="w-3 h-3" />
           </Link>
+        </div>
+
+        {/* ── AI Financial Analyzer ── */}
+        <div className="bg-white rounded-xl border border-[#e2e8f0] overflow-hidden">
+          <div className="px-5 py-4 border-b border-[#e2e8f0] bg-[#f8fafc] flex items-center gap-2">
+            <div className="w-7 h-7 rounded-[6px] flex items-center justify-center flex-shrink-0"
+              style={{ background: 'linear-gradient(135deg, rgba(13,148,136,0.15), rgba(8,145,178,0.1))' }}>
+              <Zap className="w-3.5 h-3.5 text-[#0d9488]" />
+            </div>
+            <div>
+              <h2 className="text-[14px] font-bold text-[#0f172a]">AI Financial Model Builder</h2>
+              <p className="text-[11px] text-[#64748b]">
+                Import any financial spreadsheet or document · Fundir AI builds a full model with projections
+              </p>
+            </div>
+          </div>
+          <div className="p-5">
+            <FinancialAnalyzer
+              orgCode="CYC2025"
+              googleConnected={googleConnected}
+              microsoftConnected={microsoftConnected}
+            />
+          </div>
         </div>
 
       </div>
