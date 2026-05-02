@@ -34,17 +34,18 @@ export interface ReportsData {
 }
 
 // ── Shared dark tooltip ───────────────────────────────────────────────────────
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function DarkTooltip({ active, payload, label, formatter }: {
   active?: boolean;
-  payload?: Array<{ name: string; value: number; color: string }>;
-  label?: string;
+  payload?: readonly any[];
+  label?: string | number;
   formatter?: (v: number, name: string) => string;
 }) {
   if (!active || !payload?.length) return null;
   return (
     <div className="rounded-lg border px-3 py-2.5 text-[12px] shadow-xl"
       style={{ background: '#0d1929', borderColor: 'rgba(255,255,255,0.12)', minWidth: 140 }}>
-      {label && <p className="text-slate-400 mb-1.5 font-medium">{label}</p>}
+      {label != null && <p className="text-slate-400 mb-1.5 font-medium">{label}</p>}
       {payload.map((p, i) => (
         <div key={i} className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-1.5">
@@ -52,7 +53,7 @@ function DarkTooltip({ active, payload, label, formatter }: {
             <span className="text-slate-400">{p.name}</span>
           </div>
           <span className="font-bold text-slate-100">
-            {formatter ? formatter(p.value, p.name) : p.value}
+            {formatter ? formatter(Number(p.value), String(p.name)) : p.value}
           </span>
         </div>
       ))}

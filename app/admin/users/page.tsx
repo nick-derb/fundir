@@ -17,7 +17,7 @@ async function getUsers() {
   const memMap: Record<string, { role: string; org_code: string; org_name: string }[]> = {};
   for (const m of memberships ?? []) {
     if (!memMap[m.user_id]) memMap[m.user_id] = [];
-    const org = m.org as { org_code: string; name: string } | null;
+    const org = m.org as unknown as { org_code: string; name: string } | null;
     memMap[m.user_id].push({ role: m.role, org_code: org?.org_code ?? '—', org_name: org?.name ?? '—' });
   }
 
