@@ -6,7 +6,7 @@ import { useState, useEffect } from 'react';
 import {
   LayoutDashboard, Search, KanbanSquare, Settings, LogOut,
   Bell, BarChart3, CalendarDays, TrendingUp, Building2,
-  Sparkles, ChevronDown, Landmark,
+  Sparkles, ChevronDown, Landmark, Shield,
 } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/supabase';
 import { CommandPalette, CommandPaletteTrigger } from '@/components/command-palette';
@@ -61,6 +61,77 @@ const SHORTCUT_MAP: Record<string, string> = {
   i: '/org',
   s: '/settings',
 };
+
+// ── Cloud Storage sidebar widget ────────────────────────────────────────────
+function GoogleIcon() {
+  return (
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none">
+      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57C23.36 18.34 22.56 15.5 22.56 12.25z" fill="#4285F4"/>
+      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+    </svg>
+  );
+}
+function MicrosoftIcon() {
+  return (
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none">
+      <rect x="1"  y="1"  width="10" height="10" fill="#F25022"/>
+      <rect x="13" y="1"  width="10" height="10" fill="#7FBA00"/>
+      <rect x="1"  y="13" width="10" height="10" fill="#00A4EF"/>
+      <rect x="13" y="13" width="10" height="10" fill="#FFB900"/>
+    </svg>
+  );
+}
+
+function CloudStorageWidget({ orgCode }: { orgCode: string }) {
+  const [status, setStatus] = useState<{ google: boolean; microsoft: boolean } | null>(null);
+
+  useEffect(() => {
+    fetch(`/api/integrations/status?org=${orgCode}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => d && setStatus(d))
+      .catch(() => {});
+  }, [orgCode]);
+
+  const services = [
+    { key: 'google',    label: 'Google Drive', Icon: GoogleIcon,    href: `/api/auth/google?org=${orgCode}&return=/financials`    },
+    { key: 'microsoft', label: 'Microsoft 365', Icon: MicrosoftIcon, href: `/api/auth/microsoft?org=${orgCode}&return=/financials` },
+  ] as const;
+
+  return (
+    <div className="mx-3 mb-2 px-2.5 py-2.5 rounded-[8px] border border-white/[0.07]"
+      style={{ background: 'rgba(255,255,255,0.03)' }}>
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-[10px] font-bold text-[#475569] uppercase tracking-widest">Cloud Storage</span>
+        <Link href="/settings" className="text-[9px] text-[#0d9488] hover:text-[#14b8a6] transition-colors">manage</Link>
+      </div>
+      <div className="space-y-1.5">
+        {services.map(({ key, label, Icon, href }) => {
+          const connected = status?.[key];
+          return (
+            <div key={key} className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <Icon />
+                <span className="text-[10px] text-[#64748b]">{label}</span>
+              </div>
+              {status === null ? (
+                <span className="w-1.5 h-1.5 rounded-full bg-[#1e293b]" />
+              ) : connected ? (
+                <span className="text-[10px] font-bold text-[#4ade80]">● Live</span>
+              ) : (
+                <a href={href}
+                  className="text-[9px] font-bold text-[#0d9488] hover:text-[#14b8a6] transition-colors">
+                  Connect
+                </a>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 export function AppShell({ children, orgName = 'Chicago Youth Centers', userEmail }: AppShellProps) {
   const pathname    = usePathname();
@@ -195,6 +266,9 @@ export function AppShell({ children, orgName = 'Chicago Youth Centers', userEmai
           </div>
         )}
 
+        {/* Cloud Storage widget */}
+        <CloudStorageWidget orgCode="CYC2025" />
+
         {/* AI badge */}
         <div className="mx-3 mb-3 p-3 rounded-[8px] border border-white/10"
           style={{ background: 'linear-gradient(135deg, rgba(13,148,136,0.15), rgba(8,145,178,0.10))' }}>
@@ -216,6 +290,13 @@ export function AppShell({ children, orgName = 'Chicago Youth Centers', userEmai
           {userEmail && (
             <p className="px-2.5 mb-2 text-[10px] text-[#475569] truncate">{userEmail}</p>
           )}
+          <Link
+            href="/admin"
+            className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-[7px] text-[12px] text-[#334155] hover:text-[#475569] hover:bg-white/5 transition-all"
+          >
+            <Shield className="w-3.5 h-3.5 text-[#ef4444]/50" />
+            Admin Console
+          </Link>
           <button
             onClick={handleSignOut}
             className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-[7px] text-[12px] text-[#475569] hover:text-[#94a3b8] hover:bg-white/5 transition-all"
@@ -248,7 +329,7 @@ export function AppShell({ children, orgName = 'Chicago Youth Centers', userEmai
         </header>
 
         {/* Page content */}
-        <main className="flex-1" style={{ background: '#f1f5f9' }}>
+        <main className="flex-1 min-h-screen" style={{ background: '#f1f5f9' }}>
           {children}
         </main>
       </div>

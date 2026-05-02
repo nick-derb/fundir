@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { CheckCircle, XCircle, ExternalLink, Loader2 } from 'lucide-react';
+import { CheckCircle, ExternalLink, Loader2 } from 'lucide-react';
 
 interface IntegrationStatus {
   google:    { connected: boolean; email?: string | null };
@@ -9,8 +9,9 @@ interface IntegrationStatus {
 }
 
 interface IntegrationConnectorProps {
-  orgCode: string;
-  status:  IntegrationStatus;
+  orgCode:    string;
+  status:     IntegrationStatus;
+  returnPath?: string;
 }
 
 // SVG icons for Google / Microsoft (inline, no extra deps)
@@ -39,6 +40,7 @@ function MicrosoftIcon() {
 export function IntegrationConnector({
   orgCode,
   status,
+  returnPath = '/settings',
 }: IntegrationConnectorProps) {
   const [disconnecting, setDisconnecting] = useState<
     'google' | 'microsoft' | null
@@ -64,7 +66,7 @@ export function IntegrationConnector({
       label:     'Google Workspace',
       sublabel:  'Drive · Sheets · Docs',
       Icon:      GoogleIcon,
-      connectHref: `/api/auth/google?org=${orgCode}&return=/settings`,
+      connectHref: `/api/auth/google?org=${orgCode}&return=${returnPath}`,
       color:     '#4285F4',
       bg:        '#EFF6FF',
       ...status.google,
@@ -74,7 +76,7 @@ export function IntegrationConnector({
       label:     'Microsoft 365',
       sublabel:  'OneDrive · Excel · Word',
       Icon:      MicrosoftIcon,
-      connectHref: `/api/auth/microsoft?org=${orgCode}&return=/settings`,
+      connectHref: `/api/auth/microsoft?org=${orgCode}&return=${returnPath}`,
       color:     '#0078D4',
       bg:        '#EFF6FF',
       ...status.microsoft,

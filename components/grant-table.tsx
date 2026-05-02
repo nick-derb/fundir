@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { MatchResult } from '@/types';
+import { MatchResult, PipelineStage } from '@/types';
 import { getDaysUntil, formatCurrency, formatDate } from '@/lib/utils';
 import {
   ChevronUp, ChevronDown, ChevronsUpDown, ExternalLink,
@@ -333,6 +334,30 @@ export function GrantTable({ matches, emptyMessage = 'No grants found.' }: Grant
   const [search, setSearch]       = useState('');
   const [expandedId, setExpandedId]  = useState<string | null>(null);
   const [scoreMin, setScoreMin]   = useState(0);
+  const [deadlineFilter, setDeadlineFilter] = useState<'all' | '7' | '30' | '60'>('all');
+  const [stagingId, setStagingId] = useState<string | null>(null);
+  const [stageOverrides, setStageOverrides] = useState<Record<string, string>>({});
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!stagingId) return;
+    function close() { setStagingId(null); }
+    document.addEventListener('click', close);
+    return () => document.removeEventListener('click', close);
+  }, [stagingId]);
+
+  async function handleStageChange(matchId: string, stage: string) {
+    setStageOverrides(prev => ({ ...prev, [matchId]: stage }));
+    setStagingId(null);
+    try {
+      await fetch(`/api/grants/${matchId}/stage`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stage }),
+      });
+      router.refresh();
+    } catch {}
+  }
 
   function toggleSort(key: SortKey) {
     if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
@@ -341,8 +366,15 @@ export function GrantTable({ matches, emptyMessage = 'No grants found.' }: Grant
 
   const filtered = useMemo(() => {
     let list = [...matches];
-    if (stageFilter !== 'all') list = list.filter(m => m.pipeline_stage === stageFilter);
+    if (stageFilter !== 'all') list = list.filter(m => (stageOverrides[m.id] ?? m.pipeline_stage) === stageFilter);
     if (scoreMin > 0) list = list.filter(m => m.composite_score >= scoreMin);
+    if (deadlineFilter !== 'all') {
+      const maxDays = parseInt(deadlineFilter);
+      list = list.filter(m => {
+        const days = getDaysUntil(m.grant?.close_date);
+        return days !== null && days >= 0 && days <= maxDays;
+      });
+    }
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter(m =>
@@ -364,7 +396,7 @@ export function GrantTable({ matches, emptyMessage = 'No grants found.' }: Grant
       return 0;
     });
     return list;
-  }, [matches, sortKey, sortDir, stageFilter, search, scoreMin]);
+  }, [matches, sortKey, sortDir, stageFilter, search, scoreMin, deadlineFilter, stageOverrides]);
 
   const stages = ['all', ...Array.from(new Set(matches.map(m => m.pipeline_stage)))];
 
@@ -424,6 +456,27 @@ export function GrantTable({ matches, emptyMessage = 'No grants found.' }: Grant
                     : 'text-[#64748b] bg-white border border-[#e2e8f0] hover:text-[#0f172a]'
                 }`}>
                 {s === 'all' ? `All stages` : s}
+              </button>
+            ))}
+          </div>
+
+          <div className="h-4 w-px bg-[#e2e8f0]" />
+
+          {/* Deadline range filter */}
+          <div className="flex items-center gap-1">
+            {([
+              { label: 'Any date', val: 'all' },
+              { label: '≤7d',      val: '7'   },
+              { label: '≤30d',     val: '30'  },
+              { label: '≤60d',     val: '60'  },
+            ] as const).map(({ label, val }) => (
+              <button key={val} onClick={() => setDeadlineFilter(val)}
+                className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition-colors whitespace-nowrap ${
+                  deadlineFilter === val
+                    ? 'bg-amber-500 text-white'
+                    : 'text-[#64748b] bg-white border border-[#e2e8f0] hover:border-amber-200 hover:text-amber-700'
+                }`}>
+                {label}
               </button>
             ))}
           </div>
@@ -520,8 +573,35 @@ export function GrantTable({ matches, emptyMessage = 'No grants found.' }: Grant
                         <ScoreArc score={match.composite_score} />
                       </div>
                     </td>
-                    <td className="px-4 py-3.5">
-                      <StageBadge stage={match.pipeline_stage} />
+                    <td className="px-4 py-3.5" onClick={e => e.stopPropagation()}>
+                      <div className="relative">
+                        <button
+                          onClick={e => {
+                            e.stopPropagation();
+                            setStagingId(stagingId === match.id ? null : match.id);
+                          }}
+                          title="Click to change stage"
+                        >
+                          <StageBadge stage={(stageOverrides[match.id] ?? match.pipeline_stage) as PipelineStage} />
+                        </button>
+                        {stagingId === match.id && (
+                          <div
+                            className="absolute z-30 top-full left-0 mt-1 bg-white rounded-[8px] border border-[#e2e8f0] shadow-xl overflow-hidden min-w-[140px]"
+                            onClick={e => e.stopPropagation()}
+                          >
+                            {(['discovered', 'reviewing', 'preparing', 'drafting', 'submitted', 'awarded', 'rejected'] as const).map(s => (
+                              <button key={s} onClick={() => handleStageChange(match.id, s)}
+                                className={`w-full text-left px-3 py-2 text-[12px] font-medium capitalize transition-colors block ${
+                                  (stageOverrides[match.id] ?? match.pipeline_stage) === s
+                                    ? 'bg-[#f0fdfa] text-[#0d9488] font-bold'
+                                    : 'text-[#0f172a] hover:bg-[#f8fafc]'
+                                }`}>
+                                {s}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </td>
                     <td className="px-3 py-3.5">
                       <div className="flex items-center gap-1.5">

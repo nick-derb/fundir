@@ -3,7 +3,8 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import type { CookieOptions } from '@supabase/ssr';
 
-const PROTECTED = ['/dashboard', '/discover', '/pipeline', '/settings', '/grant', '/financials', '/calendar', '/reports', '/org', '/foundations'];
+const PROTECTED   = ['/dashboard', '/discover', '/pipeline', '/settings', '/grant', '/financials', '/calendar', '/reports', '/org', '/foundations'];
+const ADMIN_ONLY  = ['/admin'];
 const AUTH_ROUTES = ['/login', '/signup'];
 
 export async function middleware(request: NextRequest) {
@@ -33,7 +34,20 @@ export async function middleware(request: NextRequest) {
   const { data: { session } } = await supabase.auth.getSession();
 
   const isProtected = PROTECTED.some(p => pathname.startsWith(p));
-  const isAuthRoute = AUTH_ROUTES.some(p => pathname.startsWith(p));
+  const isAdminRoute = ADMIN_ONLY.some(p => pathname.startsWith(p));
+  const isAuthRoute  = AUTH_ROUTES.some(p => pathname.startsWith(p));
+
+  // Admin routes: must be logged in AND be the designated admin email
+  if (isAdminRoute) {
+    if (!session) {
+      return NextResponse.redirect(new URL('/login?next=/admin', request.url));
+    }
+    const adminEmail = (process.env.ADMIN_EMAIL ?? '').toLowerCase();
+    if (!adminEmail || session.user.email?.toLowerCase() !== adminEmail) {
+      return NextResponse.redirect(new URL('/dashboard', request.url));
+    }
+    return response;
+  }
 
   if (isProtected && !session) {
     return NextResponse.redirect(new URL('/login', request.url));
@@ -58,6 +72,8 @@ export const config = {
     '/reports/:path*',
     '/org/:path*',
     '/foundations/:path*',
+    '/admin/:path*',
+    '/admin',
     '/login',
     '/signup',
   ],

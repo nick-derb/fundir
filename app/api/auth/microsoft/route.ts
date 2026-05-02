@@ -14,7 +14,10 @@ export async function GET(req: NextRequest) {
     'base64url',
   );
 
-  const tenant = process.env.MICROSOFT_TENANT_ID ?? 'common';
+  // 'organizations' accepts all Microsoft 365 / Entra work & school accounts.
+  // Set MICROSOFT_TENANT_ID=common in env if personal @outlook/@hotmail accounts are also needed
+  // (requires Azure Portal → Authentication → Supported account types to include personal accounts).
+  const tenant = process.env.MICROSOFT_TENANT_ID ?? 'organizations';
 
   const params = new URLSearchParams({
     client_id:     process.env.MICROSOFT_CLIENT_ID!,
