@@ -8,8 +8,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const session = await getSession();
   const adminEmail = (process.env.ADMIN_EMAIL ?? '').toLowerCase();
 
-  if (!session || session.user.email?.toLowerCase() !== adminEmail) {
-    redirect('/login');
+  // If not authenticated, send to login
+  if (!session) redirect('/login?next=/admin');
+
+  // If ADMIN_EMAIL is configured, enforce it; redirect to dashboard (not /login) to avoid loop
+  if (adminEmail && session.user.email?.toLowerCase() !== adminEmail) {
+    redirect('/dashboard');
   }
 
   return (
