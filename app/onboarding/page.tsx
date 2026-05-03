@@ -94,6 +94,18 @@ export default function OnboardingPage() {
   // County picker state
   const [pickerOpen, setPickerOpen] = useState(false);
 
+  // Pre-fill invite code from URL param ?code=YMCA2025 and auto-advance
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const codeParam = params.get('code');
+    if (codeParam && codeParam.trim().length >= 5) {
+      const upper = codeParam.trim().toUpperCase();
+      setForm(prev => ({ ...prev, inviteCode: upper }));
+      setStep(2);
+    }
+  }, []);
+
   // Close EIN dropdown on outside click
   useEffect(() => {
     function handler(e: MouseEvent) {

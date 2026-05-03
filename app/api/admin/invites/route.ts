@@ -40,10 +40,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Code must be at least 4 characters.' }, { status: 400 });
   }
 
+  const expires_at = (body.expires_at ?? '').trim() || null;
+  const org_hint   = (body.org_hint   ?? '').trim() || null;
+
   const db = createServerClient();
   const { data, error } = await db
     .from('invite_codes')
-    .insert({ code, label, max_uses, uses_count: 0, active: true })
+    .insert({ code, label, max_uses, uses_count: 0, active: true, expires_at, org_hint })
     .select()
     .single();
 
