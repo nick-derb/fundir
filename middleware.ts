@@ -37,14 +37,11 @@ export async function middleware(request: NextRequest) {
   const isAdminRoute = ADMIN_ONLY.some(p => pathname.startsWith(p));
   const isAuthRoute  = AUTH_ROUTES.some(p => pathname.startsWith(p));
 
-  // Admin routes: must be logged in AND be the designated admin email
+  // Admin routes: middleware only checks authentication.
+  // The admin layout does the stricter email check server-side.
   if (isAdminRoute) {
     if (!session) {
       return NextResponse.redirect(new URL('/login?next=/admin', request.url));
-    }
-    const adminEmail = (process.env.ADMIN_EMAIL ?? '').toLowerCase();
-    if (!adminEmail || session.user.email?.toLowerCase() !== adminEmail) {
-      return NextResponse.redirect(new URL('/dashboard', request.url));
     }
     return response;
   }
