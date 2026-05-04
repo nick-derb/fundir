@@ -6,8 +6,9 @@ import { Users } from 'lucide-react';
 async function getUsers() {
   const db = createServerClient();
   // list all auth users via service role
-  const { data: { users }, error } = await db.auth.admin.listUsers({ perPage: 200 });
-  if (error) return [];
+  const { data, error } = await db.auth.admin.listUsers({ perPage: 200 });
+  if (error || !data) return [];
+  const { users } = data;
 
   // fetch their org memberships
   const { data: memberships } = await db

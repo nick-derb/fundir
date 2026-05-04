@@ -1,14 +1,8 @@
 export const dynamic = 'force-dynamic';
 
 import { createServerClient } from '@/lib/supabase';
-import { Building2, Users, Zap, TrendingUp, Activity, Clock } from 'lucide-react';
+import { Building2, Users, Zap, TrendingUp, Activity } from 'lucide-react';
 import Link from 'next/link';
-
-function fmt(n: number) {
-  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000)     return `$${(n / 1_000).toFixed(0)}K`;
-  return `$${n}`;
-}
 
 function timeAgo(ts: string): string {
   const diff = Date.now() - new Date(ts).getTime();
@@ -21,26 +15,31 @@ function timeAgo(ts: string): string {
 }
 
 async function getAdminStats() {
-  const db = createServerClient();
+  try {
+    const db = createServerClient();
 
-  const [orgsRes, matchesRes, runsRes, invitesRes] = await Promise.all([
-    db.from('organizations').select('id, org_code, name, ein, city, state, created_at').order('created_at', { ascending: false }),
-    db.from('match_results').select('id, composite_score, pipeline_stage'),
-    db.from('pipeline_runs').select('id, started_at, grants_discovered, grants_new, high_matches, duration_seconds').order('started_at', { ascending: false }).limit(8),
-    db.from('invite_codes').select('id, code, label, uses_count, max_uses, active').order('created_at', { ascending: false }),
-  ]);
+    const [orgsRes, matchesRes, runsRes, invitesRes] = await Promise.all([
+      db.from('organizations').select('id, org_code, name, ein, city, state, created_at').order('created_at', { ascending: false }),
+      db.from('match_results').select('id, composite_score, pipeline_stage'),
+      db.from('pipeline_runs').select('id, started_at, grants_discovered, grants_new, high_matches, duration_seconds').order('started_at', { ascending: false }).limit(8),
+      db.from('invite_codes').select('id, code, label, uses_count, max_uses, active').order('created_at', { ascending: false }),
+    ]);
 
-  const orgs    = orgsRes.data ?? [];
-  const matches = matchesRes.data ?? [];
-  const runs    = runsRes.data ?? [];
-  const invites = invitesRes.data ?? [];
+    const orgs    = orgsRes.data ?? [];
+    const matches = matchesRes.data ?? [];
+    const runs    = runsRes.data ?? [];
+    const invites = invitesRes.data ?? [];
 
-  const activeMatches = matches.filter(m =>
-    ['reviewing','preparing','drafting','submitted'].includes(m.pipeline_stage)
-  );
-  const awarded = matches.filter(m => m.pipeline_stage === 'awarded');
+    const activeMatches = matches.filter(m =>
+      ['reviewing','preparing','drafting','submitted'].includes(m.pipeline_stage)
+    );
+    const awarded = matches.filter(m => m.pipeline_stage === 'awarded');
 
-  return { orgs, matches, runs, invites, activeMatches, awarded };
+    return { orgs, matches, runs, invites, activeMatches, awarded };
+  } catch (err) {
+    console.error('[admin] getAdminStats error:', err);
+    return { orgs: [], matches: [], runs: [], invites: [], activeMatches: [], awarded: [] };
+  }
 }
 
 const CARD: React.CSSProperties = {
