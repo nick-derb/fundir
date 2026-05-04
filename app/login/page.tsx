@@ -93,8 +93,12 @@ export default function LoginPage() {
         </div>
 
         <p className="text-center text-[13px] text-[#64748b] mt-6">
-          Don&apos;t have access?{' '}
-          <Link href="/signup" className="text-[#0d9488] font-medium hover:underline">Request access →</Link>
+          New organization?{' '}
+          <Link href="/onboarding" className="text-[#0d9488] font-medium hover:underline">Get started →</Link>
+        </p>
+        <p className="text-center text-[13px] text-[#64748b] mt-1">
+          Joining your team?{' '}
+          <Link href="/signup" className="text-[#0d9488] font-medium hover:underline">Sign up →</Link>
         </p>
         <Link href="/" className="block text-center text-[12px] text-[#94a3b8] hover:text-[#475569] mt-2 transition-colors">
           ← Back to home

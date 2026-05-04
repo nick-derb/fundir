@@ -82,8 +82,8 @@ export default function SignupPage() {
         </div>
 
         <div className="bg-white rounded-xl border border-[#e2e8f0] shadow-card p-8">
-          <h1 className="text-[20px] font-bold text-[#0f172a] mb-1">Request access</h1>
-          <p className="text-[13px] text-[#64748b] mb-6">Sign up with your organization code</p>
+          <h1 className="text-[20px] font-bold text-[#0f172a] mb-1">Join your team</h1>
+          <p className="text-[13px] text-[#64748b] mb-6">Enter your organization&apos;s code to join an existing Fundir account</p>
 
           <form onSubmit={handleSignup} className="space-y-4">
             <div>
@@ -157,6 +157,10 @@ export default function SignupPage() {
         <p className="text-center text-[13px] text-[#64748b] mt-6">
           Already have access?{' '}
           <Link href="/login" className="text-[#0d9488] font-medium hover:underline">Sign in</Link>
+        </p>
+        <p className="text-center text-[13px] text-[#64748b] mt-1">
+          Registering a new organization?{' '}
+          <Link href="/onboarding" className="text-[#0d9488] font-medium hover:underline">Start here →</Link>
         </p>
         <Link href="/" className="block text-center text-[12px] text-[#94a3b8] hover:text-[#475569] mt-2 transition-colors">
           ← Back to home
