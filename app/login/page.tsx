@@ -95,33 +95,6 @@ export default function LoginPage() {
           <h1 className="text-[20px] font-bold text-[#0f172a] mb-1">Sign in</h1>
           <p className="text-[13px] text-[#64748b] mb-6">Access your grant intelligence dashboard</p>
 
-          {/* OAuth buttons */}
-          <div className="flex flex-col gap-2 mb-5">
-            {PROVIDERS.map(({ id, label, icon }) => (
-              <button
-                key={id}
-                onClick={() => handleOAuth(id)}
-                disabled={!!oauthLoading || loading}
-                className="w-full flex items-center justify-center gap-3 px-4 py-2.5 border border-[#e2e8f0] rounded-[8px] text-[14px] font-medium text-[#0f172a] bg-white hover:bg-[#f8fafc] hover:border-[#cbd5e1] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {oauthLoading === id ? (
-                  <svg className="animate-spin w-4 h-4 text-[#64748b]" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-                  </svg>
-                ) : icon}
-                {label}
-              </button>
-            ))}
-          </div>
-
-          {/* Divider */}
-          <div className="flex items-center gap-3 mb-5">
-            <div className="flex-1 h-px bg-[#e2e8f0]" />
-            <span className="text-[12px] text-[#94a3b8] font-medium">or</span>
-            <div className="flex-1 h-px bg-[#e2e8f0]" />
-          </div>
-
           {/* Email/password form */}
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
@@ -174,6 +147,33 @@ export default function LoginPage() {
                 : <><span>Sign in</span><ArrowRight className="w-4 h-4" /></>}
             </button>
           </form>
+
+          {/* Divider */}
+          <div className="flex items-center gap-3 mt-5">
+            <div className="flex-1 h-px bg-[#e2e8f0]" />
+            <span className="text-[12px] text-[#94a3b8] font-medium">or</span>
+            <div className="flex-1 h-px bg-[#e2e8f0]" />
+          </div>
+
+          {/* OAuth buttons */}
+          <div className="flex flex-col gap-2 mt-4">
+            {PROVIDERS.map(({ id, label, icon }) => (
+              <button
+                key={id}
+                onClick={() => handleOAuth(id)}
+                disabled={!!oauthLoading || loading}
+                className="w-full flex items-center justify-center gap-3 px-4 py-2.5 border border-[#e2e8f0] rounded-[8px] text-[14px] font-medium text-[#0f172a] bg-white hover:bg-[#f8fafc] hover:border-[#cbd5e1] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {oauthLoading === id ? (
+                  <svg className="animate-spin w-4 h-4 text-[#64748b]" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                  </svg>
+                ) : icon}
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
 
         <p className="text-center text-[13px] text-[#64748b] mt-6">
