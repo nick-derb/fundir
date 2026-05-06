@@ -81,7 +81,7 @@ export async function getAuthContext(): Promise<AuthContext | null> {
 
   if (!membership) return null;
 
-  const org = membership.organizations as { id: string; name: string; org_code: string };
+  const org = membership.organizations as unknown as { id: string; name: string; org_code: string };
 
   return {
     userId: user.id,
