@@ -64,7 +64,7 @@ export default function LandingPage() {
 
         {/* CTA */}
         <Link
-          href="/signup"
+          href="/onboarding"
           className="px-5 py-2 border border-white text-white text-[13px] font-semibold hover:bg-white hover:text-[#0a0a0a] transition-all duration-200"
         >
           Get Started
@@ -159,7 +159,7 @@ export default function LandingPage() {
           </p>
           <div className="flex items-center gap-4">
             <Link
-              href="/signup"
+              href="/onboarding"
               className="flex items-center gap-2.5 px-7 py-3.5 bg-white text-[#0a0a0a] font-bold text-[14px] hover:bg-white/90 transition-colors"
             >
               Get Started <ArrowRight className="w-4 h-4" />
@@ -215,7 +215,7 @@ export default function LandingPage() {
                 {p.tab}
               </div>
             ))}
-            <Link href="/signup" className="ml-auto px-6 py-4 text-[13px] font-semibold text-[#94a3b8] hover:text-[#475569] whitespace-nowrap">
+            <Link href="/onboarding" className="ml-auto px-6 py-4 text-[13px] font-semibold text-[#94a3b8] hover:text-[#475569] whitespace-nowrap">
               SEE ALL →
             </Link>
           </div>
@@ -228,7 +228,7 @@ export default function LandingPage() {
               <p className="text-[10px] font-bold text-[#0d9488] tracking-widest mb-4 uppercase">{products[0].label}</p>
               <h3 className="text-[36px] font-bold text-white leading-tight mb-6">{products[0].heading}</h3>
               <p className="text-[16px] text-white/50 leading-relaxed mb-8">{products[0].body}</p>
-              <Link href="/signup" className="inline-flex items-center gap-2 text-[13px] font-semibold text-white border-b border-white/30 pb-0.5 hover:border-white transition-colors">
+              <Link href="/onboarding" className="inline-flex items-center gap-2 text-[13px] font-semibold text-white border-b border-white/30 pb-0.5 hover:border-white transition-colors">
                 Explore Grant Discovery <ArrowRight className="w-3.5 h-3.5" />
               </Link>
             </div>
@@ -379,7 +379,7 @@ export default function LandingPage() {
                   <div className="p-6 bg-white">
                     <h3 className="font-bold text-[16px] text-[#0f172a] mb-2">{col.heading}</h3>
                     <p className="text-[13px] text-[#64748b] leading-relaxed mb-4">{col.desc}</p>
-                    <Link href="/signup" className="flex items-center gap-1 text-[13px] font-semibold text-[#0d9488] hover:underline">
+                    <Link href="/onboarding" className="flex items-center gap-1 text-[13px] font-semibold text-[#0d9488] hover:underline">
                       Learn more <ChevronRight className="w-3.5 h-3.5" />
                     </Link>
                   </div>
@@ -439,7 +439,7 @@ export default function LandingPage() {
               'Faith-Based', 'Workforce', 'Mental Health', 'Food Security',
               'Civil Rights', 'Science & Tech', 'International', 'Philanthropy',
             ].map(area => (
-              <Link key={area} href="/signup"
+              <Link key={area} href="/onboarding"
                 className="px-4 py-1.5 border border-[#e2e8f0] text-[13px] text-[#475569] hover:border-[#0d9488] hover:text-[#0d9488] hover:bg-[#f0fdfa] transition-all">
                 {area}
               </Link>
@@ -477,11 +477,10 @@ export default function LandingPage() {
             Find your next grant today.
           </h2>
           <p className="text-[16px] text-white/40 mb-10 leading-relaxed">
-            Sign up with your organization code.{' '}
-            CYC members use <code className="font-mono bg-white/10 px-2 py-0.5 text-[#2dd4bf]">CYC2025</code>.
+            Invite-only access for nonprofits. Request your invite to get started.
           </p>
           <Link
-            href="/signup"
+            href="/onboarding"
             className="inline-flex items-center gap-3 px-8 py-4 bg-white text-[#0a0a0a] font-bold text-[14px] hover:bg-white/90 transition-all"
           >
             Get started free <ArrowRight className="w-4 h-4" />
