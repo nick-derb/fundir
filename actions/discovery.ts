@@ -91,7 +91,7 @@ const TARGETED_SEARCHES: Array<{ name: string; params: SearchParams }> = [
   { name: 'Nonprofit Capacity',    params: { keyword: 'nonprofit capacity building community organization grant', rows: 15 } },
 ];
 
-export async function runDiscovery(params: SearchParams): Promise<{
+export async function runDiscovery(params: SearchParams, orgId?: string): Promise<{
   discovered: number;
   newGrants: number;
   highMatches: number;
@@ -270,6 +270,7 @@ export async function runDiscovery(params: SearchParams): Promise<{
 
           await supabase.from('match_results').upsert({
             grant_id:            insertedGrant.id,
+            org_id:              orgId ?? null,
             composite_score:     scoreBreakdown.composite,
             semantic_similarity: scoreBreakdown.semantic,
             eligibility_score:   scoreBreakdown.eligibility,
@@ -294,6 +295,7 @@ export async function runDiscovery(params: SearchParams): Promise<{
     // Log pipeline run
     await supabase.from('pipeline_runs').insert({
       run_id:           `run-${Date.now()}`,
+      org_id:            orgId ?? null,
       started_at:       new Date().toISOString(),
       completed_at:     new Date().toISOString(),
       grants_discovered: discovered,

@@ -1,28 +1,32 @@
 export const dynamic = 'force-dynamic';
 
 import { createServerClient } from '@/lib/supabase';
+import { getAuthContext } from '@/lib/auth-context';
 import { AppShell } from '@/components/app-shell';
 import { DiscoveryControls } from '@/components/discovery-controls';
 import { GrantTable } from '@/components/grant-table';
 import { MatchResult } from '@/types';
+import { redirect } from 'next/navigation';
 import { Search, Target, Landmark, ChevronRight, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 
-async function getRecentGrants() {
+async function getRecentGrants(orgId: string) {
   const supabase = createServerClient();
   const { data } = await supabase
     .from('match_results')
     .select('*, grant:grant_opportunities(*)')
+    .eq('org_id', orgId)
     .order('matched_at', { ascending: false })
     .limit(50);
   return (data || []) as MatchResult[];
 }
 
-async function getPipelineStats() {
+async function getPipelineStats(orgId: string) {
   const supabase = createServerClient();
   const { data } = await supabase
     .from('pipeline_runs')
     .select('*')
+    .eq('org_id', orgId)
     .order('started_at', { ascending: false })
     .limit(1)
     .single();
@@ -30,16 +34,25 @@ async function getPipelineStats() {
 }
 
 export default async function DiscoverPage() {
+  const ctx = await getAuthContext();
+  if (!ctx) redirect('/login');
+
   const [recentMatches, lastRun] = await Promise.all([
-    getRecentGrants(),
-    getPipelineStats(),
+    getRecentGrants(ctx.orgId),
+    getPipelineStats(ctx.orgId),
   ]);
 
   const highCount = recentMatches.filter(m => m.composite_score >= 70).length;
   const medCount  = recentMatches.filter(m => m.composite_score >= 40 && m.composite_score < 70).length;
 
   return (
-    <AppShell>
+    <AppShell
+      orgName={ctx.orgName}
+      userEmail={ctx.email}
+      isAdmin={ctx.isAdmin}
+      availableOrgs={ctx.availableOrgs}
+      currentOrgCode={ctx.orgCode}
+    >
       <div className="px-8 py-6 max-w-7xl mx-auto">
 
         {/* Page header */}
@@ -65,7 +78,7 @@ export default async function DiscoverPage() {
 
           {/* Controls panel */}
           <div className="lg:col-span-1 space-y-4">
-            <DiscoveryControls />
+            <DiscoveryControls orgId={ctx.orgId} />
 
             {/* Last run stats */}
             {lastRun && (

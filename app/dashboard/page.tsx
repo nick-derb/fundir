@@ -1,21 +1,24 @@
 export const dynamic = 'force-dynamic';
 
 import { createServerClient } from '@/lib/supabase';
+import { getAuthContext } from '@/lib/auth-context';
 import { AppShell } from '@/components/app-shell';
 import { GrantTable } from '@/components/grant-table';
 import { MatchResult } from '@/types';
+import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import {
   Target, AlertTriangle, ArrowUpRight, DollarSign,
   ChevronRight, Activity, Flame, Sparkles,
 } from 'lucide-react';
 
-async function getDashboardData() {
+async function getDashboardData(orgId: string, orgCode: string) {
   const supabase = createServerClient();
   const [matchesRes, opportunitiesRes, orgRes] = await Promise.all([
     supabase
       .from('match_results')
       .select('*, grant:grant_opportunities(*)')
+      .eq('org_id', orgId)
       .order('composite_score', { ascending: false })
       .limit(100),
     supabase
@@ -25,7 +28,7 @@ async function getDashboardData() {
     supabase
       .from('organizations')
       .select('name, ein, financial_data, financial_year, financial_fetched_at')
-      .eq('org_code', 'CYC2025')
+      .eq('org_code', orgCode)
       .single(),
   ]);
 
@@ -110,7 +113,10 @@ function DaysChip({ days }: { days: number }) {
 }
 
 export default async function DashboardPage() {
-  const data = await getDashboardData();
+  const ctx = await getAuthContext();
+  if (!ctx) redirect('/login');
+
+  const data = await getDashboardData(ctx.orgId, ctx.orgCode);
 
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long', month: 'long', day: 'numeric',
@@ -129,7 +135,13 @@ export default async function DashboardPage() {
   ];
 
   return (
-    <AppShell>
+    <AppShell
+      orgName={ctx.orgName}
+      userEmail={ctx.email}
+      isAdmin={ctx.isAdmin}
+      availableOrgs={ctx.availableOrgs}
+      currentOrgCode={ctx.orgCode}
+    >
       <div className="px-8 py-6 max-w-7xl mx-auto space-y-5">
 
         {/* ── Page header ──────────────────────────────────────── */}
@@ -137,7 +149,7 @@ export default async function DashboardPage() {
           <div>
             <p className="text-[12px] text-[#9ca3af] mb-0.5">{today}</p>
             <h1 className="text-[22px] font-bold text-[#111827] leading-tight">
-              {data.org?.name ?? 'Dashboard'}
+              {data.org?.name ?? ctx.orgName}
             </h1>
             <p className="text-[13px] text-[#6b7280] mt-0.5">
               {data.totalTracked} grants tracked · {data.pipelineActive} in pipeline · {data.urgentGrants.length} urgent

@@ -1,17 +1,20 @@
 export const dynamic = 'force-dynamic';
 
 import { createServerClient } from '@/lib/supabase';
+import { getAuthContext } from '@/lib/auth-context';
 import { AppShell } from '@/components/app-shell';
 import { KanbanBoard } from '@/components/kanban-board';
 import { MatchResult, PipelineStage } from '@/types';
+import { redirect } from 'next/navigation';
 import { LayoutGrid, TrendingUp, Clock, DollarSign, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 
-async function getPipelineMatches() {
+async function getPipelineMatches(orgId: string) {
   const supabase = createServerClient();
   const { data } = await supabase
     .from('match_results')
     .select('*, grant:grant_opportunities(*)')
+    .eq('org_id', orgId)
     .order('composite_score', { ascending: false });
   return (data || []) as MatchResult[];
 }
@@ -19,7 +22,10 @@ async function getPipelineMatches() {
 const STAGE_ORDER: PipelineStage[] = ['discovered', 'reviewing', 'preparing', 'drafting', 'submitted'];
 
 export default async function PipelinePage() {
-  const matches = await getPipelineMatches();
+  const ctx = await getAuthContext();
+  if (!ctx) redirect('/login');
+
+  const matches = await getPipelineMatches(ctx.orgId);
 
   const stageCounts = STAGE_ORDER.reduce((acc, s) => {
     acc[s] = matches.filter(m => m.pipeline_stage === s).length;
@@ -41,7 +47,13 @@ export default async function PipelinePage() {
   }).length;
 
   return (
-    <AppShell>
+    <AppShell
+      orgName={ctx.orgName}
+      userEmail={ctx.email}
+      isAdmin={ctx.isAdmin}
+      availableOrgs={ctx.availableOrgs}
+      currentOrgCode={ctx.orgCode}
+    >
       {/* ── Header ──────────────────────────────────────────────── */}
       <div className="border-b border-[#e2e8f0] bg-white px-8 py-5">
         <div className="max-w-full flex items-start justify-between gap-4">

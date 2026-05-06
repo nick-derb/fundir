@@ -37,6 +37,7 @@ export interface ExtractedFields {
 export interface MatchResult {
   id: string;
   grant_id: string;
+  org_id: string | null;
   composite_score: number;
   semantic_similarity: number;
   eligibility_score: number;

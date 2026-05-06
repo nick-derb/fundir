@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic';
 
 import type { ElementType } from 'react';
 import { createServerClient } from '@/lib/supabase';
+import { getAuthContext } from '@/lib/auth-context';
 import { AppShell } from '@/components/app-shell';
 import { ScoreBreakdownChart } from '@/components/score-breakdown';
 import { GrantTasks } from '@/components/grant-tasks';
@@ -12,7 +13,7 @@ import { getNote } from '@/actions/notes';
 import { getAllIntegrations } from '@/lib/oauth-tokens';
 import { ScoreBreakdown } from '@/types';
 import { formatDate, getDaysUntil, formatCurrency } from '@/lib/utils';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
 import {
   ArrowLeft, DollarSign, Building2, Tag, AlertCircle,
@@ -24,12 +25,13 @@ import type { EligibilitySignal, SignalStatus } from '@/lib/990-screener';
 
 // ── Data fetching ─────────────────────────────────────────────────────────────
 
-async function getGrantDetail(matchId: string) {
+async function getGrantDetail(matchId: string, orgId: string) {
   const supabase = createServerClient();
   const { data: match } = await supabase
     .from('match_results')
     .select('*, grant:grant_opportunities(*)')
     .eq('grant_id', matchId)
+    .eq('org_id', orgId)
     .single();
   return match;
 }
@@ -238,10 +240,11 @@ export default async function GrantDetailPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ tab?: string }>;
 }) {
-  const [{ id }, { tab: rawTab }] = await Promise.all([params, searchParams]);
+  const [{ id }, { tab: rawTab }, ctx] = await Promise.all([params, searchParams, getAuthContext()]);
+  if (!ctx) redirect('/login');
   const tab: TabKey = (TABS.map(t => t.key) as string[]).includes(rawTab ?? '') ? (rawTab as TabKey) : 'overview';
 
-  const match = await getGrantDetail(id);
+  const match = await getGrantDetail(id, ctx.orgId);
   if (!match) notFound();
 
   const grant  = match.grant;
@@ -261,7 +264,7 @@ export default async function GrantDetailPage({
   const [tasks, note, integrations] = await Promise.all([
     getTasks(match.grant_id),
     getNote(match.grant_id),
-    getAllIntegrations('CYC2025'),
+    getAllIntegrations(ctx.orgCode),
   ]);
 
   const googleConnected    = integrations.some(i => i.provider === 'google');
@@ -270,7 +273,7 @@ export default async function GrantDetailPage({
   const openTasks = tasks.filter(t => !t.completed).length;
 
   return (
-    <AppShell>
+    <AppShell orgName={ctx.orgName} userEmail={ctx.email} isAdmin={ctx.isAdmin} availableOrgs={ctx.availableOrgs} currentOrgCode={ctx.orgCode}>
       {/* ── Dark hero header ──────────────────────────────────── */}
       <div className="relative overflow-hidden border-b border-[#1e293b]"
         style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1a2236 60%, #0f172a 100%)' }}>
@@ -570,7 +573,7 @@ export default async function GrantDetailPage({
                   <GrantWorkspace
                     matchId={id}
                     grantTitle={grant?.title ?? 'Grant'}
-                    orgCode="CYC2025"
+                    orgCode={ctx.orgCode}
                     googleConnected={googleConnected}
                     microsoftConnected={microsoftConnected}
                   />

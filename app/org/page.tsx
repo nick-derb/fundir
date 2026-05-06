@@ -1,41 +1,35 @@
 export const dynamic = 'force-dynamic';
 
 import { createServerClient } from '@/lib/supabase';
+import { getAuthContext } from '@/lib/auth-context';
 import { AppShell } from '@/components/app-shell';
 import { OrgProfileEditor } from '@/components/org-profile-editor';
 import { getOrgProfile } from '@/actions/org-profile';
+import { redirect } from 'next/navigation';
 import { Building2 } from 'lucide-react';
 
-const ORG_CODE = 'CYC2025';
-
-async function getUserEmail(): Promise<string> {
-  const supabase = createServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  return user?.email ?? '';
-}
-
-async function getFy990(): Promise<number | null> {
+async function getFy990(orgCode: string): Promise<number | null> {
   const supabase = createServerClient();
   const { data } = await supabase
     .from('organizations')
     .select('financial_year')
-    .eq('org_code', ORG_CODE)
+    .eq('org_code', orgCode)
     .single();
   return data?.financial_year ?? null;
 }
 
 export default async function OrgProfilePage() {
-  const [profileData, userEmail, fy990] = await Promise.all([
-    getOrgProfile(ORG_CODE),
-    getUserEmail(),
-    getFy990(),
+  const ctx = await getAuthContext();
+  if (!ctx) redirect('/login');
+
+  const [profileData, fy990] = await Promise.all([
+    getOrgProfile(ctx.orgCode),
+    getFy990(ctx.orgCode),
   ]);
 
-  // getOrgProfile always returns a default profile merged with DB data
-  // If org not found, show a minimal fallback — should not happen in production
   if (!profileData) {
     return (
-      <AppShell>
+      <AppShell orgName={ctx.orgName} userEmail={ctx.email} isAdmin={ctx.isAdmin} availableOrgs={ctx.availableOrgs} currentOrgCode={ctx.orgCode}>
         <div className="px-8 py-6">
           <p className="text-[13px] text-red-600">Organization not found. Contact your administrator.</p>
         </div>
@@ -44,7 +38,7 @@ export default async function OrgProfilePage() {
   }
 
   return (
-    <AppShell userEmail={userEmail}>
+    <AppShell orgName={ctx.orgName} userEmail={ctx.email} isAdmin={ctx.isAdmin} availableOrgs={ctx.availableOrgs} currentOrgCode={ctx.orgCode}>
       <div className="px-8 py-6 max-w-5xl mx-auto">
         {/* Header */}
         <div className="flex items-start justify-between mb-6">
@@ -74,13 +68,13 @@ export default async function OrgProfilePage() {
 
         {/* Editor */}
         <OrgProfileEditor
-          orgCode={ORG_CODE}
+          orgCode={ctx.orgCode}
           orgName={profileData.name}
           ein={profileData.ein}
           profile={profileData.profile}
           updatedAt={profileData.updatedAt}
           updatedBy={profileData.updatedBy}
-          userEmail={userEmail}
+          userEmail={ctx.email}
           fy990={fy990}
         />
       </div>

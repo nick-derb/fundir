@@ -11,7 +11,7 @@ interface DiscoveryResult {
   errors: string[];
 }
 
-export function DiscoveryControls({ onComplete }: { onComplete?: () => void }) {
+export function DiscoveryControls({ onComplete, orgId }: { onComplete?: () => void; orgId?: string }) {
   const [isPending, startTransition] = useTransition();
   const [result, setResult] = useState<DiscoveryResult | null>(null);
   const [keyword, setKeyword] = useState('youth afterschool');
@@ -36,7 +36,7 @@ export function DiscoveryControls({ onComplete }: { onComplete?: () => void }) {
     setResult(null);
     startTransition(async () => {
       try {
-        const res = await runDiscovery({ keyword: keyword || 'youth afterschool', rows: 25 });
+        const res = await runDiscovery({ keyword: keyword || 'youth afterschool', rows: 25 }, orgId);
         setResult(res);
         setStatus(res.errors.length > 0 ? 'error' : 'done');
         onComplete?.();
