@@ -299,54 +299,58 @@ export default function OnboardingPage() {
         {/* Step progress */}
         <div style={{ flex: 1, position: 'relative' }}>
           {STEPS.map((s, i) => {
-            const isDone = step > s.num;
+            const isDone   = step > s.num;
             const isActive = step === s.num;
+            // Allow clicking back to any completed step (not forward, not step 4 success)
+            const clickable = isDone && step !== 4;
 
             return (
-              <div key={s.num} style={{ display: 'flex', gap: '16px', marginBottom: i < STEPS.length - 1 ? '0' : '0' }}>
+              <div key={s.num} style={{ display: 'flex', gap: '16px' }}>
                 {/* Connector column */}
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '28px' }}>
-                  {/* Circle */}
-                  <div style={{
-                    width: '28px', height: '28px',
-                    borderRadius: '50%',
-                    border: isDone
-                      ? '2px solid #0d9488'
-                      : isActive
+                  {/* Circle — clickable when step is completed */}
+                  <button
+                    onClick={() => clickable && (setStep(s.num), setError(''))}
+                    disabled={!clickable}
+                    title={clickable ? `Go back to ${s.title}` : undefined}
+                    style={{
+                      width: '28px', height: '28px',
+                      borderRadius: '50%',
+                      border: isDone
                         ? '2px solid #0d9488'
-                        : '2px solid rgba(255,255,255,0.15)',
-                    background: isDone
-                      ? '#0d9488'
-                      : isActive
-                        ? 'transparent'
-                        : 'transparent',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    flexShrink: 0,
-                    position: 'relative',
-                    ...(isActive ? {
-                      boxShadow: '0 0 0 4px rgba(13,148,136,0.2), 0 0 16px rgba(13,148,136,0.3)',
-                    } : {}),
-                    transition: 'all 0.3s ease',
-                  }}>
+                        : isActive
+                          ? '2px solid #0d9488'
+                          : '2px solid rgba(255,255,255,0.15)',
+                      background: isDone ? '#0d9488' : 'transparent',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      flexShrink: 0,
+                      padding: 0,
+                      cursor: clickable ? 'pointer' : 'default',
+                      ...(isActive ? {
+                        boxShadow: '0 0 0 4px rgba(13,148,136,0.2), 0 0 16px rgba(13,148,136,0.3)',
+                      } : {}),
+                      ...(clickable ? { opacity: 1 } : {}),
+                      transition: 'all 0.3s ease',
+                    }}
+                    onMouseEnter={e => { if (clickable) (e.currentTarget as HTMLElement).style.opacity = '0.75'; }}
+                    onMouseLeave={e => { if (clickable) (e.currentTarget as HTMLElement).style.opacity = '1'; }}
+                  >
                     {isDone ? (
                       <CheckCircle size={14} color="white" strokeWidth={2.5} />
                     ) : (
                       <span style={{
-                        fontSize: '11px',
-                        fontWeight: 700,
+                        fontSize: '11px', fontWeight: 700,
                         color: isActive ? '#0d9488' : 'rgba(255,255,255,0.3)',
                       }}>
                         {s.num}
                       </span>
                     )}
-                  </div>
+                  </button>
 
                   {/* Vertical line */}
                   {i < STEPS.length - 1 && (
                     <div style={{
-                      width: '2px',
-                      flex: 1,
-                      minHeight: '48px',
+                      width: '2px', flex: 1, minHeight: '48px',
                       background: isDone
                         ? 'linear-gradient(to bottom, #0d9488, rgba(13,148,136,0.3))'
                         : 'rgba(255,255,255,0.08)',
@@ -356,19 +360,24 @@ export default function OnboardingPage() {
                   )}
                 </div>
 
-                {/* Label */}
-                <div style={{ paddingTop: '4px', paddingBottom: i < STEPS.length - 1 ? '48px' : '0' }}>
+                {/* Label — also clickable when completed */}
+                <div
+                  onClick={() => clickable && (setStep(s.num), setError(''))}
+                  style={{
+                    paddingTop: '4px',
+                    paddingBottom: i < STEPS.length - 1 ? '48px' : '0',
+                    cursor: clickable ? 'pointer' : 'default',
+                  }}
+                >
                   <p style={{
                     fontSize: '13px',
                     fontWeight: isActive ? 700 : 500,
-                    color: isDone
-                      ? '#0d9488'
-                      : isActive
-                        ? '#ffffff'
-                        : 'rgba(255,255,255,0.35)',
-                    margin: 0,
-                    lineHeight: 1.3,
+                    color: isDone ? '#0d9488' : isActive ? '#ffffff' : 'rgba(255,255,255,0.35)',
+                    margin: 0, lineHeight: 1.3,
                     transition: 'color 0.3s ease',
+                    textDecoration: clickable ? 'underline' : 'none',
+                    textDecorationColor: 'rgba(13,148,136,0.4)',
+                    textUnderlineOffset: '3px',
                   }}>
                     {s.title}
                   </p>
