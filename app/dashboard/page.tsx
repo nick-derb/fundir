@@ -4,6 +4,7 @@ import { createServerClient } from '@/lib/supabase';
 import { getAuthContext } from '@/lib/auth-context';
 import { AppShell } from '@/components/app-shell';
 import { GrantTable } from '@/components/grant-table';
+import { OrgLogo } from '@/components/org-logo';
 import { MatchResult } from '@/types';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
@@ -12,6 +13,28 @@ import {
   ChevronRight, Activity, Flame, Sparkles,
 } from 'lucide-react';
 
+// ── Logo auto-fetch via ProPublica EIN → website → Clearbit ──────────────────
+async function getOrgLogoUrl(ein?: string | null): Promise<string | null> {
+  if (!ein) return null;
+  try {
+    const einClean = ein.replace(/[-\s]/g, '');
+    const res = await fetch(
+      `https://projects.propublica.org/nonprofits/api/v2/organizations/${einClean}.json`,
+      { next: { revalidate: 604800 }, signal: AbortSignal.timeout(2500) },
+    );
+    if (!res.ok) return null;
+    const json = await res.json();
+    const website: string | undefined = json.organization?.website;
+    if (!website) return null;
+    const href = website.startsWith('http') ? website : `https://${website}`;
+    const domain = new URL(href).hostname.replace(/^www\./, '');
+    return `https://logo.clearbit.com/${domain}`;
+  } catch {
+    return null;
+  }
+}
+
+// ── Data fetching ─────────────────────────────────────────────────────────────
 async function getDashboardData(orgId: string, orgCode: string) {
   const supabase = createServerClient();
   const [matchesRes, opportunitiesRes, orgRes] = await Promise.all([
@@ -57,6 +80,8 @@ async function getDashboardData(orgId: string, orgCode: string) {
     ['reviewing', 'preparing', 'drafting'].includes(m.pipeline_stage)
   ).length;
 
+  const logoUrl = await getOrgLogoUrl(org?.ein);
+
   return {
     matches,
     totalTracked:      matches.length,
@@ -71,6 +96,7 @@ async function getDashboardData(orgId: string, orgCode: string) {
     pipelineActive,
     topGrants: matches.slice(0, 5),
     org,
+    logoUrl,
   };
 }
 
@@ -87,7 +113,7 @@ function ScoreArc({ score }: { score: number }) {
   return (
     <div className="relative flex-shrink-0 w-8 h-8">
       <svg width="32" height="32" viewBox="0 0 32 32" className="rotate-[-90deg]">
-        <circle cx={cx} cy={cy} r={r} fill="none" stroke="#f1f5f9" strokeWidth="3" />
+        <circle cx={cx} cy={cy} r={r} fill="none" stroke="var(--score-track)" strokeWidth="3" />
         <circle cx={cx} cy={cy} r={r} fill="none" stroke={color} strokeWidth="3"
           strokeDasharray={`${dash} ${circumference}`} strokeLinecap="round" />
       </svg>
@@ -137,6 +163,7 @@ export default async function DashboardPage() {
   return (
     <AppShell
       orgName={ctx.orgName}
+      orgId={ctx.orgId}
       userEmail={ctx.email}
       isAdmin={ctx.isAdmin}
       availableOrgs={ctx.availableOrgs}
@@ -145,25 +172,34 @@ export default async function DashboardPage() {
       <div className="px-8 py-6 max-w-7xl mx-auto space-y-5">
 
         {/* ── Page header ──────────────────────────────────────── */}
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-[12px] text-[#9ca3af] mb-0.5">{today}</p>
-            <h1 className="text-[22px] font-bold text-[#111827] leading-tight">
-              {data.org?.name ?? ctx.orgName}
-            </h1>
-            <p className="text-[13px] text-[#6b7280] mt-0.5">
-              {data.totalTracked} grants tracked · {data.pipelineActive} in pipeline · {data.urgentGrants.length} urgent
-            </p>
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            {/* Org logo — auto-fetched from ProPublica EIN → Clearbit */}
+            {data.logoUrl && <OrgLogo src={data.logoUrl} alt={ctx.orgName} />}
+            <div>
+              <p className="text-[12px] mb-0.5" style={{ color: 'var(--text-tertiary)' }}>{today}</p>
+              <h1 className="text-[22px] font-bold leading-tight" style={{ color: 'var(--text-primary)' }}>
+                {data.org?.name ?? ctx.orgName}
+              </h1>
+              <p className="text-[13px] mt-0.5" style={{ color: 'var(--text-secondary)' }}>
+                {data.totalTracked} grants tracked · {data.pipelineActive} in pipeline · {data.urgentGrants.length} urgent
+              </p>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-shrink-0">
             <Link href="/discover"
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-[7px] text-[13px] font-semibold text-white transition-all"
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-[7px] text-[13px] font-semibold text-white transition-all hover:opacity-90"
               style={{ background: 'linear-gradient(135deg, #0d9488, #0891b2)' }}>
               <Sparkles className="w-3.5 h-3.5" />
               Run Discovery
             </Link>
             <Link href="/pipeline"
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-[7px] text-[13px] font-semibold text-[#374151] bg-white border border-[#e2e8f0] hover:bg-[#f9fafb] transition-all">
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-[7px] text-[13px] font-semibold border transition-all hover:opacity-80"
+              style={{
+                background:   'var(--sec-btn-bg)',
+                borderColor:  'var(--sec-btn-border)',
+                color:        'var(--sec-btn-text)',
+              }}>
               Open Tracker
             </Link>
           </div>
@@ -201,16 +237,20 @@ export default async function DashboardPage() {
               color: data.urgentGrants.length > 0 ? '#dc2626' : '#16a34a',
             },
           ].map(({ label, value, sub, icon: Icon, color }) => (
-            <div key={label} className="bg-white rounded-[10px] border border-[#e8ecf0] p-4">
+            <div key={label}
+              className="rounded-[10px] border p-4"
+              style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)' }}>
               <div className="flex items-center justify-between mb-3">
-                <span className="text-[11px] font-semibold text-[#6b7280] uppercase tracking-wide">{label}</span>
+                <span className="text-[11px] font-semibold uppercase tracking-wide"
+                  style={{ color: 'var(--text-secondary)' }}>{label}</span>
                 <div className="w-7 h-7 rounded-[6px] flex items-center justify-center"
-                  style={{ background: color + '15' }}>
+                  style={{ background: color + '20' }}>
                   <Icon className="w-3.5 h-3.5" style={{ color }} />
                 </div>
               </div>
-              <div className="text-[24px] font-bold text-[#111827] leading-none mb-1">{value}</div>
-              <p className="text-[11px] text-[#9ca3af]">{sub}</p>
+              <div className="text-[24px] font-bold leading-none mb-1"
+                style={{ color: 'var(--text-primary)' }}>{value}</div>
+              <p className="text-[11px]" style={{ color: 'var(--text-tertiary)' }}>{sub}</p>
             </div>
           ))}
         </div>
@@ -219,19 +259,21 @@ export default async function DashboardPage() {
         <div className="grid grid-cols-3 gap-5">
 
           {/* Top opportunities (2/3) */}
-          <div className="col-span-2 bg-white rounded-[10px] border border-[#e8ecf0] overflow-hidden">
-            <div className="px-5 py-3.5 border-b border-[#f1f5f9] flex items-center justify-between">
+          <div className="col-span-2 rounded-[10px] border overflow-hidden"
+            style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)' }}>
+            <div className="px-5 py-3.5 border-b flex items-center justify-between"
+              style={{ borderColor: 'var(--row-divider)' }}>
               <div className="flex items-center gap-2">
                 <Sparkles className="w-3.5 h-3.5 text-[#0d9488]" />
-                <h2 className="text-[13px] font-bold text-[#111827]">Top Opportunities</h2>
-                <span className="text-[11px] text-[#9ca3af]">by match score</span>
+                <h2 className="text-[13px] font-bold" style={{ color: 'var(--text-primary)' }}>Top Opportunities</h2>
+                <span className="text-[11px]" style={{ color: 'var(--text-tertiary)' }}>by match score</span>
               </div>
               <Link href="/discover" className="text-[12px] text-[#0d9488] font-medium hover:underline flex items-center gap-1">
                 View all <ArrowUpRight className="w-3 h-3" />
               </Link>
             </div>
 
-            <div className="divide-y divide-[#f8fafc]">
+            <div className="theme-divide">
               {data.topGrants.map((match, i) => {
                 const award = match.grant?.extracted_fields?.award_ceiling || match.grant?.extracted_fields?.award_floor;
                 const days  = match.grant?.close_date
@@ -239,23 +281,32 @@ export default async function DashboardPage() {
                   : null;
                 return (
                   <Link key={match.id} href={`/grant/${match.grant_id}`}>
-                    <div className="flex items-center gap-3 px-5 py-3 hover:bg-[#fafbff] transition-colors group">
-                      <span className="text-[11px] font-bold text-[#d1d5db] w-4 flex-shrink-0">#{i + 1}</span>
+                    <div className="row-hover flex items-center gap-3 px-5 py-3 group">
+                      <span className="text-[11px] font-bold w-4 flex-shrink-0"
+                        style={{ color: 'var(--rank-color)' }}>#{i + 1}</span>
                       <ScoreArc score={match.composite_score} />
                       <div className="flex-1 min-w-0">
-                        <p className="text-[13px] font-semibold text-[#111827] truncate group-hover:text-[#0d9488] transition-colors">
+                        <p className="text-[13px] font-semibold truncate group-hover:text-[#0d9488] transition-colors"
+                          style={{ color: 'var(--text-primary)' }}>
                           {match.grant?.title}
                         </p>
-                        <p className="text-[11px] text-[#9ca3af] truncate">{match.grant?.agency_name}</p>
+                        <p className="text-[11px] truncate" style={{ color: 'var(--text-tertiary)' }}>
+                          {match.grant?.agency_name}
+                        </p>
                       </div>
                       <div className="flex items-center gap-2 flex-shrink-0">
                         {award && (
-                          <span className="text-[11px] font-semibold text-[#374151] bg-[#f9fafb] px-2 py-0.5 rounded border border-[#e8ecf0]">
+                          <span className="text-[11px] font-semibold px-2 py-0.5 rounded border"
+                            style={{
+                              background: 'var(--badge-bg)',
+                              color: 'var(--badge-text)',
+                              borderColor: 'var(--badge-border)',
+                            }}>
                             {formatCompact(award)}
                           </span>
                         )}
                         {days !== null && days >= 0 && days <= 30 && <DaysChip days={days} />}
-                        <ChevronRight className="w-3.5 h-3.5 text-[#d1d5db] group-hover:text-[#0d9488] transition-colors" />
+                        <ChevronRight className="w-3.5 h-3.5 text-[#0d9488] opacity-0 group-hover:opacity-100 transition-opacity" />
                       </div>
                     </div>
                   </Link>
@@ -265,8 +316,9 @@ export default async function DashboardPage() {
 
             {/* Pipeline distribution */}
             {data.totalTracked > 0 && (
-              <div className="px-5 py-4 border-t border-[#f8fafc]">
-                <p className="text-[10px] font-bold text-[#9ca3af] uppercase tracking-widest mb-2">Pipeline</p>
+              <div className="px-5 py-4 border-t" style={{ borderColor: 'var(--row-divider)' }}>
+                <p className="text-[10px] font-bold uppercase tracking-widest mb-2"
+                  style={{ color: 'var(--text-tertiary)' }}>Pipeline</p>
                 <div className="flex gap-0.5 h-1.5 rounded-full overflow-hidden mb-2">
                   {STAGES.map(({ stage, color }) => {
                     const count = data.matches.filter(m => m.pipeline_stage === stage).length;
@@ -282,7 +334,9 @@ export default async function DashboardPage() {
                     return count > 0 ? (
                       <div key={stage} className="flex items-center gap-1">
                         <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: color }} />
-                        <span className="text-[11px] text-[#6b7280]">{label} <strong className="text-[#111827]">{count}</strong></span>
+                        <span className="text-[11px]" style={{ color: 'var(--text-secondary)' }}>
+                          {label} <strong style={{ color: 'var(--text-primary)' }}>{count}</strong>
+                        </span>
                       </div>
                     ) : null;
                   })}
@@ -292,10 +346,13 @@ export default async function DashboardPage() {
           </div>
 
           {/* Urgent deadlines (1/3) */}
-          <div className="bg-white rounded-[10px] border border-[#e8ecf0] overflow-hidden flex flex-col">
-            <div className="px-4 py-3.5 border-b border-[#f1f5f9] flex items-center gap-2">
-              <Flame className={`w-3.5 h-3.5 ${data.urgentGrants.length > 0 ? 'text-red-500' : 'text-[#9ca3af]'}`} />
-              <h2 className="text-[13px] font-bold text-[#111827]">Urgent Deadlines</h2>
+          <div className="rounded-[10px] border overflow-hidden flex flex-col"
+            style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)' }}>
+            <div className="px-4 py-3.5 border-b flex items-center gap-2"
+              style={{ borderColor: 'var(--row-divider)' }}>
+              <Flame className={`w-3.5 h-3.5 ${data.urgentGrants.length > 0 ? 'text-red-500' : ''}`}
+                style={{ color: data.urgentGrants.length === 0 ? 'var(--text-tertiary)' : undefined }} />
+              <h2 className="text-[13px] font-bold" style={{ color: 'var(--text-primary)' }}>Urgent Deadlines</h2>
               {data.urgentGrants.length > 0 && (
                 <span className="ml-auto text-[10px] font-bold px-1.5 py-0.5 bg-red-50 text-red-600 rounded-full border border-red-100">
                   {data.urgentGrants.length}
@@ -303,11 +360,13 @@ export default async function DashboardPage() {
               )}
             </div>
 
-            <div className="flex-1 overflow-y-auto divide-y divide-[#f8fafc]">
+            <div className="flex-1 overflow-y-auto theme-divide">
               {data.urgentGrants.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full py-10 px-4 text-center">
-                  <p className="text-[13px] font-medium text-[#374151]">No urgent deadlines</p>
-                  <p className="text-[11px] text-[#9ca3af] mt-1">All grants have &gt; 14 days remaining</p>
+                  <p className="text-[13px] font-medium" style={{ color: 'var(--text-muted)' }}>No urgent deadlines</p>
+                  <p className="text-[11px] mt-1" style={{ color: 'var(--text-tertiary)' }}>
+                    All grants have &gt; 14 days remaining
+                  </p>
                 </div>
               ) : (
                 data.urgentGrants.map(match => {
@@ -316,14 +375,17 @@ export default async function DashboardPage() {
                   );
                   return (
                     <Link key={match.id} href={`/grant/${match.grant_id}`}>
-                      <div className="px-4 py-3 hover:bg-[#fef2f2] transition-colors group">
+                      <div className="row-urgent-hover px-4 py-3 group">
                         <div className="flex items-start justify-between gap-2 mb-1">
-                          <p className="text-[12px] font-semibold text-[#111827] line-clamp-2 group-hover:text-red-600 transition-colors leading-snug">
+                          <p className="text-[12px] font-semibold line-clamp-2 group-hover:text-red-500 transition-colors leading-snug"
+                            style={{ color: 'var(--text-primary)' }}>
                             {match.grant?.title}
                           </p>
                           <DaysChip days={days} />
                         </div>
-                        <p className="text-[11px] text-[#9ca3af] truncate">{match.grant?.agency_name}</p>
+                        <p className="text-[11px] truncate" style={{ color: 'var(--text-tertiary)' }}>
+                          {match.grant?.agency_name}
+                        </p>
                       </div>
                     </Link>
                   );
@@ -331,7 +393,7 @@ export default async function DashboardPage() {
               )}
             </div>
 
-            <div className="px-4 py-3 border-t border-[#f1f5f9]">
+            <div className="px-4 py-3 border-t" style={{ borderColor: 'var(--row-divider)' }}>
               <Link href="/discover" className="flex items-center justify-center gap-1 text-[12px] font-semibold text-[#0d9488] hover:underline">
                 View all deadlines <ArrowUpRight className="w-3 h-3" />
               </Link>
@@ -343,8 +405,10 @@ export default async function DashboardPage() {
         <div>
           <div className="flex items-center justify-between mb-3">
             <div>
-              <h2 className="text-[15px] font-bold text-[#111827]">All Grant Matches</h2>
-              <p className="text-[12px] text-[#6b7280] mt-0.5">{data.totalTracked} opportunities matched to your profile</p>
+              <h2 className="text-[15px] font-bold" style={{ color: 'var(--text-primary)' }}>All Grant Matches</h2>
+              <p className="text-[12px] mt-0.5" style={{ color: 'var(--text-secondary)' }}>
+                {data.totalTracked} opportunities matched to your profile
+              </p>
             </div>
             <Link href="/pipeline" className="flex items-center gap-1.5 text-[13px] text-[#0d9488] hover:underline font-semibold">
               Open pipeline <ArrowUpRight className="w-3.5 h-3.5" />
@@ -352,9 +416,12 @@ export default async function DashboardPage() {
           </div>
 
           {data.matches.length === 0 ? (
-            <div className="bg-white rounded-[10px] border border-dashed border-[#e2e8f0] p-14 text-center">
-              <AlertTriangle className="w-8 h-8 text-[#d1d5db] mx-auto mb-3" />
-              <p className="text-[14px] font-medium text-[#6b7280] mb-4">No grant matches yet.</p>
+            <div className="rounded-[10px] border border-dashed p-14 text-center"
+              style={{ borderColor: 'var(--empty-border)', background: 'var(--card-bg)' }}>
+              <AlertTriangle className="w-8 h-8 mx-auto mb-3" style={{ color: 'var(--rank-color)' }} />
+              <p className="text-[14px] font-medium mb-4" style={{ color: 'var(--text-secondary)' }}>
+                No grant matches yet.
+              </p>
               <Link
                 href="/discover"
                 className="inline-flex items-center gap-2 px-5 py-2.5 rounded-[8px] text-[13px] font-semibold text-white"

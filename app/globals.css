@@ -194,6 +194,31 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
   --dropdown-bg:      #ffffff;
   --dropdown-border:  #e2e8f0;
   --dropdown-hover:   #f8fafc;
+  /* Content cards */
+  --card-bg:          #ffffff;
+  --card-border:      #e8ecf0;
+  --card-border-strong: #e2e8f0;
+  --text-primary:     #111827;
+  --text-secondary:   #6b7280;
+  --text-tertiary:    #9ca3af;
+  --text-muted:       #374151;
+  --row-divider:      #f1f5f9;
+  --row-hover:        #fafbff;
+  --urgent-hover:     #fef2f2;
+  --badge-bg:         #f9fafb;
+  --badge-border:     #e8ecf0;
+  --badge-text:       #374151;
+  --score-track:      #f1f5f9;
+  --rank-color:       #d1d5db;
+  --empty-border:     #e2e8f0;
+  --sec-btn-bg:       #ffffff;
+  --sec-btn-border:   #e2e8f0;
+  --sec-btn-text:     #374151;
+  --sec-btn-hover:    #f9fafb;
+  /* Logo badge */
+  --logo-wrap-bg:     rgba(248,250,252,1);
+  --logo-wrap-border: #e8ecf0;
+  --logo-wrap-shadow: 0 1px 4px rgba(0,0,0,0.06);
   /* Financial pages */
   --fin-page-bg:      #f1f5f9;
   --fin-hero-bg:      linear-gradient(135deg, #e2e8f0 0%, #f0f4f8 60%, #f8fafc 100%);
@@ -222,6 +247,31 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
   --dropdown-bg:      #1e293b;
   --dropdown-border:  #334155;
   --dropdown-hover:   #0f172a;
+  /* Content cards */
+  --card-bg:          #0d1629;
+  --card-border:      #1e293b;
+  --card-border-strong: #243048;
+  --text-primary:     #e2e8f0;
+  --text-secondary:   #94a3b8;
+  --text-tertiary:    #4b6280;
+  --text-muted:       #cbd5e1;
+  --row-divider:      #080f1e;
+  --row-hover:        rgba(30,41,59,0.45);
+  --urgent-hover:     rgba(220,38,38,0.07);
+  --badge-bg:         #1a2740;
+  --badge-border:     #2d3f5e;
+  --badge-text:       #94a3b8;
+  --score-track:      #1e293b;
+  --rank-color:       #2d3f5e;
+  --empty-border:     #1e293b;
+  --sec-btn-bg:       #0d1629;
+  --sec-btn-border:   #1e293b;
+  --sec-btn-text:     #94a3b8;
+  --sec-btn-hover:    #1e293b;
+  /* Logo badge */
+  --logo-wrap-bg:     rgba(255,255,255,0.07);
+  --logo-wrap-border: rgba(255,255,255,0.1);
+  --logo-wrap-shadow: 0 1px 4px rgba(0,0,0,0.5);
   /* Financial pages */
   --fin-page-bg:      #070d1a;
   --fin-hero-bg:      linear-gradient(135deg, #0d1929 0%, #0a1120 60%, #070d1a 100%);
@@ -247,7 +297,79 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
 .shell-nav-active .shell-nav-icon,
 .shell-nav-active:hover .shell-nav-icon { color: var(--nav-active-text); }
 
-/* ── Light-mode overrides for dark financial pages ───── */
-[data-theme="light"] .text-white  { color: #0f172a !important; }
+/* ── Themed utility classes ──────────────────────────── */
+
+/* Row-level dividers (replaces divide-[#f8fafc] etc.) */
+.theme-divide > * + * {
+  border-top: 1px solid var(--row-divider);
+}
+/* Themed hover rows */
+.row-hover { transition: background 0.1s ease; }
+.row-hover:hover { background: var(--row-hover); }
+.row-urgent-hover { transition: background 0.1s ease; }
+.row-urgent-hover:hover { background: var(--urgent-hover); }
+/* Org logo badge */
+.org-logo-wrap {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: var(--logo-wrap-bg);
+  border: 1px solid var(--logo-wrap-border);
+  box-shadow: var(--logo-wrap-shadow);
+  transition: box-shadow 0.2s ease;
+}
+.org-logo-wrap img {
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+}
+[data-theme="dark"] .org-logo-wrap img {
+  filter: brightness(1.08) contrast(0.92);
+}
+
+/* ── Dark mode: override common hardcoded Tailwind light colors ── */
+/* Cards / surfaces */
+[data-theme="dark"] .bg-white                     { background-color: var(--card-bg)    !important; }
+[data-theme="dark"] .bg-\[\#f8fafc\]              { background-color: #080f1e           !important; }
+[data-theme="dark"] .bg-\[\#f9fafb\]              { background-color: var(--badge-bg)   !important; }
+[data-theme="dark"] .bg-\[\#fafbff\]              { background-color: var(--row-hover)  !important; }
+/* Borders */
+[data-theme="dark"] .border-\[\#e2e8f0\]          { border-color: var(--card-border)    !important; }
+[data-theme="dark"] .border-\[\#e8ecf0\]          { border-color: var(--card-border)    !important; }
+[data-theme="dark"] .border-\[\#f1f5f9\]          { border-color: var(--row-divider)    !important; }
+[data-theme="dark"] .border-\[\#f8fafc\]          { border-color: var(--row-divider)    !important; }
+[data-theme="dark"] .border-dashed.border-\[\#e2e8f0\] { border-color: var(--card-border) !important; }
+/* Text */
+[data-theme="dark"] .text-\[\#111827\]            { color: var(--text-primary)          !important; }
+[data-theme="dark"] .text-\[\#0f172a\]            { color: var(--text-primary)          !important; }
+[data-theme="dark"] .text-\[\#374151\]            { color: var(--text-muted)            !important; }
+[data-theme="dark"] .text-\[\#475569\]            { color: var(--text-secondary)        !important; }
+[data-theme="dark"] .text-\[\#6b7280\]            { color: var(--text-secondary)        !important; }
+[data-theme="dark"] .text-\[\#64748b\]            { color: var(--text-secondary)        !important; }
+[data-theme="dark"] .text-\[\#9ca3af\]            { color: var(--text-tertiary)         !important; }
+[data-theme="dark"] .text-\[\#94a3b8\]            { color: var(--text-tertiary)         !important; }
+[data-theme="dark"] .text-\[\#d1d5db\]            { color: var(--rank-color)            !important; }
+/* Dividers inside lists */
+[data-theme="dark"] .divide-\[\#f8fafc\] > * + * { border-color: var(--row-divider)    !important; }
+[data-theme="dark"] .divide-\[\#f1f5f9\] > * + * { border-color: var(--row-divider)    !important; }
+/* Hover rows */
+[data-theme="dark"] .hover\:bg-\[\#fafbff\]:hover { background-color: var(--row-hover) !important; }
+[data-theme="dark"] .hover\:bg-\[\#f9fafb\]:hover { background-color: var(--row-hover) !important; }
+[data-theme="dark"] .hover\:bg-\[\#fef2f2\]:hover { background-color: var(--urgent-hover) !important; }
+/* Secondary buttons */
+[data-theme="dark"] a.bg-white,
+[data-theme="dark"] button.bg-white {
+  background-color: var(--sec-btn-bg)     !important;
+  border-color:     var(--sec-btn-border) !important;
+  color:            var(--sec-btn-text)   !important;
+}
+
+/* ── Light-mode: fix white text on light surfaces ────── */
+/* Only override text-white when it's NOT inside a gradient/colored button or dark panel */
 [data-theme="light"] .text-slate-400 { color: #64748b !important; }
 [data-theme="light"] .text-slate-600 { color: #475569 !important; }
