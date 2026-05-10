@@ -8,8 +8,12 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className="dark">
-      <body className="bg-base text-[#e2e8f0] antialiased">
+    <html lang="en">
+      <head>
+        {/* Anti-flash: apply saved theme before first paint */}
+        <script dangerouslySetInnerHTML={{ __html: `(function(){try{var t=localStorage.getItem('fundir-theme')||'dark';document.documentElement.setAttribute('data-theme',t);}catch(e){}})();` }} />
+      </head>
+      <body className="antialiased" style={{ background: 'var(--page-bg)', color: 'var(--text)' }}>
         {children}
       </body>
     </html>

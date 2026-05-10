@@ -173,3 +173,81 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
   box-shadow: 0 0 28px rgba(13,148,136,0.4);
   transform: translateY(-1px);
 }
+
+/* ── Dashboard theme tokens ──────────────────────────── */
+:root,
+[data-theme="light"] {
+  --sidebar-bg:       #ffffff;
+  --sidebar-border:   #e8ecf0;
+  --header-bg:        #ffffff;
+  --nav-text:         #6b7280;
+  --nav-icon:         #9ca3af;
+  --nav-hover-bg:     #f9fafb;
+  --nav-hover-text:   #111827;
+  --nav-active-bg:    #f0fdfa;
+  --nav-active-text:  #0d9488;
+  --nav-divider:      #f1f5f9;
+  --page-bg:          #f8fafc;
+  --org-text:         #374151;
+  --brand-text:       #111827;
+  --faint-text:       #9ca3af;
+  --dropdown-bg:      #ffffff;
+  --dropdown-border:  #e2e8f0;
+  --dropdown-hover:   #f8fafc;
+  /* Financial pages */
+  --fin-page-bg:      #f1f5f9;
+  --fin-hero-bg:      linear-gradient(135deg, #e2e8f0 0%, #f0f4f8 60%, #f8fafc 100%);
+  --fin-nav-bg:       rgba(241,245,249,0.97);
+  --fin-border:       rgba(0,0,0,0.07);
+  --fin-heading:      #0f172a;
+  --fin-tab-active:   #0f172a;
+  --fin-tab-inactive: #64748b;
+}
+
+[data-theme="dark"] {
+  --sidebar-bg:       #0f172a;
+  --sidebar-border:   #1e293b;
+  --header-bg:        #0f172a;
+  --nav-text:         #94a3b8;
+  --nav-icon:         #64748b;
+  --nav-hover-bg:     #1e293b;
+  --nav-hover-text:   #e2e8f0;
+  --nav-active-bg:    rgba(13,148,136,0.15);
+  --nav-active-text:  #2dd4bf;
+  --nav-divider:      #1e293b;
+  --page-bg:          #020617;
+  --org-text:         #94a3b8;
+  --brand-text:       #e2e8f0;
+  --faint-text:       #475569;
+  --dropdown-bg:      #1e293b;
+  --dropdown-border:  #334155;
+  --dropdown-hover:   #0f172a;
+  /* Financial pages */
+  --fin-page-bg:      #070d1a;
+  --fin-hero-bg:      linear-gradient(135deg, #0d1929 0%, #0a1120 60%, #070d1a 100%);
+  --fin-nav-bg:       rgba(7,13,26,0.97);
+  --fin-border:       rgba(255,255,255,0.07);
+  --fin-heading:      #ffffff;
+  --fin-tab-active:   #ffffff;
+  --fin-tab-inactive: #64748b;
+}
+
+/* ── Shell nav utility classes ───────────────────────── */
+.shell-nav-item { color: var(--nav-text); }
+.shell-nav-item:hover {
+  background: var(--nav-hover-bg);
+  color: var(--nav-hover-text);
+}
+.shell-nav-active,
+.shell-nav-active:hover {
+  background: var(--nav-active-bg);
+  color: var(--nav-active-text);
+}
+.shell-nav-icon { color: var(--nav-icon); }
+.shell-nav-active .shell-nav-icon,
+.shell-nav-active:hover .shell-nav-icon { color: var(--nav-active-text); }
+
+/* ── Light-mode overrides for dark financial pages ───── */
+[data-theme="light"] .text-white  { color: #0f172a !important; }
+[data-theme="light"] .text-slate-400 { color: #64748b !important; }
+[data-theme="light"] .text-slate-600 { color: #475569 !important; }

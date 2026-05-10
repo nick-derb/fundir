@@ -13,6 +13,7 @@ import { getDaysUntil } from '@/lib/utils';
 import Link from 'next/link';
 import { DollarSign, Calendar } from 'lucide-react';
 import type { EligibilitySignal } from '@/lib/990-screener';
+import { logActivity } from '@/lib/team-activity';
 
 const COLUMNS: { id: PipelineStage; label: string; accent: string; bg: string; header: string }[] = [
   { id: 'discovered', label: 'Discovered', accent: '#64748b', bg: '#f8fafc', header: '#f1f5f9' },
@@ -174,6 +175,13 @@ export function KanbanBoard({ initialMatches }: { initialMatches: MatchResult[] 
       if (match && match.pipeline_stage !== targetCol.id) {
         setMatches(prev => prev.map(m => m.id === matchId ? { ...m, pipeline_stage: targetCol.id } : m));
         await updatePipelineStage(matchId, targetCol.id);
+        logActivity({
+          action: 'pipeline_move',
+          entityType: 'grant',
+          entityId: matchId,
+          entityTitle: match.grant?.title ?? undefined,
+          metadata: { from: match.pipeline_stage, to: targetCol.id },
+        });
       }
       return;
     }
@@ -183,6 +191,13 @@ export function KanbanBoard({ initialMatches }: { initialMatches: MatchResult[] 
       if (match && match.pipeline_stage !== overMatch.pipeline_stage) {
         setMatches(prev => prev.map(m => m.id === matchId ? { ...m, pipeline_stage: overMatch.pipeline_stage } : m));
         await updatePipelineStage(matchId, overMatch.pipeline_stage);
+        logActivity({
+          action: 'pipeline_move',
+          entityType: 'grant',
+          entityId: matchId,
+          entityTitle: match.grant?.title ?? undefined,
+          metadata: { from: match.pipeline_stage, to: overMatch.pipeline_stage },
+        });
       }
     }
   }

@@ -273,7 +273,7 @@ export default async function GrantDetailPage({
   const openTasks = tasks.filter(t => !t.completed).length;
 
   return (
-    <AppShell orgName={ctx.orgName} userEmail={ctx.email} isAdmin={ctx.isAdmin} availableOrgs={ctx.availableOrgs} currentOrgCode={ctx.orgCode}>
+    <AppShell orgName={ctx.orgName} orgId={ctx.orgId} userEmail={ctx.email} isAdmin={ctx.isAdmin} availableOrgs={ctx.availableOrgs} currentOrgCode={ctx.orgCode}>
       {/* ── Dark hero header ──────────────────────────────────── */}
       <div className="relative overflow-hidden border-b border-[#1e293b]"
         style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1a2236 60%, #0f172a 100%)' }}>

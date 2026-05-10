@@ -37,8 +37,12 @@ const PROVIDERS = [
 
 type ProviderId = typeof PROVIDERS[number]['id'];
 
+type Mode = 'login' | 'forgot' | 'sent';
+
 export default function LoginPage() {
+  const [mode, setMode]                 = useState<Mode>('login');
   const [email, setEmail]               = useState('');
+  const [resetEmail, setResetEmail]     = useState('');
   const [password, setPassword]         = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError]               = useState('');
@@ -57,6 +61,19 @@ export default function LoginPage() {
     router.refresh();
   }
 
+  async function handleForgotPassword(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    const supabase = getSupabaseClient();
+    const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
+      redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
+    });
+    setLoading(false);
+    if (error) { setError(error.message); return; }
+    setMode('sent');
+  }
+
   async function handleOAuth(provider: ProviderId) {
     setOauthLoading(provider);
     setError('');
@@ -72,7 +89,6 @@ export default function LoginPage() {
       setError(error.message);
       setOauthLoading(null);
     }
-    // On success the browser navigates away — no need to reset loading
   }
 
   const urlError = typeof window !== 'undefined'
@@ -92,101 +108,186 @@ export default function LoginPage() {
         </div>
 
         <div className="bg-white rounded-xl border border-[#e2e8f0] shadow-sm p-8">
-          <h1 className="text-[20px] font-bold text-[#0f172a] mb-1">Sign in</h1>
-          <p className="text-[13px] text-[#64748b] mb-6">Access your grant intelligence dashboard</p>
 
-          {/* Email/password form */}
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div>
-              <label className="block text-[12px] font-semibold text-[#475569] mb-1.5 uppercase tracking-wide">
-                Email address
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                required
-                placeholder="you@organization.org"
-                className="w-full px-3 py-2.5 border border-[#e2e8f0] rounded-[6px] text-[14px] text-[#0f172a] placeholder-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-[#0d9488]/20 focus:border-[#0d9488] transition-all"
-              />
-            </div>
-
-            <div>
-              <label className="block text-[12px] font-semibold text-[#475569] mb-1.5 uppercase tracking-wide">
-                Password
-              </label>
-              <div className="relative">
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  required
-                  placeholder="••••••••"
-                  className="w-full px-3 py-2.5 pr-10 border border-[#e2e8f0] rounded-[6px] text-[14px] text-[#0f172a] placeholder-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-[#0d9488]/20 focus:border-[#0d9488] transition-all"
-                />
-                <button type="button" onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94a3b8] hover:text-[#475569]">
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
+          {/* ── Forgot password: sent confirmation ── */}
+          {mode === 'sent' && (
+            <div className="text-center py-2">
+              <div className="w-12 h-12 rounded-full bg-teal-50 border border-teal-100 flex items-center justify-center mx-auto mb-4">
+                <ArrowRight className="w-5 h-5 text-[#0d9488]" />
               </div>
-            </div>
-
-            {(error || urlError) && (
-              <div className="px-3 py-2 bg-red-50 border border-red-200 rounded-[6px] text-[13px] text-red-600">
-                {error || (urlError === 'oauth_denied' ? 'Sign-in was cancelled.' : 'Sign-in failed. Please try again.')}
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={loading || !!oauthLoading}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#0d9488] text-white font-semibold rounded-[6px] text-[14px] hover:bg-[#0f766e] disabled:opacity-50 disabled:cursor-not-allowed transition-colors mt-2"
-            >
-              {loading
-                ? 'Signing in…'
-                : <><span>Sign in</span><ArrowRight className="w-4 h-4" /></>}
-            </button>
-          </form>
-
-          {/* Divider */}
-          <div className="flex items-center gap-3 mt-5">
-            <div className="flex-1 h-px bg-[#e2e8f0]" />
-            <span className="text-[12px] text-[#94a3b8] font-medium">or</span>
-            <div className="flex-1 h-px bg-[#e2e8f0]" />
-          </div>
-
-          {/* OAuth buttons */}
-          <div className="flex flex-col gap-2 mt-4">
-            {PROVIDERS.map(({ id, label, icon }) => (
+              <h2 className="text-[18px] font-bold text-[#0f172a] mb-2">Check your email</h2>
+              <p className="text-[13px] text-[#64748b] mb-1">
+                We sent a password reset link to
+              </p>
+              <p className="text-[13px] font-semibold text-[#0f172a] mb-6">{resetEmail}</p>
+              <p className="text-[12px] text-[#94a3b8] mb-6">
+                Click the link in the email to set a new password. Check your spam folder if you don&apos;t see it.
+              </p>
               <button
-                key={id}
-                onClick={() => handleOAuth(id)}
-                disabled={!!oauthLoading || loading}
-                className="w-full flex items-center justify-center gap-3 px-4 py-2.5 border border-[#e2e8f0] rounded-[8px] text-[14px] font-medium text-[#0f172a] bg-white hover:bg-[#f8fafc] hover:border-[#cbd5e1] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={() => { setMode('login'); setError(''); }}
+                className="text-[13px] text-[#0d9488] font-medium hover:underline"
               >
-                {oauthLoading === id ? (
-                  <svg className="animate-spin w-4 h-4 text-[#64748b]" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-                  </svg>
-                ) : icon}
-                {label}
+                ← Back to sign in
               </button>
-            ))}
-          </div>
+            </div>
+          )}
+
+          {/* ── Forgot password: email form ── */}
+          {mode === 'forgot' && (
+            <>
+              <button
+                onClick={() => { setMode('login'); setError(''); }}
+                className="text-[12px] text-[#94a3b8] hover:text-[#475569] transition-colors mb-4 flex items-center gap-1"
+              >
+                ← Back to sign in
+              </button>
+              <h1 className="text-[20px] font-bold text-[#0f172a] mb-1">Reset password</h1>
+              <p className="text-[13px] text-[#64748b] mb-6">
+                Enter your email and we&apos;ll send you a reset link.
+              </p>
+              <form onSubmit={handleForgotPassword} className="space-y-4">
+                <div>
+                  <label className="block text-[12px] font-semibold text-[#475569] mb-1.5 uppercase tracking-wide">
+                    Email address
+                  </label>
+                  <input
+                    type="email"
+                    value={resetEmail}
+                    onChange={e => setResetEmail(e.target.value)}
+                    required
+                    autoFocus
+                    placeholder="you@organization.org"
+                    className="w-full px-3 py-2.5 border border-[#e2e8f0] rounded-[6px] text-[14px] text-[#0f172a] placeholder-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-[#0d9488]/20 focus:border-[#0d9488] transition-all"
+                  />
+                </div>
+                {error && (
+                  <div className="px-3 py-2 bg-red-50 border border-red-200 rounded-[6px] text-[13px] text-red-600">
+                    {error}
+                  </div>
+                )}
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#0d9488] text-white font-semibold rounded-[6px] text-[14px] hover:bg-[#0f766e] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {loading ? 'Sending…' : <><span>Send reset link</span><ArrowRight className="w-4 h-4" /></>}
+                </button>
+              </form>
+            </>
+          )}
+
+          {/* ── Normal sign-in form ── */}
+          {mode === 'login' && (
+            <>
+              <h1 className="text-[20px] font-bold text-[#0f172a] mb-1">Sign in</h1>
+              <p className="text-[13px] text-[#64748b] mb-6">Access your grant intelligence dashboard</p>
+
+              <form onSubmit={handleLogin} className="space-y-4">
+                <div>
+                  <label className="block text-[12px] font-semibold text-[#475569] mb-1.5 uppercase tracking-wide">
+                    Email address
+                  </label>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    required
+                    placeholder="you@organization.org"
+                    className="w-full px-3 py-2.5 border border-[#e2e8f0] rounded-[6px] text-[14px] text-[#0f172a] placeholder-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-[#0d9488]/20 focus:border-[#0d9488] transition-all"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-[12px] font-semibold text-[#475569] uppercase tracking-wide">
+                      Password
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => { setResetEmail(email); setMode('forgot'); setError(''); }}
+                      className="text-[12px] text-[#0d9488] font-medium hover:underline"
+                    >
+                      Forgot password?
+                    </button>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={password}
+                      onChange={e => setPassword(e.target.value)}
+                      required
+                      placeholder="••••••••"
+                      className="w-full px-3 py-2.5 pr-10 border border-[#e2e8f0] rounded-[6px] text-[14px] text-[#0f172a] placeholder-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-[#0d9488]/20 focus:border-[#0d9488] transition-all"
+                    />
+                    <button type="button" onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94a3b8] hover:text-[#475569]">
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                {(error || urlError) && (
+                  <div className="px-3 py-2 bg-red-50 border border-red-200 rounded-[6px] text-[13px] text-red-600">
+                    {error || (urlError === 'oauth_denied' ? 'Sign-in was cancelled.' : 'Sign-in failed. Please try again.')}
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={loading || !!oauthLoading}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#0d9488] text-white font-semibold rounded-[6px] text-[14px] hover:bg-[#0f766e] disabled:opacity-50 disabled:cursor-not-allowed transition-colors mt-2"
+                >
+                  {loading
+                    ? 'Signing in…'
+                    : <><span>Sign in</span><ArrowRight className="w-4 h-4" /></>}
+                </button>
+              </form>
+
+              {/* Divider */}
+              <div className="flex items-center gap-3 mt-5">
+                <div className="flex-1 h-px bg-[#e2e8f0]" />
+                <span className="text-[12px] text-[#94a3b8] font-medium">or</span>
+                <div className="flex-1 h-px bg-[#e2e8f0]" />
+              </div>
+
+              {/* OAuth buttons */}
+              <div className="flex flex-col gap-2 mt-4">
+                {PROVIDERS.map(({ id, label, icon }) => (
+                  <button
+                    key={id}
+                    onClick={() => handleOAuth(id)}
+                    disabled={!!oauthLoading || loading}
+                    className="w-full flex items-center justify-center gap-3 px-4 py-2.5 border border-[#e2e8f0] rounded-[8px] text-[14px] font-medium text-[#0f172a] bg-white hover:bg-[#f8fafc] hover:border-[#cbd5e1] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {oauthLoading === id ? (
+                      <svg className="animate-spin w-4 h-4 text-[#64748b]" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                      </svg>
+                    ) : icon}
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
         </div>
 
-        <p className="text-center text-[13px] text-[#64748b] mt-6">
-          New organization?{' '}
-          <Link href="/onboarding" className="text-[#0d9488] font-medium hover:underline">Get started →</Link>
-        </p>
-        <p className="text-center text-[13px] text-[#64748b] mt-1">
-          Joining your team?{' '}
-          <Link href="/signup" className="text-[#0d9488] font-medium hover:underline">Sign up →</Link>
-        </p>
-        <Link href="/" className="block text-center text-[12px] text-[#94a3b8] hover:text-[#475569] mt-2 transition-colors">
-          ← Back to home
-        </Link>
+        {mode === 'login' && (
+          <>
+            <p className="text-center text-[13px] text-[#64748b] mt-6">
+              New organization?{' '}
+              <Link href="/onboarding" className="text-[#0d9488] font-medium hover:underline">Get started →</Link>
+            </p>
+            <p className="text-center text-[13px] text-[#64748b] mt-1">
+              Joining your team?{' '}
+              <Link href="/signup" className="text-[#0d9488] font-medium hover:underline">Sign up →</Link>
+            </p>
+            <Link href="/" className="block text-center text-[12px] text-[#94a3b8] hover:text-[#475569] mt-2 transition-colors">
+              ← Back to home
+            </Link>
+          </>
+        )}
       </div>
     </div>
   );

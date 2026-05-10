@@ -11,6 +11,7 @@ import {
   HelpCircle, Sparkles,
 } from 'lucide-react';
 import type { EligibilitySignal } from '@/lib/990-screener';
+import { logActivity } from '@/lib/team-activity';
 
 type SortKey = 'composite_score' | 'close_date' | 'award' | 'pipeline_stage';
 type SortDir = 'asc' | 'desc';
@@ -544,7 +545,16 @@ export function GrantTable({ matches, emptyMessage = 'No grants found.' }: Grant
                 <>
                   <tr
                     key={match.id}
-                    onClick={() => setExpandedId(expanded ? null : match.id)}
+                    onClick={() => {
+                      setExpandedId(expanded ? null : match.id);
+                      if (!expanded) logActivity({
+                        action: 'grant_view',
+                        entityType: 'grant',
+                        entityId: match.grant_id,
+                        entityTitle: match.grant?.title ?? undefined,
+                        metadata: { score: match.composite_score, agency: match.grant?.agency_name ?? '' },
+                      });
+                    }}
                     className={`border-b border-[#f1f5f9] last:border-0 cursor-pointer transition-colors group ${
                       expanded ? 'bg-[#fafbff]' : 'hover:bg-[#f8fafc]'
                     }`}
