@@ -5,7 +5,7 @@ import { getAuthContext } from '@/lib/auth-context';
 import { getScoredFoundations, FoundationProfile } from '@/lib/foundation-intelligence';
 import { redirect } from 'next/navigation';
 import {
-  DollarSign, MapPin, ExternalLink,
+  MapPin, ExternalLink,
   Sparkles, Calendar, Info, Star,
   Globe, CheckCircle,
 } from 'lucide-react';
@@ -47,6 +47,35 @@ function DeadlineBadge({ pattern }: { pattern: string }) {
       <Calendar className="w-2.5 h-2.5" />
       {s.label}
     </span>
+  );
+}
+
+function GrantRangeBar({ min, avg, max }: { min: number; avg: number; max: number }) {
+  const safe = max > min;
+  const avgPct = safe ? Math.round(((avg - min) / (max - min)) * 100) : 50;
+  const pct = Math.max(5, Math.min(93, avgPct));
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-1.5">
+        <span className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-wide">Grant Range</span>
+        <span className="text-[10px] text-[#64748b]">{formatCompact(min)} – {formatCompact(max)}</span>
+      </div>
+      <div className="relative h-2 bg-[#f1f5f9] rounded-full mb-2">
+        <div
+          className="absolute left-0 top-0 h-full rounded-full"
+          style={{ width: `${pct}%`, background: 'linear-gradient(90deg, rgba(13,148,136,0.25), #0d9488)' }}
+        />
+        <div
+          className="absolute top-1/2 w-3.5 h-3.5 rounded-full border-2 border-white shadow-sm bg-[#0d9488]"
+          style={{ left: `${pct}%`, transform: 'translate(-50%, -50%)' }}
+        />
+      </div>
+      <div className="flex items-center justify-center">
+        <span className="text-[10px] font-semibold text-[#0d9488] bg-[#f0fdfa] px-2 py-0.5 rounded-full border border-[#ccfbf1]">
+          avg {formatCompact(avg)}
+        </span>
+      </div>
+    </div>
   );
 }
 
@@ -113,13 +142,8 @@ function FoundationCard({ f, rank }: { f: FoundationProfile; rank: number }) {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 mb-3">
-          <DollarSign className="w-3.5 h-3.5 text-[#94a3b8] flex-shrink-0" />
-          <span className="text-[11px] text-[#64748b]">
-            Grant range: <strong className="text-[#0f172a]">
-              {formatCompact(f.grantRange.min)} – {formatCompact(f.grantRange.max)}
-            </strong>
-          </span>
+        <div className="mb-3">
+          <GrantRangeBar min={f.grantRange.min} avg={f.avgGrantAmount} max={f.grantRange.max} />
         </div>
 
         <div className="flex flex-wrap gap-1 mb-3">

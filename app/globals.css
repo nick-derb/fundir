@@ -373,3 +373,15 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
 /* Only override text-white when it's NOT inside a gradient/colored button or dark panel */
 [data-theme="light"] .text-slate-400 { color: #64748b !important; }
 [data-theme="light"] .text-slate-600 { color: #475569 !important; }
+
+/* ── Grant side-panel animations ────────────────────── */
+@keyframes slideInRight {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+.panel-slide-in {
+  animation: slideInRight 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.panel-fade-in {
+  animation: fadeIn 0.15s ease;
+}

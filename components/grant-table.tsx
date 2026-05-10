@@ -8,7 +8,7 @@ import { getDaysUntil, formatCurrency, formatDate } from '@/lib/utils';
 import {
   ChevronUp, ChevronDown, ChevronsUpDown, ExternalLink,
   CheckCircle, XCircle, MinusCircle, Download, ChevronRight,
-  HelpCircle, Sparkles,
+  HelpCircle, Sparkles, X,
 } from 'lucide-react';
 import type { EligibilitySignal } from '@/lib/990-screener';
 import { logActivity } from '@/lib/team-activity';
@@ -34,6 +34,29 @@ function ScoreArc({ score }: { score: number }) {
       <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold" style={{ color }}>
         {score.toFixed(0)}
       </span>
+    </div>
+  );
+}
+
+function LargeScoreArc({ score }: { score: number }) {
+  const color = score >= 70 ? '#16a34a' : score >= 40 ? '#d97706' : '#dc2626';
+  const r = 22, cx = 26, cy = 26, circumference = 2 * Math.PI * r;
+  const dash = (score / 100) * circumference;
+  return (
+    <div className="relative flex-shrink-0 w-[52px] h-[52px]">
+      <svg width="52" height="52" viewBox="0 0 52 52" className="rotate-[-90deg]">
+        <circle cx={cx} cy={cy} r={r} fill="none" stroke="#f1f5f9" strokeWidth="4" />
+        <circle
+          cx={cx} cy={cy} r={r} fill="none"
+          stroke={color} strokeWidth="4"
+          strokeDasharray={`${dash} ${circumference}`}
+          strokeLinecap="round"
+        />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <span className="text-[15px] font-bold leading-none" style={{ color }}>{score.toFixed(0)}</span>
+        <span className="text-[8px] text-[#94a3b8] leading-none mt-0.5">/ 100</span>
+      </div>
     </div>
   );
 }
@@ -108,12 +131,10 @@ function DeadlineCell({ dateStr }: { dateStr?: string | null }) {
   );
 }
 
-/* ── Score weight bar ───────────────────────────────────── */
 function ScoreWeightBar({
   label, score, weight, color, desc,
 }: { label: string; score: number; weight: number; color: string; desc: string }) {
   const contribution = (score / 100) * weight;
-  const pct = score;
   return (
     <div>
       <div className="flex items-center justify-between mb-1">
@@ -123,21 +144,42 @@ function ScoreWeightBar({
         </div>
         <div className="flex items-center gap-2">
           <span className="text-[10px] text-[#94a3b8] font-mono">+{contribution.toFixed(1)} pts</span>
-          <span className="text-[11px] font-bold font-mono" style={{ color }}>{pct.toFixed(0)}/100</span>
+          <span className="text-[11px] font-bold font-mono" style={{ color }}>{score.toFixed(0)}/100</span>
         </div>
       </div>
       <div className="h-1.5 bg-[#f1f5f9] rounded-full overflow-hidden mb-1">
         <div className="h-full rounded-full transition-all duration-700"
-          style={{ width: `${pct}%`, background: color }} />
+          style={{ width: `${score}%`, background: color }} />
       </div>
       <p className="text-[10px] text-[#94a3b8] leading-snug">{desc}</p>
     </div>
   );
 }
 
-/* ── Expanded row ───────────────────────────────────────── */
-function ExpandedRow({ match }: { match: MatchResult }) {
+/* ── Grant Side Panel ───────────────────────────────────── */
+interface GrantSidePanelProps {
+  match: MatchResult;
+  onClose: () => void;
+  stageOverrides: Record<string, string>;
+  onStageChange: (matchId: string, stage: string) => void;
+}
+
+function GrantSidePanel({ match, onClose, stageOverrides, onStageChange }: GrantSidePanelProps) {
+  const [stagingOpen, setStagingOpen] = useState(false);
+  const currentStage = (stageOverrides[match.id] ?? match.pipeline_stage) as PipelineStage;
   const signals = match.financial_signals ?? [];
+  const sc = (s: number) => s >= 70 ? '#16a34a' : s >= 40 ? '#d97706' : '#dc2626';
+  const award = match.grant?.extracted_fields?.award_ceiling || match.grant?.extracted_fields?.award_floor;
+  const floor = match.grant?.extracted_fields?.award_floor;
+
+  const dims = [
+    { label: 'Semantic Similarity', score: Math.round((match.semantic_similarity ?? 0) * 100), weight: 40, desc: 'AI embedding comparison between grant mission and org profile' },
+    { label: 'Eligibility Fit',     score: Math.round((match.eligibility_score  ?? 0) * 100), weight: 22, desc: 'Entity type, geography, nonprofit status, and grant structure' },
+    { label: 'Financial Health',    score: Math.round((match.financial_score    ?? 0.5) * 100), weight: 20, desc: '990 reserves, govt dependency risk, net assets, liquidity' },
+    { label: 'Strategic Alignment', score: Math.round((match.strategic_score   ?? 0) * 100), weight: 12, desc: 'Program area keyword overlap with org mission focus' },
+    { label: 'Historical Match',    score: Math.round((match.historical_score  ?? 0.35) * 100), weight: 6,  desc: 'Prior award track record with this agency type' },
+  ];
+
   const signalConfig: Record<string, { icon: typeof CheckCircle; color: string }> = {
     match:    { icon: CheckCircle, color: '#16a34a' },
     likely:   { icon: MinusCircle, color: '#d97706' },
@@ -145,55 +187,85 @@ function ExpandedRow({ match }: { match: MatchResult }) {
     mismatch: { icon: XCircle,     color: '#dc2626' },
   };
 
-  // Score color helper
-  const sc = (s: number) => s >= 70 ? '#16a34a' : s >= 40 ? '#d97706' : '#dc2626';
-
-  // "Why matched?" dimensions from types — all scores are 0-100
-  const dims = [
-    {
-      label:  'Semantic Similarity',
-      score:  Math.round((match.semantic_similarity ?? 0) * 100),
-      weight: 40,
-      desc:   'AI embedding comparison between grant mission and org profile',
-    },
-    {
-      label:  'Eligibility Fit',
-      score:  Math.round((match.eligibility_score ?? 0) * 100),
-      weight: 22,
-      desc:   'Entity type, geography, nonprofit status, and grant structure',
-    },
-    {
-      label:  'Financial Health',
-      score:  Math.round((match.financial_score ?? 0.5) * 100),
-      weight: 20,
-      desc:   '990 reserves, govt dependency risk, net assets, liquidity',
-    },
-    {
-      label:  'Strategic Alignment',
-      score:  Math.round((match.strategic_score ?? 0) * 100),
-      weight: 12,
-      desc:   'Program area keyword overlap with org mission focus',
-    },
-    {
-      label:  'Historical Match',
-      score:  Math.round((match.historical_score ?? 0.35) * 100),
-      weight: 6,
-      desc:   'Prior award track record with this agency type',
-    },
-  ];
+  const ef = match.grant?.extracted_fields;
+  const detailRows = ef ? [
+    ef.eligible_entity_types?.length ? { label: 'Eligible', value: ef.eligible_entity_types.slice(0, 4).join(', ') } : null,
+    ef.geographic_states?.length     ? { label: 'States',   value: ef.geographic_states.slice(0, 6).join(', ')     } : null,
+    ef.program_areas?.length         ? { label: 'Areas',    value: ef.program_areas.slice(0, 5).join(', ')         } : null,
+  ].filter(Boolean) as { label: string; value: string }[] : [];
 
   return (
-    <tr className="bg-[#fafbff]">
-      <td colSpan={7} className="px-4 py-0">
-        <div className="py-5 grid grid-cols-3 gap-5 border-l-2 border-[#0d9488] pl-5 ml-2">
+    <>
+      {/* Backdrop */}
+      <div
+        className="panel-fade-in fixed inset-0 z-40 bg-[#0f172a]/20"
+        onClick={onClose}
+      />
 
-          {/* Why Matched */}
-          <div>
+      {/* Panel */}
+      <div className="panel-slide-in fixed right-0 top-0 h-full w-[500px] z-50 flex flex-col bg-white border-l border-[#e2e8f0] shadow-2xl overflow-hidden">
+
+        {/* Header */}
+        <div className="px-5 pt-5 pb-4 border-b border-[#f1f5f9] flex-shrink-0">
+          <div className="flex items-start justify-between gap-2 mb-1">
+            <p className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-widest truncate">
+              {match.grant?.agency_name || 'Federal Grant'}
+            </p>
+            <button
+              onClick={onClose}
+              className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[#94a3b8] hover:bg-[#f1f5f9] hover:text-[#0f172a] transition-colors"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+          <h2 className="text-[15px] font-bold text-[#0f172a] leading-snug pr-2">
+            {match.grant?.title || 'Unknown Grant'}
+          </h2>
+          {match.grant?.aln_codes?.length ? (
+            <p className="text-[11px] text-[#94a3b8] mt-1 font-mono">
+              ALN {match.grant.aln_codes.join(', ')}
+            </p>
+          ) : null}
+        </div>
+
+        {/* Score + key stats */}
+        <div className="px-5 py-3.5 bg-[#fafbff] border-b border-[#f1f5f9] flex-shrink-0">
+          <div className="flex items-center gap-5">
+            <LargeScoreArc score={match.composite_score} />
+            <div className="grid grid-cols-2 gap-x-8 gap-y-2.5 flex-1">
+              <div>
+                <p className="text-[9px] font-bold text-[#94a3b8] uppercase tracking-wider mb-1">Deadline</p>
+                <DeadlineCell dateStr={match.grant?.close_date} />
+              </div>
+              {award ? (
+                <div>
+                  <p className="text-[9px] font-bold text-[#94a3b8] uppercase tracking-wider mb-1">Max Award</p>
+                  <p className="text-[13px] font-bold text-[#0f172a]">{formatCurrency(award)}</p>
+                  {floor && floor !== award && (
+                    <p className="text-[10px] text-[#94a3b8]">floor {formatCurrency(floor)}</p>
+                  )}
+                </div>
+              ) : null}
+              {ef?.geographic_scope && (
+                <div>
+                  <p className="text-[9px] font-bold text-[#94a3b8] uppercase tracking-wider mb-1">Scope</p>
+                  <p className="text-[11px] text-[#475569]">{ef.geographic_scope}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Scrollable body */}
+        <div className="flex-1 overflow-y-auto">
+
+          {/* Score breakdown */}
+          <div className="px-5 py-4 border-b border-[#f1f5f9]">
             <div className="flex items-center gap-1.5 mb-3">
               <Sparkles className="w-3 h-3 text-[#6366f1]" />
-              <p className="text-[10px] font-bold text-[#64748b] uppercase tracking-widest">Why This Matched</p>
-              <span className="ml-auto text-[10px] font-bold font-mono text-[#0f172a]">
-                {match.composite_score.toFixed(1)}/100
+              <p className="text-[10px] font-bold text-[#64748b] uppercase tracking-widest">Match Breakdown</p>
+              <span className="ml-auto text-[11px] font-bold font-mono text-[#0f172a]">
+                {match.composite_score.toFixed(1)} / 100
               </span>
             </div>
             <div className="space-y-3">
@@ -210,66 +282,12 @@ function ExpandedRow({ match }: { match: MatchResult }) {
             </div>
           </div>
 
-          {/* Fundir Assessment + flags */}
-          <div>
-            <div className="flex items-center gap-1.5 mb-3">
-              <Sparkles className="w-3 h-3 text-[#0d9488]" />
-              <p className="text-[10px] font-bold text-[#64748b] uppercase tracking-widest">Fundir Assessment</p>
-            </div>
-            {match.recommendation ? (
-              <p className="text-[12px] text-[#475569] leading-relaxed">{match.recommendation}</p>
-            ) : (
-              <p className="text-[12px] text-[#94a3b8] italic">No assessment available. Run discovery to generate AI analysis.</p>
-            )}
-
-            {match.eligibility_flags?.length > 0 && (
-              <div className="mt-4 space-y-1.5">
-                <p className="text-[10px] font-bold text-[#d97706] uppercase tracking-widest mb-2">Eligibility Flags</p>
-                {(match.eligibility_flags as string[]).map((flag, i) => (
-                  <p key={i} className="text-[11px] text-amber-700 flex items-start gap-1.5 leading-snug">
-                    <span className="text-amber-400 mt-0.5 flex-shrink-0">⚠</span>{flag}
-                  </p>
-                ))}
-              </div>
-            )}
-
-            {/* Grant metadata */}
-            {match.grant?.extracted_fields && (
-              <div className="mt-4 pt-3 border-t border-[#f1f5f9] space-y-1.5">
-                <p className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-widest mb-2">Grant Details</p>
-                {match.grant.extracted_fields.eligible_entity_types?.length ? (
-                  <div className="text-[11px] text-[#64748b]">
-                    <span className="font-semibold text-[#0f172a]">Eligible: </span>
-                    {match.grant.extracted_fields.eligible_entity_types.slice(0, 3).join(', ')}
-                  </div>
-                ) : null}
-                {match.grant.extracted_fields.geographic_scope && (
-                  <div className="text-[11px] text-[#64748b]">
-                    <span className="font-semibold text-[#0f172a]">Scope: </span>
-                    {match.grant.extracted_fields.geographic_scope}
-                    {match.grant.extracted_fields.geographic_states?.length
-                      ? ` (${match.grant.extracted_fields.geographic_states.slice(0, 4).join(', ')})`
-                      : ''}
-                  </div>
-                )}
-                {match.grant.extracted_fields.program_areas?.length ? (
-                  <div className="text-[11px] text-[#64748b]">
-                    <span className="font-semibold text-[#0f172a]">Areas: </span>
-                    {match.grant.extracted_fields.program_areas.slice(0, 4).join(', ')}
-                  </div>
-                ) : null}
-              </div>
-            )}
-          </div>
-
           {/* 990 Signals */}
-          <div>
-            <p className="text-[10px] font-bold text-[#64748b] uppercase tracking-widest mb-3">990 Eligibility Signals</p>
-            {signals.length === 0 ? (
-              <p className="text-[12px] text-[#94a3b8] italic">990 screening not available for this grant</p>
-            ) : (
-              <div className="space-y-2">
-                {signals.slice(0, 6).map((s) => {
+          {signals.length > 0 && (
+            <div className="px-5 py-4 border-b border-[#f1f5f9]">
+              <p className="text-[10px] font-bold text-[#64748b] uppercase tracking-widest mb-3">990 Eligibility Signals</p>
+              <div className="space-y-2.5">
+                {signals.slice(0, 7).map(s => {
                   const cfg = signalConfig[s.status] || signalConfig.unknown;
                   const Icon = cfg.icon;
                   return (
@@ -283,17 +301,81 @@ function ExpandedRow({ match }: { match: MatchResult }) {
                   );
                 })}
               </div>
+            </div>
+          )}
+
+          {/* Fundir Assessment */}
+          <div className="px-5 py-4 border-b border-[#f1f5f9]">
+            <div className="flex items-center gap-1.5 mb-2">
+              <Sparkles className="w-3 h-3 text-[#0d9488]" />
+              <p className="text-[10px] font-bold text-[#64748b] uppercase tracking-widest">Fundir Assessment</p>
+            </div>
+            {match.recommendation ? (
+              <p className="text-[12px] text-[#475569] leading-relaxed">{match.recommendation}</p>
+            ) : (
+              <p className="text-[12px] text-[#94a3b8] italic">No assessment available. Run discovery to generate AI analysis.</p>
             )}
-            <Link
-              href={`/grant/${match.grant_id}`}
-              className="inline-flex items-center gap-1 mt-4 text-[11px] font-semibold text-[#0d9488] hover:text-[#0f766e] transition-colors"
-            >
-              Full analysis & application guide <ChevronRight className="w-3 h-3" />
-            </Link>
+            {match.eligibility_flags?.length > 0 && (
+              <div className="mt-3 space-y-1.5">
+                <p className="text-[10px] font-bold text-[#d97706] uppercase tracking-widest mb-1.5">Eligibility Flags</p>
+                {(match.eligibility_flags as string[]).map((flag, i) => (
+                  <p key={i} className="text-[11px] text-amber-700 flex items-start gap-1.5 leading-snug">
+                    <span className="text-amber-400 mt-0.5 flex-shrink-0">⚠</span>{flag}
+                  </p>
+                ))}
+              </div>
+            )}
           </div>
+
+          {/* Grant Details */}
+          {detailRows.length > 0 && (
+            <div className="px-5 py-4">
+              <p className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-widest mb-3">Grant Details</p>
+              <div className="space-y-2">
+                {detailRows.map(r => (
+                  <div key={r.label} className="flex gap-3">
+                    <span className="text-[11px] font-semibold text-[#94a3b8] w-16 flex-shrink-0">{r.label}</span>
+                    <span className="text-[11px] text-[#475569]">{r.value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
-      </td>
-    </tr>
+
+        {/* Footer */}
+        <div className="px-5 py-3.5 border-t border-[#e2e8f0] flex items-center justify-between gap-3 flex-shrink-0 bg-[#fafbff]">
+          <div className="relative">
+            <button
+              onClick={e => { e.stopPropagation(); setStagingOpen(o => !o); }}
+              className="flex items-center gap-1.5 hover:opacity-80 transition-opacity"
+            >
+              <StageBadge stage={currentStage} />
+              <ChevronDown className="w-3 h-3 text-[#94a3b8]" />
+            </button>
+            {stagingOpen && (
+              <div className="absolute bottom-full left-0 mb-1 bg-white rounded-[8px] border border-[#e2e8f0] shadow-xl overflow-hidden min-w-[140px] z-10">
+                {(['discovered', 'reviewing', 'preparing', 'drafting', 'submitted', 'awarded', 'rejected'] as const).map(s => (
+                  <button key={s} onClick={() => { onStageChange(match.id, s); setStagingOpen(false); }}
+                    className={`w-full text-left px-3 py-2 text-[12px] font-medium capitalize transition-colors block ${
+                      currentStage === s ? 'bg-[#f0fdfa] text-[#0d9488] font-bold' : 'text-[#0f172a] hover:bg-[#f8fafc]'
+                    }`}>
+                    {s}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          <Link
+            href={`/grant/${match.grant_id}`}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-[7px] text-[12px] font-bold text-white transition-opacity hover:opacity-90"
+            style={{ background: 'linear-gradient(135deg, #0d9488, #0891b2)' }}
+          >
+            Full Analysis <ExternalLink className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+      </div>
+    </>
   );
 }
 
@@ -333,7 +415,7 @@ export function GrantTable({ matches, emptyMessage = 'No grants found.' }: Grant
   const [sortDir, setSortDir]     = useState<SortDir>('desc');
   const [stageFilter, setStageFilter] = useState<string>('all');
   const [search, setSearch]       = useState('');
-  const [expandedId, setExpandedId]  = useState<string | null>(null);
+  const [selectedMatch, setSelectedMatch] = useState<MatchResult | null>(null);
   const [scoreMin, setScoreMin]   = useState(0);
   const [deadlineFilter, setDeadlineFilter] = useState<'all' | '7' | '30' | '60'>('all');
   const [stagingId, setStagingId] = useState<string | null>(null);
@@ -346,6 +428,13 @@ export function GrantTable({ matches, emptyMessage = 'No grants found.' }: Grant
     document.addEventListener('click', close);
     return () => document.removeEventListener('click', close);
   }, [stagingId]);
+
+  useEffect(() => {
+    if (!selectedMatch) return;
+    function onKey(e: KeyboardEvent) { if (e.key === 'Escape') setSelectedMatch(null); }
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [selectedMatch]);
 
   async function handleStageChange(matchId: string, stage: string) {
     setStageOverrides(prev => ({ ...prev, [matchId]: stage }));
@@ -426,7 +515,6 @@ export function GrantTable({ matches, emptyMessage = 'No grants found.' }: Grant
             className="flex-1 min-w-[200px] max-w-xs px-3 py-1.5 bg-white border border-[#e2e8f0] rounded-[6px] text-[13px] text-[#0f172a] placeholder-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-[#0d9488]/20 focus:border-[#0d9488] transition-all"
           />
 
-          {/* Score filter chips */}
           <div className="flex items-center gap-1">
             {[
               { label: 'All',   min: 0   },
@@ -447,7 +535,6 @@ export function GrantTable({ matches, emptyMessage = 'No grants found.' }: Grant
 
           <div className="h-4 w-px bg-[#e2e8f0]" />
 
-          {/* Stage filter */}
           <div className="flex items-center gap-1 overflow-x-auto">
             {stages.map(s => (
               <button key={s} onClick={() => setStageFilter(s)}
@@ -463,7 +550,6 @@ export function GrantTable({ matches, emptyMessage = 'No grants found.' }: Grant
 
           <div className="h-4 w-px bg-[#e2e8f0]" />
 
-          {/* Deadline range filter */}
           <div className="flex items-center gap-1">
             {([
               { label: 'Any date', val: 'all' },
@@ -538,102 +624,113 @@ export function GrantTable({ matches, emptyMessage = 'No grants found.' }: Grant
             filtered.map(match => {
               const award = match.grant?.extracted_fields?.award_ceiling ||
                             match.grant?.extracted_fields?.award_floor;
-              const expanded = expandedId === match.id;
+              const isSelected = selectedMatch?.id === match.id;
               const scoreColor = match.composite_score >= 70 ? '#16a34a' : match.composite_score >= 40 ? '#d97706' : '#dc2626';
 
               return (
-                <>
-                  <tr
-                    key={match.id}
-                    onClick={() => {
-                      setExpandedId(expanded ? null : match.id);
-                      if (!expanded) logActivity({
+                <tr
+                  key={match.id}
+                  onClick={() => {
+                    if (isSelected) {
+                      setSelectedMatch(null);
+                    } else {
+                      setSelectedMatch(match);
+                      logActivity({
                         action: 'grant_view',
                         entityType: 'grant',
                         entityId: match.grant_id,
                         entityTitle: match.grant?.title ?? undefined,
                         metadata: { score: match.composite_score, agency: match.grant?.agency_name ?? '' },
                       });
-                    }}
-                    className={`border-b border-[#f1f5f9] last:border-0 cursor-pointer transition-colors group ${
-                      expanded ? 'bg-[#fafbff]' : 'hover:bg-[#f8fafc]'
-                    }`}
-                    style={{ borderLeft: expanded ? `3px solid ${scoreColor}` : '3px solid transparent' }}
-                  >
-                    <td className="px-4 py-3.5">
-                      <p className="font-semibold text-[13px] text-[#0f172a] group-hover:text-[#0d9488] transition-colors line-clamp-2 leading-snug">
-                        {match.grant?.title || 'Unknown Grant'}
-                      </p>
-                      <SignalSummary signals={match.financial_signals} />
-                    </td>
-                    <td className="px-4 py-3.5 text-[#64748b] max-w-[160px]">
-                      <span className="text-[12px] line-clamp-2 leading-snug">{match.grant?.agency_name || '—'}</span>
-                    </td>
-                    <td className="px-4 py-3.5">
-                      <DeadlineCell dateStr={match.grant?.close_date} />
-                    </td>
-                    <td className="px-4 py-3.5">
-                      {award
-                        ? <span className="text-[12px] font-semibold text-[#0f172a]">{formatCurrency(award)}</span>
-                        : <span className="text-[#94a3b8] text-[12px]">—</span>
-                      }
-                    </td>
-                    <td className="px-4 py-3.5">
-                      <div className="flex justify-center">
-                        <ScoreArc score={match.composite_score} />
-                      </div>
-                    </td>
-                    <td className="px-4 py-3.5" onClick={e => e.stopPropagation()}>
-                      <div className="relative">
-                        <button
-                          onClick={e => {
-                            e.stopPropagation();
-                            setStagingId(stagingId === match.id ? null : match.id);
-                          }}
-                          title="Click to change stage"
-                        >
-                          <StageBadge stage={(stageOverrides[match.id] ?? match.pipeline_stage) as PipelineStage} />
-                        </button>
-                        {stagingId === match.id && (
-                          <div
-                            className="absolute z-30 top-full left-0 mt-1 bg-white rounded-[8px] border border-[#e2e8f0] shadow-xl overflow-hidden min-w-[140px]"
-                            onClick={e => e.stopPropagation()}
-                          >
-                            {(['discovered', 'reviewing', 'preparing', 'drafting', 'submitted', 'awarded', 'rejected'] as const).map(s => (
-                              <button key={s} onClick={() => handleStageChange(match.id, s)}
-                                className={`w-full text-left px-3 py-2 text-[12px] font-medium capitalize transition-colors block ${
-                                  (stageOverrides[match.id] ?? match.pipeline_stage) === s
-                                    ? 'bg-[#f0fdfa] text-[#0d9488] font-bold'
-                                    : 'text-[#0f172a] hover:bg-[#f8fafc]'
-                                }`}>
-                                {s}
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-3 py-3.5">
-                      <div className="flex items-center gap-1.5">
-                        <ChevronDown
-                          className={`w-3.5 h-3.5 text-[#cbd5e1] group-hover:text-[#0d9488] transition-all ${expanded ? 'rotate-180 text-[#0d9488]' : ''}`}
-                        />
-                        <Link
-                          href={`/grant/${match.grant_id}`}
+                    }
+                  }}
+                  className={`border-b border-[#f1f5f9] last:border-0 cursor-pointer transition-colors group ${
+                    isSelected ? 'bg-[#fafbff]' : 'hover:bg-[#f8fafc]'
+                  }`}
+                  style={{ borderLeft: isSelected ? `3px solid ${scoreColor}` : '3px solid transparent' }}
+                >
+                  <td className="px-4 py-3.5">
+                    <p className="font-semibold text-[13px] text-[#0f172a] group-hover:text-[#0d9488] transition-colors line-clamp-2 leading-snug">
+                      {match.grant?.title || 'Unknown Grant'}
+                    </p>
+                    <SignalSummary signals={match.financial_signals} />
+                  </td>
+                  <td className="px-4 py-3.5 text-[#64748b] max-w-[160px]">
+                    <span className="text-[12px] line-clamp-2 leading-snug">{match.grant?.agency_name || '—'}</span>
+                  </td>
+                  <td className="px-4 py-3.5">
+                    <DeadlineCell dateStr={match.grant?.close_date} />
+                  </td>
+                  <td className="px-4 py-3.5">
+                    {award
+                      ? <span className="text-[12px] font-semibold text-[#0f172a]">{formatCurrency(award)}</span>
+                      : <span className="text-[#94a3b8] text-[12px]">—</span>
+                    }
+                  </td>
+                  <td className="px-4 py-3.5">
+                    <div className="flex justify-center">
+                      <ScoreArc score={match.composite_score} />
+                    </div>
+                  </td>
+                  <td className="px-4 py-3.5" onClick={e => e.stopPropagation()}>
+                    <div className="relative">
+                      <button
+                        onClick={e => {
+                          e.stopPropagation();
+                          setStagingId(stagingId === match.id ? null : match.id);
+                        }}
+                        title="Click to change stage"
+                      >
+                        <StageBadge stage={(stageOverrides[match.id] ?? match.pipeline_stage) as PipelineStage} />
+                      </button>
+                      {stagingId === match.id && (
+                        <div
+                          className="absolute z-30 top-full left-0 mt-1 bg-white rounded-[8px] border border-[#e2e8f0] shadow-xl overflow-hidden min-w-[140px]"
                           onClick={e => e.stopPropagation()}
                         >
-                          <ExternalLink className="w-3.5 h-3.5 text-[#cbd5e1] hover:text-[#0d9488] transition-colors" />
-                        </Link>
-                      </div>
-                    </td>
-                  </tr>
-                  {expanded && <ExpandedRow key={`${match.id}-expanded`} match={match} />}
-                </>
+                          {(['discovered', 'reviewing', 'preparing', 'drafting', 'submitted', 'awarded', 'rejected'] as const).map(s => (
+                            <button key={s} onClick={() => handleStageChange(match.id, s)}
+                              className={`w-full text-left px-3 py-2 text-[12px] font-medium capitalize transition-colors block ${
+                                (stageOverrides[match.id] ?? match.pipeline_stage) === s
+                                  ? 'bg-[#f0fdfa] text-[#0d9488] font-bold'
+                                  : 'text-[#0f172a] hover:bg-[#f8fafc]'
+                              }`}>
+                              {s}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-3 py-3.5">
+                    <div className="flex items-center gap-1.5">
+                      <ChevronRight className={`w-3.5 h-3.5 transition-colors ${
+                        isSelected ? 'text-[#0d9488]' : 'text-[#cbd5e1] group-hover:text-[#0d9488]'
+                      }`} />
+                      <Link
+                        href={`/grant/${match.grant_id}`}
+                        onClick={e => e.stopPropagation()}
+                      >
+                        <ExternalLink className="w-3.5 h-3.5 text-[#cbd5e1] hover:text-[#0d9488] transition-colors" />
+                      </Link>
+                    </div>
+                  </td>
+                </tr>
               );
             })
           )}
         </tbody>
       </table>
+
+      {/* Grant side panel */}
+      {selectedMatch && (
+        <GrantSidePanel
+          match={selectedMatch}
+          onClose={() => setSelectedMatch(null)}
+          stageOverrides={stageOverrides}
+          onStageChange={handleStageChange}
+        />
+      )}
     </div>
   );
 }
