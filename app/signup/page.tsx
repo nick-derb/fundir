@@ -95,7 +95,7 @@ export default function SignupPage() {
                 value={orgCode}
                 onChange={e => setOrgCode(e.target.value)}
                 required
-                placeholder="e.g. CYC2025"
+                placeholder="e.g. YMCA2025"
                 className="w-full px-3 py-2.5 border border-[#e2e8f0] rounded-[6px] text-[14px] text-[#0f172a] placeholder-[#94a3b8] uppercase focus:outline-none focus:ring-2 focus:ring-[#0d9488]/20 focus:border-[#0d9488] transition-all font-mono"
               />
               <p className="flex items-center gap-1 text-[11px] text-[#94a3b8] mt-1.5">

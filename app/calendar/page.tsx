@@ -1,12 +1,14 @@
 export const dynamic = 'force-dynamic';
 
 import { createServerClient } from '@/lib/supabase';
+import { getAuthContext } from '@/lib/auth-context';
 import { AppShell } from '@/components/app-shell';
 import { DeadlineCalendar, CalendarGrant } from '@/components/deadline-calendar';
 import { CalendarDays, Clock, Flame, CheckCircle, ArrowUpRight } from 'lucide-react';
+import { redirect } from 'next/navigation';
 import Link from 'next/link';
 
-async function getCalendarGrants(): Promise<CalendarGrant[]> {
+async function getCalendarGrants(orgId: string): Promise<CalendarGrant[]> {
   const supabase = createServerClient();
   const { data } = await supabase
     .from('match_results')
@@ -17,6 +19,7 @@ async function getCalendarGrants(): Promise<CalendarGrant[]> {
       pipeline_stage,
       grant:grant_opportunities(title, close_date, agency_name)
     `)
+    .eq('org_id', orgId)
     .not('grant_opportunities.close_date', 'is', null)
     .order('grant_opportunities.close_date', { ascending: true });
 
@@ -42,7 +45,10 @@ async function getCalendarGrants(): Promise<CalendarGrant[]> {
 }
 
 export default async function CalendarPage() {
-  const grants = await getCalendarGrants();
+  const ctx = await getAuthContext();
+  if (!ctx) redirect('/login');
+
+  const grants = await getCalendarGrants(ctx.orgId);
   const now    = new Date();
 
   const urgent = grants.filter(g => {
@@ -59,7 +65,14 @@ export default async function CalendarPage() {
   const highMatch = grants.filter(g => g.composite_score >= 70).length;
 
   return (
-    <AppShell>
+    <AppShell
+      orgName={ctx.orgName}
+      orgId={ctx.orgId}
+      userEmail={ctx.email}
+      isAdmin={ctx.isAdmin}
+      availableOrgs={ctx.availableOrgs}
+      currentOrgCode={ctx.orgCode}
+    >
 
       {/* ── Dark Hero ── */}
       <div className="relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)' }}>
@@ -79,7 +92,7 @@ export default async function CalendarPage() {
               </div>
               <h1 className="text-[26px] font-bold text-white leading-tight">Grant Calendar</h1>
               <p className="text-[#94a3b8] text-[13px] mt-1">
-                {grants.length} grants with deadlines tracked · Chicago Youth Centers
+                {grants.length} grants with deadlines tracked · {ctx.orgName}
               </p>
             </div>
             <Link href="/discover"

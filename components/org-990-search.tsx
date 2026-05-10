@@ -147,7 +147,7 @@ export function Org990Search({ orgCode }: Org990SearchProps) {
             value={query}
             onChange={handleInput}
             onFocus={() => { if (results.length > 0) setIsOpen(true); }}
-            placeholder="e.g. Chicago Youth Centers…"
+            placeholder="Search by organization name…"
             className="w-full pl-9 pr-8 py-2.5 border border-[#e2e8f0] rounded-lg text-[13px] text-[#0f172a] placeholder-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-[#0d9488]/20 focus:border-[#0d9488] transition-all bg-white"
           />
           {query && (
