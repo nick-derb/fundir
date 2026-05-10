@@ -31,6 +31,10 @@
     "tailwind-merge": "^3.5.0",
     "xlsx": "^0.18.5"
   },
+  "packageManager": "pnpm@10.33.0",
+  "engines": {
+    "node": ">=20"
+  },
   "devDependencies": {
     "@types/node": "^20",
     "@types/react": "^19",
