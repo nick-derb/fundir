@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import { RecoveryDetector } from '@/components/recovery-detector';
 
 export const metadata: Metadata = {
   title: 'Fundir — AI Grant Intelligence',
@@ -14,6 +15,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script dangerouslySetInnerHTML={{ __html: `(function(){try{var t=localStorage.getItem('fundir-theme')||'dark';document.documentElement.setAttribute('data-theme',t);}catch(e){}})();` }} />
       </head>
       <body className="antialiased" style={{ background: 'var(--page-bg)', color: 'var(--text)' }}>
+        <RecoveryDetector />
         {children}
       </body>
     </html>

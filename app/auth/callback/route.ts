@@ -15,8 +15,18 @@ export async function GET(request: NextRequest) {
     ? `${proto}://${forwardedHost}`
     : request.nextUrl.origin;
 
-  if (error || !code) {
+  if (error) {
     return NextResponse.redirect(`${baseUrl}/login?error=oauth_denied`);
+  }
+
+  if (!code) {
+    // No PKCE code — may be a hash-based recovery redirect that the browser
+    // will resolve client-side. Send to reset-password so RecoveryDetector
+    // or onAuthStateChange can pick it up.
+    if (next.startsWith('/reset-password')) {
+      return NextResponse.redirect(`${baseUrl}/reset-password`);
+    }
+    return NextResponse.redirect(`${baseUrl}/login`);
   }
 
   // Create the redirect response BEFORE the Supabase client so we can

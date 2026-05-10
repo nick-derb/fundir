@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Zap, Eye, EyeOff, ArrowRight } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/supabase';
@@ -48,7 +48,13 @@ export default function LoginPage() {
   const [error, setError]               = useState('');
   const [loading, setLoading]           = useState(false);
   const [oauthLoading, setOauthLoading] = useState<ProviderId | null>(null);
-  const router = useRouter();
+  const router       = useRouter();
+  const searchParams = useSearchParams();
+
+  // Auto-open forgot-password form when redirected from expired reset link
+  useEffect(() => {
+    if (searchParams.get('forgot') === '1') setMode('forgot');
+  }, [searchParams]);
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
