@@ -1,6 +1,7 @@
 'use client';
+export const dynamic = 'force-dynamic';
 
-import { useState, useEffect } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Zap, Eye, EyeOff, ArrowRight, CheckCircle, RefreshCw, Check } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/supabase';
@@ -27,7 +28,7 @@ const REQS = [
   { label: 'Number',                 met: (p: string) => /[0-9]/.test(p) },
 ];
 
-export default function ResetPasswordPage() {
+function ResetPasswordPageContent() {
   const [pageState, setPageState] = useState<PageState>('loading');
   const [password, setPassword]   = useState('');
   const [confirm, setConfirm]     = useState('');
@@ -295,5 +296,13 @@ export default function ResetPasswordPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense>
+      <ResetPasswordPageContent />
+    </Suspense>
   );
 }

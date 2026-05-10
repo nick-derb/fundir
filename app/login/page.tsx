@@ -1,6 +1,7 @@
 'use client';
+export const dynamic = 'force-dynamic';
 
-import { useState, useEffect } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Zap, Eye, EyeOff, ArrowRight } from 'lucide-react';
@@ -39,7 +40,7 @@ type ProviderId = typeof PROVIDERS[number]['id'];
 
 type Mode = 'login' | 'forgot' | 'sent';
 
-export default function LoginPage() {
+function LoginPageContent() {
   const [mode, setMode]                 = useState<Mode>('login');
   const [email, setEmail]               = useState('');
   const [resetEmail, setResetEmail]     = useState('');
@@ -296,5 +297,13 @@ export default function LoginPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginPageContent />
+    </Suspense>
   );
 }
