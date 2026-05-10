@@ -1,9 +1,9 @@
 export const dynamic = 'force-dynamic';
 
+import { getAuthContext } from '@/lib/auth-context';
 import { createServerClient } from '@/lib/supabase';
 import { AppShell } from '@/components/app-shell';
-import { CYC_PROFILE } from '@/lib/cyc-profile';
-import { formatCurrency } from '@/lib/utils';
+import { redirect } from 'next/navigation';
 import {
   CheckCircle, XCircle, Settings, Database, Cpu,
   Globe, Shield, RefreshCw, Building2, AlertTriangle,
@@ -25,12 +25,12 @@ async function getLastRun() {
   return data;
 }
 
-async function getOrgFinancialStatus() {
+async function getOrgFinancialStatus(orgCode: string) {
   const supabase = createServerClient();
   const { data } = await supabase
     .from('organizations')
     .select('name, ein, financial_year, financial_fetched_at')
-    .eq('org_code', 'CYC2025')
+    .eq('org_code', orgCode)
     .single();
   return data;
 }
@@ -60,11 +60,14 @@ async function checkConnections() {
 }
 
 export default async function SettingsPage() {
+  const ctx = await getAuthContext();
+  if (!ctx) redirect('/login');
+
   const [lastRun, connections, orgFinancial, integrations] = await Promise.all([
     getLastRun(),
     checkConnections(),
-    getOrgFinancialStatus(),
-    getAllIntegrations('CYC2025'),
+    getOrgFinancialStatus(ctx.orgCode),
+    getAllIntegrations(ctx.orgCode),
   ]);
 
   const googleConnected    = integrations.some(i => i.provider === 'google');
@@ -72,11 +75,18 @@ export default async function SettingsPage() {
   const googleEmail        = integrations.find(i => i.provider === 'google')?.user_email;
   const microsoftEmail     = integrations.find(i => i.provider === 'microsoft')?.user_email;
 
-  const allConnected = connections.supabase && connections.anthropic && connections.openai && connections.grantsGov;
+  const allConnected   = connections.supabase && connections.anthropic && connections.openai && connections.grantsGov;
   const connectedCount = Object.values(connections).filter(Boolean).length;
 
   return (
-    <AppShell>
+    <AppShell
+      orgName={ctx.orgName}
+      orgId={ctx.orgId}
+      userEmail={ctx.email}
+      isAdmin={ctx.isAdmin}
+      availableOrgs={ctx.availableOrgs}
+      currentOrgCode={ctx.orgCode}
+    >
 
       {/* ── Dark Hero ── */}
       <div className="relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)' }}>
@@ -96,7 +106,7 @@ export default async function SettingsPage() {
               </div>
               <h1 className="text-[26px] font-bold text-white leading-tight">Settings</h1>
               <p className="text-[#94a3b8] text-[13px] mt-1">
-                Fundir · Chicago Youth Centers · v2.0
+                Fundir · {ctx.orgName} · v2.0
               </p>
             </div>
             <div className="flex flex-col items-end gap-2">
@@ -152,7 +162,7 @@ export default async function SettingsPage() {
             </div>
           </div>
           <IntegrationConnector
-            orgCode="CYC2025"
+            orgCode={ctx.orgCode}
             status={{
               google:    { connected: googleConnected,    email: googleEmail },
               microsoft: { connected: microsoftConnected, email: microsoftEmail },
@@ -186,44 +196,44 @@ export default async function SettingsPage() {
           <div className="divide-y divide-[#f1f5f9]">
             {[
               {
-                name:    'Supabase',
-                desc:    'PostgreSQL database · match results, grant data, org profile',
-                ok:      connections.supabase,
-                icon:    Database,
-                color:   '#3ecf8e',
-                env:     'NEXT_PUBLIC_SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY',
+                name:  'Supabase',
+                desc:  'PostgreSQL database · match results, grant data, org profile',
+                ok:    connections.supabase,
+                icon:  Database,
+                color: '#3ecf8e',
+                env:   'NEXT_PUBLIC_SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY',
               },
               {
-                name:    'Anthropic Claude',
-                desc:    'AI extraction · grant scoring · relevance analysis',
-                ok:      connections.anthropic,
-                icon:    Cpu,
-                color:   '#f97316',
-                env:     'ANTHROPIC_API_KEY',
+                name:  'Anthropic Claude',
+                desc:  'AI extraction · grant scoring · relevance analysis',
+                ok:    connections.anthropic,
+                icon:  Cpu,
+                color: '#f97316',
+                env:   'ANTHROPIC_API_KEY',
               },
               {
-                name:    'OpenAI Embeddings',
-                desc:    'Semantic matching · cosine similarity scoring',
-                ok:      connections.openai,
-                icon:    Zap,
-                color:   '#10a37f',
-                env:     'OPENAI_API_KEY',
+                name:  'OpenAI Embeddings',
+                desc:  'Semantic matching · cosine similarity scoring',
+                ok:    connections.openai,
+                icon:  Zap,
+                color: '#10a37f',
+                env:   'OPENAI_API_KEY',
               },
               {
-                name:    'Grants.gov',
-                desc:    'Federal grant discovery · live opportunity feed · no key required',
-                ok:      connections.grantsGov,
-                icon:    Globe,
-                color:   '#2563eb',
-                env:     'No key required',
+                name:  'Grants.gov',
+                desc:  'Federal grant discovery · live opportunity feed · no key required',
+                ok:    connections.grantsGov,
+                icon:  Globe,
+                color: '#2563eb',
+                env:   'No key required',
               },
               {
-                name:    'ProPublica 990 API',
-                desc:    'IRS Form 990 financial data · free · no key required',
-                ok:      true,
-                icon:    Shield,
-                color:   '#7c3aed',
-                env:     'No key required',
+                name:  'ProPublica 990 API',
+                desc:  'IRS Form 990 financial data · free · no key required',
+                ok:    true,
+                icon:  Shield,
+                color: '#7c3aed',
+                env:   'No key required',
               },
             ].map(({ name, desc, ok, icon: Icon, color, env }) => (
               <div key={name} className="flex items-center justify-between px-5 py-4 hover:bg-[#f8fafc] transition-colors group">
@@ -280,17 +290,16 @@ export default async function SettingsPage() {
           </div>
 
           <div className="p-5 space-y-5">
-            {/* Status note */}
             <div className="flex items-start gap-3 p-3 rounded-[8px] bg-[#f0f9ff] border border-[#bae6fd]">
               <Info className="w-3.5 h-3.5 text-[#0284c7] flex-shrink-0 mt-0.5" />
               <p className="text-[11px] text-[#0369a1] leading-relaxed">
-                <strong>Note:</strong> The dashboard Financials page uses real FY2025 audited data sourced directly
-                from the audit report (Kearney & Company, Jan 5, 2026). ProPublica data for CYC has known gaps
-                (zero values for government grants). The 990 sync is preserved for historical comparison.
+                Sync pulls the latest IRS Form 990 data for your organization from ProPublica. This powers the
+                financial eligibility signals used in grant matching. If your 990 is recent, sync now to improve
+                match accuracy.
               </p>
             </div>
 
-            <Org990Search orgCode="CYC2025" />
+            <Org990Search orgCode={ctx.orgCode} />
 
             <div className="flex items-center gap-3">
               <div className="flex-1 h-px bg-[#f1f5f9]" />
@@ -321,7 +330,7 @@ export default async function SettingsPage() {
                   <p className="text-[12px] text-[#64748b]">No EIN on file — use the search above.</p>
                 )}
               </div>
-              <SyncFinancialsButton orgCode="CYC2025" disabled={!orgFinancial?.ein} />
+              <SyncFinancialsButton orgCode={ctx.orgCode} disabled={!orgFinancial?.ein} />
             </div>
           </div>
         </div>
@@ -351,10 +360,10 @@ export default async function SettingsPage() {
             </div>
             <div className="p-5 grid grid-cols-2 md:grid-cols-4 gap-3">
               {[
-                { label: 'Grants Scanned',   value: lastRun.grants_discovered, color: '#64748b' },
-                { label: 'New Stored',        value: lastRun.grants_new,        color: '#0d9488' },
-                { label: 'High Match',        value: lastRun.high_matches,      color: '#16a34a' },
-                { label: 'Medium Match',      value: lastRun.medium_matches,    color: '#d97706' },
+                { label: 'Grants Scanned', value: lastRun.grants_discovered, color: '#64748b' },
+                { label: 'New Stored',     value: lastRun.grants_new,        color: '#0d9488' },
+                { label: 'High Match',     value: lastRun.high_matches,      color: '#16a34a' },
+                { label: 'Medium Match',   value: lastRun.medium_matches,    color: '#d97706' },
               ].map(({ label, value, color }) => (
                 <div key={label} className="p-4 bg-[#f8fafc] rounded-[8px] border border-[#f1f5f9] text-center">
                   <div className="text-[28px] font-bold tabular-nums" style={{ color }}>{value}</div>
@@ -378,13 +387,10 @@ export default async function SettingsPage() {
           </div>
           <div className="divide-y divide-[#f1f5f9]">
             {[
-              { label: 'Organization',           value: CYC_PROFILE.name },
-              { label: 'EIN',                    value: CYC_PROFILE.ein, mono: true },
-              { label: 'Entity Type',            value: CYC_PROFILE.entityType },
-              { label: 'Location',               value: `${CYC_PROFILE.city}, ${CYC_PROFILE.state}` },
-              { label: 'Service Sites',          value: `${CYC_PROFILE.sites} active centers` },
-              { label: 'Annual Budget',          value: formatCurrency(CYC_PROFILE.annualBudget) },
-              { label: 'GATA Registered',        value: CYC_PROFILE.gataRegistered ? 'Yes' : 'No' },
+              { label: 'Organization', value: orgFinancial?.name ?? ctx.orgName },
+              { label: 'Org Code',     value: ctx.orgCode, mono: true },
+              ...(orgFinancial?.ein ? [{ label: 'EIN', value: orgFinancial.ein.replace(/(\d{2})(\d{7})/, '$1-$2'), mono: true }] : []),
+              { label: 'Entity Type',  value: '501(c)(3)' },
             ].map(({ label, value, mono }) => (
               <div key={label} className="flex items-center justify-between px-5 py-3 hover:bg-[#f8fafc] transition-colors">
                 <span className="text-[12px] text-[#64748b] w-44 flex-shrink-0">{label}</span>
@@ -394,8 +400,8 @@ export default async function SettingsPage() {
           </div>
           <div className="px-5 py-3 border-t border-[#f1f5f9] bg-[#f8fafc]">
             <p className="text-[11px] text-[#94a3b8]">
-              To update the matching profile, edit <code className="font-mono text-[#475569]">lib/cyc-profile.ts</code> and redeploy.
-              Future versions will support UI-based profile editing.
+              Extended profile fields (mission, programs, budget) are used by the AI matching engine and
+              are configured per-organization. Contact your Fundir administrator to update matching parameters.
             </p>
           </div>
         </div>
@@ -413,14 +419,14 @@ export default async function SettingsPage() {
           </div>
           <div className="divide-y divide-[#f1f5f9]">
             {[
-              { label: 'Minimum Store Score',  value: '32 / 100',         desc: 'Grants below this are discarded' },
-              { label: 'Semantic Weight',      value: '40%',               desc: 'Embedding similarity' },
-              { label: 'Eligibility Weight',   value: '22%',               desc: 'Org-type and geographic fit' },
-              { label: 'Financial Weight',     value: '20%',               desc: '990 health signals' },
-              { label: 'Strategic Weight',     value: '12%',               desc: 'Mission keyword alignment' },
-              { label: 'Historical Weight',    value: '6%',                desc: 'Award track record' },
-              { label: 'Hard Exclusions',      value: 'Active',            desc: 'International, defense, foreign-aid' },
-              { label: 'Discovery Searches',   value: '11 targeted',       desc: 'Youth, STEM, afterschool, violence prevention…' },
+              { label: 'Minimum Store Score',  value: '32 / 100',     desc: 'Grants below this are discarded' },
+              { label: 'Semantic Weight',      value: '40%',           desc: 'Embedding similarity' },
+              { label: 'Eligibility Weight',   value: '22%',           desc: 'Org-type and geographic fit' },
+              { label: 'Financial Weight',     value: '20%',           desc: '990 health signals' },
+              { label: 'Strategic Weight',     value: '12%',           desc: 'Mission keyword alignment' },
+              { label: 'Historical Weight',    value: '6%',            desc: 'Award track record' },
+              { label: 'Hard Exclusions',      value: 'Active',        desc: 'International, defense, foreign-aid' },
+              { label: 'Discovery Searches',   value: '11 targeted',   desc: 'Youth, STEM, afterschool, violence prevention…' },
             ].map(({ label, value, desc }) => (
               <div key={label} className="flex items-center justify-between px-5 py-3 hover:bg-[#f8fafc] transition-colors">
                 <div>

@@ -374,21 +374,26 @@ export function scoreFitWithOrg(
 // ── Get enriched foundation profiles ─────────────────────────────────────────
 // Scores all seed foundations against CYC's profile and returns sorted list
 
-const CYC_MISSION_KEYWORDS = [
+const DEFAULT_MISSION_KEYWORDS = [
   'youth', 'children', 'afterschool', 'education', 'early childhood',
   'workforce', 'mentoring', 'STEM', 'community', 'low-income',
   'south side', 'west side', 'Chicago', 'violence prevention',
   'social-emotional', 'summer', 'teen', 'development',
 ];
 
-export function getScoredFoundations(orgBudget = 18_000_000): FoundationProfile[] {
+export function getScoredFoundations(
+  orgBudget = 18_000_000,
+  orgCity = 'Chicago',
+  orgState = 'IL',
+  missionKeywords = DEFAULT_MISSION_KEYWORDS,
+): FoundationProfile[] {
   return SEED_FOUNDATIONS.map(f => {
     const { score, reason } = scoreFitWithOrg(
       f,
       orgBudget,
-      'Chicago',
-      'IL',
-      CYC_MISSION_KEYWORDS,
+      orgCity,
+      orgState,
+      missionKeywords,
     );
     return {
       ...f,

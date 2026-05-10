@@ -15,6 +15,7 @@ import {
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 export interface ReportsData {
+  orgName: string;
   kpis: {
     totalAwarded:   number;
     winRate:        number;
@@ -414,7 +415,7 @@ export function ReportsCharts({ data }: { data: ReportsData }) {
             </div>
             <h1 className="text-[26px] font-bold text-white leading-tight">Performance Dashboard</h1>
             <p className="text-slate-400 text-[13px] mt-0.5">
-              Chicago Youth Centers · FY2025–2026 · {data.kpis.submitted} applications tracked · Live data
+              {data.orgName} · {data.kpis.submitted} applications tracked · Live data
             </p>
           </div>
           <div className="flex items-center gap-3 flex-shrink-0">
