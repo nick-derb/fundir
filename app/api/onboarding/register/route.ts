@@ -1,11 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
 
-interface LocationItem {
-  state: string;
-  county: string | null;
-}
-
 interface RegisterBody {
   inviteCode: string;
   email: string;
@@ -14,7 +9,6 @@ interface RegisterBody {
   ein: string;
   city: string;
   state: string;
-  locations: LocationItem[];
   fiscalYearStart: string;
   fiscalYearEnd: string;
 }
@@ -47,7 +41,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 });
   }
 
-  const { inviteCode, email, password, orgName, ein, city, state, locations, fiscalYearStart, fiscalYearEnd } = body;
+  const { inviteCode, email, password, orgName, ein, city, state, fiscalYearStart, fiscalYearEnd } = body;
   const normalizedCode = (inviteCode ?? '').trim().toUpperCase();
   const supabase = createServerClient();
 
@@ -115,28 +109,29 @@ export async function POST(req: NextRequest) {
 
   const userId = authData.user.id;
 
-  // ── 4. Generate unique org code ────────────────────────────────────────────
+  // ── 4. Generate unique org code (retry up to 5 times) ─────────────────────
   let orgCode = generateOrgCode(orgName);
-  const { data: existing } = await supabase
-    .from('organizations')
-    .select('id')
-    .eq('org_code', orgCode)
-    .maybeSingle();
-
-  if (existing) {
-    orgCode = `${orgCode.slice(0, 3)}${Math.floor(100 + Math.random() * 900)}`;
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const { data: existing } = await supabase
+      .from('organizations')
+      .select('id')
+      .eq('org_code', orgCode)
+      .maybeSingle();
+    if (!existing) break;
+    orgCode = `${generateOrgCode(orgName).slice(0, 3)}${Math.floor(100 + Math.random() * 900)}`;
   }
 
   // ── 5. Create organization record ──────────────────────────────────────────
+  const einFormatted = ein ? formatEin(ein) : null;
+
   const { data: org, error: orgError } = await supabase
     .from('organizations')
     .insert({
       org_code: orgCode,
       name: orgName,
-      ein: formatEin(ein),
+      ein: einFormatted,
       city: city ?? '',
       state: state ?? '',
-      locations: locations ?? [],
       fiscal_year_start: fiscalYearStart ?? '01-01',
       fiscal_year_end: fiscalYearEnd ?? '12-31',
     })
@@ -145,7 +140,16 @@ export async function POST(req: NextRequest) {
 
   if (orgError || !org) {
     await supabase.auth.admin.deleteUser(userId);
-    console.error('[onboarding/register] org insert error:', orgError);
+    console.error('[onboarding/register] org insert error:', orgError?.code, orgError?.message, orgError?.details);
+
+    // Surface EIN conflict explicitly
+    if (orgError?.code === '23505' && orgError.message?.includes('ein')) {
+      return NextResponse.json(
+        { error: 'An organization with this EIN is already registered. Contact support if this is an error.' },
+        { status: 409 },
+      );
+    }
+
     return NextResponse.json({ error: 'Failed to create organization. Please try again.' }, { status: 500 });
   }
 
