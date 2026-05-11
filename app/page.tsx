@@ -154,14 +154,6 @@ export default function LandingPage() {
             <HeroCTAs />
           </div>
 
-          <div className="flex items-center gap-6 mt-10 animate-fade-in-up delay-500">
-            {['SOC 2 Ready', 'IRS 990 Auto-Sync', 'No Credit Card'].map(t => (
-              <span key={t} className="flex items-center gap-1.5 text-[12px] text-white/30">
-                <CheckCircle className="w-3.5 h-3.5 text-[#0d9488]" />
-                {t}
-              </span>
-            ))}
-          </div>
         </div>
 
         {/* Scroll indicator */}
