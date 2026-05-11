@@ -460,12 +460,12 @@ export function YMCAFinancialsShell({
   const [tab, setTab] = useState<AnyTab>('overview');
 
   return (
-    <div style={{ background: '#070d1a', minHeight: '100vh' }}>
+    <div style={{ background: 'var(--fin-page-bg)', minHeight: '100vh' }}>
 
       {/* ── Hero ─────────────────────────────────────────────── */}
       <div className="relative overflow-hidden border-b" style={{
-        background: 'linear-gradient(135deg,#0d1929 0%,#0a1120 60%,#070d1a 100%)',
-        borderColor: 'rgba(255,255,255,0.06)',
+        background: 'var(--fin-hero-bg)',
+        borderColor: 'var(--fin-border)',
       }}>
         <div className="absolute inset-0 opacity-[0.025]" style={{
           backgroundImage: 'linear-gradient(#fff 1px,transparent 1px),linear-gradient(90deg,#fff 1px,transparent 1px)',
@@ -495,17 +495,17 @@ export function YMCAFinancialsShell({
 
       {/* ── Sticky tab nav ───────────────────────────────────── */}
       <div className="sticky top-0 z-20 border-b" style={{
-        background: 'rgba(7,13,26,0.97)',
+        background: 'var(--fin-nav-bg)',
         backdropFilter: 'blur(12px)',
         WebkitBackdropFilter: 'blur(12px)',
-        borderColor: 'rgba(255,255,255,0.07)',
+        borderColor: 'var(--fin-border)',
       }}>
         <div className="px-8 max-w-7xl mx-auto flex items-center overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
           {ALL_TABS.map(({ id, label, icon: Icon }) => (
             <button key={id} onClick={() => setTab(id as AnyTab)}
               className="flex items-center gap-2 px-4 py-3.5 text-[12px] font-semibold whitespace-nowrap border-b-2 transition-all"
               style={{
-                color: tab === id ? '#fff' : '#64748b',
+                color: tab === id ? 'var(--fin-tab-active)' : 'var(--fin-tab-inactive)',
                 borderBottomColor: tab === id ? '#0d9488' : 'transparent',
               }}>
               <Icon className="w-3.5 h-3.5" />
@@ -537,7 +537,7 @@ export function YMCAFinancialsShell({
 
       {/* ── Footer ───────────────────────────────────────────── */}
       <div className="px-8 pb-8 max-w-7xl mx-auto">
-        <div className="flex items-center justify-between py-4 border-t" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+        <div className="flex items-center justify-between py-4 border-t" style={{ borderColor: 'var(--fin-border)' }}>
           <p className="text-[11px] text-slate-700">
             Source: IRS Form 990 (FY2024) · Compensation990.com · EIN 36-2179782 · ymcachicago.org
           </p>

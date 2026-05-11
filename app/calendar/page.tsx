@@ -74,8 +74,8 @@ export default async function CalendarPage() {
       currentOrgCode={ctx.orgCode}
     >
 
-      {/* ── Dark Hero ── */}
-      <div className="relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)' }}>
+      {/* ── Hero ── */}
+      <div className="relative overflow-hidden" style={{ background: 'var(--fin-hero-bg)' }}>
         <div className="absolute inset-0 opacity-5" style={{
           backgroundImage: 'linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)',
           backgroundSize: '40px 40px',
@@ -138,16 +138,17 @@ export default async function CalendarPage() {
                 bar: grants.length > 0 ? (highMatch / grants.length) * 100 : 0,
               },
             ].map(({ label, value, sub, accent, icon: Icon, bar }) => (
-              <div key={label} className="rounded-[10px] border border-white/10 p-4" style={{ background: 'rgba(255,255,255,0.06)' }}>
+              <div key={label} className="rounded-[10px] border p-4"
+              style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)' }}>
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-[11px] font-semibold text-[#94a3b8] uppercase tracking-wide">{label}</span>
                   <div className="w-6 h-6 rounded-[5px] flex items-center justify-center" style={{ background: accent + '25' }}>
                     <Icon className="w-3.5 h-3.5" style={{ color: accent }} />
                   </div>
                 </div>
-                <div className="text-[26px] font-bold text-white leading-none mb-1">{value}</div>
+                <div className="text-[26px] font-bold leading-none mb-1" style={{ color: 'var(--text-primary)' }}>{value}</div>
                 <p className="text-[11px] text-[#64748b] mb-3">{sub}</p>
-                <div className="h-1 bg-white/10 rounded-full overflow-hidden">
+                <div className="h-1 rounded-full overflow-hidden" style={{ background: 'var(--score-track)' }}>
                   <div className="h-full rounded-full" style={{ width: `${bar}%`, background: `linear-gradient(90deg, ${accent}, ${accent}99)` }} />
                 </div>
               </div>
