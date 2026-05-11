@@ -1,18 +1,21 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { FinancialAnalyzer } from './financial-analyzer';
 import { IntegrationConnector } from './integration-connector';
 import {
   BarChart3, Brain, CheckCircle, ChevronDown, FileText, Loader2,
   Lightbulb, BookOpen, Library, Wand2, ArrowRight, AlertTriangle,
+  DollarSign, TrendingUp, Shield, Target, RefreshCw,
 } from 'lucide-react';
+import type { ComputedFinancials, OrgProfile } from '@/lib/propublica';
 
 // ── Shared helpers (exported so CYC shell can import them) ────────────────────
 export function Card({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
     <div className={`rounded-xl border ${className}`}
-      style={{ background: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.08)' }}>
+      style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)' }}>
       {children}
     </div>
   );
@@ -21,7 +24,7 @@ export function Card({ children, className = '' }: { children: React.ReactNode; 
 export function CardHeader({ children, accent }: { children: React.ReactNode; accent?: string }) {
   return (
     <div className="px-4 py-3 border-b flex items-center justify-between"
-      style={{ borderColor: 'rgba(255,255,255,0.06)', background: accent ?? 'rgba(255,255,255,0.02)' }}>
+      style={{ borderColor: 'var(--card-border)', background: accent ?? 'var(--badge-bg)' }}>
       {children}
     </div>
   );
@@ -30,8 +33,8 @@ export function CardHeader({ children, accent }: { children: React.ReactNode; ac
 export function SectionTitle({ title, sub }: { title: string; sub?: string }) {
   return (
     <div className="mb-4">
-      <h2 className="text-[15px] font-bold text-slate-100">{title}</h2>
-      {sub && <p className="text-[11px] text-slate-500 mt-0.5">{sub}</p>}
+      <h2 className="text-[15px] font-bold" style={{ color: 'var(--text-primary)' }}>{title}</h2>
+      {sub && <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-secondary)' }}>{sub}</p>}
     </div>
   );
 }
@@ -69,18 +72,18 @@ export function AITab({ orgCode, orgId, orgName, googleConnected, microsoftConne
             {['Connect cloud storage', 'Select document type', 'AI analyzes & saves'].map((step, i) => (
               <div key={step} className="flex items-center gap-2">
                 <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold flex-shrink-0 ${(i === 0 && anyConnected) ? 'bg-green-500 text-white' : i === 0 ? 'bg-teal-500 text-white' : ''}`}
-                  style={i > 0 ? { background: 'rgba(255,255,255,0.08)', color: '#64748b' } : {}}>
+                  style={i > 0 ? { background: 'var(--badge-bg)', color: 'var(--text-tertiary)' } : {}}>
                   {i === 0 && anyConnected ? <CheckCircle className="w-3.5 h-3.5" /> : i + 1}
                 </div>
-                <span className={`text-[12px] whitespace-nowrap ${i === 0 ? 'text-slate-300' : 'text-slate-600'}`}>{step}</span>
-                {i < 2 && <div className="w-6 h-px mx-1" style={{ background: 'rgba(255,255,255,0.1)' }} />}
+                <span className="text-[12px] whitespace-nowrap" style={{ color: i === 0 ? 'var(--text-muted)' : 'var(--text-tertiary)' }}>{step}</span>
+                {i < 2 && <div className="w-6 h-px mx-1" style={{ background: 'var(--row-divider)' }} />}
               </div>
             ))}
           </div>
         </div>
-        <div className="mx-5 mb-5 rounded-xl border overflow-hidden" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
-          <div className="px-4 py-2.5 border-b" style={{ borderColor: 'rgba(255,255,255,0.06)', background: 'rgba(255,255,255,0.02)' }}>
-            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Cloud Storage — Step 1</p>
+        <div className="mx-5 mb-5 rounded-xl border overflow-hidden" style={{ borderColor: 'var(--card-border)' }}>
+          <div className="px-4 py-2.5 border-b" style={{ borderColor: 'var(--card-border)', background: 'var(--badge-bg)' }}>
+            <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-tertiary)' }}>Cloud Storage — Step 1</p>
           </div>
           <IntegrationConnector
             orgCode={orgCode}
@@ -154,7 +157,7 @@ function AnalysisExpandView({ analysis }: { analysis: Record<string, unknown> })
             { label: 'Grant Readiness', value: `${score}/100`,                                                color: score >= 70 ? '#22c55e' : '#f59e0b' },
           ].map(({ label, value, color }) => (
             <div key={label} className="p-3 rounded-[8px] border"
-              style={{ background: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.06)' }}>
+              style={{ background: 'var(--badge-bg)', borderColor: 'var(--card-border)' }}>
               <p className="text-[9px] text-slate-600 uppercase tracking-wide mb-1">{label}</p>
               <p className="text-[15px] font-bold font-mono" style={{ color }}>{value}</p>
             </div>
@@ -263,8 +266,8 @@ export function DocumentLibraryTab({
       {!loading && docs.length === 0 && (
         <div className="flex flex-col items-center gap-4 py-16 text-center">
           <div className="w-14 h-14 rounded-2xl flex items-center justify-center"
-            style={{ background: 'rgba(255,255,255,0.05)' }}>
-            <Library className="w-7 h-7 text-slate-600" />
+            style={{ background: 'var(--badge-bg)' }}>
+            <Library className="w-7 h-7" style={{ color: 'var(--text-tertiary)' }} />
           </div>
           <div>
             <p className="text-[14px] font-bold text-slate-400">No documents analyzed yet</p>
@@ -287,7 +290,7 @@ export function DocumentLibraryTab({
             const isOpen = expanded === doc.id;
             return (
               <div key={doc.id} className="rounded-[10px] border overflow-hidden transition-all"
-                style={{ borderColor: isOpen ? 'rgba(13,148,136,0.3)' : 'rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)' }}>
+                style={{ borderColor: isOpen ? 'rgba(13,148,136,0.4)' : 'var(--card-border)', background: 'var(--card-bg)' }}>
                 <button onClick={() => handleExpand(doc.id)}
                   className="w-full flex items-start gap-4 px-5 py-4 text-left hover:bg-white/[0.02] transition-colors">
                   <div className="w-8 h-8 rounded-[6px] flex items-center justify-center flex-shrink-0 mt-0.5"
@@ -314,7 +317,7 @@ export function DocumentLibraryTab({
                   </div>
                 </button>
                 {isOpen && (
-                  <div className="px-5 pb-5 border-t" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+                  <div className="px-5 pb-5 border-t" style={{ borderColor: 'var(--card-border)' }}>
                     {fetching ? (
                       <div className="flex items-center gap-2 py-4 text-slate-600 text-[12px]">
                         <Loader2 className="w-4 h-4 animate-spin" /> Loading full analysis…
@@ -587,6 +590,211 @@ export function StrategyBriefTab({ orgCode, orgName }: { orgCode: string; orgNam
   );
 }
 
+// ── 990 Financial Overview Tab ────────────────────────────────────────────────
+type FinancialHistory = Array<{ tax_prd_yr: number; totrevenue: number; totfuncexpns: number; compnsatncurrofcr: number }>;
+
+interface OrgFinancialData {
+  computed: ComputedFinancials;
+  org: OrgProfile;
+  history?: FinancialHistory;
+}
+
+export function OrgFinancialsTab({
+  financialData, ein, orgName,
+}: {
+  financialData: OrgFinancialData | null;
+  ein?: string | null;
+  orgName?: string;
+}) {
+  if (!financialData?.computed) {
+    return (
+      <div className="flex flex-col items-center gap-5 py-20 text-center">
+        <div className="w-16 h-16 rounded-2xl flex items-center justify-center" style={{ background: 'rgba(13,148,136,0.1)' }}>
+          <BarChart3 className="w-8 h-8 text-[#0d9488]" />
+        </div>
+        <div>
+          <h2 className="text-[17px] font-bold mb-2" style={{ color: 'var(--text-primary)' }}>No 990 Data Synced</h2>
+          <p className="text-[13px] max-w-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
+            Sync your IRS Form 990 data to see financial health metrics, revenue breakdown, and grant eligibility signals.
+          </p>
+        </div>
+        <Link href="/settings"
+          className="flex items-center gap-2 px-5 py-2.5 rounded-[8px] text-[13px] font-bold text-white"
+          style={{ background: 'linear-gradient(135deg,#0d9488,#0891b2)' }}>
+          <RefreshCw className="w-4 h-4" /> Sync 990 Data in Settings
+        </Link>
+        <p className="text-[11px]" style={{ color: 'var(--text-tertiary)' }}>
+          Free · auto-matched via ProPublica using your EIN
+        </p>
+      </div>
+    );
+  }
+
+  const { computed, history } = financialData;
+  const fmt = (n: number) => {
+    const a = Math.abs(n);
+    if (a >= 1_000_000) return `$${(a / 1_000_000).toFixed(1)}M`;
+    if (a >= 1_000) return `$${(a / 1_000).toFixed(0)}K`;
+    return `$${a}`;
+  };
+
+  const depColor = (d: string) =>
+    d === 'critical' ? '#dc2626' : d === 'elevated' ? '#d97706' : d === 'moderate' ? '#d97706' : '#16a34a';
+
+  return (
+    <div className="space-y-5">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-[#0d9488] mb-0.5">IRS Form 990 · ProPublica</p>
+          <h2 className="text-[20px] font-bold" style={{ color: 'var(--text-primary)' }}>Financial Health Overview</h2>
+          <p className="text-[12px] mt-0.5" style={{ color: 'var(--text-secondary)' }}>
+            FY{computed.filingYear}{ein ? ` · EIN ${ein}` : orgName ? ` · ${orgName}` : ''}
+          </p>
+        </div>
+        <Link href="/settings"
+          className="flex items-center gap-1.5 text-[12px] font-semibold text-[#0d9488] hover:underline">
+          <RefreshCw className="w-3.5 h-3.5" /> Sync new data
+        </Link>
+      </div>
+
+      {/* KPI grid */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {[
+          {
+            label: 'Total Revenue', value: fmt(computed.totalRevenue),
+            icon: DollarSign, color: '#0d9488', sub: `FY${computed.filingYear}`,
+          },
+          {
+            label: 'Net Assets', value: fmt(computed.netAssets),
+            icon: TrendingUp, color: computed.netAssets >= 0 ? '#16a34a' : '#dc2626', sub: 'End of year',
+          },
+          {
+            label: 'Months of Reserves', value: `${computed.monthsOfReserves.toFixed(1)} mo`,
+            icon: Shield,
+            color: computed.monthsOfReserves >= 6 ? '#16a34a' : computed.monthsOfReserves >= 3 ? '#d97706' : '#dc2626',
+            sub: 'Operating liquidity',
+          },
+          {
+            label: 'Program Efficiency', value: `${computed.programEfficiencyPct.toFixed(0)}%`,
+            icon: Target,
+            color: computed.programEfficiencyPct >= 80 ? '#16a34a' : computed.programEfficiencyPct >= 65 ? '#d97706' : '#dc2626',
+            sub: '% to programs',
+          },
+        ].map(({ label, value, icon: Icon, color, sub }) => (
+          <div key={label} className="rounded-xl border p-4"
+            style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)' }}>
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-[11px] font-semibold uppercase tracking-wide"
+                style={{ color: 'var(--text-secondary)' }}>{label}</span>
+              <div className="w-7 h-7 rounded-[6px] flex items-center justify-center"
+                style={{ background: color + '20' }}>
+                <Icon className="w-3.5 h-3.5" style={{ color }} />
+              </div>
+            </div>
+            <div className="text-[22px] font-bold leading-none mb-1" style={{ color: 'var(--text-primary)' }}>{value}</div>
+            <p className="text-[11px]" style={{ color: 'var(--text-tertiary)' }}>{sub}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Revenue mix + eligibility signals */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="rounded-xl border p-5" style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)' }}>
+          <p className="text-[11px] font-bold uppercase tracking-widest mb-4"
+            style={{ color: 'var(--text-tertiary)' }}>Revenue Mix</p>
+          <div className="space-y-4">
+            {[
+              { label: 'Government Grants', pct: computed.governmentGrantsPct, color: '#2563eb' },
+              { label: 'Private Grants & Gifts', pct: computed.privateGrantsPct, color: '#0d9488' },
+              { label: 'Program Revenue', pct: computed.programRevenuePct, color: '#7c3aed' },
+            ].map(({ label, pct, color }) => (
+              <div key={label}>
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[12px] font-medium" style={{ color: 'var(--text-secondary)' }}>{label}</span>
+                  <span className="text-[12px] font-bold tabular-nums" style={{ color }}>{pct.toFixed(0)}%</span>
+                </div>
+                <div className="h-2 rounded-full overflow-hidden" style={{ background: 'var(--score-track)' }}>
+                  <div className="h-full rounded-full" style={{ width: `${Math.min(pct, 100)}%`, background: color }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="rounded-xl border p-5" style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)' }}>
+          <p className="text-[11px] font-bold uppercase tracking-widest mb-4"
+            style={{ color: 'var(--text-tertiary)' }}>Grant Eligibility Signals</p>
+          <div className="space-y-4">
+            {[
+              {
+                label: 'Govt Grant Dependency',
+                status: computed.govtDependency,
+                color: depColor(computed.govtDependency),
+                desc: computed.govtDependency === 'critical' ? 'High risk — diversification needed'
+                    : computed.govtDependency === 'elevated' ? 'Some risk — watch revenue mix'
+                    : computed.govtDependency === 'moderate' ? 'Moderate — within normal range'
+                    : 'Low risk — well diversified',
+              },
+              {
+                label: 'Liquidity Position',
+                status: computed.monthsOfReserves >= 6 ? 'strong' : computed.monthsOfReserves >= 3 ? 'adequate' : 'low',
+                color: computed.monthsOfReserves >= 6 ? '#16a34a' : computed.monthsOfReserves >= 3 ? '#d97706' : '#dc2626',
+                desc: `${computed.monthsOfReserves.toFixed(1)} months of operating reserves`,
+              },
+              {
+                label: 'Program Efficiency',
+                status: computed.programEfficiencyPct >= 80 ? 'excellent' : computed.programEfficiencyPct >= 65 ? 'good' : 'below avg',
+                color: computed.programEfficiencyPct >= 80 ? '#16a34a' : computed.programEfficiencyPct >= 65 ? '#d97706' : '#dc2626',
+                desc: `${computed.programEfficiencyPct.toFixed(0)}% of expenses go to programs`,
+              },
+            ].map(({ label, status, color, desc }) => (
+              <div key={label} className="flex items-start gap-3">
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 mt-0.5 capitalize"
+                  style={{ background: color + '20', color }}>
+                  {status}
+                </span>
+                <div>
+                  <p className="text-[12px] font-semibold" style={{ color: 'var(--text-primary)' }}>{label}</p>
+                  <p className="text-[11px]" style={{ color: 'var(--text-tertiary)' }}>{desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Revenue history sparkline */}
+      {history && history.length > 1 && (
+        <div className="rounded-xl border p-5" style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)' }}>
+          <p className="text-[11px] font-bold uppercase tracking-widest mb-4"
+            style={{ color: 'var(--text-tertiary)' }}>Revenue History</p>
+          <div className="flex items-end gap-3" style={{ height: 80 }}>
+            {history.slice(-7).map(yr => {
+              const max = Math.max(...history.slice(-7).map(y => y.totrevenue));
+              const barH = Math.round((yr.totrevenue / max) * 56);
+              return (
+                <div key={yr.tax_prd_yr} className="flex-1 flex flex-col items-center gap-1">
+                  <div className="w-full rounded-[4px] flex flex-col-reverse overflow-hidden"
+                    style={{ height: 56, background: 'var(--score-track)' }}>
+                    <div className="w-full rounded-[3px]" style={{
+                      height: barH,
+                      background: 'linear-gradient(to top, #0d9488, rgba(13,148,136,0.35))',
+                    }} />
+                  </div>
+                  <span className="text-[9px] tabular-nums" style={{ color: 'var(--text-tertiary)' }}>
+                    {yr.tax_prd_yr}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Tab definitions (exported for CYC shell) ──────────────────────────────────
 export const COMMON_TABS = [
   { id: 'ai',       label: 'AI Analyzer',    icon: Brain   },
@@ -597,17 +805,29 @@ export const COMMON_TABS = [
 export type CommonTab = typeof COMMON_TABS[number]['id'];
 
 // ── Generic Financials Shell — non-CYC orgs only ──────────────────────────────
+type ShellTab = '990' | CommonTab;
+
+const SHELL_TABS: Array<{ id: ShellTab; label: string; icon: React.ComponentType<{ className?: string }> }> = [
+  { id: '990',      label: '990 Overview',   icon: BarChart3 },
+  { id: 'ai',       label: 'AI Analyzer',    icon: Brain     },
+  { id: 'docs',     label: 'Documents',      icon: Library   },
+  { id: 'strategy', label: 'Strategy Brief', icon: Wand2     },
+];
+
 export function FinancialsShell({
   orgCode, orgId, orgName,
   googleConnected, microsoftConnected,
+  financialData, ein,
 }: {
   orgCode:            string;
   orgId?:             string;
   orgName?:           string;
   googleConnected:    boolean;
   microsoftConnected: boolean;
+  financialData?:     OrgFinancialData | null;
+  ein?:               string | null;
 }) {
-  const [tab, setTab] = useState<CommonTab>('ai');
+  const [tab, setTab] = useState<ShellTab>(financialData?.computed ? '990' : 'ai');
 
   return (
     <div style={{ background: 'var(--fin-page-bg)', minHeight: '100vh' }}>
@@ -618,15 +838,15 @@ export function FinancialsShell({
         borderColor: 'var(--fin-border)',
       }}>
         <div className="absolute inset-0 opacity-[0.025]" style={{
-          backgroundImage: 'linear-gradient(#fff 1px,transparent 1px),linear-gradient(90deg,#fff 1px,transparent 1px)',
+          backgroundImage: 'linear-gradient(currentColor 1px,transparent 1px),linear-gradient(90deg,currentColor 1px,transparent 1px)',
           backgroundSize: '48px 48px',
         }} />
         <div className="absolute top-0 right-1/3 w-80 h-36 rounded-full blur-3xl pointer-events-none"
           style={{ background: 'radial-gradient(circle,rgba(13,148,136,0.10),transparent)' }} />
         <div className="relative px-8 py-7 max-w-7xl mx-auto">
           <div className="flex items-center gap-2 mb-1">
-            <BarChart3 className="w-3.5 h-3.5 text-teal-500" />
-            <span className="text-[10px] font-bold text-teal-500 uppercase tracking-widest">Org Intelligence · Financials</span>
+            <BarChart3 className="w-3.5 h-3.5 text-[#0d9488]" />
+            <span className="text-[10px] font-bold text-[#0d9488] uppercase tracking-widest">Org Intelligence · Financials</span>
           </div>
           <h1 className="text-[26px] font-bold leading-tight" style={{ color: 'var(--fin-heading)' }}>{orgName ?? 'My Organization'}</h1>
         </div>
@@ -640,8 +860,8 @@ export function FinancialsShell({
         borderColor: 'var(--fin-border)',
       }}>
         <div className="px-8 max-w-7xl mx-auto flex items-center overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
-          {COMMON_TABS.map(({ id, label, icon: Icon }) => (
-            <button key={id} onClick={() => setTab(id as CommonTab)}
+          {SHELL_TABS.map(({ id, label, icon: Icon }) => (
+            <button key={id} onClick={() => setTab(id)}
               className="flex items-center gap-2 px-4 py-3.5 text-[12px] font-semibold whitespace-nowrap border-b-2 transition-all"
               style={{
                 color: tab === id ? 'var(--fin-tab-active)' : 'var(--fin-tab-inactive)',
@@ -650,7 +870,10 @@ export function FinancialsShell({
               <Icon className="w-3.5 h-3.5" />
               {label}
               {id === 'ai' && (googleConnected || microsoftConnected) && (
-                <span className="w-1.5 h-1.5 rounded-full bg-green-400 flex-shrink-0" />
+                <span className="w-1.5 h-1.5 rounded-full bg-[#16a34a] flex-shrink-0" />
+              )}
+              {id === '990' && financialData?.computed && (
+                <span className="w-1.5 h-1.5 rounded-full bg-[#16a34a] flex-shrink-0" />
               )}
             </button>
           ))}
@@ -659,6 +882,9 @@ export function FinancialsShell({
 
       {/* ── Tab content ──────────────────────────────────────── */}
       <div className="px-8 py-7 max-w-7xl mx-auto">
+        {tab === '990' && (
+          <OrgFinancialsTab financialData={financialData ?? null} ein={ein} orgName={orgName} />
+        )}
         {tab === 'ai' && (
           <AITab orgCode={orgCode} orgId={orgId} orgName={orgName}
             googleConnected={googleConnected} microsoftConnected={microsoftConnected} />

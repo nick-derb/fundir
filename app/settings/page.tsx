@@ -88,10 +88,13 @@ export default async function SettingsPage() {
       currentOrgCode={ctx.orgCode}
     >
 
-      {/* ── Dark Hero ── */}
-      <div className="relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)' }}>
-        <div className="absolute inset-0 opacity-5" style={{
-          backgroundImage: 'linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)',
+      {/* ── Hero ── */}
+      <div className="relative overflow-hidden border-b" style={{
+        background: 'var(--fin-hero-bg)',
+        borderColor: 'var(--fin-border)',
+      }}>
+        <div className="absolute inset-0 opacity-[0.025]" style={{
+          backgroundImage: 'linear-gradient(var(--text) 1px, transparent 1px), linear-gradient(90deg, var(--text) 1px, transparent 1px)',
           backgroundSize: '40px 40px',
         }} />
         <div className="absolute top-0 left-1/4 w-96 h-48 rounded-full opacity-10 blur-3xl"
@@ -101,21 +104,21 @@ export default async function SettingsPage() {
           <div className="flex items-start justify-between gap-6">
             <div>
               <div className="flex items-center gap-2 mb-1">
-                <Settings className="w-4 h-4 text-[#94a3b8]" />
-                <span className="text-[11px] font-bold text-[#94a3b8] uppercase tracking-widest">System Configuration</span>
+                <Settings className="w-3.5 h-3.5 text-[#0d9488]" />
+                <span className="text-[10px] font-bold text-[#0d9488] uppercase tracking-widest">System Configuration</span>
               </div>
-              <h1 className="text-[26px] font-bold text-white leading-tight">Settings</h1>
-              <p className="text-[#94a3b8] text-[13px] mt-1">
+              <h1 className="text-[26px] font-bold leading-tight" style={{ color: 'var(--fin-heading)' }}>Settings</h1>
+              <p className="text-[13px] mt-1" style={{ color: 'var(--text-secondary)' }}>
                 Fundir · {ctx.orgName} · v2.0
               </p>
             </div>
             <div className="flex flex-col items-end gap-2">
               <span className={`flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-full border ${
                 allConnected
-                  ? 'text-[#4ade80] bg-[#4ade80]/10 border-[#4ade80]/20'
-                  : 'text-[#fbbf24] bg-[#fbbf24]/10 border-[#fbbf24]/20'
+                  ? 'text-[#16a34a] bg-[#16a34a]/10 border-[#16a34a]/20'
+                  : 'text-[#d97706] bg-[#d97706]/10 border-[#d97706]/20'
               }`}>
-                <span className={`w-1.5 h-1.5 rounded-full ${allConnected ? 'bg-[#4ade80] animate-pulse' : 'bg-[#fbbf24]'}`} />
+                <span className={`w-1.5 h-1.5 rounded-full ${allConnected ? 'bg-[#16a34a] animate-pulse' : 'bg-[#d97706]'}`} />
                 {connectedCount}/4 services online
               </span>
             </div>

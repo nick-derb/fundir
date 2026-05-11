@@ -369,10 +369,39 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
   color:            var(--sec-btn-text)   !important;
 }
 
-/* ── Light-mode: fix white text on light surfaces ────── */
-/* Only override text-white when it's NOT inside a gradient/colored button or dark panel */
-[data-theme="light"] .text-slate-400 { color: #64748b !important; }
+/* ── Light-mode: fix slate text colors designed for dark backgrounds ──── */
+[data-theme="light"] .text-slate-100 { color: #0f172a !important; }
+[data-theme="light"] .text-slate-200 { color: #1e293b !important; }
+[data-theme="light"] .text-slate-300 { color: #334155 !important; }
+[data-theme="light"] .text-slate-400 { color: #475569 !important; }
+[data-theme="light"] .text-slate-500 { color: #64748b !important; }
 [data-theme="light"] .text-slate-600 { color: #475569 !important; }
+[data-theme="light"] .text-white      { color: #0f172a !important; }
+
+/* Exception: keep text-white inside colored/gradient buttons & badges */
+[data-theme="light"] .bg-\[\#0d9488\]  .text-white,
+[data-theme="light"] [style*="linear-gradient"] .text-white,
+[data-theme="light"] [style*="#0d9488"] .text-white,
+[data-theme="light"] [style*="#6366f1"] .text-white,
+[data-theme="light"] [style*="#7c3aed"] .text-white,
+[data-theme="light"] button .text-white,
+[data-theme="light"] a .text-white     { color: #ffffff !important; }
+
+/* ── Light-mode: fix dark rgba surfaces ────────────────────────────────── */
+[data-theme="light"] .bg-white\/\[0\.02\]  { background-color: #fafbff !important; }
+[data-theme="light"] .bg-white\/\[0\.03\]  { background-color: var(--card-bg) !important; }
+[data-theme="light"] .bg-white\/\[0\.04\]  { background-color: var(--badge-bg) !important; }
+[data-theme="light"] .bg-white\/\[0\.05\]  { background-color: var(--badge-bg) !important; }
+[data-theme="light"] .bg-white\/\[0\.08\]  { background-color: #f1f5f9 !important; }
+[data-theme="light"] .hover\:bg-white\/\[0\.02\]:hover { background-color: var(--row-hover) !important; }
+
+/* ── Light-mode: teal-toned text is fine as-is ──────────────────────────── */
+[data-theme="light"] .text-teal-400 { color: #0d9488 !important; }
+[data-theme="light"] .text-teal-500 { color: #0f766e !important; }
+[data-theme="light"] .text-green-400 { color: #16a34a !important; }
+[data-theme="light"] .text-red-400   { color: #dc2626 !important; }
+[data-theme="light"] .text-amber-400 { color: #d97706 !important; }
+[data-theme="light"] .text-indigo-400 { color: #4f46e5 !important; }
 
 /* ── Grant side-panel animations ────────────────────── */
 @keyframes slideInRight {
