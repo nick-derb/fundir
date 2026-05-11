@@ -60,6 +60,16 @@ export default async function FinancialsPage() {
     );
   }
 
+  // YMCA Metro Chicago gets its own shell with 990 data from IRS Form
+  if (ctx.orgCode === 'YOM2026') {
+    const { YMCAFinancialsShell } = await import('@/components/ymca-financials-shell');
+    return (
+      <AppShell orgName={ctx.orgName} orgId={ctx.orgId} userEmail={ctx.email} isAdmin={ctx.isAdmin} availableOrgs={ctx.availableOrgs} currentOrgCode={ctx.orgCode}>
+        <YMCAFinancialsShell key={ctx.orgCode} {...shellProps} />
+      </AppShell>
+    );
+  }
+
   return (
     <AppShell orgName={ctx.orgName} orgId={ctx.orgId} userEmail={ctx.email} isAdmin={ctx.isAdmin} availableOrgs={ctx.availableOrgs} currentOrgCode={ctx.orgCode}>
       <FinancialsShell key={ctx.orgCode} {...shellProps} />
