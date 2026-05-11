@@ -5,6 +5,7 @@
  *
  * FY2024 = fiscal year ended December 31, 2024
  */
+import type { OrgMatchProfile } from './matching';
 
 // ── Core Financials ──────────────────────────────────────────────────────────
 
@@ -266,3 +267,36 @@ export const YMCA_INTELLIGENCE_FLAGS = [
     action:     'CEO compensation within reasonable range for grants with overhead scrutiny. Program-to-admin ratio and deficit are the more significant concerns to address in grant applications.',
   },
 ] as const;
+
+// ── Match Profile (used by discovery scoring engine) ─────────────────────────
+
+export const YMCA_MATCH_PROFILE: OrgMatchProfile = {
+  name:             'The YMCA of Metropolitan Chicago',
+  mission:          'The YMCA of Metropolitan Chicago strengthens communities through youth development, healthy living, and social responsibility. Serving Chicago since 1858, the Y provides programs and services for all ages — from early childhood and afterschool programs to workforce development, fitness, and family support.',
+  city:             'Chicago',
+  state:            'IL',
+  annualBudget:     YMCA_CORE.revenue,
+  sites:            20,
+  gataRegistered:   true,
+  orgGrantMin:      100_000,
+  orgGrantMax:      5_000_000,
+  targetPopulations: [
+    'youth', 'children', 'teens', 'families', 'adults', 'seniors',
+    'low-income', 'underserved communities', 'workforce', 'child care',
+  ],
+  programs: [
+    {
+      name:  'Youth Development',
+      areas: ['youth', 'afterschool', 'child care', 'early childhood', 'teen programs', 'mentoring', 'summer camp', 'out-of-school time', 'social-emotional learning'],
+    },
+    {
+      name:  'Healthy Living',
+      areas: ['fitness', 'wellness', 'health', 'swimming', 'sports', 'recreation', 'chronic disease prevention', 'nutrition'],
+    },
+    {
+      name:  'Social Responsibility',
+      areas: ['workforce development', 'job training', 'social services', 'community programs', 'financial wellness', 'civic engagement', 'violence prevention'],
+    },
+  ],
+  historicalWinRates: {},
+};

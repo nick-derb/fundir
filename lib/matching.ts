@@ -1,6 +1,20 @@
 import { ExtractedFields, ScoreBreakdown } from '@/types';
-import { CYC_PROFILE } from './cyc-profile';
 import { FinancialEligibilityResult, neutralFinancialResult } from './990-screener';
+
+export interface OrgMatchProfile {
+  name: string;
+  mission: string;
+  city: string;
+  state: string;
+  targetPopulations: readonly string[];
+  programs: readonly { readonly name: string; readonly areas: readonly string[] }[];
+  gataRegistered: boolean;
+  historicalWinRates: Record<string, number>;
+  annualBudget: number;
+  sites: number;
+  orgGrantMin: number;
+  orgGrantMax: number;
+}
 
 export function cosineSimilarity(a: number[], b: number[]): number {
   if (!a?.length || !b?.length || a.length !== b.length) return 0;
@@ -82,7 +96,7 @@ export function hardExclusionReason(
 
 // ── Eligibility scoring ─────────────────────────────────────────────────────
 
-function computeEligibility(fields: ExtractedFields): number {
+function computeEligibility(fields: ExtractedFields, profile: OrgMatchProfile): number {
   let score = 0;
 
   // Entity type (35%)
@@ -104,22 +118,22 @@ function computeEligibility(fields: ExtractedFields): number {
     score += (isExplicitlyExcluded ? 0.0 : isEligible ? 1.0 : 0.4) * 0.35;
   }
 
-  // Geography (30%) — increased weight because Chicago-specificity matters
+  // Geography (30%) — increased weight because state-specificity matters
   const scope = fields.geographic_scope || 'national';
   if (scope === 'international' || scope === 'foreign') {
-    return 0; // hard zero — IL org cannot apply to international grants
+    return 0; // hard zero — domestic org cannot apply to international grants
   } else if (scope === 'national' || !scope) {
     score += 1.0 * 0.30;
   } else if (scope === 'state') {
-    if (fields.geographic_states?.includes('IL')) {
+    if (fields.geographic_states?.includes(profile.state)) {
       score += 1.0 * 0.30;
     } else if (!fields.geographic_states?.length) {
       score += 0.6 * 0.30;
     } else {
-      score += 0.0 * 0.30; // explicitly excludes IL
+      score += 0.0 * 0.30; // explicitly excludes org's state
     }
   } else if (scope === 'city' || scope === 'local') {
-    if (fields.geographic_states?.includes('IL')) {
+    if (fields.geographic_states?.includes(profile.state)) {
       score += 0.8 * 0.30;
     } else {
       score += 0.1 * 0.30;
@@ -130,7 +144,7 @@ function computeEligibility(fields: ExtractedFields): number {
 
   // Target population alignment (20%)
   const grantPops = fields.target_population?.map(p => p.toLowerCase()) || [];
-  const orgPops   = CYC_PROFILE.targetPopulations.map(p => p.toLowerCase());
+  const orgPops   = profile.targetPopulations.map(p => p.toLowerCase());
   if (!grantPops.length) {
     score += 0.4 * 0.20; // unknown — conservative
   } else {
@@ -142,25 +156,25 @@ function computeEligibility(fields: ExtractedFields): number {
 
   // Compliance (15%)
   const requiresGATA = fields.compliance_frameworks?.some(f => f.toUpperCase().includes('GATA'));
-  score += (!requiresGATA || CYC_PROFILE.gataRegistered ? 1.0 : 0.2) * 0.15;
+  score += (!requiresGATA || profile.gataRegistered ? 1.0 : 0.2) * 0.15;
 
   return Math.min(1.0, score);
 }
 
 // ── Strategic fit scoring ───────────────────────────────────────────────────
 
-function computeStrategicFit(fields: ExtractedFields): number {
+function computeStrategicFit(fields: ExtractedFields, profile: OrgMatchProfile): number {
   let score = 0;
 
   // Program area overlap (60%) — most important strategic signal
-  const grantAreas = fields.program_areas?.map(a => a.toLowerCase()) || [];
-  const orgAreas   = CYC_PROFILE.programs.flatMap(p => p.areas.map(a => a.toLowerCase()));
+  const grantAreas = fields.program_areas?.map((a: string) => a.toLowerCase()) || [];
+  const orgAreas   = profile.programs.flatMap((p: { name: string; areas: readonly string[] }) => p.areas.map((a: string) => a.toLowerCase()));
 
   if (!grantAreas.length) {
     score += 0.25 * 0.60; // unknown — conservative (was 0.3 before, lowered to reduce noise)
   } else {
-    const intersection = grantAreas.filter(ga =>
-      orgAreas.some(oa => ga.includes(oa) || oa.includes(ga) || editDistance(ga, oa) <= 2)
+    const intersection = grantAreas.filter((ga: string) =>
+      orgAreas.some((oa: string) => ga.includes(oa) || oa.includes(ga) || editDistance(ga, oa) <= 2)
     );
     const jaccard = intersection.length / new Set([...grantAreas, ...orgAreas]).size;
     score += jaccard * 0.60;
@@ -169,8 +183,8 @@ function computeStrategicFit(fields: ExtractedFields): number {
   // Award size fit (30%)
   const awardMin = fields.award_floor   || 0;
   const awardMax = fields.award_ceiling || awardMin;
-  const orgMin   = 50_000;
-  const orgMax   = 750_000;
+  const orgMin   = profile.orgGrantMin;
+  const orgMax   = profile.orgGrantMax;
 
   if (!awardMax) {
     score += 0.5 * 0.30;
@@ -217,18 +231,19 @@ export function computeMatchScore(
   extractedFields: ExtractedFields,
   agencyCode: string,
   alnCodes: string[],
-  financialResult?: FinancialEligibilityResult,
+  financialResult: FinancialEligibilityResult | undefined,
+  orgProfile: OrgMatchProfile,
 ): ScoreBreakdown {
   const semantic    = cosineSimilarity(grantEmbedding, orgEmbedding);
-  const eligibility = computeEligibility(extractedFields);
+  const eligibility = computeEligibility(extractedFields, orgProfile);
   const financial   = (financialResult ?? neutralFinancialResult()).score / 100;
 
   const historical =
-    CYC_PROFILE.historicalWinRates[agencyCode] ??
-    CYC_PROFILE.historicalWinRates[alnCodes?.[0]] ??
+    orgProfile.historicalWinRates[agencyCode] ??
+    orgProfile.historicalWinRates[alnCodes?.[0]] ??
     0.35; // reduced default: was 0.5, now 0.35 to avoid over-crediting unknown agencies
 
-  const strategic = computeStrategicFit(extractedFields);
+  const strategic = computeStrategicFit(extractedFields, orgProfile);
 
   // Geography hard-zero: if international, everything collapses
   const geographyHardZero = extractedFields.geographic_scope === 'international' ||
@@ -265,13 +280,13 @@ export function computeMatchScore(
 // Grants below this score are not worth storing or surfacing to the user.
 export const MIN_STORE_SCORE = 32;
 
-export function generateRecommendation(score: ScoreBreakdown, fields: ExtractedFields): string {
+export function generateRecommendation(score: ScoreBreakdown, fields: ExtractedFields, profile: OrgMatchProfile): string {
   const fin = score.financial_990 >= 70 ? 'financial profile is well-matched' :
               score.financial_990 >= 40 ? 'financial profile is adequate' : 'financial profile needs review';
 
-  const geo = fields.geographic_scope === 'state' && fields.geographic_states?.includes('IL')
-    ? 'Illinois-specific opportunity. '
-    : fields.geographic_scope === 'national' ? 'National opportunity open to IL nonprofits. '
+  const geo = fields.geographic_scope === 'state' && fields.geographic_states?.includes(profile.state)
+    ? `${profile.state}-specific opportunity. `
+    : fields.geographic_scope === 'national' ? `National opportunity open to ${profile.state} nonprofits. `
     : '';
 
   if (score.composite >= 70) {
@@ -281,20 +296,20 @@ export function generateRecommendation(score: ScoreBreakdown, fields: ExtractedF
   } else if (score.composite >= 35) {
     return `${geo}Partial match (${score.composite.toFixed(0)}/100). Some program or population overlap, but limited alignment overall. Review carefully — may fit a specific program only.`;
   }
-  return `Low match (${score.composite.toFixed(0)}/100). Limited program and financial alignment with CYC's current priorities.`;
+  return `Low match (${score.composite.toFixed(0)}/100). Limited program and financial alignment with the organization's current priorities.`;
 }
 
-export function getEligibilityFlags(fields: ExtractedFields): string[] {
+export function getEligibilityFlags(fields: ExtractedFields, profile: OrgMatchProfile): string[] {
   const flags: string[] = [];
   if (fields.cost_sharing_required) {
     flags.push(`Cost share required${fields.cost_sharing_percentage ? `: ${fields.cost_sharing_percentage}%` : ''}`);
   }
   if (fields.geographic_scope === 'state' && fields.geographic_states?.length &&
-      !fields.geographic_states.includes('IL')) {
-    flags.push(`Geographic restriction: ${fields.geographic_states.join(', ')} only — CYC may not be eligible`);
+      !fields.geographic_states.includes(profile.state)) {
+    flags.push(`Geographic restriction: ${fields.geographic_states.join(', ')} only — ${profile.name} may not be eligible`);
   }
   if (fields.compliance_frameworks?.some(f => f.includes('GATA'))) {
-    flags.push('GATA required — CYC registered ✓');
+    flags.push(`GATA required — ${profile.gataRegistered ? 'registered ✓' : 'not registered — verify before applying'}`);
   }
   if (fields.grant_duration_months && fields.grant_duration_months < 6) {
     flags.push(`Short grant period: ${fields.grant_duration_months} months — assess implementation feasibility`);

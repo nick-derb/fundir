@@ -378,6 +378,9 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
 [data-theme="light"] .text-slate-600 { color: #475569 !important; }
 [data-theme="light"] .text-white      { color: #0f172a !important; }
 
+/* Landing page is always dark — never remap its text-white */
+[data-theme="light"] .landing-dark .text-white { color: #ffffff !important; }
+
 /* Exception: keep text-white inside colored/gradient buttons & badges */
 /* Descendants of colored containers */
 [data-theme="light"] .bg-\[\#0d9488\]  .text-white,

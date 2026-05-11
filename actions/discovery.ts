@@ -6,49 +6,76 @@ import { extractGrantFields } from '@/lib/extraction';
 import { generateEmbedding, buildGrantText } from '@/lib/embeddings';
 import {
   computeMatchScore, generateRecommendation, getEligibilityFlags,
-  hardExclusionReason, MIN_STORE_SCORE,
+  hardExclusionReason, MIN_STORE_SCORE, OrgMatchProfile,
 } from '@/lib/matching';
 import { screen990Against, neutralFinancialResult, FinancialEligibilityResult } from '@/lib/990-screener';
 import { ComputedFinancials, OrgProfile } from '@/lib/propublica';
 import { CYC_PROFILE } from '@/lib/cyc-profile';
+import { YMCA_MATCH_PROFILE } from '@/lib/ymca-live-data';
 import crypto from 'crypto';
 
-// Module-level caches (reset per cold start)
-let cachedOrgEmbedding: number[] | null = null;
-let cachedFinancialProfile: {
+type FinancialCache = {
   computed: ComputedFinancials;
   org: OrgProfile;
   history?: Array<{ tax_prd_yr: number; totrevenue: number; totfuncexpns: number; compnsatncurrofcr: number }>;
   profileData?: Record<string, number>;
-} | null = null;
+};
 
-async function getOrgEmbedding(): Promise<number[]> {
-  if (cachedOrgEmbedding) return cachedOrgEmbedding;
+// Per-org caches keyed by orgCode (reset on cold start)
+const orgEmbeddingCache   = new Map<string, number[]>();
+const financialProfileCache = new Map<string, FinancialCache>();
 
-  // Rich org description — more context = better cosine similarity discrimination
-  const orgText = [
-    `Organization: ${CYC_PROFILE.name}`,
-    `Mission: ${CYC_PROFILE.mission}`,
-    `Location: ${CYC_PROFILE.city}, ${CYC_PROFILE.state} — serves Chicago's South and West sides`,
-    `Entity type: 501(c)(3) nonprofit, youth-serving community organization`,
-    `Programs: ${CYC_PROFILE.programs.map(p => `${p.name} (${p.areas.join(', ')})`).join('; ')}`,
-    `Target populations: ${CYC_PROFILE.targetPopulations.join(', ')}`,
-    `Annual budget: $${(CYC_PROFILE.annualBudget / 1_000_000).toFixed(1)}M`,
-    `Sites: ${CYC_PROFILE.sites} community centers`,
-    `Focus: domestic, USA, Illinois, Chicago — does NOT operate internationally`,
-  ].join('\n');
-
-  cachedOrgEmbedding = await generateEmbedding(orgText);
-  return cachedOrgEmbedding;
+function getOrgProfile(orgCode: string): OrgMatchProfile {
+  if (orgCode === 'CYC2025') return CYC_PROFILE as unknown as OrgMatchProfile;
+  if (orgCode === 'YOM2026') return YMCA_MATCH_PROFILE;
+  // Generic 501(c)(3) fallback for orgs without a dedicated profile
+  return {
+    name:              'Nonprofit Organization',
+    mission:           'Community-serving nonprofit organization providing social services and programs.',
+    city:              'Chicago',
+    state:             'IL',
+    annualBudget:      1_000_000,
+    sites:             1,
+    gataRegistered:    false,
+    orgGrantMin:       10_000,
+    orgGrantMax:       500_000,
+    targetPopulations: ['community', 'low-income', 'underserved'],
+    programs:          [{ name: 'Community Services', areas: ['community', 'social services', 'nonprofit'] }],
+    historicalWinRates: {},
+  };
 }
 
-async function getFinancialProfile() {
-  if (cachedFinancialProfile) return cachedFinancialProfile;
+async function getOrgEmbedding(orgCode: string): Promise<number[]> {
+  const cached = orgEmbeddingCache.get(orgCode);
+  if (cached) return cached;
+
+  const profile = getOrgProfile(orgCode);
+  const orgText = [
+    `Organization: ${profile.name}`,
+    `Mission: ${profile.mission}`,
+    `Location: ${profile.city}, ${profile.state}`,
+    `Entity type: 501(c)(3) nonprofit`,
+    `Programs: ${profile.programs.map(p => `${p.name} (${p.areas.join(', ')})`).join('; ')}`,
+    `Target populations: ${profile.targetPopulations.join(', ')}`,
+    `Annual budget: $${(profile.annualBudget / 1_000_000).toFixed(1)}M`,
+    `Sites: ${profile.sites} locations`,
+    `Focus: domestic, USA, ${profile.state}`,
+  ].join('\n');
+
+  const embedding = await generateEmbedding(orgText);
+  orgEmbeddingCache.set(orgCode, embedding);
+  return embedding;
+}
+
+async function getFinancialProfile(orgCode: string): Promise<FinancialCache | null> {
+  const cached = financialProfileCache.get(orgCode);
+  if (cached) return cached;
+
   const supabase = createServerClient();
   const { data } = await supabase
     .from('organizations')
     .select('financial_data, profile_data')
-    .eq('org_code', 'CYC2025')
+    .eq('org_code', orgCode)
     .single();
 
   if (!data?.financial_data) return null;
@@ -58,13 +85,15 @@ async function getFinancialProfile() {
     history?: Array<{ tax_prd_yr: number; totrevenue: number; totfuncexpns: number; compnsatncurrofcr: number }>;
   };
   if (!fd.computed) return null;
-  cachedFinancialProfile = {
+
+  const profile: FinancialCache = {
     computed:    fd.computed,
     org:         fd.org,
     history:     fd.history,
     profileData: (data.profile_data as Record<string, number>) || undefined,
   };
-  return cachedFinancialProfile;
+  financialProfileCache.set(orgCode, profile);
+  return profile;
 }
 
 function computeContentHash(sourceId: string, title: string): string {
@@ -91,7 +120,7 @@ const TARGETED_SEARCHES: Array<{ name: string; params: SearchParams }> = [
   { name: 'Nonprofit Capacity',    params: { keyword: 'nonprofit capacity building community organization grant', rows: 15 } },
 ];
 
-export async function runDiscovery(params: SearchParams, orgId?: string): Promise<{
+export async function runDiscovery(params: SearchParams, orgId?: string, orgCode?: string): Promise<{
   discovered: number;
   newGrants: number;
   highMatches: number;
@@ -109,6 +138,9 @@ export async function runDiscovery(params: SearchParams, orgId?: string): Promis
   let excluded          = 0;   // hard-excluded (international/defense)
   let belowThreshold    = 0;   // passed gates but scored too low to store
 
+  const resolvedOrgCode = orgCode ?? 'CYC2025';
+  const orgProfile      = getOrgProfile(resolvedOrgCode);
+
   try {
     // Use targeted search profiles if no specific params provided
     const searches = (params.keyword || params.fundingCategories)
@@ -116,8 +148,8 @@ export async function runDiscovery(params: SearchParams, orgId?: string): Promis
       : TARGETED_SEARCHES.slice(0, 4); // run first 4 on demand; all via cron
 
     const [orgEmbedding, financialProfile] = await Promise.all([
-      getOrgEmbedding(),
-      getFinancialProfile(),
+      getOrgEmbedding(resolvedOrgCode),
+      getFinancialProfile(resolvedOrgCode),
     ]);
 
     for (const search of searches) {
@@ -221,7 +253,7 @@ export async function runDiscovery(params: SearchParams, orgId?: string): Promis
           // ── 7. Composite score ─────────────────────────────────────────────
           const scoreBreakdown = computeMatchScore(
             embedding, orgEmbedding, extractedFields,
-            hit.agencyCode, hit.alnlist || [], financialResult,
+            hit.agencyCode, hit.alnlist || [], financialResult, orgProfile,
           );
 
           // ── 8. Minimum score gate — skip low-signal grants ─────────────────
@@ -265,8 +297,8 @@ export async function runDiscovery(params: SearchParams, orgId?: string): Promis
           newGrants++;
 
           // ── 10. Upsert match result ────────────────────────────────────────
-          const recommendation  = generateRecommendation(scoreBreakdown, extractedFields);
-          const eligibilityFlags = getEligibilityFlags(extractedFields);
+          const recommendation  = generateRecommendation(scoreBreakdown, extractedFields, orgProfile);
+          const eligibilityFlags = getEligibilityFlags(extractedFields, orgProfile);
 
           await supabase.from('match_results').upsert({
             grant_id:            insertedGrant.id,

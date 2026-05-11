@@ -25,6 +25,8 @@ export const CYC_PROFILE = {
       { name: "Social Services Block Grant", aln: "93.667", amount: 5_800, risk: "low" as const, riskReason: "Block grants relatively protected" },
     ],
   },
+  orgGrantMin: 50_000,
+  orgGrantMax: 750_000,
   historicalWinRates: {
     "ED": 0.7,
     "HHS": 0.6,
