@@ -540,9 +540,10 @@ export function GrantTable({ matches, emptyMessage = 'No grants found.' }: Grant
               <button key={s} onClick={() => setStageFilter(s)}
                 className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors whitespace-nowrap capitalize ${
                   stageFilter === s
-                    ? 'bg-[#0f172a] text-white'
+                    ? 'bg-[#0f172a]'
                     : 'text-[#64748b] bg-white border border-[#e2e8f0] hover:text-[#0f172a]'
-                }`}>
+                }`}
+                style={stageFilter === s ? { color: '#ffffff' } : undefined}>
                 {s === 'all' ? `All stages` : s}
               </button>
             ))}
