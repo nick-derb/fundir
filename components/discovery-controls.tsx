@@ -1,5 +1,6 @@
 'use client';
 import { useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 import { runDiscovery } from '@/actions/discovery';
 import { Search, Play, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 
@@ -12,6 +13,7 @@ interface DiscoveryResult {
 }
 
 export function DiscoveryControls({ onComplete, orgId }: { onComplete?: () => void; orgId?: string }) {
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [result, setResult] = useState<DiscoveryResult | null>(null);
   const [keyword, setKeyword] = useState('youth afterschool');
@@ -40,6 +42,7 @@ export function DiscoveryControls({ onComplete, orgId }: { onComplete?: () => vo
         setResult(res);
         setStatus(res.errors.length > 0 ? 'error' : 'done');
         onComplete?.();
+        router.refresh();
       } catch (e) {
         setStatus('error');
         setResult({ discovered: 0, newGrants: 0, highMatches: 0, mediumMatches: 0, errors: [String(e)] });
