@@ -391,7 +391,7 @@ export default async function SettingsPage() {
           <div className="divide-y divide-[#f1f5f9]">
             {[
               { label: 'Organization', value: orgFinancial?.name ?? ctx.orgName },
-              { label: 'Org Code',     value: ctx.orgCode, mono: true },
+              { label: 'Organization ID', value: ctx.orgCode.replace(/\d{4}$/, ''), mono: true },
               ...(orgFinancial?.ein ? [{ label: 'EIN', value: orgFinancial.ein.replace(/(\d{2})(\d{7})/, '$1-$2'), mono: true }] : []),
               { label: 'Entity Type',  value: '501(c)(3)' },
             ].map(({ label, value, mono }) => (

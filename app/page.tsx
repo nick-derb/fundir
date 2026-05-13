@@ -451,7 +451,7 @@ export default function LandingPage() {
           <div className="flex items-center gap-6">
             <Link href="/login" className="text-[12px] text-white/25 hover:text-white/50 transition-colors">Sign in</Link>
             <Link href="/onboarding" className="text-[12px] text-white/25 hover:text-white/50 transition-colors">Get started</Link>
-            <p className="text-[12px] text-white/15">© 2025 Fundir</p>
+            <p className="text-[12px] text-white/15">© 2026 Fundir</p>
           </div>
         </div>
       </footer>
