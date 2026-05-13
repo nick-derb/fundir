@@ -378,7 +378,11 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
 [data-theme="light"] .text-slate-600 { color: #475569 !important; }
 [data-theme="light"] .text-white      { color: #0f172a !important; }
 
-/* Landing page is always dark — never remap its text-white */
+/* Landing page is a marketing surface — locked to light theme regardless
+   of the user's app theme choice. The wrapper itself carries data-theme="light"
+   (see app/page.tsx), so all dark-mode utility overrides above are skipped
+   inside it. This single .text-white exception keeps the always-dark sections
+   of the landing (hero/CTA/footer/product-tabs panel) showing white text. */
 [data-theme="light"] .landing-dark .text-white { color: #ffffff !important; }
 
 /* Exception: keep text-white inside colored/gradient buttons & badges */

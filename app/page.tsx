@@ -50,7 +50,7 @@ const typeColor: Record<string, string> = {
 /* ── Page ───────────────────────────────────────────── */
 export default function LandingPage() {
   return (
-    <div className="landing-dark min-h-screen bg-[#0a0a0a] text-white">
+    <div data-theme="light" className="landing-dark min-h-screen bg-[#0a0a0a] text-white">
 
       {/* ══ NAV — animated backdrop blur on scroll ═══════════════════════════ */}
       <LandingNav />
