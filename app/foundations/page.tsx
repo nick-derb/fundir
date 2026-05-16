@@ -2,182 +2,16 @@ export const dynamic = 'force-dynamic';
 
 import { AppShell } from '@/components/app-shell';
 import { getAuthContext } from '@/lib/auth-context';
-import { getScoredFoundations, FoundationProfile } from '@/lib/foundation-intelligence';
+import { getScoredFoundations } from '@/lib/foundation-intelligence';
+import { FoundationsGrid } from '@/components/foundations-grid';
 import { redirect } from 'next/navigation';
-import {
-  MapPin, ExternalLink,
-  Sparkles, Calendar, Info, Star,
-  Globe, CheckCircle,
-} from 'lucide-react';
+import { Sparkles, Info, Globe, CheckCircle } from 'lucide-react';
 
 function formatCompact(n: number) {
   if (n >= 1_000_000_000) return `$${(n / 1_000_000_000).toFixed(1)}B`;
-  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `$${(n / 1_000).toFixed(0)}K`;
+  if (n >= 1_000_000)     return `$${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000)         return `$${(n / 1_000).toFixed(0)}K`;
   return `$${n}`;
-}
-
-function FitBar({ score }: { score: number }) {
-  const color = score >= 70 ? '#16a34a' : score >= 50 ? '#d97706' : '#64748b';
-  return (
-    <div className="flex items-center gap-2">
-      <div className="flex-1 h-1.5 bg-[#f1f5f9] rounded-full overflow-hidden">
-        <div className="h-full rounded-full transition-all"
-          style={{ width: `${score}%`, background: color }} />
-      </div>
-      <span className="text-[11px] font-bold tabular-nums w-8 text-right" style={{ color }}>
-        {score}
-      </span>
-    </div>
-  );
-}
-
-function DeadlineBadge({ pattern }: { pattern: string }) {
-  const map: Record<string, { label: string; bg: string; text: string }> = {
-    rolling:       { label: 'Rolling',       bg: '#f0fdf4', text: '#16a34a' },
-    'annual-spring': { label: 'Spring Cycle', bg: '#eff6ff', text: '#2563eb' },
-    'annual-fall':   { label: 'Fall Cycle',   bg: '#faf5ff', text: '#7c3aed' },
-    cycle:         { label: 'Grant Cycle',   bg: '#fff7ed', text: '#c2410c' },
-    unknown:       { label: 'Unknown',       bg: '#f1f5f9', text: '#64748b' },
-  };
-  const s = map[pattern] || map.unknown;
-  return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold"
-      style={{ background: s.bg, color: s.text }}>
-      <Calendar className="w-2.5 h-2.5" />
-      {s.label}
-    </span>
-  );
-}
-
-function GrantRangeBar({ min, avg, max }: { min: number; avg: number; max: number }) {
-  const safe = max > min;
-  const avgPct = safe ? Math.round(((avg - min) / (max - min)) * 100) : 50;
-  const pct = Math.max(5, Math.min(93, avgPct));
-  return (
-    <div>
-      <div className="flex items-center justify-between mb-1.5">
-        <span className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-wide">Grant Range</span>
-        <span className="text-[10px] text-[#64748b]">{formatCompact(min)} – {formatCompact(max)}</span>
-      </div>
-      <div className="relative h-2 bg-[#f1f5f9] rounded-full mb-2">
-        <div
-          className="absolute left-0 top-0 h-full rounded-full"
-          style={{ width: `${pct}%`, background: 'linear-gradient(90deg, rgba(13,148,136,0.25), #0d9488)' }}
-        />
-        <div
-          className="absolute top-1/2 w-3.5 h-3.5 rounded-full border-2 border-white shadow-sm bg-[#0d9488]"
-          style={{ left: `${pct}%`, transform: 'translate(-50%, -50%)' }}
-        />
-      </div>
-      <div className="flex items-center justify-center">
-        <span className="text-[10px] font-semibold text-[#0d9488] bg-[#f0fdfa] px-2 py-0.5 rounded-full border border-[#ccfbf1]">
-          avg {formatCompact(avg)}
-        </span>
-      </div>
-    </div>
-  );
-}
-
-function FoundationCard({ f, rank }: { f: FoundationProfile; rank: number }) {
-  const isTopMatch = f.fitScore >= 70;
-  const isLocal    = f.geographicFocus.some(g => g.toLowerCase().includes('chicago') || g.toLowerCase().includes('illinois'));
-
-  return (
-    <div className={`bg-white rounded-xl border shadow-card overflow-hidden transition-all hover:shadow-md ${
-      isTopMatch ? 'border-[#0d9488]/30' : 'border-[#e2e8f0]'
-    }`}>
-      {isTopMatch && (
-        <div className="h-0.5 w-full" style={{ background: 'linear-gradient(90deg, #0d9488, #0891b2)' }} />
-      )}
-
-      <div className="p-5">
-        <div className="flex items-start gap-3 mb-3">
-          <div className={`w-9 h-9 rounded-[8px] flex items-center justify-center text-[13px] font-bold text-white flex-shrink-0 ${
-            isTopMatch
-              ? 'bg-gradient-to-br from-[#0d9488] to-[#0891b2]'
-              : 'bg-[#f1f5f9] text-[#64748b]'
-          }`}>
-            {isTopMatch
-              ? <Star className="w-4 h-4" />
-              : <span>#{rank}</span>
-            }
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-start justify-between gap-2">
-              <h3 className="text-[14px] font-bold text-[#0f172a] leading-snug">{f.name}</h3>
-              {isLocal && (
-                <span className="flex-shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-[#0d9488]/10 text-[#0d9488] border border-[#0d9488]/20">
-                  LOCAL
-                </span>
-              )}
-            </div>
-            <div className="flex items-center gap-1.5 mt-0.5">
-              <MapPin className="w-3 h-3 text-[#94a3b8]" />
-              <span className="text-[11px] text-[#64748b]">{f.city}, {f.state}</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="mb-3">
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-wide">Mission Fit</span>
-          </div>
-          <FitBar score={f.fitScore} />
-          <p className="text-[10px] text-[#94a3b8] mt-1">{f.fitReason}</p>
-        </div>
-
-        <div className="grid grid-cols-3 gap-2 mb-3">
-          <div className="bg-[#f8fafc] rounded-[6px] p-2 text-center">
-            <p className="text-[10px] text-[#94a3b8] mb-0.5">Assets</p>
-            <p className="text-[12px] font-bold text-[#0f172a]">{formatCompact(f.assets)}</p>
-          </div>
-          <div className="bg-[#f8fafc] rounded-[6px] p-2 text-center">
-            <p className="text-[10px] text-[#94a3b8] mb-0.5">Avg Grant</p>
-            <p className="text-[12px] font-bold text-[#0f172a]">{formatCompact(f.avgGrantAmount)}</p>
-          </div>
-          <div className="bg-[#f8fafc] rounded-[6px] p-2 text-center">
-            <p className="text-[10px] text-[#94a3b8] mb-0.5">Giving/yr</p>
-            <p className="text-[12px] font-bold text-[#0f172a]">{formatCompact(f.totalGrantsGiven)}</p>
-          </div>
-        </div>
-
-        <div className="mb-3">
-          <GrantRangeBar min={f.grantRange.min} avg={f.avgGrantAmount} max={f.grantRange.max} />
-        </div>
-
-        <div className="flex flex-wrap gap-1 mb-3">
-          {f.focusAreas.slice(0, 4).map(area => (
-            <span key={area} className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#f1f5f9] text-[#475569] border border-[#e2e8f0]">
-              {area}
-            </span>
-          ))}
-          {f.focusAreas.length > 4 && (
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#f1f5f9] text-[#94a3b8]">
-              +{f.focusAreas.length - 4} more
-            </span>
-          )}
-        </div>
-
-        <div className="flex items-center justify-between pt-3 border-t border-[#f1f5f9]">
-          <DeadlineBadge pattern={f.deadlinePattern} />
-          <div className="flex items-center gap-2">
-            <a href={f.proPublicaUrl} target="_blank" rel="noopener noreferrer"
-              className="flex items-center gap-1 text-[10px] text-[#94a3b8] hover:text-[#0d9488] transition-colors">
-              990-PF <ExternalLink className="w-2.5 h-2.5" />
-            </a>
-            {f.applicationUrl && (
-              <a href={f.applicationUrl} target="_blank" rel="noopener noreferrer"
-                className="flex items-center gap-1.5 text-[11px] font-semibold text-white px-2.5 py-1 rounded-[5px] transition-all hover:opacity-90"
-                style={{ background: 'linear-gradient(135deg, #0d9488, #0891b2)' }}>
-                Apply <ExternalLink className="w-2.5 h-2.5" />
-              </a>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
 }
 
 export default async function FoundationsPage() {
@@ -227,17 +61,18 @@ export default async function FoundationsPage() {
               </h1>
               <p className="text-[#94a3b8] text-[14px] max-w-2xl leading-relaxed">
                 {foundations.length} foundations scored against {ctx.orgName}&apos;s mission and financials —
-                surfacing funders that never appear on Grants.gov. Sourced from IRS Form 990-PF filings via ProPublica.
+                surfacing funders that never appear on Grants.gov. Click any funder for its live IRS
+                990 filing history.
               </p>
             </div>
           </div>
 
           <div className="grid grid-cols-4 gap-4 mt-6">
             {[
-              { label: 'Foundations Mapped',   value: `${foundations.length}`,       sub: 'scored vs your org profile',    color: '#0d9488' },
-              { label: 'Strong Fits ≥70',       value: `${topMatches.length}`,        sub: 'high mission alignment',         color: '#16a34a' },
-              { label: 'Local Funders',          value: `${localFunders.length}`,      sub: 'Chicago/IL geography',           color: '#6366f1' },
-              { label: 'Total Grant Potential', value: formatCompact(totalPotential), sub: 'avg grants, top 10',             color: '#d97706' },
+              { label: 'Foundations Mapped',   value: `${foundations.length}`,       sub: 'scored vs your org profile',  color: '#0d9488' },
+              { label: 'Strong Fits ≥70',       value: `${topMatches.length}`,        sub: 'high mission alignment',       color: '#16a34a' },
+              { label: 'Local Funders',          value: `${localFunders.length}`,      sub: 'Chicago/IL geography',         color: '#6366f1' },
+              { label: 'Total Grant Potential', value: formatCompact(totalPotential), sub: 'avg grants, top 10',           color: '#d97706' },
             ].map(({ label, value, sub, color }) => (
               <div key={label} className="rounded-[10px] border border-white/10 p-4"
                 style={{ background: 'rgba(255,255,255,0.06)' }}>
@@ -266,18 +101,18 @@ export default async function FoundationsPage() {
               <p className="text-[13px] text-[#475569] leading-relaxed mb-3">
                 Grants.gov only lists federal grants. The majority of nonprofit funding — especially for community-based organizations like yours —
                 comes from <strong>private foundations</strong> that publish zero RFPs and are invisible to conventional grant searches.
-                Fundir reads IRS Form 990-PF filings directly to reverse-engineer which foundations are actively funding
+                Fundir reads IRS Form 990 filings directly to reverse-engineer which foundations are actively funding
                 missions like yours, what they typically award, and how to reach them.
               </p>
               <div className="flex flex-wrap gap-4 text-[12px]">
                 {[
-                  { icon: CheckCircle, label: 'Free data — IRS 990-PF via ProPublica', color: '#16a34a' },
-                  { icon: CheckCircle, label: 'No grants.gov listing required',         color: '#16a34a' },
-                  { icon: CheckCircle, label: 'Scored against your org\'s 990 profile', color: '#16a34a' },
-                  { icon: CheckCircle, label: 'Local funders you\'ve never heard of',   color: '#16a34a' },
-                ].map(({ icon: Icon, label, color }) => (
+                  { label: 'Free data — IRS 990 via ProPublica',         color: '#16a34a' },
+                  { label: 'Live multi-year filing history per funder',  color: '#16a34a' },
+                  { label: 'Scored against your org\'s 990 profile',      color: '#16a34a' },
+                  { label: 'Local funders you\'ve never heard of',        color: '#16a34a' },
+                ].map(({ label, color }) => (
                   <div key={label} className="flex items-center gap-1.5">
-                    <Icon className="w-3.5 h-3.5 flex-shrink-0" style={{ color }} />
+                    <CheckCircle className="w-3.5 h-3.5 flex-shrink-0" style={{ color }} />
                     <span className="text-[#475569]">{label}</span>
                   </div>
                 ))}
@@ -292,20 +127,16 @@ export default async function FoundationsPage() {
             <div>
               <h2 className="text-[16px] font-bold text-[#0f172a]">Strongest Foundation Fits</h2>
               <p className="text-[12px] text-[#64748b] mt-0.5">
-                Ranked by mission alignment score against {ctx.orgName}&apos;s programs and geography
+                Ranked by mission alignment against {ctx.orgName}&apos;s programs and geography — click for live 990 data
               </p>
             </div>
             <div className="flex items-center gap-2 text-[11px] text-[#94a3b8]">
               <Globe className="w-3.5 h-3.5" />
-              Data: IRS 990-PF · ProPublica Nonprofit Explorer
+              Data: IRS 990 · ProPublica Nonprofit Explorer
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {foundations.slice(0, 12).map((f, i) => (
-              <FoundationCard key={f.ein + f.name} f={f} rank={i + 1} />
-            ))}
-          </div>
+          <FoundationsGrid foundations={foundations.slice(0, 12)} />
         </div>
 
         {/* ── Intelligence note ──────────────────────────────── */}
@@ -314,13 +145,12 @@ export default async function FoundationsPage() {
           <div className="flex items-start gap-3">
             <Sparkles className="w-5 h-5 text-[#6366f1] mt-0.5 flex-shrink-0" />
             <div>
-              <h3 className="text-[13px] font-bold text-[#0f172a] mb-1">Coming Next: Automated 990-PF Grant Schedule Extraction</h3>
+              <h3 className="text-[13px] font-bold text-[#0f172a] mb-1">Coming Next: 990 Grant Schedule Extraction</h3>
               <p className="text-[12px] text-[#6b21a8] leading-relaxed">
-                Fundir will automatically pull the actual grant schedules from 990-PF Part XV to surface
-                foundations that have granted to peer organizations like YMCA of Metropolitan Chicago,
-                After School Matters, Youth Guidance, and Chicago CRED — then alert you when they&apos;re
-                likely to make similar grants to {ctx.orgName}. This requires no API key and runs on the same
-                free ProPublica infrastructure.
+                Live filing history is now available on every funder card. Next, Fundir will parse the actual
+                grant schedules from 990 Part XV to surface which foundations have funded peer organizations
+                like After School Matters, Youth Guidance, and Chicago CRED — then alert you when they&apos;re
+                likely to make similar grants to {ctx.orgName}.
               </p>
             </div>
           </div>
