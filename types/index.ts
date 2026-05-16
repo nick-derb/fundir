@@ -18,6 +18,23 @@ export interface GrantOpportunity {
   ingested_at: string;
 }
 
+/**
+ * The grant's own financial bar — what an applicant must be able to absorb,
+ * float, or comply with. Reverse-screened against the org's actual 990.
+ */
+export interface FinancialRequirements {
+  cost_share_required?:        boolean | null;
+  cost_share_pct?:             number | null;
+  cost_share_type?:            'cash' | 'in-kind' | 'both' | null;
+  payment_structure?:          'reimbursement' | 'advance' | 'mixed' | null;
+  indirect_cost_cap_pct?:      number | null;
+  single_audit_required?:      boolean | null;
+  audit_required?:             boolean | null;
+  min_org_budget?:             number | null;
+  min_operating_history_years?: number | null;
+  reporting_burden?:           'low' | 'moderate' | 'high' | null;
+}
+
 export interface ExtractedFields {
   eligible_entity_types?: string[];
   geographic_scope?: 'national' | 'state' | 'city' | 'international' | 'foreign' | null;
@@ -31,6 +48,7 @@ export interface ExtractedFields {
   grant_duration_months?: number | null;
   compliance_frameworks?: string[];
   key_requirements?: string[];
+  financial_requirements?: FinancialRequirements;
   confidence_score?: number;
 }
 

@@ -5,6 +5,7 @@ import { createServerClient } from '@/lib/supabase';
 import { getAuthContext } from '@/lib/auth-context';
 import { AppShell } from '@/components/app-shell';
 import { ScoreBreakdownChart } from '@/components/score-breakdown';
+import { FinancialVerdict } from '@/components/financial-verdict';
 import { GrantTasks } from '@/components/grant-tasks';
 import { GrantNotes } from '@/components/grant-notes';
 import { GrantWorkspace } from '@/components/grant-workspace';
@@ -598,6 +599,8 @@ export default async function GrantDetailPage({
               signals={match.financial_signals ?? []}
               score={match.financial_score ?? 50}
             />
+
+            <FinancialVerdict grantId={match.grant_id} />
           </div>
         </div>
       </div>

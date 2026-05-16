@@ -29,9 +29,25 @@ export interface EligibilitySignal {
   source?:   'irs_990' | 'self_reported' | 'estimated' | 'n/a';
 }
 
+/**
+ * A pass/fail test of the org's actual 990 against one of THIS grant's
+ * specific financial requirements (cost-share, payment structure, audit
+ * triggers, capacity thresholds). Distinct from the 7 weighted signals —
+ * these are binary gates, and a 'blocker' caps the composite score.
+ */
+export type CheckStatus = 'pass' | 'caution' | 'blocker' | 'unknown';
+
+export interface RequirementCheck {
+  requirement: string;        // the grant requirement being tested
+  status:      CheckStatus;
+  finding:     string;        // one-line org-specific conclusion
+  detail:      string;        // supporting analysis for the grant writer
+}
+
 export interface FinancialEligibilityResult {
   score:              number;     // 0–100 composite score
   signals:            EligibilitySignal[];
+  requirementChecks:  RequirementCheck[];
   preQualified:       boolean;
   hardDisqualifiers:  string[];
   dataConfidence:     DataConfidence;
@@ -488,6 +504,160 @@ function computeDataConfidence(
   return { level, filingYear, dataAgeYears: age, hasProfileData, label };
 }
 
+// ── Financial Requirement Checks ─────────────────────────────────────────────
+// Reverse-tests the org's actual 990 against THIS grant's specific financial
+// bar. Where the 7 weighted signals ask "is this org financially healthy?",
+// these ask "can this org clear this grant's specific requirements?"
+
+export function checkFinancialRequirements(
+  computed: ComputedFinancials,
+  fields: ExtractedFields,
+  agencyCode: string,
+  alnCodes: string[],
+): RequirementCheck[] {
+  const checks: RequirementCheck[] = [];
+  const reqs    = fields.financial_requirements ?? {};
+  const award   = fields.award_ceiling || fields.award_floor || 0;
+  const federal = isFederalGrant(agencyCode, alnCodes);
+
+  const monthlyOpex      = computed.totalRevenue > 0 ? computed.totalRevenue / 12 : 0;
+  const liquidityDollars = Math.max(0, computed.monthsOfReserves * monthlyOpex);
+
+  // ── Payment structure — the cash-flow killer ──────────────────────────────
+  const isReimbursement =
+    reqs.payment_structure === 'reimbursement' ||
+    reqs.payment_structure === 'mixed' ||
+    (reqs.payment_structure == null && federal);
+
+  if (award > 0 && isReimbursement) {
+    // Reimbursement grants pay only after costs are incurred. A realistic float
+    // exposure is roughly one quarter of the award carried 60–90 days.
+    const floatExposure = award / 4;
+    const reserveLabel  = `${computed.monthsOfReserves.toFixed(1)} months of operating reserves`;
+
+    if (computed.monthsOfReserves < 3 && floatExposure > liquidityDollars * 0.5) {
+      checks.push({
+        requirement: 'Reimbursement-based payment',
+        status: 'blocker',
+        finding: `Reimburses after spend — ~${fmt(floatExposure)} float exceeds safe liquidity`,
+        detail: `This grant pays only after costs are incurred. With ${reserveLabel}, carrying ~${fmt(floatExposure)} for 60–90 days is a serious cash-flow risk. Pursue only with an advance-payment arrangement, or pair it with an unrestricted grant to cover the float.`,
+      });
+    } else if (computed.monthsOfReserves < 3) {
+      checks.push({
+        requirement: 'Reimbursement-based payment',
+        status: 'caution',
+        finding: `Reimbursement basis — manageable, but monitor cash timing`,
+        detail: `Funds arrive after spend. The ~${fmt(floatExposure)} float is within reach of current liquidity (${reserveLabel}) but leaves little margin. Build the reimbursement lag into the cash-flow plan.`,
+      });
+    } else {
+      checks.push({
+        requirement: 'Reimbursement-based payment',
+        status: 'pass',
+        finding: `Reimbursement basis — adequate reserves to absorb the lag`,
+        detail: `With ${reserveLabel}, the org can comfortably float ~${fmt(floatExposure)} between spend and reimbursement.`,
+      });
+    }
+  }
+
+  // ── Cost-share / matching funds ───────────────────────────────────────────
+  const costShare = reqs.cost_share_required ?? fields.cost_sharing_required;
+  if (costShare) {
+    const pct      = reqs.cost_share_pct ?? fields.cost_sharing_percentage ?? 0;
+    const shareAmt = pct > 0 && award > 0 ? award * (pct / 100) : 0;
+    const isCash   = reqs.cost_share_type === 'cash' || reqs.cost_share_type === 'both' || reqs.cost_share_type == null;
+
+    if (isCash && shareAmt > 0) {
+      if (shareAmt > liquidityDollars * 0.4) {
+        checks.push({
+          requirement: 'Cost share / match',
+          status: 'blocker',
+          finding: `${pct}% cash match (~${fmt(shareAmt)}) exceeds available liquidity`,
+          detail: `A cash match of ~${fmt(shareAmt)} would consume most or all unrestricted liquidity. Identify a dedicated match source before applying, or treat this grant as out of reach this cycle.`,
+        });
+      } else if (shareAmt > liquidityDollars * 0.15) {
+        checks.push({
+          requirement: 'Cost share / match',
+          status: 'caution',
+          finding: `${pct}% cash match (~${fmt(shareAmt)}) is significant`,
+          detail: `The required ~${fmt(shareAmt)} cash match is absorbable but material. Confirm a match source — board gifts, unrestricted reserves, or another grant — before committing.`,
+        });
+      } else {
+        checks.push({
+          requirement: 'Cost share / match',
+          status: 'pass',
+          finding: `${pct}% cash match (~${fmt(shareAmt)}) is comfortably affordable`,
+          detail: `The required match is small relative to available liquidity.`,
+        });
+      }
+    } else if (reqs.cost_share_type === 'in-kind') {
+      checks.push({
+        requirement: 'Cost share / match',
+        status: 'caution',
+        finding: `In-kind match required — no cash outlay, but must be documented`,
+        detail: `An in-kind match does not strain liquidity, but staff time and facilities must be tracked and documented to satisfy the funder.`,
+      });
+    } else {
+      checks.push({
+        requirement: 'Cost share / match',
+        status: 'caution',
+        finding: `Cost share required — confirm amount and type`,
+        detail: `This grant requires a match but the amount or cash/in-kind split is not specified. Verify in the full RFP before applying.`,
+      });
+    }
+  }
+
+  // ── Single Audit (2 CFR 200 Subpart F) ────────────────────────────────────
+  if (federal || reqs.single_audit_required) {
+    const federalSpend = computed.totalRevenue * (computed.governmentGrantsPct / 100);
+    if (federalSpend >= 750_000) {
+      checks.push({
+        requirement: 'Single Audit (2 CFR 200)',
+        status: 'pass',
+        finding: `Already subject to a Single Audit — no new compliance burden`,
+        detail: `The org's federal spending (~${fmt(federalSpend)}) already exceeds the $750K Single Audit threshold, so this grant adds no new audit obligation.`,
+      });
+    } else {
+      checks.push({
+        requirement: 'Single Audit (2 CFR 200)',
+        status: 'caution',
+        finding: `This award could trigger a first Single Audit`,
+        detail: `If this and other federal awards push federal spending past $750K in a fiscal year, the org must commission a Single Audit (~$10–20K plus added staff time). Budget for it.`,
+      });
+    }
+  }
+
+  // ── Minimum organizational budget / capacity ──────────────────────────────
+  if (reqs.min_org_budget && reqs.min_org_budget > 0) {
+    if (computed.totalRevenue < reqs.min_org_budget) {
+      checks.push({
+        requirement: 'Minimum organizational budget',
+        status: 'blocker',
+        finding: `Below the funder's ${fmt(reqs.min_org_budget)} minimum budget threshold`,
+        detail: `This funder requires applicants to have at least ${fmt(reqs.min_org_budget)} in annual budget; the org reports ~${fmt(computed.totalRevenue)}. This is likely a hard eligibility bar.`,
+      });
+    } else {
+      checks.push({
+        requirement: 'Minimum organizational budget',
+        status: 'pass',
+        finding: `Meets the ${fmt(reqs.min_org_budget)} minimum budget requirement`,
+        detail: `Org budget (~${fmt(computed.totalRevenue)}) clears the funder's stated minimum.`,
+      });
+    }
+  }
+
+  // ── Indirect cost recovery cap ────────────────────────────────────────────
+  if (reqs.indirect_cost_cap_pct != null && reqs.indirect_cost_cap_pct < 12) {
+    checks.push({
+      requirement: 'Indirect cost recovery',
+      status: 'caution',
+      finding: `Indirect costs capped at ${reqs.indirect_cost_cap_pct}% — org absorbs overhead`,
+      detail: `This grant limits indirect/administrative cost recovery to ${reqs.indirect_cost_cap_pct}%, below the ~15% federal de minimis rate. The org absorbs the difference from unrestricted funds — factor that into the true cost of the grant.`,
+    });
+  }
+
+  return checks;
+}
+
 // ── Main screener ─────────────────────────────────────────────────────────────
 
 export function screen990Against(
@@ -544,18 +714,31 @@ export function screen990Against(
   // ── Composite score ────────────────────────────────────────────────────────
   const totalWeight = signals.reduce((s, sig) => s + sig.weight, 0);
   const rawScore    = signals.reduce((s, sig) => s + sig.score * sig.weight, 0) / totalWeight;
-  const score       = Math.round(Math.min(100, Math.max(0, rawScore * 100)));
+  let score         = Math.round(Math.min(100, Math.max(0, rawScore * 100)));
+
+  // ── Requirement checks — test the 990 against THIS grant's financial bar ──
+  const requirementChecks   = checkFinancialRequirements(computed, fields, agencyCode, alnCodes);
+  const requirementBlockers = requirementChecks.filter(c => c.status === 'blocker');
+
+  // A hard requirement blocker (unfloatable reimbursement, unaffordable match,
+  // budget-floor failure) caps the financial score — the org cannot clear the bar.
+  if (requirementBlockers.length > 0) {
+    score = Math.min(score, 35);
+  }
 
   // ── Hard disqualifiers ─────────────────────────────────────────────────────
-  const hardDisqualifiers = signals
-    .filter(s => s.status === 'mismatch' && ['Budget Fit', 'Financial Stability'].includes(s.factor))
-    .map(s => s.headline);
+  const hardDisqualifiers = [
+    ...signals
+      .filter(s => s.status === 'mismatch' && ['Budget Fit', 'Financial Stability'].includes(s.factor))
+      .map(s => s.headline),
+    ...requirementBlockers.map(c => c.finding),
+  ];
 
   const preQualified = hardDisqualifiers.length === 0;
 
   const dataConfidence = computeDataConfidence(computed.filingYear, hasProfileData, currentYear);
 
-  return { score, signals, preQualified, hardDisqualifiers, dataConfidence };
+  return { score, signals, requirementChecks, preQualified, hardDisqualifiers, dataConfidence };
 }
 
 // ── Neutral fallback ──────────────────────────────────────────────────────────
@@ -563,6 +746,7 @@ export function neutralFinancialResult(): FinancialEligibilityResult {
   return {
     score: 50,
     signals: [],
+    requirementChecks: [],
     preQualified: true,
     hardDisqualifiers: [],
     dataConfidence: { level: 'none', filingYear: null, dataAgeYears: null, hasProfileData: false, label: 'No 990 data' },
