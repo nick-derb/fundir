@@ -11,6 +11,7 @@ import {
 import { getSupabaseClient } from '@/lib/supabase';
 import { CommandPalette, CommandPaletteTrigger } from '@/components/command-palette';
 import { TeamPanel, TeamButton } from '@/components/team-panel';
+import { AiAdvisor } from '@/components/ai-advisor';
 import { switchAdminOrg } from '@/actions/admin-org';
 
 const NAV_ITEMS = [
@@ -292,6 +293,9 @@ export function AppShell({
           onClose={() => setTeamOpen(false)}
         />
       )}
+
+      {/* AI grant strategist — fixed overlay, available on every page */}
+      <AiAdvisor orgCode={currentOrgCode} orgId={orgId} orgName={orgName} />
     </div>
   );
 }

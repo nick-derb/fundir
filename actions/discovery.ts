@@ -11,6 +11,7 @@ import {
 import { screen990Against, neutralFinancialResult, FinancialEligibilityResult } from '@/lib/990-screener';
 import { ComputedFinancials, OrgProfile } from '@/lib/propublica';
 import { CYC_PROFILE } from '@/lib/cyc-profile';
+import { CYC_FINANCIAL_PROFILE } from '@/lib/cyc-live-data';
 import { YMCA_MATCH_PROFILE } from '@/lib/ymca-live-data';
 import crypto from 'crypto';
 
@@ -70,6 +71,13 @@ async function getOrgEmbedding(orgCode: string): Promise<number[]> {
 async function getFinancialProfile(orgCode: string): Promise<FinancialCache | null> {
   const cached = financialProfileCache.get(orgCode);
   if (cached) return cached;
+
+  // CYC uses hand-audited FY2025 financials — more accurate and current than
+  // ProPublica's stale 990 snapshot, and consistent with the Financials page.
+  if (orgCode === 'CYC2025') {
+    financialProfileCache.set(orgCode, CYC_FINANCIAL_PROFILE);
+    return CYC_FINANCIAL_PROFILE;
+  }
 
   const supabase = createServerClient();
   const { data } = await supabase

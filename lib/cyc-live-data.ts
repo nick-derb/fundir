@@ -7,6 +7,8 @@
  * Updated from: chicagoyouthcenters.org/nonprofit-status-financial-info
  */
 
+import type { ComputedFinancials, OrgProfile, Filing990 } from './propublica';
+
 // ── Statement of Financial Position ─────────────────────────────────────────
 
 export const CYC_BALANCE_SHEET = {
@@ -499,3 +501,46 @@ export const CYC_PROGRAM_ANALYSIS = {
     note:                   'Highest reliance on private philanthropy. Teen Shark Tank Jr. event April 2025 showcases program quality',
   },
 } as const;
+
+// ── 990 Screener Profile ─────────────────────────────────────────────────────
+// Maps CYC's audited FY2025 financials into the shape the reverse-990 screening
+// engine consumes. This is what makes financial eligibility scoring run on real,
+// current, audited numbers instead of a stale ProPublica 990 snapshot — and
+// keeps the discovery engine consistent with the Financials page.
+
+const CYC_990_COMPUTED: ComputedFinancials = {
+  totalRevenue:         CYC_INCOME_STATEMENT.revenue.totalRevenue,   // $13,405,288
+  governmentGrantsPct:  75,   // $9.998M govt fees+grants / $13.405M = 74.6%
+  privateGrantsPct:     17,   // $2.336M public support / $13.405M
+  programRevenuePct:    3,    // $339K earned program fees / $13.405M (990 line)
+  programEfficiencyPct: 86,   // $12.31M program svcs / $14.31M total expenses
+  netAssets:            CYC_BALANCE_SHEET.netAssets.totalNetAssets,  // $15,047,471
+  monthsOfReserves:     CYC_LIQUIDITY.monthsOfLiquidity,             // 2.4 (audited)
+  govtDependency:       'critical',
+  filingYear:           CYC_INCOME_STATEMENT.fiscalYear,             // 2025
+};
+
+const CYC_990_ORG: OrgProfile = {
+  ein:            '36-2344429',
+  name:           'Chicago Youth Centers',
+  city:           'Chicago',
+  state:          'IL',
+  ntee_code:      'O20',   // Youth Development — Youth Centers/Clubs
+  income_amount:  CYC_INCOME_STATEMENT.revenue.totalRevenue,
+  asset_amount:   CYC_BALANCE_SHEET.assets.totalAssets,
+  revenue_amount: CYC_INCOME_STATEMENT.revenue.totalRevenue,
+};
+
+// 3-year filing history — feeds the multi-year revenue-trend signal and the
+// executive-compensation efficiency signal (latest year, by tax_prd_yr).
+const CYC_990_HISTORY: Array<Pick<Filing990, 'tax_prd_yr' | 'totrevenue' | 'totfuncexpns' | 'compnsatncurrofcr'>> = [
+  { tax_prd_yr: 2023, totrevenue: 17_300_000, totfuncexpns: 13_500_000, compnsatncurrofcr: 0 },
+  { tax_prd_yr: 2024, totrevenue: 14_893_766, totfuncexpns: 13_876_754, compnsatncurrofcr: 0 },
+  { tax_prd_yr: 2025, totrevenue: 13_405_288, totfuncexpns: 14_314_827, compnsatncurrofcr: 431_695 },
+];
+
+export const CYC_FINANCIAL_PROFILE = {
+  computed: CYC_990_COMPUTED,
+  org:      CYC_990_ORG,
+  history:  CYC_990_HISTORY,
+};
