@@ -171,6 +171,48 @@ export default async function DashboardPage() {
     >
       <div className="px-4 sm:px-6 md:px-8 py-6 max-w-7xl mx-auto space-y-5">
 
+        {/* ── Brand-new org: hero empty state instead of a deflating page of zeros ── */}
+        {data.totalTracked === 0 && (
+          <div className="rounded-2xl border overflow-hidden relative"
+            style={{
+              background: 'linear-gradient(135deg, #0f172a 0%, #1a2236 60%, #0f172a 100%)',
+              borderColor: 'var(--card-border)',
+            }}>
+            <div className="absolute inset-0 opacity-[0.05]" style={{
+              backgroundImage: 'linear-gradient(rgba(255,255,255,0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.15) 1px, transparent 1px)',
+              backgroundSize: '40px 40px',
+            }} />
+            <div className="absolute top-0 right-1/4 w-96 h-48 rounded-full opacity-20 blur-3xl"
+              style={{ background: 'radial-gradient(circle, #0d9488, transparent)' }} />
+            <div className="relative px-6 md:px-10 py-10 md:py-14 max-w-3xl">
+              <div className="flex items-center gap-2 mb-3">
+                <Sparkles className="w-4 h-4 text-[#0d9488]" />
+                <span className="text-[11px] font-bold text-[#0d9488] uppercase tracking-widest">Welcome to Fundir</span>
+              </div>
+              <h2 className="text-[24px] md:text-[32px] font-bold text-white leading-tight mb-3">
+                Let&apos;s find your first matching grants
+              </h2>
+              <p className="text-[14px] text-[#94a3b8] leading-relaxed mb-6 max-w-xl">
+                Run discovery once and Fundir will surface federal and foundation grants
+                matched to {data.org?.name ?? ctx.orgName}&apos;s mission, programs, and
+                financial profile — scored, ranked, and reverse-screened against your 990.
+              </p>
+              <div className="flex flex-wrap items-center gap-2.5">
+                <Link href="/discover"
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-[8px] text-[13px] font-bold text-white transition-all hover:opacity-95"
+                  style={{ background: 'linear-gradient(135deg, #0d9488, #0891b2)' }}>
+                  <Sparkles className="w-3.5 h-3.5" />
+                  Run your first discovery
+                </Link>
+                <Link href="/settings"
+                  className="flex items-center gap-1.5 px-4 py-2.5 rounded-[8px] text-[13px] font-semibold text-white/80 border border-white/15 hover:bg-white/5 transition-colors">
+                  Sync 990 financials
+                </Link>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* ── Page header ──────────────────────────────────────── */}
         <div className="flex flex-wrap items-center justify-between gap-3 sm:gap-4">
           <div className="flex items-center gap-4">

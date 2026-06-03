@@ -104,6 +104,30 @@ export default function OnboardingPage() {
       setForm(prev => ({ ...prev, inviteCode: upper }));
       setStep(2);
     }
+
+    // Hand-off from /onboarding/chat: read the captured profile from
+    // sessionStorage and pre-fill org name + city + state so the user
+    // does not have to re-type what the chat already extracted.
+    try {
+      const raw = sessionStorage.getItem('fundir-onboarding-profile');
+      if (raw) {
+        const stored = JSON.parse(raw) as {
+          profile?: { orgName?: string; city?: string; state?: string };
+        };
+        const p = stored.profile ?? {};
+        if (p.orgName || p.city || p.state) {
+          setForm(prev => ({
+            ...prev,
+            orgName: prev.orgName || p.orgName || '',
+            city:    prev.city    || p.city    || '',
+            state:   prev.state   || p.state   || '',
+          }));
+        }
+        sessionStorage.removeItem('fundir-onboarding-profile');
+      }
+    } catch {
+      // sessionStorage unavailable or malformed — silently ignore
+    }
   }, []);
 
   // Close EIN dropdown on outside click
