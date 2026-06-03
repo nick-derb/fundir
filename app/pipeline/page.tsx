@@ -55,8 +55,8 @@ export default async function PipelinePage() {
       currentOrgCode={ctx.orgCode}
     >
       {/* ── Header ──────────────────────────────────────────────── */}
-      <div className="border-b border-[#e2e8f0] bg-white px-8 py-5">
-        <div className="max-w-full flex items-start justify-between gap-4">
+      <div className="border-b border-[#e2e8f0] bg-white px-4 sm:px-6 md:px-8 py-4 md:py-5">
+        <div className="max-w-full flex flex-wrap items-start justify-between gap-3 md:gap-4">
           <div>
             <div className="flex items-center gap-2 mb-1">
               <LayoutGrid className="w-4 h-4 text-[#0d9488]" />
@@ -112,7 +112,7 @@ export default async function PipelinePage() {
       </div>
 
       {/* ── Board ───────────────────────────────────────────────── */}
-      <div className="px-8 py-6 overflow-x-auto" style={{ background: 'linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%)', minHeight: 'calc(100vh - 160px)' }}>
+      <div className="px-4 sm:px-6 md:px-8 py-6 overflow-x-auto" style={{ background: 'linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%)', minHeight: 'calc(100vh - 160px)' }}>
         {matches.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24">
             <div className="w-16 h-16 rounded-full bg-white border border-[#e2e8f0] flex items-center justify-center mb-4 shadow-sm">

@@ -169,10 +169,10 @@ export default async function DashboardPage() {
       availableOrgs={ctx.availableOrgs}
       currentOrgCode={ctx.orgCode}
     >
-      <div className="px-8 py-6 max-w-7xl mx-auto space-y-5">
+      <div className="px-4 sm:px-6 md:px-8 py-6 max-w-7xl mx-auto space-y-5">
 
         {/* ── Page header ──────────────────────────────────────── */}
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 sm:gap-4">
           <div className="flex items-center gap-4">
             {/* Org logo — auto-fetched from ProPublica EIN → Clearbit */}
             {data.logoUrl && <OrgLogo src={data.logoUrl} alt={ctx.orgName} />}
@@ -206,7 +206,7 @@ export default async function DashboardPage() {
         </div>
 
         {/* ── KPI row ───────────────────────────────────────────── */}
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
           {[
             {
               label: 'Grant Opportunities',
@@ -256,10 +256,10 @@ export default async function DashboardPage() {
         </div>
 
         {/* ── Main content row ──────────────────────────────────── */}
-        <div className="grid grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
 
-          {/* Top opportunities (2/3) */}
-          <div className="col-span-2 rounded-[10px] border overflow-hidden"
+          {/* Top opportunities (2/3 on desktop, full-width on mobile) */}
+          <div className="lg:col-span-2 rounded-[10px] border overflow-hidden"
             style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)' }}>
             <div className="px-5 py-3.5 border-b flex items-center justify-between"
               style={{ borderColor: 'var(--row-divider)' }}>

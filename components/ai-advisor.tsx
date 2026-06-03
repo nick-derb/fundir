@@ -136,11 +136,8 @@ export function AiAdvisor({ orgCode, orgId, orgName }: AiAdvisorProps) {
       {/* Panel */}
       {open && (
         <div
-          className="fixed bottom-6 right-6 z-[60] flex flex-col rounded-2xl shadow-2xl overflow-hidden border"
+          className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-[60] flex flex-col rounded-2xl shadow-2xl overflow-hidden border w-[calc(100vw-32px)] sm:w-[420px] h-[calc(100vh-32px)] sm:h-[620px] sm:max-h-[calc(100vh-48px)]"
           style={{
-            width: '420px',
-            height: '620px',
-            maxHeight: 'calc(100vh - 48px)',
             background: 'var(--card-bg, #ffffff)',
             borderColor: 'var(--card-border, #e2e8f0)',
           }}

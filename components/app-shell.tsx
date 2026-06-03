@@ -7,6 +7,7 @@ import {
   LayoutDashboard, Search, KanbanSquare, Settings, LogOut,
   BarChart3, CalendarDays, TrendingUp, Building2,
   Landmark, Shield, ChevronDown, Check, Sun, Moon,
+  Menu, X,
 } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/supabase';
 import { CommandPalette, CommandPaletteTrigger } from '@/components/command-palette';
@@ -66,7 +67,11 @@ export function AppShell({
   const [switching, setSwitching]       = useState(false);
   const [theme, setTheme]               = useState<'dark' | 'light'>('dark');
   const [teamOpen, setTeamOpen]         = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const orgMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close the mobile drawer whenever the user navigates to a new page.
+  useEffect(() => { setMobileNavOpen(false); }, [pathname]);
 
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout>;
@@ -139,8 +144,20 @@ export function AppShell({
     <div className="flex min-h-screen" style={{ background: 'var(--page-bg)' }}>
       {paletteOpen && <CommandPalette />}
 
-      {/* ── Sidebar ────────────────────────────────────────────── */}
-      <aside className="w-52 flex flex-col fixed inset-y-0 left-0 z-50 border-r"
+      {/* ── Mobile backdrop (sub-md only, when drawer is open) ── */}
+      {mobileNavOpen && (
+        <button
+          aria-label="Close navigation"
+          onClick={() => setMobileNavOpen(false)}
+          className="fixed inset-0 z-40 bg-black/40 md:hidden"
+        />
+      )}
+
+      {/* ── Sidebar ─ desktop: always visible; mobile: slide-in drawer ── */}
+      <aside
+        className={`w-52 flex flex-col fixed inset-y-0 left-0 z-50 border-r transform transition-transform duration-200 ease-out md:translate-x-0 ${
+          mobileNavOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
         style={{ background: 'var(--sidebar-bg)', borderColor: 'var(--sidebar-border)' }}>
 
         {/* Brand + org switcher */}
@@ -256,12 +273,21 @@ export function AppShell({
         </div>
       </aside>
 
-      {/* ── Content area ───────────────────────────────────────── */}
-      <div className="flex-1 ml-52 flex flex-col min-h-screen">
+      {/* ── Content area ─ ml-52 on desktop; full width on mobile ── */}
+      <div className="flex-1 md:ml-52 flex flex-col min-h-screen w-full">
         {/* Top bar */}
-        <header className="sticky top-0 z-40 h-12 flex items-center px-6 gap-4 border-b"
+        <header className="sticky top-0 z-40 h-12 flex items-center px-3 md:px-6 gap-3 md:gap-4 border-b"
           style={{ background: 'var(--header-bg)', borderColor: 'var(--sidebar-border)' }}>
-          <div className="flex-1">
+          {/* Mobile hamburger — opens the sidebar drawer */}
+          <button
+            onClick={() => setMobileNavOpen(o => !o)}
+            aria-label={mobileNavOpen ? 'Close navigation' : 'Open navigation'}
+            className="md:hidden w-8 h-8 -ml-1 rounded-lg flex items-center justify-center hover:bg-white/5"
+            style={{ color: 'var(--brand-text)' }}
+          >
+            {mobileNavOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+          </button>
+          <div className="flex-1 min-w-0">
             <CommandPaletteTrigger onClick={() => setPaletteOpen(true)} />
           </div>
           {userEmail && orgId && (

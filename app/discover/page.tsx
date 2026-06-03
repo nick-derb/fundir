@@ -53,7 +53,7 @@ export default async function DiscoverPage() {
       availableOrgs={ctx.availableOrgs}
       currentOrgCode={ctx.orgCode}
     >
-      <div className="px-8 py-6 max-w-7xl mx-auto">
+      <div className="px-4 sm:px-6 md:px-8 py-6 max-w-7xl mx-auto">
 
         {/* Page header */}
         <div className="flex items-start justify-between gap-4 mb-6">

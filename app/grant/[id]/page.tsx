@@ -290,7 +290,7 @@ export default async function GrantDetailPage({
             style={{ background: 'radial-gradient(circle, #0d9488, transparent)' }} />
         )}
 
-        <div className="relative px-8 py-6 max-w-7xl mx-auto">
+        <div className="relative px-4 sm:px-6 md:px-8 py-6 max-w-7xl mx-auto">
           {/* Breadcrumb */}
           <Link href="/dashboard"
             className="inline-flex items-center gap-1.5 text-[12px] text-[#64748b] hover:text-[#94a3b8] mb-4 transition-colors">
@@ -353,7 +353,7 @@ export default async function GrantDetailPage({
         </div>
       </div>
 
-      <div className="px-8 py-5 max-w-7xl mx-auto">
+      <div className="px-4 sm:px-6 md:px-8 py-5 max-w-7xl mx-auto">
         {/* ── Tab bar ── */}
         <div className="flex items-center gap-1 mb-5 bg-white rounded-xl border border-[#e2e8f0] shadow-card px-2 py-2">
           {TABS.map(({ key, label, icon: Icon }) => {
@@ -465,7 +465,7 @@ export default async function GrantDetailPage({
                 {(fields.award_floor || fields.award_ceiling || fields.grant_duration_months || fields.geographic_scope) && (
                   <div className="bg-white rounded-xl border border-[#e2e8f0] shadow-card p-5">
                     <p className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-widest mb-3">Key Details</p>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {fields.award_floor && (
                         <div className="p-3 bg-[#f8fafc] rounded-[8px] border border-[#f1f5f9]">
                           <p className="text-[10px] text-[#94a3b8] mb-1">Award Floor</p>

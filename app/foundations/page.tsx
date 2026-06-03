@@ -44,7 +44,7 @@ export default async function FoundationsPage() {
         <div className="absolute top-0 right-1/4 w-96 h-48 rounded-full opacity-10 blur-3xl"
           style={{ background: 'radial-gradient(circle, #0d9488, transparent)' }} />
 
-        <div className="relative px-8 py-8 max-w-7xl mx-auto">
+        <div className="relative px-4 sm:px-6 md:px-8 py-6 md:py-8 max-w-7xl mx-auto">
           <div className="flex items-start justify-between gap-4">
             <div>
               <div className="flex items-center gap-2 mb-2">
@@ -67,7 +67,7 @@ export default async function FoundationsPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-4 gap-4 mt-6">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mt-6">
             {[
               { label: 'Foundations Mapped',   value: `${foundations.length}`,       sub: 'scored vs your org profile',  color: '#0d9488' },
               { label: 'Strong Fits ≥70',       value: `${topMatches.length}`,        sub: 'high mission alignment',       color: '#16a34a' },
@@ -85,7 +85,7 @@ export default async function FoundationsPage() {
         </div>
       </div>
 
-      <div className="px-8 py-6 max-w-7xl mx-auto space-y-6">
+      <div className="px-4 sm:px-6 md:px-8 py-6 max-w-7xl mx-auto space-y-6">
 
         {/* ── How this works ─────────────────────────────────── */}
         <div className="bg-white rounded-xl border border-[#e2e8f0] shadow-card p-5">

@@ -102,7 +102,7 @@ export default async function SettingsPage() {
         <div className="absolute top-0 left-1/4 w-96 h-48 rounded-full opacity-10 blur-3xl"
           style={{ background: 'radial-gradient(circle, #6366f1, transparent)' }} />
 
-        <div className="relative px-8 py-8 max-w-7xl mx-auto">
+        <div className="relative px-4 sm:px-6 md:px-8 py-6 md:py-8 max-w-7xl mx-auto">
           <div className="flex items-start justify-between gap-6">
             <div>
               <div className="flex items-center gap-2 mb-1">
@@ -129,7 +129,7 @@ export default async function SettingsPage() {
       </div>
 
       {/* ── Body ── */}
-      <div className="px-8 py-6 max-w-4xl mx-auto space-y-5">
+      <div className="px-4 sm:px-6 md:px-8 py-6 max-w-4xl mx-auto space-y-5">
 
         {/* System status banner if degraded */}
         {!allConnected && (
