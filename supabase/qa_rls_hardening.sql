@@ -2,27 +2,53 @@
 -- Fundir RLS Hardening — closes data-isolation gaps surfaced in the QA pass.
 -- Run this in Supabase SQL editor (Dashboard → SQL Editor → New query).
 --
--- THIS MIGRATION:
---   1. Drops the public-read policy on `organizations` (which exposed `ein`,
---      `financial_data` (full 990 history), and `profile_data` (mission,
---      budget, board, contributors) to anonymous users). Replaces with a
---      member-can-read-own-org policy.
---   2. Adds `org_id` to `grant_notes` + `grant_tasks`, backfills it for the
---      single existing tenant (CYC), changes the broken UNIQUE INDEX on
---      `grant_notes(grant_id)` to `(grant_id, org_id)` so two orgs can have
---      private notes on the same grant.
---   3. Replaces the `USING (true)` policies on `grant_notes` + `grant_tasks`
---      (any authenticated user could read/write any row) with proper
---      org-member-only policies.
---   4. Enables RLS on `match_results`, `grant_opportunities`, `pipeline_runs`,
---      `document_analyses` with org-member-only policies. Server-side code
---      uses the service-role key which bypasses RLS, so existing server
---      actions and API routes keep working — but anon/auth direct clients
---      are now blocked from cross-tenant access (defense in depth on top of
---      the app-layer `.eq('org_id', ctx.orgId)` filtering).
---
--- IDEMPOTENT — safe to re-run. Uses IF EXISTS / IF NOT EXISTS everywhere.
+-- This is SELF-CONTAINED — it creates any referenced tables that don't
+-- already exist (e.g. grant_notes / grant_tasks if the original
+-- add_tasks_notes.sql was never applied to this database). Safe to re-run.
 -- ════════════════════════════════════════════════════════════════════════════
+
+-- ── 0. Ensure referenced tables exist (idempotent) ─────────────────────────
+-- grant_notes + grant_tasks may have been missed if add_tasks_notes.sql was
+-- never applied. document_analyses may have been missed if
+-- add_document_analyses.sql was never applied. CREATE TABLE IF NOT EXISTS
+-- so this works against any prior state.
+
+CREATE TABLE IF NOT EXISTS grant_notes (
+  id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  grant_id    uuid NOT NULL REFERENCES grant_opportunities(id) ON DELETE CASCADE,
+  body        text NOT NULL DEFAULT '',
+  updated_at  timestamptz NOT NULL DEFAULT now(),
+  created_at  timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS grant_tasks (
+  id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  grant_id    uuid NOT NULL REFERENCES grant_opportunities(id) ON DELETE CASCADE,
+  title       text NOT NULL,
+  completed   boolean NOT NULL DEFAULT false,
+  due_date    date,
+  priority    text CHECK (priority IN ('high', 'medium', 'low')) DEFAULT 'medium',
+  created_at  timestamptz NOT NULL DEFAULT now(),
+  updated_at  timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_grant_tasks_grant_id  ON grant_tasks(grant_id);
+CREATE INDEX IF NOT EXISTS idx_grant_tasks_completed ON grant_tasks(grant_id, completed);
+
+CREATE TABLE IF NOT EXISTS document_analyses (
+  id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  org_id          uuid REFERENCES organizations(id) ON DELETE CASCADE,
+  org_code        text NOT NULL,
+  file_name       text NOT NULL,
+  provider        text NOT NULL DEFAULT 'upload',
+  doc_type        text NOT NULL DEFAULT 'financial',
+  summary         text NOT NULL DEFAULT '',
+  analysis        jsonb NOT NULL DEFAULT '{}',
+  analyzed_at     timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS doc_analyses_org_code_idx ON document_analyses(org_code, analyzed_at DESC);
+CREATE INDEX IF NOT EXISTS doc_analyses_org_id_idx   ON document_analyses(org_id,   analyzed_at DESC);
 
 -- ── 1. organizations — drop public read; restrict to members ───────────────
 DROP POLICY IF EXISTS "Public can read orgs" ON organizations;
@@ -39,6 +65,7 @@ ALTER TABLE grant_notes
   ADD COLUMN IF NOT EXISTS org_id uuid REFERENCES organizations(id) ON DELETE CASCADE;
 
 -- Backfill: the only existing tenant is CYC; all existing notes belong to it.
+-- No-op if there are no rows yet.
 UPDATE grant_notes
 SET    org_id = (SELECT id FROM organizations WHERE org_code = 'CYC2025')
 WHERE  org_id IS NULL;
@@ -51,6 +78,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_grant_notes_grant_org
   ON grant_notes(grant_id, org_id);
 
 CREATE INDEX IF NOT EXISTS idx_grant_notes_org_id ON grant_notes(org_id);
+
+ALTER TABLE grant_notes ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "auth_all_notes" ON grant_notes;
 DROP POLICY IF EXISTS "notes: members manage own org" ON grant_notes;
@@ -68,6 +97,8 @@ SET    org_id = (SELECT id FROM organizations WHERE org_code = 'CYC2025')
 WHERE  org_id IS NULL;
 
 CREATE INDEX IF NOT EXISTS idx_grant_tasks_org_id ON grant_tasks(org_id);
+
+ALTER TABLE grant_tasks ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "auth_all_tasks" ON grant_tasks;
 DROP POLICY IF EXISTS "tasks: members manage own org" ON grant_tasks;
@@ -110,9 +141,6 @@ CREATE POLICY "runs: members read own org" ON pipeline_runs
   USING (org_id IN (SELECT org_id FROM user_organizations WHERE user_id = auth.uid()));
 
 -- ── 6. grant_opportunities — shared catalogue, any authed user can read ──
--- grant_opportunities is a shared catalogue across all orgs. Reads are open
--- to any authenticated user; writes happen during discovery and only via
--- the service-role key (which bypasses RLS anyway).
 ALTER TABLE grant_opportunities ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "grants: authenticated read all" ON grant_opportunities;
