@@ -13,6 +13,8 @@ import { ComputedFinancials, OrgProfile } from '@/lib/propublica';
 import { CYC_PROFILE } from '@/lib/cyc-profile';
 import { CYC_FINANCIAL_PROFILE } from '@/lib/cyc-live-data';
 import { YMCA_MATCH_PROFILE } from '@/lib/ymca-live-data';
+import { getAuthContext } from '@/lib/auth-context';
+import { ExtractedFields } from '@/types';
 import crypto from 'crypto';
 
 type FinancialCache = {
@@ -411,4 +413,93 @@ export async function rescoreAndPruneExistingMatches(): Promise<{
   }
 
   return { pruned, errors };
+}
+
+// ── Re-extract financial_requirements on existing grants ─────────────────────
+// Grants discovered before the financial_requirements schema landed lack the
+// payment-structure / cost-share / audit-trigger data the reverse-990 verdict
+// needs. This action re-runs Claude extraction on grants in the org's pipeline
+// that are missing it. Processes in small batches so a single click stays
+// within serverless time limits — re-click to continue.
+
+const REEXTRACT_BATCH_SIZE = 12;
+
+interface GrantRowForReExtract {
+  id:               string;
+  title:            string;
+  agency_name:      string;
+  agency_code:      string;
+  aln_codes:        string[] | null;
+  full_text:        string | null;
+  extracted_fields: Record<string, unknown> | null;
+}
+
+export async function reExtractFinancialRequirements(): Promise<{
+  totalRemaining: number;   // grants still missing financial_requirements BEFORE this batch
+  scanned:        number;   // attempted this batch
+  updated:        number;   // successfully updated this batch
+  errors:         string[];
+}> {
+  const ctx = await getAuthContext();
+  if (!ctx) {
+    return { totalRemaining: 0, scanned: 0, updated: 0, errors: ['Not authenticated.'] };
+  }
+
+  const supabase = createServerClient();
+  const { data: matches, error: matchErr } = await supabase
+    .from('match_results')
+    .select('grant:grant_opportunities(id, title, agency_name, agency_code, aln_codes, full_text, extracted_fields)')
+    .eq('org_id', ctx.orgId);
+
+  if (matchErr) {
+    return { totalRemaining: 0, scanned: 0, updated: 0, errors: [matchErr.message] };
+  }
+
+  const grants: GrantRowForReExtract[] = (matches ?? [])
+    .map(m => m.grant as unknown as GrantRowForReExtract | null)
+    .filter((g): g is GrantRowForReExtract => g != null);
+
+  const needsExtraction = grants.filter(g => {
+    const ef = g.extracted_fields;
+    return !ef || !ef.financial_requirements;
+  });
+
+  const totalRemaining = needsExtraction.length;
+  const errors: string[] = [];
+  let updated = 0;
+  let scanned = 0;
+
+  for (const g of needsExtraction.slice(0, REEXTRACT_BATCH_SIZE)) {
+    scanned++;
+    try {
+      const newFields = await extractGrantFields(
+        g.title,
+        g.agency_name,
+        g.agency_code,
+        g.aln_codes ?? [],
+        g.full_text ?? '',
+      ) as ExtractedFields;
+
+      // If Claude returned only a confidence_score, treat as failed extraction
+      if (Object.keys(newFields).filter(k => k !== 'confidence_score').length === 0) {
+        errors.push(`${g.id}: empty extraction`);
+        continue;
+      }
+
+      // Merge: keep any existing keys not in the new extraction; new wins on conflict
+      const merged = { ...(g.extracted_fields ?? {}), ...newFields };
+
+      const { error } = await supabase
+        .from('grant_opportunities')
+        .update({ extracted_fields: merged })
+        .eq('id', g.id);
+
+      if (error) errors.push(`${g.id}: ${error.message}`);
+      else updated++;
+    } catch (err) {
+      errors.push(`${g.id}: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
+  return { totalRemaining, scanned, updated, errors };
 }

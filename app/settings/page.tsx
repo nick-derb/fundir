@@ -12,6 +12,8 @@ import {
 import { SyncFinancialsButton } from '@/components/sync-financials-button';
 import { Org990Search } from '@/components/org-990-search';
 import { IntegrationConnector } from '@/components/integration-connector';
+import { RefreshExtractionButton } from '@/components/refresh-extraction-button';
+import { Sparkles } from 'lucide-react';
 import { getAllIntegrations } from '@/lib/oauth-tokens';
 
 async function getLastRun() {
@@ -376,6 +378,26 @@ export default async function SettingsPage() {
             </div>
           </div>
         )}
+
+        {/* ── Refresh AI Analysis ── */}
+        <div className="bg-white rounded-xl border border-[#e2e8f0] overflow-hidden">
+          <div className="px-5 py-4 border-b border-[#e2e8f0] bg-[#f8fafc] flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-[6px] flex items-center justify-center"
+                style={{ background: 'linear-gradient(135deg, #0d9488, #0891b2)' }}>
+                <Sparkles className="w-3.5 h-3.5 text-white" />
+              </div>
+              <div>
+                <h2 className="text-[14px] font-bold text-[#0f172a]">Refresh AI Analysis</h2>
+                <p className="text-[11px] text-[#64748b]">Re-run extraction on grants discovered before the latest financial-requirements upgrade</p>
+              </div>
+            </div>
+            <RefreshExtractionButton />
+          </div>
+          <div className="px-5 py-3 text-[11px] text-[#64748b] leading-relaxed">
+            Grants in your pipeline get an updated set of financial-requirements signals — reimbursement risk, cost-share affordability, Single Audit triggers, and capacity thresholds — that feed the Reverse-990 Verdict on each grant detail page. Processed in batches of 12 to stay within serverless time limits; re-click to continue.
+          </div>
+        </div>
 
         {/* ── Organization Profile ── */}
         <div className="bg-white rounded-xl border border-[#e2e8f0] overflow-hidden">

@@ -7,6 +7,7 @@ import { AppShell } from '@/components/app-shell';
 import { ScoreBreakdownChart } from '@/components/score-breakdown';
 import { FinancialVerdict } from '@/components/financial-verdict';
 import { GrantTasks } from '@/components/grant-tasks';
+import { buildMatchReasons } from '@/lib/match-reasons';
 import { GrantNotes } from '@/components/grant-notes';
 import { GrantWorkspace } from '@/components/grant-workspace';
 import { getTasks } from '@/actions/tasks';
@@ -391,6 +392,39 @@ export default async function GrantDetailPage({
             {/* OVERVIEW TAB */}
             {tab === 'overview' && (
               <>
+                {(() => {
+                  const reasons = buildMatchReasons(
+                    score,
+                    fields,
+                    { agency_name: grant?.agency_name, aln_codes: grant?.aln_codes },
+                    'IL',
+                  );
+                  if (!reasons.length) return null;
+                  return (
+                    <div className="rounded-xl border border-[#0d9488]/25 shadow-card p-5 overflow-hidden relative"
+                      style={{ background: 'linear-gradient(180deg, #f0fdfa 0%, #ffffff 35%)' }}>
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="w-6 h-6 rounded-[5px] flex items-center justify-center"
+                          style={{ background: 'linear-gradient(135deg, #0d9488, #0891b2)' }}>
+                          <Sparkles className="w-3.5 h-3.5 text-white" />
+                        </div>
+                        <p className="text-[11px] font-bold text-[#0d9488] uppercase tracking-widest">Why it&apos;s a match</p>
+                      </div>
+                      <ul className="space-y-2">
+                        {reasons.map((r, i) => (
+                          <li key={i} className="flex items-start gap-2 text-[13px] text-[#0f172a]">
+                            <CheckCircle className="w-4 h-4 text-[#0d9488] mt-0.5 flex-shrink-0" />
+                            <span className="leading-relaxed">{r.text}</span>
+                          </li>
+                        ))}
+                      </ul>
+                      <p className="text-[10px] text-[#94a3b8] mt-3 pt-3 border-t border-[#0d9488]/15">
+                        Derived deterministically from Fundir&apos;s 7-factor score and extracted grant data.
+                      </p>
+                    </div>
+                  );
+                })()}
+
                 {match.recommendation && (
                   <div className="bg-white rounded-xl border border-[#e2e8f0] shadow-card p-5">
                     <div className="flex items-center gap-2 mb-3">
