@@ -73,8 +73,9 @@ export default function LandingPage() {
           style={{ background: 'radial-gradient(ellipse, rgba(99,102,241,0.1), transparent 70%)' }}
         />
 
-        {/* Product screenshot — ghost browser on the right */}
-        <div className="absolute inset-0 flex items-center justify-end pr-0 pointer-events-none">
+        {/* Product screenshot — ghost browser on the right. Hidden below md
+            because it overlaps the hero text on small viewports. */}
+        <div className="absolute inset-0 hidden md:flex items-center justify-end pr-0 pointer-events-none">
           <div className="w-[62%] h-full relative">
             <div className="absolute inset-8 rounded-xl overflow-hidden border border-white/8 shadow-2xl bg-[#0f172a] opacity-35 scan-line">
               <div className="flex items-center gap-2 px-4 py-2.5 bg-[#1e293b] border-b border-white/10">
@@ -132,7 +133,7 @@ export default function LandingPage() {
         </div>
 
         {/* Hero text */}
-        <div className="relative flex-1 flex flex-col justify-center px-16 pt-24 pb-24 max-w-3xl">
+        <div className="relative flex-1 flex flex-col justify-center px-6 md:px-12 lg:px-16 pt-20 md:pt-24 pb-16 md:pb-24 max-w-3xl">
           <div className="animate-fade-in-up delay-100">
             <span className="inline-flex items-center gap-2 px-3 py-1 border border-[#0d9488]/40 text-[#0d9488] text-[11px] font-semibold uppercase tracking-widest mb-8">
               <span className="w-1.5 h-1.5 rounded-full bg-[#0d9488] animate-pulse" />
@@ -140,7 +141,7 @@ export default function LandingPage() {
             </span>
           </div>
 
-          <h1 className="text-[64px] md:text-[76px] font-bold text-white leading-[1.0] tracking-tight mb-8 animate-fade-in-up delay-200">
+          <h1 className="text-[44px] sm:text-[56px] md:text-[68px] lg:text-[76px] font-bold text-white leading-[1.05] md:leading-[1.0] tracking-tight mb-6 md:mb-8 animate-fade-in-up delay-200">
             AI-Powered Grant<br />
             Intelligence for<br />
             <HeroTypewriter />
@@ -164,13 +165,13 @@ export default function LandingPage() {
       </section>
 
       {/* ══ STATEMENT ════════════════════════════════════════════════════════ */}
-      <section className="py-32 px-8 bg-white">
+      <section className="py-20 md:py-32 px-6 md:px-8 bg-white">
         <div className="max-w-5xl mx-auto text-center">
           <ScrollReveal>
             <p className="text-[13px] font-semibold text-[#94a3b8] uppercase tracking-widest mb-8">Our Software</p>
           </ScrollReveal>
           <ScrollReveal delay={100}>
-            <h2 className="text-[48px] md:text-[64px] font-bold text-[#0f172a] leading-[1.1] tracking-tight">
+            <h2 className="text-[34px] sm:text-[44px] md:text-[56px] lg:text-[64px] font-bold text-[#0f172a] leading-[1.1] tracking-tight">
               The grant world now has<br />
               <span className="text-shimmer">an operating system.</span>
             </h2>
@@ -187,12 +188,12 @@ export default function LandingPage() {
       <ProductTabs products={products} />
 
       {/* ══ CAPABILITIES ═════════════════════════════════════════════════════ */}
-      <section className="py-24 px-8 bg-white border-t border-[#e2e8f0]">
+      <section className="py-16 md:py-24 px-6 md:px-8 bg-white border-t border-[#e2e8f0]">
         <div className="max-w-6xl mx-auto">
           <ScrollReveal>
             <div className="mb-16">
               <p className="text-[#0d9488] text-[12px] font-bold uppercase tracking-widest mb-3">Platform Capabilities</p>
-              <h2 className="text-[40px] font-bold text-[#0f172a] leading-tight">
+              <h2 className="text-[28px] sm:text-[34px] md:text-[40px] font-bold text-[#0f172a] leading-tight">
                 Built for the full grant lifecycle.
               </h2>
             </div>
@@ -315,7 +316,7 @@ export default function LandingPage() {
       </section>
 
       {/* ══ DARK STATEMENT + STATS ════════════════════════════════════════════ */}
-      <section className="py-32 px-8 bg-[#0a0a0a]">
+      <section className="py-20 md:py-32 px-6 md:px-8 bg-[#0a0a0a]">
         <div className="max-w-5xl mx-auto">
           <div className="relative">
             <div className="absolute -top-16 left-0 w-64 h-64 rounded-full blur-[80px] pointer-events-none animate-float-glow"
@@ -324,7 +325,7 @@ export default function LandingPage() {
               <p className="text-[13px] font-semibold text-[#0d9488] uppercase tracking-widest mb-8">Why Fundir</p>
             </ScrollReveal>
             <ScrollReveal delay={100}>
-              <h2 className="text-[52px] md:text-[68px] font-bold text-white leading-[1.05] tracking-tight max-w-4xl">
+              <h2 className="text-[34px] sm:text-[44px] md:text-[58px] lg:text-[68px] font-bold text-white leading-[1.05] tracking-tight max-w-4xl">
                 Fundir scores financial eligibility against every grant —{' '}
                 <span className="text-white/25">before you spend a single hour applying.</span>
               </h2>
@@ -352,7 +353,7 @@ export default function LandingPage() {
       </section>
 
       {/* ══ COVERAGE ═════════════════════════════════════════════════════════ */}
-      <section className="py-20 px-8 bg-white border-t border-[#e2e8f0]">
+      <section className="py-14 md:py-20 px-6 md:px-8 bg-white border-t border-[#e2e8f0]">
         <div className="max-w-6xl mx-auto">
           <ScrollReveal>
             <div className="flex items-end justify-between mb-10">
@@ -404,13 +405,13 @@ export default function LandingPage() {
       </section>
 
       {/* ══ FINAL CTA ════════════════════════════════════════════════════════ */}
-      <section className="relative py-32 px-8 bg-[#0a0a0a] overflow-hidden border-t border-white/5">
+      <section className="relative py-20 md:py-32 px-6 md:px-8 bg-[#0a0a0a] overflow-hidden border-t border-white/5">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] rounded-full blur-[120px] pointer-events-none animate-float-glow"
           style={{ background: 'radial-gradient(ellipse, rgba(13,148,136,0.1), transparent 70%)' }} />
         <div className="relative max-w-2xl mx-auto text-center">
           <ScrollReveal>
             <p className="text-[12px] font-bold text-[#0d9488] uppercase tracking-widest mb-6">Ready to get started?</p>
-            <h2 className="text-[48px] font-bold text-white leading-tight mb-6">
+            <h2 className="text-[32px] sm:text-[40px] md:text-[48px] font-bold text-white leading-tight mb-6">
               Find your next grant today.
             </h2>
             <p className="text-[16px] text-white/40 mb-10 leading-relaxed">
