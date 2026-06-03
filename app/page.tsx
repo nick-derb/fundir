@@ -371,7 +371,7 @@ export default function LandingPage() {
                 'Faith-Based', 'Workforce', 'Mental Health', 'Food Security',
                 'Civil Rights', 'Science & Tech', 'International', 'Philanthropy',
               ].map(area => (
-                <Link key={area} href="/onboarding"
+                <Link key={area} href="/onboarding/chat"
                   className="px-4 py-1.5 border border-[#e2e8f0] text-[13px] text-[#475569] hover:border-[#0d9488] hover:text-[#0d9488] hover:bg-[#f0fdfa] hover:-translate-y-px hover:shadow-sm transition-all duration-150">
                   {area}
                 </Link>
@@ -419,7 +419,7 @@ export default function LandingPage() {
           </ScrollReveal>
           <ScrollReveal delay={150}>
             <Link
-              href="/onboarding"
+              href="/onboarding/chat"
               className="group inline-flex items-center gap-3 px-8 py-4 bg-white text-[#0a0a0a] font-bold text-[14px] btn-glow hover:bg-white relative overflow-hidden"
             >
               <span className="absolute inset-0 bg-[#f0fdfa] opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
@@ -450,7 +450,7 @@ export default function LandingPage() {
           </div>
           <div className="flex items-center gap-6">
             <Link href="/login" className="text-[12px] text-white/25 hover:text-white/50 transition-colors">Sign in</Link>
-            <Link href="/onboarding" className="text-[12px] text-white/25 hover:text-white/50 transition-colors">Get started</Link>
+            <Link href="/onboarding/chat" className="text-[12px] text-white/25 hover:text-white/50 transition-colors">Get started</Link>
             <p className="text-[12px] text-white/15">© 2026 Fundir</p>
           </div>
         </div>

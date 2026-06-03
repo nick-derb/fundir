@@ -52,7 +52,7 @@ export function HeroCTAs() {
   return (
     <div className="flex items-center gap-4">
       <Link
-        href="/onboarding"
+        href="/onboarding/chat"
         className="group relative flex items-center gap-2.5 px-7 py-3.5 bg-white text-[#0a0a0a] font-bold text-[14px] overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_30px_rgba(255,255,255,0.2)]"
       >
         <span className="absolute inset-0 bg-white/90 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
@@ -273,7 +273,7 @@ export function ProductTabs({ products }: { products: Product[] }) {
               {p.tab}
             </button>
           ))}
-          <Link href="/onboarding" className="ml-auto px-6 py-4 text-[13px] font-semibold text-[#94a3b8] hover:text-[#0d9488] whitespace-nowrap transition-colors">
+          <Link href="/onboarding/chat" className="ml-auto px-6 py-4 text-[13px] font-semibold text-[#94a3b8] hover:text-[#0d9488] whitespace-nowrap transition-colors">
             SEE ALL →
           </Link>
         </div>
@@ -287,7 +287,7 @@ export function ProductTabs({ products }: { products: Product[] }) {
             <h3 className="text-[36px] font-bold text-white leading-tight mb-6">{products[active].heading}</h3>
             <p className="text-[16px] text-white/50 leading-relaxed mb-8">{products[active].body}</p>
             <Link
-              href="/onboarding"
+              href="/onboarding/chat"
               className="group inline-flex items-center gap-2 text-[13px] font-semibold text-white border-b border-white/30 pb-0.5 hover:border-white transition-colors"
             >
               Explore {products[active].tab}
@@ -370,7 +370,7 @@ export function LandingNav() {
       </Link>
 
       <Link
-        href="/onboarding"
+        href="/onboarding/chat"
         className="relative px-5 py-2 border border-white text-white text-[13px] font-semibold overflow-hidden group transition-all duration-200 hover:-translate-y-px"
       >
         <span className="absolute inset-0 bg-white translate-y-full group-hover:translate-y-0 transition-transform duration-200 ease-out" />
