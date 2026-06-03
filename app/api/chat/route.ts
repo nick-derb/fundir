@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { createServerClient } from '@/lib/supabase';
+import { getAuthContext } from '@/lib/auth-context';
 import {
   CYC_INTELLIGENCE_FLAGS, CYC_FEDERAL_PROGRAMS, CYC_INCOME_STATEMENT,
   CYC_LIQUIDITY, CYC_PROGRAM_ANALYSIS, CYC_REVENUE_TREND, CYC_IMPACT,
@@ -106,23 +107,32 @@ ${matchCtx}`;
 }
 
 export async function POST(req: NextRequest) {
+  // Auth FIRST — derive org identity from the session, never trust the body.
+  const ctx = await getAuthContext();
+  if (!ctx) {
+    return new Response('Not authenticated.', { status: 401 });
+  }
   if (!process.env.ANTHROPIC_API_KEY) {
     return new Response('The advisor is not configured (missing API key).', { status: 503 });
   }
 
-  let body: { orgCode?: string; orgId?: string; orgName?: string; messages?: ChatMessage[] };
+  let body: { messages?: ChatMessage[] };
   try {
     body = await req.json();
   } catch {
     return new Response('Invalid request body.', { status: 400 });
   }
 
-  const { orgCode, orgId, orgName = 'your organization', messages = [] } = body;
+  const messages = body.messages ?? [];
   if (!messages.length) {
     return new Response('No messages provided.', { status: 400 });
   }
 
-  const isCyc = orgCode === 'CYC2025';
+  // Org identity comes from auth, NOT the request body.
+  const orgCode = ctx.orgCode;
+  const orgId   = ctx.orgId;
+  const orgName = ctx.orgName;
+  const isCyc   = orgCode === 'CYC2025';
   const [financialCtx, matchCtx] = await Promise.all([
     Promise.resolve(isCyc ? buildCycContext() : ''),
     buildMatchContext(orgId),

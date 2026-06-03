@@ -1,17 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
+import { getAuthContext } from '@/lib/auth-context';
 
-// GET /api/integrations/analyses?orgCode=XXX           → list (no analysis JSON)
-// GET /api/integrations/analyses?orgCode=XXX&id=UUID  → single with full analysis
+// GET /api/integrations/analyses         → list (no analysis JSON) for the authed user's org
+// GET /api/integrations/analyses?id=UUID → single analysis (must belong to authed user's org)
 
 export async function GET(req: NextRequest) {
-  const { searchParams } = req.nextUrl;
-  const orgCode = searchParams.get('orgCode');
-  const id      = searchParams.get('id');
+  const ctx = await getAuthContext();
+  if (!ctx) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
 
-  if (!orgCode) {
-    return NextResponse.json({ error: 'orgCode required' }, { status: 400 });
-  }
+  const { searchParams } = req.nextUrl;
+  const id      = searchParams.get('id');
+  const orgCode = ctx.orgCode;   // never from the URL
 
   const db = createServerClient();
 

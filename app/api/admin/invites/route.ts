@@ -1,17 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
+import { getAuthContext } from '@/lib/auth-context';
 
-// Verify that the request comes from the admin email via Supabase session
+// Verify the caller is the configured admin. Primary check is the Supabase
+// session (via getAuthContext().isAdmin). The x-admin-key header is a
+// secondary path for server-to-server tooling — ONLY accepted if
+// ADMIN_SECRET_KEY is set in the environment. If neither check passes,
+// the request is rejected. This route previously had a `return true`
+// fallback that meant ADMIN_SECRET_KEY being unset opened the endpoint
+// to anyone — that bug is fixed here.
 async function isAdmin(req: NextRequest): Promise<boolean> {
-  const adminEmail = (process.env.ADMIN_EMAIL ?? '').toLowerCase();
-  if (!adminEmail) return false;
+  // Path 1: server-to-server with an explicit shared key.
+  const adminSecret = process.env.ADMIN_SECRET_KEY;
+  if (adminSecret && req.headers.get('x-admin-key') === adminSecret) return true;
 
-  // Read auth token from Authorization header (Bearer) or cookie
-  const authHeader = req.headers.get('x-admin-key');
-  if (authHeader === process.env.ADMIN_SECRET_KEY) return true;
-
-  // Fallback: trust middleware already verified session; allow if ADMIN_SECRET_KEY not set
-  return true;
+  // Path 2: authenticated session whose email matches ADMIN_EMAIL.
+  const ctx = await getAuthContext();
+  return !!ctx?.isAdmin;
 }
 
 export async function GET(req: NextRequest) {

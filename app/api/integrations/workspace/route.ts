@@ -13,6 +13,7 @@ import {
   createExcelFile,
 } from '@/lib/microsoft-graph';
 import { createServerClient } from '@/lib/supabase';
+import { getAuthContext } from '@/lib/auth-context';
 
 export const maxDuration = 30;
 
@@ -25,16 +26,19 @@ function sanitizeName(name: string): string {
 
 /** GET — list files in grant workspace folder */
 export async function GET(req: NextRequest) {
+  const ctx = await getAuthContext();
+  if (!ctx) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+
   const { searchParams } = req.nextUrl;
   const provider  = searchParams.get('provider') as 'google' | 'microsoft' | null;
   const matchId   = searchParams.get('matchId');
-  const orgCode   = searchParams.get('org') ?? 'CYC2025';
 
   if (!provider || !matchId) {
     return NextResponse.json({ error: 'provider and matchId required' }, { status: 400 });
   }
 
-  const token = await getValidToken(orgCode, provider);
+  // Org code from auth — never from the URL.
+  const token = await getValidToken(ctx.orgCode, provider);
   if (!token) {
     return NextResponse.json({ error: 'not_connected' }, { status: 401 });
   }
@@ -70,11 +74,13 @@ export async function GET(req: NextRequest) {
 
 /** POST — create or initialize grant workspace folder */
 export async function POST(req: NextRequest) {
+  const ctx = await getAuthContext();
+  if (!ctx) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+
   const {
     provider,
     matchId,
     grantTitle,
-    orgCode = 'CYC2025',
     action = 'init',
     docName,
     docType = 'doc',
@@ -82,13 +88,13 @@ export async function POST(req: NextRequest) {
     provider: 'google' | 'microsoft';
     matchId: string;
     grantTitle: string;
-    orgCode?: string;
     action?: 'init' | 'create_doc';
     docName?: string;
     docType?: 'doc' | 'sheet';
   };
 
-  const token = await getValidToken(orgCode, provider);
+  // Org code from auth — never from the body.
+  const token = await getValidToken(ctx.orgCode, provider);
   if (!token) {
     return NextResponse.json({ error: 'not_connected' }, { status: 401 });
   }

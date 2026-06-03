@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getValidToken } from '@/lib/oauth-tokens';
+import { getAuthContext } from '@/lib/auth-context';
 import { extractDocContent } from '@/lib/google-drive';
 import { extractContent } from '@/lib/microsoft-graph';
 import type { GraphFile } from '@/lib/microsoft-graph';
@@ -7,16 +8,19 @@ import type { GraphFile } from '@/lib/microsoft-graph';
 export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
-  const { provider, orgCode = 'CYC2025', fileId, mimeType, fileName } =
+  const ctx = await getAuthContext();
+  if (!ctx) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+
+  const { provider, fileId, mimeType, fileName } =
     await req.json() as {
       provider: 'google' | 'microsoft';
-      orgCode?: string;
       fileId: string;
       mimeType?: string;
       fileName?: string;
     };
 
-  const token = await getValidToken(orgCode, provider);
+  // Org code from auth — never trust the body.
+  const token = await getValidToken(ctx.orgCode, provider);
   if (!token) {
     return NextResponse.json({ error: 'not_connected' }, { status: 401 });
   }

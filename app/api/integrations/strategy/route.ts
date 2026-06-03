@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { createServerClient } from '@/lib/supabase';
+import { getAuthContext } from '@/lib/auth-context';
 
 export const maxDuration = 120;
 
@@ -60,16 +61,17 @@ Return this exact JSON:
 }`;
 }
 
-export async function POST(req: NextRequest) {
-  const { orgCode, orgName = 'Your Organization' } =
-    await req.json() as { orgCode: string; orgName?: string };
+export async function POST(_req: NextRequest) {
+  // Auth FIRST — org identity comes from the session, NOT the body.
+  const ctx = await getAuthContext();
+  if (!ctx) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
 
-  if (!orgCode) {
-    return NextResponse.json({ error: 'orgCode required' }, { status: 400 });
-  }
   if (!process.env.ANTHROPIC_API_KEY) {
     return NextResponse.json({ error: 'Anthropic API key not configured' }, { status: 503 });
   }
+
+  const orgCode = ctx.orgCode;
+  const orgName = ctx.orgName;
 
   const db = createServerClient();
   const { data: analyses } = await db

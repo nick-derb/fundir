@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { createServerClient } from '@/lib/supabase';
+import { getAuthContext } from '@/lib/auth-context';
 
 export const maxDuration = 120;
 
@@ -144,21 +145,26 @@ ${truncated}`;
 
 // ── POST handler ───────────────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
+  // Auth FIRST — org identity comes from the session, NOT the body. Without
+  // this gate, anonymous callers could write document_analyses rows under any
+  // org's code, which the strategy endpoint would later feed into Claude
+  // (prompt-injection chain).
+  const ctx = await getAuthContext();
+  if (!ctx) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+
   const {
     content,
     fileName    = 'Document',
     docType     = 'financial',
-    orgCode,
-    orgId,
     provider    = 'upload',
   } = await req.json() as {
     content:   string;
     fileName?: string;
     docType?:  DocType;
-    orgCode?:  string;
-    orgId?:    string;
     provider?: string;
   };
+  const orgCode = ctx.orgCode;
+  const orgId   = ctx.orgId;
 
   if (!content || content.length < 50) {
     return NextResponse.json({ error: 'Document content too short to analyze' }, { status: 400 });
