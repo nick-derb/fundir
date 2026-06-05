@@ -108,6 +108,13 @@ export default function OnboardingPage() {
     // Hand-off from /onboarding/chat: read the captured profile from
     // sessionStorage and pre-fill org name + city + state so the user
     // does not have to re-type what the chat already extracted.
+    //
+    // Step 3 (Org Profile) has no plain "Org Name" input — it has a
+    // ProPublica IRS-database search whose value is `einQuery`. To make
+    // the hand-off visible, we ALSO seed einQuery with the captured org
+    // name and run the search immediately so the user lands on step 3
+    // with the dropdown already populated. Without this, the chat hand-off
+    // looks like a no-op even though the underlying form state is filled.
     try {
       const raw = sessionStorage.getItem('fundir-onboarding-profile');
       if (raw) {
@@ -122,6 +129,24 @@ export default function OnboardingPage() {
             city:    prev.city    || p.city    || '',
             state:   prev.state   || p.state   || '',
           }));
+
+          // Seed the ProPublica search so step 3 shows results immediately.
+          if (p.orgName && p.orgName.trim().length >= 2) {
+            setEinQuery(p.orgName);
+            setEinSearching(true);
+            (async () => {
+              try {
+                const res  = await fetch(`/api/orgs/search?q=${encodeURIComponent(p.orgName!)}`);
+                const data: OrgSearchResult[] = await res.json();
+                setEinResults(data);
+                setEinDropdownOpen(data.length > 0);
+              } catch {
+                setEinResults([]);
+              } finally {
+                setEinSearching(false);
+              }
+            })();
+          }
         }
         sessionStorage.removeItem('fundir-onboarding-profile');
       }
