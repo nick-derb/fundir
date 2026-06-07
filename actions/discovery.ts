@@ -14,6 +14,7 @@ import { CYC_PROFILE } from '@/lib/cyc-profile';
 import { CYC_FINANCIAL_PROFILE } from '@/lib/cyc-live-data';
 import { YMCA_MATCH_PROFILE } from '@/lib/ymca-live-data';
 import { getAuthContext } from '@/lib/auth-context';
+import { fetchOrgOutcomeCounts, buildHistoricalWinRates } from '@/lib/win-rate-bayes';
 import { ExtractedFields } from '@/types';
 import crypto from 'crypto';
 
@@ -196,7 +197,7 @@ export async function runDiscovery(params: SearchParams, orgId?: string, orgCode
   let belowThreshold    = 0;   // passed gates but scored too low to store
 
   const resolvedOrgCode = orgCode ?? 'CYC2025';
-  const orgProfile      = getOrgProfile(resolvedOrgCode);
+  const baseOrgProfile  = getOrgProfile(resolvedOrgCode);
 
   try {
     // Use targeted search profiles if no specific params provided
@@ -204,10 +205,23 @@ export async function runDiscovery(params: SearchParams, orgId?: string, orgCode
       ? [{ name: 'Custom', params }]
       : TARGETED_SEARCHES.slice(0, 4); // run first 4 on demand; all via cron
 
-    const [programEmbeddings, financialProfile] = await Promise.all([
+    const [programEmbeddings, financialProfile, observedOutcomes] = await Promise.all([
       getOrgProgramEmbeddings(resolvedOrgCode),
       getFinancialProfile(resolvedOrgCode),
+      orgId ? fetchOrgOutcomeCounts(orgId) : Promise.resolve(null),
     ]);
+
+    // Merge Bayesian win rates from real submission history on top of the
+    // baseline hand-coded historicalWinRates so the historical component
+    // reflects what the org has actually won and lost, not what we
+    // assumed. Observed rates take precedence by being spread last.
+    const observedRates = observedOutcomes
+      ? buildHistoricalWinRates(observedOutcomes)
+      : {};
+    const orgProfile = {
+      ...baseOrgProfile,
+      historicalWinRates: { ...baseOrgProfile.historicalWinRates, ...observedRates },
+    };
 
     for (const search of searches) {
       let hits;
