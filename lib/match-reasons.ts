@@ -31,6 +31,22 @@ export function buildMatchReasons(
 ): MatchReason[] {
   const reasons: MatchReason[] = [];
 
+  // ── Matched program (lead, when present) ────────────────────────────────────
+  // The per-program embedding scoring tells us which specific program within
+  // the org this grant best fits. That's the most concrete, decision-useful
+  // signal we have, so it leads the bullet list.
+  if (score.matchedProgram && score.matchedProgram !== 'General Operating') {
+    reasons.push({
+      category: 'mission',
+      text: `Best fit for your ${score.matchedProgram} program`,
+    });
+  } else if (score.matchedProgram === 'General Operating') {
+    reasons.push({
+      category: 'mission',
+      text: `Best fit as mission-level / general operating support`,
+    });
+  }
+
   // ── Mission / semantic alignment ────────────────────────────────────────────
   if (score.semantic >= 65) {
     const areas = fields.program_areas?.slice(0, 2);

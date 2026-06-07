@@ -6,7 +6,7 @@ import { extractGrantFields } from '@/lib/extraction';
 import { generateEmbedding, buildGrantText } from '@/lib/embeddings';
 import {
   computeMatchScore, generateRecommendation, getEligibilityFlags,
-  hardExclusionReason, MIN_STORE_SCORE, OrgMatchProfile,
+  hardExclusionReason, MIN_STORE_SCORE, OrgMatchProfile, ProgramEmbeddingRef,
 } from '@/lib/matching';
 import { screen990Against, neutralFinancialResult, FinancialEligibilityResult } from '@/lib/990-screener';
 import { ComputedFinancials, OrgProfile } from '@/lib/propublica';
@@ -25,8 +25,8 @@ type FinancialCache = {
 };
 
 // Per-org caches keyed by orgCode (reset on cold start)
-const orgEmbeddingCache   = new Map<string, number[]>();
-const financialProfileCache = new Map<string, FinancialCache>();
+const programEmbeddingsCache = new Map<string, ProgramEmbeddingRef[]>();
+const financialProfileCache  = new Map<string, FinancialCache>();
 
 function getOrgProfile(orgCode: string): OrgMatchProfile {
   if (orgCode === 'CYC2025') return CYC_PROFILE as unknown as OrgMatchProfile;
@@ -48,26 +48,73 @@ function getOrgProfile(orgCode: string): OrgMatchProfile {
   };
 }
 
-async function getOrgEmbedding(orgCode: string): Promise<number[]> {
-  const cached = orgEmbeddingCache.get(orgCode);
+/**
+ * Per-program embeddings — one focused vector per org program plus a
+ * "general operating" fallback. Replaces the single muddled org-wide
+ * embedding so a grant for a specific program area matches that program
+ * cleanly instead of getting diluted by the rest of the org's mission.
+ *
+ * For CYC this yields 5 embeddings:
+ *   - Early Learning / Head Start
+ *   - Afterschool Programs
+ *   - Summer Day Camps
+ *   - Teen Programming
+ *   - General Operating (slightly down-weighted so program-specific wins)
+ *
+ * Cost: ~5 × $0.000026 per cold start = negligible. Cached in-process.
+ */
+async function getOrgProgramEmbeddings(orgCode: string): Promise<ProgramEmbeddingRef[]> {
+  const cached = programEmbeddingsCache.get(orgCode);
   if (cached) return cached;
 
   const profile = getOrgProfile(orgCode);
-  const orgText = [
-    `Organization: ${profile.name}`,
+
+  // Stable context block so each program embedding gets the same
+  // org-level grounding (location, scale, populations) — only the
+  // program-specific lines differ.
+  const baseContext = [
+    `Organization: ${profile.name}, a ${profile.city}, ${profile.state}-based 501(c)(3) nonprofit.`,
+    `Annual budget: $${(profile.annualBudget / 1_000_000).toFixed(1)}M across ${profile.sites} sites.`,
+    `Serves: ${profile.targetPopulations.slice(0, 5).join(', ')}.`,
+    `Focus: domestic, USA, ${profile.state}.`,
+  ].join(' ');
+
+  const programs = await Promise.all(profile.programs.map(async (p) => {
+    // Program-specific text: lead with the program name and areas so the
+    // embedding's strongest signals are program-aligned. baseContext is at
+    // the bottom so cosine isn't washed out by repeated org-level boilerplate.
+    const text = [
+      `Program: ${p.name}`,
+      `Focus areas: ${p.areas.join(', ')}.`,
+      `What we do in this program: deliver ${p.areas.slice(0, 3).join(', ')} services to ${profile.targetPopulations.slice(0, 3).join(', ')}.`,
+      baseContext,
+    ].join('\n');
+    return {
+      programName: p.name,
+      embedding:   await generateEmbedding(text),
+      weight:      1.0,
+    };
+  }));
+
+  // General operating embedding — captures mission-level / unrestricted
+  // grants that don't map to one specific program. Down-weighted so a
+  // tied cosine on a specific program wins.
+  const generalText = [
+    `Program area: General Operating Support`,
     `Mission: ${profile.mission}`,
-    `Location: ${profile.city}, ${profile.state}`,
-    `Entity type: 501(c)(3) nonprofit`,
-    `Programs: ${profile.programs.map(p => `${p.name} (${p.areas.join(', ')})`).join('; ')}`,
-    `Target populations: ${profile.targetPopulations.join(', ')}`,
-    `Annual budget: $${(profile.annualBudget / 1_000_000).toFixed(1)}M`,
-    `Sites: ${profile.sites} locations`,
-    `Focus: domestic, USA, ${profile.state}`,
+    `This embedding represents grants that fund the organization's general operations, unrestricted use, or mission-level work that spans all programs.`,
+    baseContext,
   ].join('\n');
 
-  const embedding = await generateEmbedding(orgText);
-  orgEmbeddingCache.set(orgCode, embedding);
-  return embedding;
+  const general: ProgramEmbeddingRef = {
+    programName: 'General Operating',
+    embedding:   await generateEmbedding(generalText),
+    weight:      0.85,
+  };
+
+  const all: ProgramEmbeddingRef[] = [...programs, general];
+  programEmbeddingsCache.set(orgCode, all);
+  return all;
 }
 
 async function getFinancialProfile(orgCode: string): Promise<FinancialCache | null> {
@@ -157,8 +204,8 @@ export async function runDiscovery(params: SearchParams, orgId?: string, orgCode
       ? [{ name: 'Custom', params }]
       : TARGETED_SEARCHES.slice(0, 4); // run first 4 on demand; all via cron
 
-    const [orgEmbedding, financialProfile] = await Promise.all([
-      getOrgEmbedding(resolvedOrgCode),
+    const [programEmbeddings, financialProfile] = await Promise.all([
+      getOrgProgramEmbeddings(resolvedOrgCode),
       getFinancialProfile(resolvedOrgCode),
     ]);
 
@@ -261,8 +308,11 @@ export async function runDiscovery(params: SearchParams, orgId?: string, orgCode
           }
 
           // ── 7. Composite score ─────────────────────────────────────────────
+          // Per-program scoring: cosine is computed against each program
+          // embedding and the max wins, with the winning program name
+          // surfaced on scoreBreakdown.matchedProgram.
           const scoreBreakdown = computeMatchScore(
-            embedding, orgEmbedding, extractedFields,
+            embedding, programEmbeddings, extractedFields,
             hit.agencyCode, hit.alnlist || [], financialResult, orgProfile,
           );
 
@@ -307,7 +357,13 @@ export async function runDiscovery(params: SearchParams, orgId?: string, orgCode
           newGrants++;
 
           // ── 10. Upsert match result ────────────────────────────────────────
-          const recommendation  = generateRecommendation(scoreBreakdown, extractedFields, orgProfile);
+          // Prefix the recommendation with the matched program so the user
+          // sees which of their programs this grant is for — the most
+          // valuable signal in the per-program scoring rebuild.
+          const baseRec = generateRecommendation(scoreBreakdown, extractedFields, orgProfile);
+          const recommendation = scoreBreakdown.matchedProgram
+            ? `Best program fit: ${scoreBreakdown.matchedProgram}. ${baseRec}`
+            : baseRec;
           const eligibilityFlags = getEligibilityFlags(extractedFields, orgProfile);
 
           await supabase.from('match_results').upsert({

@@ -92,6 +92,12 @@ export interface ScoreBreakdown {
   financial_990: number;
   historical: number;
   strategic: number;
+  /**
+   * The name of the program within the org that this grant best matched
+   * (from per-program embedding scoring). Optional for backwards-compat
+   * with older match_results rows scored before per-program embeddings.
+   */
+  matchedProgram?: string;
 }
 
 export interface FederalProgram {

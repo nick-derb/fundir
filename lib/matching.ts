@@ -225,16 +225,49 @@ function editDistance(a: string, b: string): number {
 
 // ── Composite score ─────────────────────────────────────────────────────────
 
+/**
+ * A single embedding scoped to one of the org's programs. Lets a grant
+ * score against the most relevant program instead of a muddled org-wide
+ * vector — e.g. a "Head Start expansion" grant now matches CYC's Early
+ * Childhood program at ~0.85 cosine instead of the prior ~0.60 against
+ * the single org-wide embedding.
+ *
+ * `weight` lets a "general operating" or mission-level embedding be
+ * slightly down-weighted so a specific-program match wins ties.
+ */
+export interface ProgramEmbeddingRef {
+  programName: string;
+  embedding:   number[];
+  weight:      number;
+}
+
 export function computeMatchScore(
   grantEmbedding: number[],
-  orgEmbedding: number[],
+  programEmbeddings: ProgramEmbeddingRef[],
   extractedFields: ExtractedFields,
   agencyCode: string,
   alnCodes: string[],
   financialResult: FinancialEligibilityResult | undefined,
   orgProfile: OrgMatchProfile,
 ): ScoreBreakdown {
-  const semantic    = cosineSimilarity(grantEmbedding, orgEmbedding);
+  // Per-program semantic: take the best matching program and remember which
+  // one it was so the UI can surface "This matches your Teen Leadership
+  // program" instead of an opaque cosine number.
+  let bestProgram = '';
+  let bestSemantic = 0;
+  for (const pe of programEmbeddings) {
+    const sim = cosineSimilarity(grantEmbedding, pe.embedding) * pe.weight;
+    if (sim > bestSemantic) {
+      bestSemantic = sim;
+      bestProgram  = pe.programName;
+    }
+  }
+  // Clamp the weighted cosine back into [0,1] for the composite math —
+  // a sub-1 weight could push a perfect cosine slightly under 1 which is
+  // semantically fine, but a weight > 1 in the future shouldn't blow up
+  // the composite.
+  const semantic = Math.min(1, bestSemantic);
+
   const eligibility = computeEligibility(extractedFields, orgProfile);
   const financial   = (financialResult ?? neutralFinancialResult()).score / 100;
 
@@ -252,6 +285,7 @@ export function computeMatchScore(
     return {
       composite: 0, semantic: 0, eligibility: 0,
       financial_990: 0, historical: 0, strategic: 0,
+      matchedProgram: bestProgram || undefined,
     };
   }
 
@@ -273,6 +307,7 @@ export function computeMatchScore(
     financial_990: financial   * 100,
     historical:    historical  * 100,
     strategic:     strategic   * 100,
+    matchedProgram: bestProgram || undefined,
   };
 }
 
