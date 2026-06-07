@@ -5,6 +5,7 @@ import { getAuthContext } from '@/lib/auth-context';
 import { AppShell } from '@/components/app-shell';
 import { DiscoveryControls } from '@/components/discovery-controls';
 import { GrantTable } from '@/components/grant-table';
+import { NLSearch } from '@/components/nl-search';
 import { MatchResult } from '@/types';
 import { redirect } from 'next/navigation';
 import { Search, Target, Landmark, ChevronRight, Sparkles } from 'lucide-react';
@@ -63,7 +64,7 @@ export default async function DiscoverPage() {
               <h1 className="text-[20px] font-bold text-[#111827]">Grant Discovery</h1>
             </div>
             <p className="text-[13px] text-[#6b7280]">
-              Grants.gov federal opportunities · AI extraction · composite match scoring
+              Search the corpus in plain English, or run a fresh discovery sweep against grants.gov
             </p>
           </div>
           <Link href="/foundations"
@@ -72,6 +73,11 @@ export default async function DiscoverPage() {
             Foundation Map
             <ChevronRight className="w-3 h-3 text-[#9ca3af]" />
           </Link>
+        </div>
+
+        {/* Natural-language search bar — primary surface, top of page */}
+        <div className="mb-5">
+          <NLSearch />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-5">
