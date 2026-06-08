@@ -12,7 +12,7 @@ import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import {
   Search, Sparkles, Loader2, ArrowRight, X, Calendar,
-  DollarSign, Tag, MapPin, AlertCircle,
+  DollarSign, Tag, MapPin, AlertCircle, Landmark, Building2,
 } from 'lucide-react';
 
 interface SearchResult {
@@ -26,6 +26,7 @@ interface SearchResult {
   composite_score?: number | null;
   pipeline_stage?:  string | null;
   match_id?:        string | null;
+  source:           'grants_gov' | 'foundation';
   reason:           string;
   extracted_fields: {
     award_floor?:   number | null;
@@ -75,11 +76,14 @@ function daysUntil(close: string | null): number | null {
   return Math.ceil((t - Date.now()) / (1000 * 60 * 60 * 24));
 }
 
+type SourceFilter = 'all' | 'grants_gov' | 'foundation';
+
 export function NLSearch() {
   const [query,    setQuery]    = useState('');
   const [loading,  setLoading]  = useState(false);
   const [response, setResponse] = useState<SearchResponse | null>(null);
   const [error,    setError]    = useState<string | null>(null);
+  const [sourceFilter, setSourceFilter] = useState<SourceFilter>('all');
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { inputRef.current?.focus(); }, []);
@@ -195,8 +199,32 @@ export function NLSearch() {
           {response.parsed.funder_types?.map(f => (
             <span key={`f-${f}`} className="px-2 py-0.5 rounded-full bg-white border border-[#e2e8f0] text-[#475569]">{f}</span>
           ))}
+          {/* Source toggle pills — let the user narrow to one funder type
+              without re-typing the whole query. */}
+          <span className="mx-1 text-[#cbd5e1]">·</span>
+          {([
+            { id: 'all',         label: 'All sources',        Icon: Sparkles  },
+            { id: 'grants_gov',  label: 'Federal',            Icon: Building2 },
+            { id: 'foundation',  label: 'Foundations',        Icon: Landmark  },
+          ] as const).map(({ id, label, Icon }) => {
+            const active = sourceFilter === id;
+            return (
+              <button
+                key={id}
+                onClick={() => setSourceFilter(id)}
+                className={`px-2 py-0.5 rounded-full flex items-center gap-1 border transition-colors ${
+                  active
+                    ? 'bg-[#0d9488] text-white border-[#0d9488]'
+                    : 'bg-white text-[#475569] border-[#e2e8f0] hover:border-[#0d9488] hover:text-[#0d9488]'
+                }`}
+              >
+                <Icon className="w-2.5 h-2.5" />{label}
+              </button>
+            );
+          })}
+
           <span className="ml-auto text-[10px] text-[#94a3b8]">
-            {response.results.length} of {response.candidates} candidates after filter
+            {response.results.filter(r => sourceFilter === 'all' || r.source === sourceFilter).length} of {response.candidates} candidates after filter
           </span>
         </div>
       )}
@@ -216,15 +244,31 @@ export function NLSearch() {
 
       {response && response.results.length > 0 && (
         <ul className="divide-y divide-[#f1f5f9]">
-          {response.results.map(r => {
+          {response.results
+            .filter(r => sourceFilter === 'all' || r.source === sourceFilter)
+            .map(r => {
             const days = daysUntil(r.close_date);
             const urgent = days != null && days >= 0 && days <= 14;
             const award = r.extracted_fields.award_ceiling ?? r.extracted_fields.award_floor;
+            const isFoundation = r.source === 'foundation';
+            // Foundations have a synthetic id "foundation:<ein>" that is not
+            // a route — link to the funder page instead of /grant/[id].
+            const href = isFoundation ? '/foundations' : `/grant/${r.id}`;
             return (
               <li key={r.id} className="hover:bg-[#f8fafc] transition-colors">
-                <Link href={`/grant/${r.id}`} className="block px-4 py-3.5">
+                <Link href={href} className="block px-4 py-3.5">
                   <div className="flex items-start justify-between gap-3 mb-1">
                     <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 mb-0.5">
+                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide flex items-center gap-1 ${
+                          isFoundation
+                            ? 'bg-[#faf5ff] text-[#7c3aed] border border-[#ddd6fe]'
+                            : 'bg-[#eff6ff] text-[#2563eb] border border-[#bfdbfe]'
+                        }`}>
+                          {isFoundation ? <Landmark className="w-2.5 h-2.5" /> : <Building2 className="w-2.5 h-2.5" />}
+                          {isFoundation ? 'Foundation' : 'Federal'}
+                        </span>
+                      </div>
                       <p className="text-[13px] font-semibold text-[#0f172a] truncate">{r.title}</p>
                       <p className="text-[11px] text-[#64748b] truncate">{r.agency_name}{r.aln_codes?.length ? ` · ALN ${r.aln_codes[0]}` : ''}</p>
                     </div>

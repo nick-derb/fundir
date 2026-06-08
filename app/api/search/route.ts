@@ -27,6 +27,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { getAuthContext } from '@/lib/auth-context';
 import { generateEmbedding } from '@/lib/embeddings';
 import { searchCorpusByEmbedding, type CorpusGrant } from '@/lib/corpus-search';
+import { searchFoundationsByEmbedding } from '@/lib/foundation-corpus';
 import type { ExtractedFields } from '@/types';
 
 export const maxDuration = 30;
@@ -131,22 +132,31 @@ function fitsStates(fields: ExtractedFields, wantedStates: string[]): boolean {
 }
 
 interface SearchResult extends CorpusGrant {
+  source: 'grants_gov' | 'foundation';
   reason: string;
 }
 
 function postFilter(
   grants: CorpusGrant[],
   parsed: ParsedQuery,
+  source: 'grants_gov' | 'foundation',
 ): SearchResult[] {
   return grants.flatMap((g): SearchResult[] => {
     const fields = (g.extracted_fields ?? {}) as ExtractedFields;
     if (!inDeadlineWindow(g.close_date, parsed.deadline_days)) return [];
     if (!fitsAwardRange(fields, parsed.min_award, parsed.max_award)) return [];
     if (!fitsStates(fields, parsed.geographic_states)) return [];
+    // If the user explicitly asked for a funder_type, filter sources to match.
+    if (parsed.funder_types && parsed.funder_types.length > 0) {
+      const wantsFederal     = parsed.funder_types.includes('federal');
+      const wantsFoundation  = parsed.funder_types.includes('foundation');
+      if (source === 'grants_gov' && !wantsFederal && (wantsFoundation || parsed.funder_types.length > 0)) return [];
+      if (source === 'foundation' && !wantsFoundation) return [];
+    }
     const reasonBits: string[] = [];
     reasonBits.push(`${Math.round(g.similarity * 100)}% semantic`);
     if (g.composite_score != null) reasonBits.push(`stored score ${Math.round(g.composite_score)}`);
-    return [{ ...g, reason: reasonBits.join(' · ') }];
+    return [{ ...g, source, reason: reasonBits.join(' · ') }];
   });
 }
 
@@ -177,23 +187,34 @@ export async function POST(req: NextRequest) {
   // 2. Embed the cleaned query.
   const queryEmbedding = await generateEmbedding(parsed.cleaned_query || raw);
 
-  // 3. Pull a larger pool from the corpus than we need so post-filtering
-  //    doesn't leave us empty after the structured constraints apply.
+  // 3. Pull pools from BOTH sources in parallel. Federal grants come from
+  //    the pgvector corpus (Tier 1B); foundations come from the
+  //    in-process embedding cache (Tier 2E). Overscan each so the
+  //    structured post-filter has room to drop ineligible rows.
   const overscan = Math.min(k * 4, 200);
-  const candidates = await searchCorpusByEmbedding(queryEmbedding, {
-    orgId:        ctx.orgId,
-    k:            overscan,
-    minCloseDate: parsed.deadline_days != null
-      ? new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString().slice(0, 10)  // exclude already-closed
-      : undefined,
-  });
+  const [grantsCandidates, foundationCandidates] = await Promise.all([
+    searchCorpusByEmbedding(queryEmbedding, {
+      orgId:        ctx.orgId,
+      k:            overscan,
+      minCloseDate: parsed.deadline_days != null
+        ? new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString().slice(0, 10)  // exclude already-closed
+        : undefined,
+    }),
+    searchFoundationsByEmbedding(queryEmbedding, Math.min(20, k)),
+  ]);
 
-  // 4. Apply structured post-filters and cap to k.
-  const filtered = postFilter(candidates, parsed).slice(0, k);
+  // 4. Apply structured post-filters per source, then merge + cap to k
+  //    sorted by similarity. A foundation with cosine 0.8 should rank
+  //    above a federal grant with cosine 0.6, regardless of source.
+  const filteredGrants     = postFilter(grantsCandidates,     parsed, 'grants_gov');
+  const filteredFoundations = postFilter(foundationCandidates, parsed, 'foundation');
+  const filtered = [...filteredGrants, ...filteredFoundations]
+    .sort((a, b) => b.similarity - a.similarity)
+    .slice(0, k);
 
   return NextResponse.json({
     parsed,
     results:    filtered,
-    candidates: candidates.length,
+    candidates: grantsCandidates.length + foundationCandidates.length,
   });
 }
