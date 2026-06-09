@@ -27,7 +27,8 @@ import Anthropic from '@anthropic-ai/sdk';
 import { getAuthContext } from '@/lib/auth-context';
 import { generateEmbedding } from '@/lib/embeddings';
 import { searchCorpusByEmbedding, type CorpusGrant } from '@/lib/corpus-search';
-import { searchFoundationsByEmbedding } from '@/lib/foundation-corpus';
+import { searchFoundationsByEmbedding, foundationSignal } from '@/lib/foundation-corpus';
+import { fetchOrgOutcomeCounts, bayesianWinRate } from '@/lib/win-rate-bayes';
 import type { ExtractedFields } from '@/types';
 
 export const maxDuration = 30;
@@ -136,10 +137,15 @@ interface SearchResult extends CorpusGrant {
   reason: string;
 }
 
+interface OutcomeLookup {
+  byAgency: Record<string, { wins: number; losses: number }>;
+}
+
 function postFilter(
   grants: CorpusGrant[],
   parsed: ParsedQuery,
   source: 'grants_gov' | 'foundation',
+  outcomeLookup: OutcomeLookup | null,
 ): SearchResult[] {
   return grants.flatMap((g): SearchResult[] => {
     const fields = (g.extracted_fields ?? {}) as ExtractedFields;
@@ -156,6 +162,21 @@ function postFilter(
     const reasonBits: string[] = [];
     reasonBits.push(`${Math.round(g.similarity * 100)}% semantic`);
     if (g.composite_score != null) reasonBits.push(`stored score ${Math.round(g.composite_score)}`);
+
+    // Tier 2F: federal grants get a real historical win-rate bullet when
+    // the org has recorded outcomes at this agency (Tier 1C feedback
+    // loop). "55% prior at HHS-ACF based on 12 prior" is the kind of
+    // concrete signal Instrumentl's generic match summary can't produce.
+    if (source === 'grants_gov' && outcomeLookup && g.agency_code) {
+      const key = g.agency_code.toUpperCase();
+      const c   = outcomeLookup.byAgency[key];
+      if (c && c.wins + c.losses > 0) {
+        const rate = bayesianWinRate(c.wins, c.losses);
+        const n    = c.wins + c.losses;
+        reasonBits.push(`${Math.round(rate * 100)}% prior at ${key} (n=${n})`);
+      }
+    }
+
     return [{ ...g, source, reason: reasonBits.join(' · ') }];
   });
 }
@@ -189,10 +210,12 @@ export async function POST(req: NextRequest) {
 
   // 3. Pull pools from BOTH sources in parallel. Federal grants come from
   //    the pgvector corpus (Tier 1B); foundations come from the
-  //    in-process embedding cache (Tier 2E). Overscan each so the
+  //    in-process embedding cache (Tier 2E). Org outcome counts (Tier
+  //    1C) come along so we can render the Bayesian historical
+  //    win-rate signal per federal row. Overscan each so the
   //    structured post-filter has room to drop ineligible rows.
   const overscan = Math.min(k * 4, 200);
-  const [grantsCandidates, foundationCandidates] = await Promise.all([
+  const [grantsCandidates, foundationCandidates, outcomeCounts] = await Promise.all([
     searchCorpusByEmbedding(queryEmbedding, {
       orgId:        ctx.orgId,
       k:            overscan,
@@ -201,16 +224,27 @@ export async function POST(req: NextRequest) {
         : undefined,
     }),
     searchFoundationsByEmbedding(queryEmbedding, Math.min(20, k)),
+    fetchOrgOutcomeCounts(ctx.orgId),
   ]);
 
   // 4. Apply structured post-filters per source, then merge + cap to k
   //    sorted by similarity. A foundation with cosine 0.8 should rank
   //    above a federal grant with cosine 0.6, regardless of source.
-  const filteredGrants     = postFilter(grantsCandidates,     parsed, 'grants_gov');
-  const filteredFoundations = postFilter(foundationCandidates, parsed, 'foundation');
-  const filtered = [...filteredGrants, ...filteredFoundations]
+  const filteredGrants      = postFilter(grantsCandidates,      parsed, 'grants_gov', outcomeCounts);
+  const filteredFoundations = postFilter(foundationCandidates,  parsed, 'foundation', outcomeCounts);
+  let filtered = [...filteredGrants, ...filteredFoundations]
     .sort((a, b) => b.similarity - a.similarity)
     .slice(0, k);
+
+  // 5. Tier 2F: per-foundation behavior signal. Cheap in-process lookup,
+  //    appended to the row's reason string. Runs in parallel.
+  const foundationSignals = await Promise.all(
+    filtered.map(r => r.source === 'foundation' ? foundationSignal(r.id) : Promise.resolve(null)),
+  );
+  filtered = filtered.map((r, i) => {
+    const extra = foundationSignals[i];
+    return extra ? { ...r, reason: `${r.reason} · ${extra}` } : r;
+  });
 
   return NextResponse.json({
     parsed,

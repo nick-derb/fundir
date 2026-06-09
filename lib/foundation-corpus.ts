@@ -123,3 +123,35 @@ export async function searchFoundationsByEmbedding(
     match_id:        null,
   }));
 }
+
+/**
+ * Build a short funder-behavior signal for a foundation row in the
+ * search feed. Tier 2F: concrete, demoable bullets that Instrumentl's
+ * generic match summary can't produce.
+ *
+ * Returns up to one phrase (caller adds it to the row's reason string).
+ */
+export async function foundationSignal(grantId: string): Promise<string | null> {
+  // grantId is "foundation:<ein>" for foundation rows. Anything else has
+  // no foundation signal to add.
+  if (!grantId.startsWith('foundation:')) return null;
+  const records = await ensureFoundationRecords();
+  const ein = grantId.slice('foundation:'.length);
+  const r = records.find(rec => rec.id === grantId || rec.id.endsWith(ein));
+  if (!r) return null;
+
+  // Prefer the most concrete signal: rolling deadline > avg grant fit.
+  if (r.deadlinePattern === 'rolling') {
+    return `Rolling deadline · avg grant $${Math.round(r.avgGrant / 1000)}K`;
+  }
+  if (r.deadlinePattern === 'annual-spring') {
+    return `Spring LOI window · avg grant $${Math.round(r.avgGrant / 1000)}K`;
+  }
+  if (r.deadlinePattern === 'annual-fall') {
+    return `Fall LOI window · avg grant $${Math.round(r.avgGrant / 1000)}K`;
+  }
+  if (r.deadlinePattern === 'cycle') {
+    return `Cycle-based · avg grant $${Math.round(r.avgGrant / 1000)}K`;
+  }
+  return `Avg grant $${Math.round(r.avgGrant / 1000)}K`;
+}
