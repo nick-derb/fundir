@@ -115,7 +115,10 @@ export async function searchFoundationsByEmbedding(
       award_ceiling:  r.grantMax,
       program_areas:  Array.from(r.focusAreas),
       geographic_scope: 'state',
-      geographic_states: r.state === 'IL' ? ['IL'] : [],
+      // Use the foundation's actual state — no hardcoded gate. National-
+      // focus foundations are caught at the adapter level by their
+      // geographicFocus tag, not by squashing the state list to empty.
+      geographic_states: [r.state],
     },
     similarity,
     composite_score: null,

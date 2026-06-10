@@ -62,14 +62,14 @@ Extract any of:
 
 Examples:
 
-Query: "show me unrestricted operating grants for IL youth orgs under $250K closing in 60 days"
-{"cleaned_query":"youth nonprofit programs unrestricted operating","program_areas":["youth"],"funding_use":["operating"],"min_award":null,"max_award":250000,"geographic_states":["IL"],"deadline_days":60,"funder_types":null}
+Query: "show me unrestricted operating grants for TX veterans-services orgs under $250K closing in 60 days"
+{"cleaned_query":"veterans services nonprofit unrestricted operating","program_areas":["veterans"],"funding_use":["operating"],"min_award":null,"max_award":250000,"geographic_states":["TX"],"deadline_days":60,"funder_types":null}
 
 Query: "head start federal funding"
 {"cleaned_query":"Head Start early childhood education","program_areas":["early childhood","head start"],"funding_use":null,"min_award":null,"max_award":null,"geographic_states":[],"deadline_days":null,"funder_types":["federal"]}
 
-Query: "any chicago foundation that funds afterschool"
-{"cleaned_query":"afterschool out-of-school time youth Chicago","program_areas":["afterschool"],"funding_use":null,"min_award":null,"max_award":null,"geographic_states":["IL"],"deadline_days":null,"funder_types":["foundation"]}`;
+Query: "any portland foundation that funds homeless services"
+{"cleaned_query":"homeless services housing nonprofit Portland","program_areas":["homeless services"],"funding_use":null,"min_award":null,"max_award":null,"geographic_states":["OR"],"deadline_days":null,"funder_types":["foundation"]}`;
 
 async function parseQuery(raw: string): Promise<ParsedQuery> {
   const msg = await claude.messages.create({

@@ -29,9 +29,9 @@ Return JSON:
 {
   "eligible_entity_types": ["nonprofit_501c3", ...],
   "geographic_scope": "national" | "state" | "city" | "international" | null,
-  "geographic_states": ["IL", ...],
-  "target_population": ["youth", "ages 6-18", ...],
-  "program_areas": ["afterschool", "STEM", ...],
+  "geographic_states": ["<two-letter state code>", ...],
+  "target_population": ["<population>", "<demographic>", ...],
+  "program_areas": ["<area>", "<area>", ...],
   "award_floor": number | null,
   "award_ceiling": number | null,
   "cost_sharing_required": boolean | null,

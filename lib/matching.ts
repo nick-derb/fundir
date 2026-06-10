@@ -26,58 +26,68 @@ export function cosineSimilarity(a: number[], b: number[]): number {
 
 // ── Hard-exclusion gate ─────────────────────────────────────────────────────
 //
-// Agencies, keywords, and scopes that are incompatible with a Chicago youth
-// nonprofit regardless of embedding similarity.  Returns a human-readable
+// Agencies, keywords, and scopes that are incompatible with the calling
+// segment regardless of embedding similarity. Returns a human-readable
 // reason string when excluded, or null when the grant should proceed.
+//
+// Phase 1C: rules come from segments.exclusion_rules (DB config) and are
+// passed in by the caller. The constants below remain as a domestic-USA
+// nonprofit safe default — used when no segment-scoped rules are supplied
+// (e.g. ad-hoc tooling) — but business logic should pass real rules.
 
-const EXCLUDED_AGENCIES = new Set([
-  'DOS',   // State Dept (international)
-  'STATE', // State Dept alt code
-  'DOD',   // Dept of Defense
-  'USAID', // US Agency for International Development
-  'ARMY',  // US Army
-  'NAVY',  // US Navy
-  'AIR',   // Air Force
-  'MDA',   // Missile Defense Agency
-  'DARPA', // Defense Advanced Research Projects
-  'NSA',   // National Security Agency
-  'DIA',   // Defense Intelligence Agency
-  'USMC',  // Marine Corps
+const DEFAULT_EXCLUDED_AGENCIES = new Set([
+  'DOS','STATE','DOD','USAID','ARMY','NAVY','AIR','MDA','DARPA','NSA','DIA','USMC',
 ]);
 
-// Title/synopsis keywords that indicate international/foreign-aid grants
-const INTERNATIONAL_KEYWORDS = [
-  'ukraine', 'ukrainian', 'russia', 'russian',
-  'afghanistan', 'afghan',
-  'israel', 'gaza', 'west bank',
-  'iraq', 'syria', 'somalia', 'sudan', 'myanmar',
-  'overseas', 'foreign country', 'foreign nation',
+const DEFAULT_INTERNATIONAL_KEYWORDS = [
+  'ukraine','ukrainian','russia','russian',
+  'afghanistan','afghan',
+  'israel','gaza','west bank',
+  'iraq','syria','somalia','sudan','myanmar',
+  'overseas','foreign country','foreign nation',
   'international development',
-  'usaid', 'foreign assistance',
-  'refugees abroad', 'displaced persons abroad',
+  'usaid','foreign assistance',
+  'refugees abroad','displaced persons abroad',
   'global health',
-  'democracy abroad', 'rule of law abroad',
-  'peacekeeping', 'military support',
-  'arms', 'weapons', 'combat',
-  'embassy', 'consulate',
+  'democracy abroad','rule of law abroad',
+  'peacekeeping','military support',
+  'arms','weapons','combat',
+  'embassy','consulate',
 ];
 
-// Agency code prefixes that signal military/defence/international
-const EXCLUDED_AGENCY_PREFIXES = ['DOD-', 'ARMY-', 'NAVY-', 'USAF-', 'DLA-'];
+const DEFAULT_EXCLUDED_AGENCY_PREFIXES = ['DOD-','ARMY-','NAVY-','USAF-','DLA-'];
+
+export interface ExclusionRules {
+  /** Uppercase agency codes that hard-fail the gate. */
+  agencies?:        string[];
+  /** Uppercase agency code prefixes (e.g. 'DOD-'). */
+  agency_prefixes?: string[];
+  /** Lowercase substring matches in title/synopsis/full_text. */
+  keywords?:        string[];
+  /** Free-text segment label, woven into the user-visible reason string
+   *  ("not applicable to a {segment_label}"). Optional; safe default used. */
+  segment_label?:   string;
+}
 
 export function hardExclusionReason(
   agencyCode: string,
   title: string,
   synopsis: string,
   fullText: string,
+  rules?: ExclusionRules,
 ): string | null {
   const code = (agencyCode || '').toUpperCase();
 
+  const agencies        = rules?.agencies        ? new Set(rules.agencies.map(a => a.toUpperCase())) : DEFAULT_EXCLUDED_AGENCIES;
+  const agencyPrefixes  = rules?.agency_prefixes ?? DEFAULT_EXCLUDED_AGENCY_PREFIXES;
+  const keywords        = rules?.keywords        ?? DEFAULT_INTERNATIONAL_KEYWORDS;
+  const segmentLabel    = rules?.segment_label   ?? 'domestic nonprofit';
+
   // Direct agency exclusion
-  if (EXCLUDED_AGENCIES.has(code)) {
-    return `Agency ${agencyCode} is outside CYC's eligible funding universe (international/defense)`;
+  if (agencies.has(code)) {
+    return `Agency ${agencyCode} is outside the segment's eligible funding universe (international/defense)`;
   }
-  for (const prefix of EXCLUDED_AGENCY_PREFIXES) {
+  for (const prefix of agencyPrefixes) {
     if (code.startsWith(prefix)) {
       return `Agency prefix ${prefix} indicates defense/military funding — excluded`;
     }
@@ -85,9 +95,9 @@ export function hardExclusionReason(
 
   // International keyword scan (case-insensitive, whole-word)
   const textToScan = `${title} ${synopsis} ${fullText}`.toLowerCase();
-  for (const kw of INTERNATIONAL_KEYWORDS) {
-    if (textToScan.includes(kw)) {
-      return `Grant references international/foreign context ("${kw}") — not applicable to Chicago domestic nonprofit`;
+  for (const kw of keywords) {
+    if (textToScan.includes(kw.toLowerCase())) {
+      return `Grant references international/foreign context ("${kw}") — not applicable to a ${segmentLabel}`;
     }
   }
 

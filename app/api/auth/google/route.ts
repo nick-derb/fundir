@@ -9,8 +9,15 @@ const SCOPES = [
 ].join(' ');
 
 export async function GET(req: NextRequest) {
-  const orgCode = req.nextUrl.searchParams.get('org') ?? 'CYC2025';
+  const orgCode = req.nextUrl.searchParams.get('org');
   const returnTo = req.nextUrl.searchParams.get('return') ?? '/settings';
+
+  // Org must come from the calling page (settings carries it through). No
+  // hardcoded tenant default — that silently bound every tenant's
+  // integration callbacks to CYC.
+  if (!orgCode) {
+    return NextResponse.json({ error: 'missing required `org` query param' }, { status: 400 });
+  }
 
   const state = Buffer.from(JSON.stringify({ orgCode, returnTo })).toString(
     'base64url',

@@ -3,19 +3,13 @@ import Anthropic from '@anthropic-ai/sdk';
 import { createServerClient } from '@/lib/supabase';
 import { getAuthContext } from '@/lib/auth-context';
 import { screen990Against, RequirementCheck, EligibilitySignal } from '@/lib/990-screener';
-import { CYC_FINANCIAL_PROFILE } from '@/lib/cyc-live-data';
-import { ComputedFinancials, OrgProfile } from '@/lib/propublica';
+import { getOrgFinancialProfile } from '@/lib/org-financials';
+import { ComputedFinancials } from '@/lib/propublica';
 import { ExtractedFields } from '@/types';
 
 export const maxDuration = 45;
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-
-type OrgFin = {
-  computed: ComputedFinancials;
-  org:      OrgProfile;
-  history?: Array<{ tax_prd_yr: number; totrevenue: number; totfuncexpns: number; compnsatncurrofcr: number }>;
-};
 
 function money(n: number): string {
   const abs = Math.abs(n);
@@ -23,20 +17,6 @@ function money(n: number): string {
   if (abs >= 1_000_000) return `${sign}$${(abs / 1_000_000).toFixed(2)}M`;
   if (abs >= 1_000)     return `${sign}$${(abs / 1_000).toFixed(0)}K`;
   return `${sign}$${abs}`;
-}
-
-async function resolveOrgFinancials(orgCode: string): Promise<OrgFin | null> {
-  if (orgCode === 'CYC2025') return CYC_FINANCIAL_PROFILE;
-  const db = createServerClient();
-  const { data } = await db
-    .from('organizations')
-    .select('financial_data')
-    .eq('org_code', orgCode)
-    .single();
-  const fd = data?.financial_data as
-    { computed?: ComputedFinancials; org?: OrgProfile; history?: OrgFin['history'] } | null;
-  if (fd?.computed && fd?.org) return { computed: fd.computed, org: fd.org, history: fd.history };
-  return null;
 }
 
 const SYSTEM = `You are Fundir's financial eligibility analyst. Given an organization's IRS 990 financial profile and a specific grant — plus deterministic requirement checks already computed — you write a tight, grant-specific financial verdict for the org's grant writers.
@@ -122,7 +102,7 @@ export async function POST(req: NextRequest) {
 
   const grant   = match.grant;
   const fields  = (grant.extracted_fields ?? {}) as ExtractedFields;
-  const profile = await resolveOrgFinancials(ctx.orgCode);
+  const profile = await getOrgFinancialProfile(ctx.orgCode);
 
   if (!profile) {
     return NextResponse.json({

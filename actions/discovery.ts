@@ -11,10 +11,13 @@ import {
 import { screen990Against, neutralFinancialResult, FinancialEligibilityResult } from '@/lib/990-screener';
 import { ComputedFinancials, OrgProfile } from '@/lib/propublica';
 import { CYC_PROFILE } from '@/lib/cyc-profile';
-import { CYC_FINANCIAL_PROFILE } from '@/lib/cyc-live-data';
 import { YMCA_MATCH_PROFILE } from '@/lib/ymca-live-data';
 import { getAuthContext } from '@/lib/auth-context';
 import { fetchOrgOutcomeCounts, buildHistoricalWinRates } from '@/lib/win-rate-bayes';
+import { getOrgFinancialProfile } from '@/lib/org-financials';
+import { getOrgConfig } from '@/lib/config/loader';
+import type { ExclusionRules } from '@/lib/matching';
+import type { Segment } from '@/lib/config/types';
 import { ExtractedFields } from '@/types';
 import crypto from 'crypto';
 
@@ -29,15 +32,22 @@ type FinancialCache = {
 const programEmbeddingsCache = new Map<string, ProgramEmbeddingRef[]>();
 const financialProfileCache  = new Map<string, FinancialCache>();
 
-function getOrgProfile(orgCode: string): OrgMatchProfile {
-  if (orgCode === 'CYC2025') return CYC_PROFILE as unknown as OrgMatchProfile;
-  if (orgCode === 'YOM2026') return YMCA_MATCH_PROFILE;
-  // Generic 501(c)(3) fallback for orgs without a dedicated profile
+// Transitional fixture registry. Phase 2 retires this map by promoting
+// each fixture's contents into organizations.profile_data + the segment
+// row; this is the only place in business logic that looks up a profile
+// by org_code literal.
+const FIXTURE_PROFILES: Record<string, OrgMatchProfile> = {
+  CYC2025: CYC_PROFILE as unknown as OrgMatchProfile,
+  YOM2026: YMCA_MATCH_PROFILE,
+};
+
+function genericProfile(state: string, stateLabel: string): OrgMatchProfile {
   return {
     name:              'Nonprofit Organization',
     mission:           'Community-serving nonprofit organization providing social services and programs.',
-    city:              'Chicago',
-    state:             'IL',
+    // City unknown for a generic fallback; the matcher only uses state.
+    city:              stateLabel,
+    state,
     annualBudget:      1_000_000,
     sites:             1,
     gataRegistered:    false,
@@ -47,6 +57,10 @@ function getOrgProfile(orgCode: string): OrgMatchProfile {
     programs:          [{ name: 'Community Services', areas: ['community', 'social services', 'nonprofit'] }],
     historicalWinRates: {},
   };
+}
+
+function getOrgProfile(orgCode: string, fallbackState = '', fallbackStateLabel = ''): OrgMatchProfile {
+  return FIXTURE_PROFILES[orgCode] ?? genericProfile(fallbackState, fallbackStateLabel);
 }
 
 /**
@@ -122,33 +136,18 @@ async function getFinancialProfile(orgCode: string): Promise<FinancialCache | nu
   const cached = financialProfileCache.get(orgCode);
   if (cached) return cached;
 
-  // CYC uses hand-audited FY2025 financials — more accurate and current than
-  // ProPublica's stale 990 snapshot, and consistent with the Financials page.
-  if (orgCode === 'CYC2025') {
-    financialProfileCache.set(orgCode, CYC_FINANCIAL_PROFILE);
-    return CYC_FINANCIAL_PROFILE;
-  }
-
-  const supabase = createServerClient();
-  const { data } = await supabase
-    .from('organizations')
-    .select('financial_data, profile_data')
-    .eq('org_code', orgCode)
-    .single();
-
-  if (!data?.financial_data) return null;
-  const fd = data.financial_data as {
-    computed: ComputedFinancials;
-    org: OrgProfile;
-    history?: Array<{ tax_prd_yr: number; totrevenue: number; totfuncexpns: number; compnsatncurrofcr: number }>;
-  };
-  if (!fd.computed) return null;
+  // The fixture-vs-DB dispatch lives in lib/org-financials.ts — single
+  // place that knows about hand-audited per-org fixtures. This function
+  // adapts the shape into the local FinancialCache record (which also
+  // carries profile_data, unused by the financial-verdict surface).
+  const fin = await getOrgFinancialProfile(orgCode);
+  if (!fin) return null;
 
   const profile: FinancialCache = {
-    computed:    fd.computed,
-    org:         fd.org,
-    history:     fd.history,
-    profileData: (data.profile_data as Record<string, number>) || undefined,
+    computed:    fin.computed,
+    org:         fin.org,
+    history:     fin.history,
+    profileData: fin.profileData,
   };
   financialProfileCache.set(orgCode, profile);
   return profile;
@@ -158,25 +157,34 @@ function computeContentHash(sourceId: string, title: string): string {
   return crypto.createHash('sha256').update(`${sourceId}:${title}`).digest('hex');
 }
 
-// ── Targeted search profiles for Chicago youth nonprofit ─────────────────────
-// These go well beyond generic Grants.gov categories and use specific
-// program-aligned keywords to dramatically improve relevance.
-const TARGETED_SEARCHES: Array<{ name: string; params: SearchParams }> = [
-  // Core mission areas
-  { name: 'Youth Afterschool',     params: { keyword: 'youth afterschool out-of-school time', rows: 25 } },
-  { name: 'Early Childhood',       params: { keyword: 'early childhood education Head Start pre-K', rows: 25 } },
-  { name: 'Youth Workforce Dev',   params: { keyword: 'youth workforce development job training 14-24', rows: 25 } },
-  { name: 'STEM Youth',            params: { keyword: 'STEM youth nonprofit afterschool Chicago Illinois', rows: 20 } },
-  { name: '21st CCLC',             params: { keyword: '21st Century Community Learning Centers', rows: 20 } },
-  { name: 'Violence Prevention',   params: { keyword: 'youth violence prevention community nonprofit Illinois', rows: 20 } },
-  { name: 'Mentoring',             params: { keyword: 'youth mentoring at-risk young people nonprofit', rows: 20 } },
-  { name: 'Social-Emotional',      params: { keyword: 'social emotional learning youth development nonprofit', rows: 20 } },
-  // Population-specific
-  { name: 'Low-Income Youth',      params: { keyword: 'low-income youth education nonprofit disadvantaged', rows: 20 } },
-  { name: 'Summer Learning',       params: { keyword: 'summer learning loss youth camps nonprofit', rows: 15 } },
-  // Compliance/operations
-  { name: 'Nonprofit Capacity',    params: { keyword: 'nonprofit capacity building community organization grant', rows: 15 } },
-];
+// ── Search-profile resolution ───────────────────────────────────────────────
+// Phase 1C: the keyword list used to live as a code constant tied to one
+// segment. It now comes from segments.peer_rules.keyword_profiles. The
+// helper below pulls them in the right shape for runDiscovery; the small
+// hardcoded fallback exists only for callers that haven't pinned an org to
+// a segment yet (the Phase 1 transition window).
+function profilesFromSegment(segment: Segment | null): Array<{ name: string; params: SearchParams }> {
+  const fromConfig = segment?.peer_rules?.keyword_profiles ?? [];
+  if (fromConfig.length > 0) {
+    return fromConfig.map(p => ({ name: p.name, params: { keyword: p.keyword, rows: p.rows } }));
+  }
+  // Conservative fallback (segment not yet configured): one generic
+  // nonprofit search so the pipeline doesn't no-op silently.
+  return [{ name: 'Generic Nonprofit', params: { keyword: 'nonprofit grant', rows: 25 } }];
+}
+
+// Build an ExclusionRules object from a segment row for the hard gate.
+// The matching layer's defaults still cover the conservative case.
+function exclusionRulesFromSegment(segment: Segment | null): ExclusionRules | undefined {
+  if (!segment) return undefined;
+  const r = segment.exclusion_rules ?? {};
+  return {
+    agencies:        r.agencies,
+    agency_prefixes: r.agency_prefixes,
+    keywords:        r.keywords,
+    segment_label:   segment.name,
+  };
+}
 
 export async function runDiscovery(params: SearchParams, orgId?: string, orgCode?: string): Promise<{
   discovered: number;
@@ -196,14 +204,40 @@ export async function runDiscovery(params: SearchParams, orgId?: string, orgCode
   let excluded          = 0;   // hard-excluded (international/defense)
   let belowThreshold    = 0;   // passed gates but scored too low to store
 
-  const resolvedOrgCode = orgCode ?? 'CYC2025';
-  const baseOrgProfile  = getOrgProfile(resolvedOrgCode);
+  if (!orgCode) {
+    // Fail fast instead of silently defaulting to one tenant; the caller
+    // is responsible for passing the org explicitly (UI does this via
+    // auth context; cron does it per-org in its loop).
+    return {
+      discovered: 0, newGrants: 0, highMatches: 0, mediumMatches: 0,
+      excluded: 0, belowThreshold: 0,
+      errors: ['runDiscovery: orgCode is required'],
+    };
+  }
+  const resolvedOrgCode = orgCode;
+
+  // Phase 1C: resolve the org's segment so keyword profiles and exclusion
+  // rules come from config rather than code constants. The match profile
+  // defaults pick up the region's primary state when the org has no
+  // dedicated fixture.
+  const orgConfig = await getOrgConfig(resolvedOrgCode);
+  const segment   = orgConfig?.segment ?? null;
+  const region    = orgConfig?.region  ?? null;
+  const baseOrgProfile = getOrgProfile(
+    resolvedOrgCode,
+    region?.geo_scope?.states?.[0] ?? '',
+    region?.name ?? '',
+  );
+  const allProfiles = profilesFromSegment(segment);
+  const exclusionRules = exclusionRulesFromSegment(segment);
 
   try {
-    // Use targeted search profiles if no specific params provided
+    // Use a single custom search when caller supplied a keyword/category;
+    // otherwise pull the on-demand subset (first 4) from the segment's
+    // keyword profiles. The cron path supplies its own iteration.
     const searches = (params.keyword || params.fundingCategories)
       ? [{ name: 'Custom', params }]
-      : TARGETED_SEARCHES.slice(0, 4); // run first 4 on demand; all via cron
+      : allProfiles.slice(0, 4);
 
     const [programEmbeddings, financialProfile, observedOutcomes] = await Promise.all([
       getOrgProgramEmbeddings(resolvedOrgCode),
@@ -245,6 +279,7 @@ export async function runDiscovery(params: SearchParams, orgId?: string, orgCode
             hit.title || '',
             '',
             hit.alnlist?.join(' ') || '',
+            exclusionRules,
           );
           if (exclusionReason) {
             excluded++;
@@ -284,6 +319,7 @@ export async function runDiscovery(params: SearchParams, orgId?: string, orgCode
               extractedFields.geographic_scope || '',
               ...(extractedFields.geographic_states || []),
             ].join(' '),
+            exclusionRules,
           );
           if (postExclusionReason) {
             excluded++;

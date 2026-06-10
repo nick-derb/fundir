@@ -18,25 +18,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
 import { runDiscovery } from '@/actions/discovery';
+import { getSegment } from '@/lib/config/loader';
 
 export const maxDuration = 300; // 5 minutes — bounded by Vercel Pro limit
 export const dynamic     = 'force-dynamic';
 
-// Keyword profiles the cron rotates through. Each runDiscovery call
-// processes up to ~8 grants, so 6 profiles per invocation stays well
-// within the maxDuration budget. Profiles 7-11 from TARGETED_SEARCHES
-// will be added when we want broader coverage; for now this set covers
-// the highest-signal CYC-aligned topics.
-const CRON_PROFILES = [
-  { name: 'Youth Afterschool',   keyword: 'youth afterschool out-of-school time',         rows: 25 },
-  { name: 'Early Childhood',     keyword: 'early childhood education Head Start pre-K',   rows: 25 },
-  { name: 'Youth Workforce Dev', keyword: 'youth workforce development job training 14-24', rows: 25 },
-  { name: '21st CCLC',           keyword: '21st Century Community Learning Centers',      rows: 20 },
-  { name: 'Violence Prevention', keyword: 'youth violence prevention community nonprofit Illinois', rows: 20 },
-  { name: 'Mentoring',           keyword: 'youth mentoring at-risk young people nonprofit', rows: 20 },
-] as const;
+// Phase 1C: profiles and the per-org dispatch list both come from the DB.
+// No hardcoded org code, no hardcoded keyword list. The selection rule is:
+//   - all orgs whose region_id + segment_id are set
+//   - for each, iterate the first N keyword_profiles in their segment
+// Adding a new tenant in a new region = one org row insert.
+interface OrgRow { id: string; org_code: string; segment_id: string | null; }
 
-interface OrgRow { id: string; org_code: string; }
+// Per-cron-invocation cap on keyword profiles per org (the per-profile
+// limit and rows-per-profile come from the segment config). Sized so that
+// orgs * profiles * ~8 grants fits within maxDuration.
+const PROFILES_PER_ORG_PER_RUN = 6;
 
 function authorized(req: NextRequest): boolean {
   const secret = process.env.CRON_SECRET;
@@ -46,15 +43,15 @@ function authorized(req: NextRequest): boolean {
 }
 
 async function getCronOrgs(): Promise<OrgRow[]> {
-  // Today the cron is wired to the CYC tenant only. To extend to all
-  // tenants nightly, broaden this query to `select('id, org_code')`
-  // with no `.eq` filter — runDiscovery is already org-scoped per call.
+  // All orgs pinned to a region + segment are eligible for the nightly
+  // refresh. runDiscovery is already org-scoped per call, so adding a new
+  // tenant is purely a data operation — no code edit.
   const db = createServerClient();
   const { data } = await db
     .from('organizations')
-    .select('id, org_code')
-    .eq('org_code', 'CYC2025')
-    .limit(5);
+    .select('id, org_code, segment_id')
+    .not('region_id', 'is', null)
+    .not('segment_id', 'is', null);
   return (data as OrgRow[]) ?? [];
 }
 
@@ -80,10 +77,24 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }> = [];
 
   // Sequential per (org, profile) so concurrent rate-limits on Grants.gov
-  // and OpenAI don't bite. Bounded by CRON_PROFILES.length * orgs.length
-  // and the per-keyword 8-grant cap inside runDiscovery.
+  // and OpenAI don't bite. The keyword profiles per org come from the
+  // segment row's peer_rules.keyword_profiles — no code constant.
   for (const org of orgs) {
-    for (const profile of CRON_PROFILES) {
+    const segment = org.segment_id ? await getSegment(org.segment_id) : null;
+    const profiles = (segment?.peer_rules?.keyword_profiles ?? [])
+      .slice(0, PROFILES_PER_ORG_PER_RUN);
+
+    if (profiles.length === 0) {
+      summary.push({
+        org_code:      org.org_code,
+        profile:       '(no keyword profiles in segment)',
+        discovered: 0, newGrants: 0, highMatches: 0, mediumMatches: 0,
+        errors: ['segment has no peer_rules.keyword_profiles configured'],
+      });
+      continue;
+    }
+
+    for (const profile of profiles) {
       const elapsed = (Date.now() - startedAt) / 1000;
       if (elapsed > 270) break; // 30s safety margin under maxDuration
 

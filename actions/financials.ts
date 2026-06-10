@@ -44,7 +44,9 @@ export async function syncFinancials(orgCode: string): Promise<SyncResult> {
   } catch (firstErr) {
     // EIN lookup failed — try searching by org name
     try {
-      const found = await searchOrgByName(org.name, org.state ?? 'IL');
+      // No state default: a missing state should yield a nationwide search,
+      // not silently scope to IL and miss a real out-of-state match.
+      const found = await searchOrgByName(org.name, org.state ?? undefined);
       if (!found) throw new Error(`Organization not found on ProPublica for EIN ${org.ein} or name "${org.name}". They may file a 990-N (postcard) or not yet have an e-filed return indexed.`);
       resolvedEin = found.ein;
       result = await fetch990(found.ein);

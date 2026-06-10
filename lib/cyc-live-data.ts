@@ -544,3 +544,59 @@ export const CYC_FINANCIAL_PROFILE = {
   org:      CYC_990_ORG,
   history:  CYC_990_HISTORY,
 };
+
+// ── Intelligence-context builder (advisor prompt) ───────────────────────────
+// Phase 1C move: the chat route used to inline this string-builder behind an
+// `orgCode === 'CYC2025'` check. The literal is now bounded to the fixture
+// registry in lib/org-financials.ts; the route just calls
+// orgFin.buildIntelligenceContext?.().
+function money(n: number): string {
+  const abs = Math.abs(n);
+  const sign = n < 0 ? '-' : '';
+  if (abs >= 1_000_000) return `${sign}$${(abs / 1_000_000).toFixed(2)}M`;
+  if (abs >= 1_000)     return `${sign}$${(abs / 1_000).toFixed(0)}K`;
+  return `${sign}$${abs}`;
+}
+
+export function buildCycIntelligenceContext(): string {
+  const inc = CYC_INCOME_STATEMENT;
+
+  const flags = CYC_INTELLIGENCE_FLAGS
+    .map(f => `  - [${f.severity.toUpperCase()}] ${f.headline} (${f.metric}). ${f.detail} RECOMMENDED ACTION: ${f.action}`)
+    .join('\n');
+
+  const federal = CYC_FEDERAL_PROGRAMS
+    .map(p => `  - ${p.name}, ALN ${p.aln}: ~${money(p.estimatedAmount)} (${p.pctOfRevenue}% of total revenue) — RISK ${p.risk.toUpperCase()}. ${p.riskReason} Program impact: ${p.programImpact}.`)
+    .join('\n');
+
+  const trend = CYC_REVENUE_TREND
+    .map(t => `  - ${t.year}: revenue ${money(t.revenue)}, expenses ${money(t.expenses)}, ${money(t.surplus)} ${t.surplus >= 0 ? 'surplus' : 'deficit'} (${t.note})`)
+    .join('\n');
+
+  const pa = CYC_PROGRAM_ANALYSIS;
+  const programs = [
+    `  - Early Childhood Education: ${pa.earlyChildhood.pctOfProgramExpenses}% of program spend (${money(pa.earlyChildhood.expenseFY2025)}). ${pa.earlyChildhood.efficiencyNote}`,
+    `  - School-Age / Out-of-School Time: ${pa.schoolAge.pctOfProgramExpenses}% (${money(pa.schoolAge.expenseFY2025)}), funding gap ${money(pa.schoolAge.fundingGap)}. ${pa.schoolAge.note}`,
+    `  - Teen Leadership Development: ${pa.teenLeadership.pctOfProgramExpenses}% (${money(pa.teenLeadership.expenseFY2025)}), funding gap ${money(pa.teenLeadership.fundingGap)}. ${pa.teenLeadership.note}`,
+  ].join('\n');
+
+  return `CHICAGO YOUTH CENTERS — FINANCIAL INTELLIGENCE (audited FY2025, year ended June 30, 2025)
+
+TOP-LINE: Total revenue ${money(inc.revenue.totalRevenue)}, total expenses ${money(inc.expenses.totalExpenses)}, net ${money(inc.netChange)} (operating deficit, reversing a ${money(inc.netChangePrior)} surplus the prior year). 68 years in operation, Charity Navigator 4/4 stars, 86% program-expense ratio.
+
+LIQUIDITY: ${money(CYC_LIQUIDITY.netUnrestrictedLiquidity)} net unrestricted liquidity — roughly ${CYC_LIQUIDITY.monthsOfLiquidity} months of operating expenses (healthy benchmark is 3-6 months). The organization drew ${money(455_000)} on its ${money(1_500_000)} line of credit in FY2025, the first draw ever.
+
+3-YEAR REVENUE TREND:
+${trend}
+
+INTELLIGENCE FLAGS (auto-derived from the audited statements):
+${flags}
+
+FEDERAL FUNDING PORTFOLIO — government revenue is 74.6% of total, and these federal programs are exposed under the FY2026/FY2027 appropriations cycle:
+${federal}
+
+PROGRAM CONCENTRATION:
+${programs}
+
+MISSION IMPACT: ${CYC_IMPACT.youthServedTotal.toLocaleString()} youth served across 7 Chicago centers — early learning (ages 15 months-5), out-of-school time (6-18), and teen leadership. Serves Chicago's South and West sides.`;
+}

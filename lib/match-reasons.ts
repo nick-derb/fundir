@@ -27,7 +27,9 @@ export function buildMatchReasons(
   score:    ScoreBreakdown,
   fields:   ExtractedFields,
   grant:    { agency_name?: string | null; aln_codes?: string[] | null },
-  orgState: string = 'IL',
+  // No default: the caller must pass the org's state. This used to default
+  // to 'IL' which silently lied about geography for any non-IL tenant.
+  orgState: string,
 ): MatchReason[] {
   const reasons: MatchReason[] = [];
 
@@ -77,12 +79,16 @@ export function buildMatchReasons(
   }
 
   // ── Geographic fit ─────────────────────────────────────────────────────────
+  // orgState may be empty when the org isn't pinned to a region yet — handle
+  // that path silently by dropping state-specific bullets rather than printing
+  // "open to  nonprofits".
   const scope = fields.geographic_scope;
-  const includesOrgState = fields.geographic_states?.includes(orgState);
+  const hasState = orgState.length > 0;
+  const includesOrgState = hasState ? fields.geographic_states?.includes(orgState) : false;
   if (scope === 'national') {
     reasons.push({
       category: 'geography',
-      text: `National opportunity open to ${orgState} nonprofits`,
+      text: hasState ? `National opportunity open to ${orgState} nonprofits` : 'National opportunity',
     });
   } else if (scope === 'state' && includesOrgState) {
     reasons.push({

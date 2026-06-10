@@ -14,15 +14,19 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(`${appUrl}/settings?error=microsoft_denied`);
   }
 
-  let orgCode  = 'CYC2025';
+  let orgCode: string | null = null;
   let returnTo = '/settings';
   try {
     const parsed = JSON.parse(
       Buffer.from(state ?? '', 'base64url').toString('utf8'),
     );
-    orgCode  = parsed.orgCode  ?? orgCode;
+    orgCode  = parsed.orgCode  ?? null;
     returnTo = parsed.returnTo ?? returnTo;
-  } catch { /* use defaults */ }
+  } catch { /* state could not be parsed */ }
+
+  if (!orgCode) {
+    return NextResponse.redirect(`${appUrl}/settings?error=microsoft_state_missing_org`);
+  }
 
   const tenant = process.env.MICROSOFT_TENANT_ID ?? 'common';
 

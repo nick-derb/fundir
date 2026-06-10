@@ -8,6 +8,7 @@ import { ScoreBreakdownChart } from '@/components/score-breakdown';
 import { FinancialVerdict } from '@/components/financial-verdict';
 import { GrantTasks } from '@/components/grant-tasks';
 import { buildMatchReasons } from '@/lib/match-reasons';
+import { getOrgConfig } from '@/lib/config/loader';
 import { GrantNotes } from '@/components/grant-notes';
 import { GrantWorkspace } from '@/components/grant-workspace';
 import { getTasks } from '@/actions/tasks';
@@ -263,11 +264,16 @@ export default async function GrantDetailPage({
   const deadlineUrgent = days !== null && days >= 0 && days <= 14;
   const award         = fields.award_floor || fields.award_ceiling;
 
-  const [tasks, note, integrations] = await Promise.all([
+  const [tasks, note, integrations, orgConfig] = await Promise.all([
     getTasks(match.grant_id),
     getNote(match.grant_id),
     getAllIntegrations(ctx.orgCode),
+    getOrgConfig(ctx.orgCode),
   ]);
+  // Org's primary state derives from its region config. Falls back to '' so
+  // buildMatchReasons skips the state-specific bullets cleanly rather than
+  // claiming a state the org isn't in.
+  const orgState = orgConfig?.region?.geo_scope?.states?.[0] ?? '';
 
   const googleConnected    = integrations.some(i => i.provider === 'google');
   const microsoftConnected = integrations.some(i => i.provider === 'microsoft');
@@ -397,7 +403,7 @@ export default async function GrantDetailPage({
                     score,
                     fields,
                     { agency_name: grant?.agency_name, aln_codes: grant?.aln_codes },
-                    'IL',
+                    orgState,
                   );
                   if (!reasons.length) return null;
                   return (

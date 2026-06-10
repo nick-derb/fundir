@@ -13,15 +13,19 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(`${appUrl}/settings?error=google_denied`);
   }
 
-  let orgCode  = 'CYC2025';
+  let orgCode: string | null = null;
   let returnTo = '/settings';
   try {
     const parsed = JSON.parse(
       Buffer.from(state ?? '', 'base64url').toString('utf8'),
     );
-    orgCode  = parsed.orgCode  ?? orgCode;
+    orgCode  = parsed.orgCode  ?? null;
     returnTo = parsed.returnTo ?? returnTo;
-  } catch { /* use defaults */ }
+  } catch { /* state could not be parsed */ }
+
+  if (!orgCode) {
+    return NextResponse.redirect(`${appUrl}/settings?error=google_state_missing_org`);
+  }
 
   // Exchange authorization code for tokens
   const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
