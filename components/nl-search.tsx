@@ -6,14 +6,22 @@
  * Replaces the "keyword + 4 category chips" controls UX with a single
  * freeform input. Drives /api/search end-to-end: parse -> embed ->
  * pgvector corpus retrieve -> structured post-filter -> ranked feed.
+ *
+ * Phase 1E: result list migrated onto the design system — every row
+ * renders as a <GrantCard> with score/recommendation/evidence in the
+ * primitives shipped in components/ui/.
  */
 
 import { useState, useRef, useEffect } from 'react';
-import Link from 'next/link';
 import {
-  Search, Sparkles, Loader2, ArrowRight, X, Calendar,
+  Search, Sparkles, Loader2, X, Calendar,
   DollarSign, Tag, MapPin, AlertCircle, Landmark, Building2,
 } from 'lucide-react';
+import { GrantCard } from '@/components/ui/grant-card';
+import { EmptyState } from '@/components/ui/empty-state';
+import { Button } from '@/components/ui/button';
+import type { EvidenceItem, FactorKey } from '@/components/ui/evidence-list';
+import type { Recommendation } from '@/components/ui/recommendation-pill';
 
 interface SearchResult {
   id:               string;
@@ -55,10 +63,13 @@ interface SearchResponse {
   error?:     string;
 }
 
+// Region/segment-neutral examples that demonstrate the input shapes the
+// parser handles. Per the architecture rule we don't reference a specific
+// city or program area here — the prompt is the same for every tenant.
 const SUGGESTED = [
-  'unrestricted operating grants for IL youth orgs under $250K closing in 60 days',
-  'Head Start federal funding',
-  'foundation grants for afterschool programs in Chicago',
+  'unrestricted operating grants under $250K closing in 60 days',
+  'federal funding for nonprofits in our segment',
+  'foundation grants for community programs',
   'capital project grants for nonprofit facilities',
 ];
 
@@ -74,6 +85,39 @@ function daysUntil(close: string | null): number | null {
   const t = new Date(close).getTime();
   if (Number.isNaN(t)) return null;
   return Math.ceil((t - Date.now()) / (1000 * 60 * 60 * 24));
+}
+
+function recommendationFor(compositeScore: number | null | undefined, similarity: number): Recommendation {
+  // Prefer the stored composite score when present (it reflects all
+  // factors). Fall back to similarity-only for fresh hits.
+  const s = compositeScore != null ? compositeScore : similarity * 100;
+  if (s >= 70) return 'pursue';
+  if (s >= 50) return 'maybe';
+  return 'skip';
+}
+
+/**
+ * Parse the per-row "reason" string the search API returns into the
+ * EvidenceItem shape the design-system list consumes. The reason is a
+ * dot-separated chain like:
+ *   "78% semantic · stored score 65 · 55% prior at HHS-ACF (n=12) · Rolling deadline · avg grant $80K"
+ * Each fragment is classified into a FactorKey by simple substring match
+ * so the dot color and the right-aligned factor tag render correctly.
+ */
+function parseEvidence(reason: string): EvidenceItem[] {
+  if (!reason) return [];
+  return reason.split('·').map(s => s.trim()).filter(Boolean).map(text => {
+    const lower = text.toLowerCase();
+    let factor: FactorKey;
+    if      (lower.includes('semantic') || lower.includes('mission') || lower.includes('program'))   factor = 'semantic';
+    else if (lower.includes('prior') || lower.includes('won') || lower.includes('rate'))             factor = 'historical';
+    else if (lower.includes('peer') || lower.includes('funder') || lower.includes('foundation'))     factor = 'funder_affinity';
+    else if (lower.includes('deadline') || lower.includes('avg grant') || lower.includes('award'))   factor = 'strategic';
+    else if (lower.includes('990') || lower.includes('budget') || lower.includes('reserves'))        factor = 'financial_990';
+    else if (lower.includes('eligible') || lower.includes('cra') || lower.includes('tract'))         factor = 'eligibility';
+    else                                                                                              factor = 'semantic';
+    return { text, factor };
+  });
 }
 
 type SourceFilter = 'all' | 'grants_gov' | 'foundation';
@@ -118,45 +162,46 @@ export function NLSearch() {
   }
 
   return (
-    <div className="bg-white rounded-xl border border-[#e2e8f0] shadow-card overflow-hidden">
+    <div className="bg-canvas-1 rounded-lg shadow-flat overflow-hidden">
       {/* Search bar */}
-      <div className="px-4 py-3 border-b border-[#f1f5f9] flex items-center gap-2"
-        style={{ background: 'linear-gradient(180deg, #f8fafc 0%, #ffffff 100%)' }}>
-        <Sparkles className="w-4 h-4 text-[#0d9488] flex-shrink-0" />
+      <div className="px-4 py-3 border-b border-canvas-3 flex items-center gap-2 bg-canvas-0">
+        <Sparkles className="w-4 h-4 text-action flex-shrink-0" />
         <input
           ref={inputRef}
           value={query}
           onChange={e => setQuery(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter') runSearch(query); }}
           placeholder="Describe what you're looking for in plain English…"
-          className="flex-1 bg-transparent text-[13px] text-[#0f172a] placeholder:text-[#94a3b8] outline-none"
+          className="flex-1 bg-transparent text-body text-ink-0 placeholder:text-ink-3 outline-none"
         />
         {query && !loading && (
-          <button onClick={clear} className="text-[#94a3b8] hover:text-[#475569]" aria-label="Clear">
+          <button
+            onClick={clear}
+            className="text-ink-3 hover:text-ink-1 transition-colors duration-fast"
+            aria-label="Clear">
             <X className="w-3.5 h-3.5" />
           </button>
         )}
-        <button
+        <Button
+          size="sm"
           onClick={() => runSearch(query)}
-          disabled={!query.trim() || loading}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-[6px] text-[12px] font-semibold text-white disabled:opacity-40 transition-opacity"
-          style={{ background: 'linear-gradient(135deg, #0d9488, #0891b2)' }}>
+          disabled={!query.trim() || loading}>
           {loading
             ? <><Loader2 className="w-3 h-3 animate-spin" /> Searching</>
             : <><Search className="w-3 h-3" /> Search</>}
-        </button>
+        </Button>
       </div>
 
       {/* Suggested prompts */}
       {!response && !loading && !error && (
-        <div className="px-4 py-3 border-b border-[#f1f5f9]">
-          <p className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-widest mb-2">Try</p>
+        <div className="px-4 py-3 border-b border-canvas-3">
+          <p className="text-eyebrow font-semibold text-ink-2 uppercase tracking-wider mb-2">Try</p>
           <div className="flex flex-wrap gap-1.5">
             {SUGGESTED.map(s => (
               <button
                 key={s}
                 onClick={() => { setQuery(s); runSearch(s); }}
-                className="text-[11px] text-[#475569] px-2.5 py-1 rounded-full border border-[#e2e8f0] hover:border-[#0d9488] hover:text-[#0d9488] transition-colors">
+                className="text-caption text-ink-1 px-2.5 py-1 rounded-sm border border-canvas-3 hover:border-action hover:text-action transition-colors duration-fast">
                 {s}
               </button>
             ))}
@@ -166,64 +211,64 @@ export function NLSearch() {
 
       {/* Parsed chips */}
       {response && (
-        <div className="px-4 py-2.5 border-b border-[#f1f5f9] bg-[#fafbff] flex flex-wrap gap-1.5 items-center text-[10px]">
-          <span className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-widest mr-1">Parsed</span>
+        <div className="px-4 py-2.5 border-b border-canvas-3 bg-canvas-0 flex flex-wrap gap-1.5 items-center text-caption">
+          <span className="text-eyebrow font-semibold text-ink-2 uppercase tracking-wider mr-1">Parsed</span>
           {response.parsed.program_areas?.map(p => (
-            <span key={`p-${p}`} className="px-2 py-0.5 rounded-full bg-white border border-[#e2e8f0] text-[#475569] flex items-center gap-1">
+            <span key={`p-${p}`} className="px-2 py-0.5 rounded-sm bg-canvas-1 border border-canvas-3 text-ink-1 flex items-center gap-1">
               <Tag className="w-2.5 h-2.5" />{p}
             </span>
           ))}
           {response.parsed.funding_use?.map(u => (
-            <span key={`u-${u}`} className="px-2 py-0.5 rounded-full bg-white border border-[#e2e8f0] text-[#475569]">{u}</span>
+            <span key={`u-${u}`} className="px-2 py-0.5 rounded-sm bg-canvas-1 border border-canvas-3 text-ink-1">{u}</span>
           ))}
           {response.parsed.geographic_states.map(s => (
-            <span key={`s-${s}`} className="px-2 py-0.5 rounded-full bg-white border border-[#e2e8f0] text-[#475569] flex items-center gap-1">
+            <span key={`s-${s}`} className="px-2 py-0.5 rounded-sm bg-canvas-1 border border-canvas-3 text-ink-1 flex items-center gap-1">
               <MapPin className="w-2.5 h-2.5" />{s}
             </span>
           ))}
           {response.parsed.max_award != null && (
-            <span className="px-2 py-0.5 rounded-full bg-white border border-[#e2e8f0] text-[#475569] flex items-center gap-1">
+            <span className="px-2 py-0.5 rounded-sm bg-canvas-1 border border-canvas-3 text-ink-1 flex items-center gap-1">
               <DollarSign className="w-2.5 h-2.5" />≤ {money(response.parsed.max_award)}
             </span>
           )}
           {response.parsed.min_award != null && (
-            <span className="px-2 py-0.5 rounded-full bg-white border border-[#e2e8f0] text-[#475569] flex items-center gap-1">
+            <span className="px-2 py-0.5 rounded-sm bg-canvas-1 border border-canvas-3 text-ink-1 flex items-center gap-1">
               <DollarSign className="w-2.5 h-2.5" />≥ {money(response.parsed.min_award)}
             </span>
           )}
           {response.parsed.deadline_days != null && (
-            <span className="px-2 py-0.5 rounded-full bg-white border border-[#e2e8f0] text-[#475569] flex items-center gap-1">
+            <span className="px-2 py-0.5 rounded-sm bg-canvas-1 border border-canvas-3 text-ink-1 flex items-center gap-1">
               <Calendar className="w-2.5 h-2.5" />≤ {response.parsed.deadline_days}d
             </span>
           )}
           {response.parsed.funder_types?.map(f => (
-            <span key={`f-${f}`} className="px-2 py-0.5 rounded-full bg-white border border-[#e2e8f0] text-[#475569]">{f}</span>
+            <span key={`f-${f}`} className="px-2 py-0.5 rounded-sm bg-canvas-1 border border-canvas-3 text-ink-1">{f}</span>
           ))}
-          {/* Source toggle pills — let the user narrow to one funder type
-              without re-typing the whole query. */}
-          <span className="mx-1 text-[#cbd5e1]">·</span>
+
+          {/* Source toggle pills — narrow to one funder type without
+              re-typing the query. */}
+          <span className="mx-1 text-canvas-3">·</span>
           {([
-            { id: 'all',         label: 'All sources',        Icon: Sparkles  },
-            { id: 'grants_gov',  label: 'Federal',            Icon: Building2 },
-            { id: 'foundation',  label: 'Foundations',        Icon: Landmark  },
+            { id: 'all',         label: 'All sources', Icon: Sparkles  },
+            { id: 'grants_gov',  label: 'Federal',     Icon: Building2 },
+            { id: 'foundation',  label: 'Foundations', Icon: Landmark  },
           ] as const).map(({ id, label, Icon }) => {
             const active = sourceFilter === id;
             return (
               <button
                 key={id}
                 onClick={() => setSourceFilter(id)}
-                className={`px-2 py-0.5 rounded-full flex items-center gap-1 border transition-colors ${
+                className={`px-2 py-0.5 rounded-sm flex items-center gap-1 border transition-colors duration-fast ${
                   active
-                    ? 'bg-[#0d9488] text-white border-[#0d9488]'
-                    : 'bg-white text-[#475569] border-[#e2e8f0] hover:border-[#0d9488] hover:text-[#0d9488]'
-                }`}
-              >
+                    ? 'bg-action text-canvas-1 border-action'
+                    : 'bg-canvas-1 text-ink-1 border-canvas-3 hover:border-action hover:text-action'
+                }`}>
                 <Icon className="w-2.5 h-2.5" />{label}
               </button>
             );
           })}
 
-          <span className="ml-auto text-[10px] text-[#94a3b8]">
+          <span className="ml-auto text-caption text-ink-2">
             {response.results.filter(r => sourceFilter === 'all' || r.source === sourceFilter).length} of {response.candidates} candidates after filter
           </span>
         </div>
@@ -231,84 +276,54 @@ export function NLSearch() {
 
       {/* Results */}
       {error && (
-        <div className="px-4 py-6 flex items-center gap-2 text-[12px] text-[#dc2626] bg-[#fef2f2]">
+        <div className="px-4 py-6 flex items-center gap-2 text-body text-alert bg-signal-skip-soft">
           <AlertCircle className="w-4 h-4" /> {error}
         </div>
       )}
 
       {response && response.results.length === 0 && !error && (
-        <div className="px-4 py-8 text-center text-[12px] text-[#94a3b8]">
-          No grants matched after structured filtering. Try loosening the constraints.
-        </div>
+        <EmptyState
+          variant="filtered-out"
+          title="No grants pass these filters"
+          body="The structured constraints (amount, deadline, geography) ruled everything out. Loosen one and try again."
+        />
       )}
 
       {response && response.results.length > 0 && (
-        <ul className="divide-y divide-[#f1f5f9]">
+        <div className="p-4 grid gap-3">
           {response.results
             .filter(r => sourceFilter === 'all' || r.source === sourceFilter)
             .map(r => {
-            const days = daysUntil(r.close_date);
-            const urgent = days != null && days >= 0 && days <= 14;
-            const award = r.extracted_fields.award_ceiling ?? r.extracted_fields.award_floor;
-            const isFoundation = r.source === 'foundation';
-            // Foundations have a synthetic id "foundation:<ein>" that is not
-            // a route — link to the funder page instead of /grant/[id].
-            const href = isFoundation ? '/foundations' : `/grant/${r.id}`;
-            return (
-              <li key={r.id} className="hover:bg-[#f8fafc] transition-colors">
-                <Link href={href} className="block px-4 py-3.5">
-                  <div className="flex items-start justify-between gap-3 mb-1">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5 mb-0.5">
-                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide flex items-center gap-1 ${
-                          isFoundation
-                            ? 'bg-[#faf5ff] text-[#7c3aed] border border-[#ddd6fe]'
-                            : 'bg-[#eff6ff] text-[#2563eb] border border-[#bfdbfe]'
-                        }`}>
-                          {isFoundation ? <Landmark className="w-2.5 h-2.5" /> : <Building2 className="w-2.5 h-2.5" />}
-                          {isFoundation ? 'Foundation' : 'Federal'}
-                        </span>
-                      </div>
-                      <p className="text-[13px] font-semibold text-[#0f172a] truncate">{r.title}</p>
-                      <p className="text-[11px] text-[#64748b] truncate">{r.agency_name}{r.aln_codes?.length ? ` · ALN ${r.aln_codes[0]}` : ''}</p>
-                    </div>
-                    <div className="flex-shrink-0 flex items-center gap-1">
-                      {r.composite_score != null && (
-                        <span className="text-[11px] font-bold text-white px-1.5 py-0.5 rounded"
-                          style={{ background: r.composite_score >= 70 ? '#16a34a' : r.composite_score >= 40 ? '#d97706' : '#64748b' }}>
-                          {Math.round(r.composite_score)}
-                        </span>
-                      )}
-                      <span className="text-[11px] font-semibold text-[#0d9488]">
-                        {Math.round(r.similarity * 100)}%
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3 text-[11px] text-[#64748b]">
-                    {r.close_date && (
-                      <span className={urgent ? 'text-[#dc2626] font-semibold flex items-center gap-1' : 'flex items-center gap-1'}>
-                        <Calendar className="w-3 h-3" />
-                        {days != null ? `${days}d` : new Date(r.close_date).toLocaleDateString()}
-                      </span>
-                    )}
-                    {award != null && (
-                      <span className="flex items-center gap-1">
-                        <DollarSign className="w-3 h-3" />{money(award)}
-                      </span>
-                    )}
-                    {r.pipeline_stage && r.pipeline_stage !== 'discovered' && (
-                      <span className="px-1.5 py-0.5 rounded-full bg-[#f1f5f9] text-[#475569] text-[10px] uppercase tracking-wide font-semibold">
-                        {r.pipeline_stage}
-                      </span>
-                    )}
-                    <span className="ml-auto text-[#94a3b8]">{r.reason}</span>
-                    <ArrowRight className="w-3 h-3 text-[#94a3b8]" />
-                  </div>
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
+              const days = daysUntil(r.close_date);
+              const award = r.extracted_fields.award_ceiling ?? r.extracted_fields.award_floor;
+              const isFoundation = r.source === 'foundation';
+              // Foundations have a synthetic id "foundation:<ein>" that is
+              // not a route — link to the funder page instead of /grant/[id].
+              const href = isFoundation ? '/foundations' : `/grant/${r.id}`;
+
+              // Eyebrow: "UP TO $250K · FEDERAL · ALN 84.287" (federal)
+              //          "UP TO $250K · FOUNDATION"            (foundation)
+              const eyebrowParts: string[] = [];
+              if (award != null) eyebrowParts.push(`Up to ${money(award)}`);
+              eyebrowParts.push(isFoundation ? 'Foundation' : 'Federal');
+              if (!isFoundation && r.aln_codes?.length) eyebrowParts.push(`ALN ${r.aln_codes[0]}`);
+
+              return (
+                <GrantCard
+                  key={r.id}
+                  href={href}
+                  title={r.title}
+                  funder={r.agency_name}
+                  eyebrow={eyebrowParts.join(' · ')}
+                  score={r.composite_score ?? r.similarity * 100}
+                  recommendation={recommendationFor(r.composite_score, r.similarity)}
+                  evidence={parseEvidence(r.reason)}
+                  deadlineDays={days}
+                  deadlineDate={r.close_date}
+                />
+              );
+            })}
+        </div>
       )}
     </div>
   );
