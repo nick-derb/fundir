@@ -3,7 +3,7 @@
  *
  * Tokens live in tailwind.config.ts; the CSS variables below mirror them
  * so non-utility CSS (and any third-party widget) can pick them up. The
- * legacy --brand-*/--bg/--text-* variables stay until Phase 1E's screen
+ * legacy brand / bg / text variables stay until Phase 1E's screen
  * migrations land so existing rules keep working — see DESIGN_SYSTEM.md §4.
  */
 
