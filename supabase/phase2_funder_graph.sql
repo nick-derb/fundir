@@ -30,8 +30,12 @@ CREATE TABLE IF NOT EXISTS funders (
   created_at   timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS funders_ein_idx
-  ON funders(ein) WHERE ein IS NOT NULL;
+-- Full unique index (NOT partial). PostgREST's ON CONFLICT can't match
+-- a partial unique index because it would need the WHERE predicate
+-- in the conflict target. SQL's default NULL != NULL semantics already
+-- let multiple federal-agency rows (EIN NULL) coexist without violating
+-- this index.
+CREATE UNIQUE INDEX IF NOT EXISTS funders_ein_idx ON funders(ein);
 CREATE INDEX IF NOT EXISTS funders_type_idx ON funders(funder_type);
 -- For fuzzy-by-name lookups in the identity-resolution path (Phase 2C).
 CREATE INDEX IF NOT EXISTS funders_name_trgm_idx ON funders USING gin (name gin_trgm_ops);
@@ -60,9 +64,9 @@ CREATE TABLE IF NOT EXISTS recipients (
   created_at      timestamptz NOT NULL DEFAULT now()
 );
 
--- EIN unique when present (Decision 3: EIN-first identity).
-CREATE UNIQUE INDEX IF NOT EXISTS recipients_ein_idx
-  ON recipients(ein) WHERE ein IS NOT NULL;
+-- Same shape as funders_ein_idx — full unique, no WHERE, so PostgREST's
+-- ON CONFLICT works against it. (Decision 3: EIN-first identity.)
+CREATE UNIQUE INDEX IF NOT EXISTS recipients_ein_idx ON recipients(ein);
 CREATE INDEX IF NOT EXISTS recipients_org_id_idx
   ON recipients(organization_id) WHERE organization_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS recipients_ntee_idx ON recipients(ntee_code);
