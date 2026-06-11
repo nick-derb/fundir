@@ -17,11 +17,15 @@
 import { createServerClient } from '@/lib/supabase';
 import { geocodeAddress } from './geocoder';
 import { upsertTract } from './repo';
-import { COOK_COUNTY_LMI_TRACTS, COOK_COUNTY_FIPS_PREFIX } from './seed-data';
+import { COOK_COUNTY_LMI_TRACTS } from './seed-data';
 import type { LmiStatus } from './types';
 
 const SEEDED_LMI_LOOKUP = new Map<string, LmiStatus>(
   COOK_COUNTY_LMI_TRACTS.map(t => [t.tract_id, t.lmi_status]),
+);
+
+const SEEDED_COMMUNITY_LOOKUP = new Map<string, string>(
+  COOK_COUNTY_LMI_TRACTS.map(t => [t.tract_id, t.community]),
 );
 
 const SLEEP_BETWEEN_GEOCODES_MS = 1100;
@@ -108,9 +112,11 @@ export async function resolveOrgAddresses(orgId: string): Promise<ResolveOrgResu
         await sleep(SLEEP_BETWEEN_GEOCODES_MS);
         continue;
       }
-      // Look up the LMI status from our seed. Outside Cook County or
-      // outside the seeded list → 'unknown'.
-      const lmi = SEEDED_LMI_LOOKUP.get(geo.tract_id) ?? 'unknown';
+      // Look up the LMI status + community label from our seed. Outside
+      // Cook County or outside the seeded list → 'unknown' / no
+      // community label, which the matcher treats as neutral evidence.
+      const lmi       = SEEDED_LMI_LOOKUP.get(geo.tract_id) ?? 'unknown';
+      const community = SEEDED_COMMUNITY_LOOKUP.get(geo.tract_id);
       await upsertTract({
         tract_id:   geo.tract_id,
         lmi_status: lmi,
@@ -119,6 +125,9 @@ export async function resolveOrgAddresses(orgId: string): Promise<ResolveOrgResu
           county_fips:   geo.county_fips,
           matched_from:  addr,
           last_seen_at:  new Date().toISOString(),
+          // Only set community when known so unverified tracts don't
+          // carry a confidently-wrong label.
+          ...(community ? { community } : {}),
         },
       });
       const prior = tractTally.get(geo.tract_id);
