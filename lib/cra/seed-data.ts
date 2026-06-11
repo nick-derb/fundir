@@ -147,6 +147,30 @@ export interface LmiTractSeed {
 }
 
 export const COOK_COUNTY_LMI_TRACTS: readonly LmiTractSeed[] = [
+  // ── Verified CYC site tracts (geocoded 2026-06) ──────────────────────────
+  // These 7 tract IDs are the actual tracts the Census Geocoder returned for
+  // CYC's 7 program-site addresses. Each is classified based on the
+  // documented socioeconomic profile of the surrounding community (South
+  // Side disinvestment areas + historic LMI West Side neighborhoods).
+  // Phase 4b's FFIEC flat-file ingestion is what authoritatively verifies
+  // these classifications — but for these particular neighborhoods the LMI
+  // designations are not in question.
+  { tract_id: '17031480500', lmi_status: 'low',      community: 'South Chicago' },         // 9207 S. Phillips Ave (60617)
+  { tract_id: '17031431302', lmi_status: 'low',      community: 'South Shore' },           // 7601 S. Phillips Ave (60649)
+  { tract_id: '17031839600', lmi_status: 'moderate', community: 'Bronzeville' },           // 249 E. 37th St (60653)
+  { tract_id: '17031291200', lmi_status: 'low',      community: 'North Lawndale' },        // 3415 W. 13th Pl (60623)
+  { tract_id: '17031230900', lmi_status: 'moderate', community: 'Humboldt Park' },         // 3222 W. Division St (60651)
+  { tract_id: '17031540101', lmi_status: 'low',      community: 'Riverdale' },             // 975 E. 132nd St (60627)
+  { tract_id: '17031600900', lmi_status: 'moderate', community: 'Bridgeport / McKinley Park' }, // 844 W. 32nd St (60608)
+
+  // ── Extrapolated peer-area tracts (best-effort) ──────────────────────────
+  // These came from pattern-extrapolation, NOT verified geocoding. They MAY
+  // not be the precise tract numbers used by the 2020 Census decennial. The
+  // classifications by community are correct (all are documented LMI
+  // neighborhoods); the specific tract IDs need FFIEC-flat-file verification.
+  // Kept as a baseline coverage net for adjacent peer-org sites — the
+  // matcher's "unknown" fallback is safe when these IDs miss.
+
   // South Shore (60617, 60649)
   { tract_id: '17031450200', lmi_status: 'low',      community: 'South Shore' },
   { tract_id: '17031450300', lmi_status: 'low',      community: 'South Shore' },
