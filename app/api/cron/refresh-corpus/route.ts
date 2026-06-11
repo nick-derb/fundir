@@ -60,6 +60,22 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
+  // Pay-API kill switch: this cron makes Claude (extraction) + OpenAI
+  // (embedding) calls on every new federal grant it sees. Default OFF so
+  // the schedule fires but does nothing — the user flips ON via
+  //   Vercel → Project → Settings → Environment Variables → Production
+  //   REFRESH_CORPUS_ENABLED=true
+  // and the next 06:00 UTC tick starts ingesting. Removing the env var
+  // (or setting anything other than 'true') turns it back off without a
+  // code change.
+  if (process.env.REFRESH_CORPUS_ENABLED !== 'true') {
+    return NextResponse.json({
+      ok:      true,
+      enabled: false,
+      message: 'refresh-corpus is disabled. Set REFRESH_CORPUS_ENABLED=true in Vercel env to enable.',
+    });
+  }
+
   const orgs = await getCronOrgs();
   if (orgs.length === 0) {
     return NextResponse.json({ ok: false, message: 'No orgs configured for cron' });
