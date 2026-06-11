@@ -139,7 +139,7 @@ INSERT INTO segments (
   ),
   jsonb_build_object(
     'agencies',         jsonb_build_array('DOS','STATE','DOD','USAID','ARMY','NAVY','AIR','MDA','DARPA','NSA','DIA','USMC'),
-    'agency_prefixes',  jsonb_build_array('DOD-','ARMY-','NAVY-','USAF-','DLA-'),
+    'agency_prefixes',  jsonb_build_array('DOD-','ARMY-','NAVY-','USAF-','DLA-','DOS-','STATE-','USAID-'),
     'keywords',         jsonb_build_array(
       'ukraine','ukrainian','russia','russian',
       'afghanistan','afghan',

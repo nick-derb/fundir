@@ -16,7 +16,7 @@
 import { createServerClient } from '@/lib/supabase';
 import {
   computeMatchScore, generateRecommendation, getEligibilityFlags,
-  hardExclusionReason, type ProgramEmbeddingRef,
+  hardExclusionReason, type ProgramEmbeddingRef, type ExclusionRules,
 } from '@/lib/matching';
 import { screen990Against, neutralFinancialResult, type FinancialEligibilityResult } from '@/lib/990-screener';
 import { getOrgConfig } from '@/lib/config/loader';
@@ -119,6 +119,19 @@ export async function rescoreOrgCorpus(orgIdInput: string, orgCode: string): Pro
     orgConfig?.region?.name ?? '',
   );
 
+  // Segment-scoped exclusion rules. Without this, rescore would use
+  // the matcher's built-in DEFAULT_ lists, which don't carry tenant-
+  // specific blocks (the DOS- / STATE- / USAID- prefixes added in the
+  // youth-ost segment, for example). Falls through to defaults when the
+  // org isn't pinned to a segment yet.
+  const segment = orgConfig?.segment ?? null;
+  const exclusionRules: ExclusionRules | undefined = segment ? {
+    agencies:        segment.exclusion_rules.agencies,
+    agency_prefixes: segment.exclusion_rules.agency_prefixes,
+    keywords:        segment.exclusion_rules.keywords,
+    segment_label:   segment.name,
+  } : undefined;
+
   const [programEmbeddings, financialProfile, observedOutcomes, craSnapshot] = await Promise.all([
     buildProgramEmbeddings(baseProfile),
     getOrgFinancialProfile(orgCode),
@@ -183,6 +196,7 @@ export async function rescoreOrgCorpus(orgIdInput: string, orgCode: string): Pro
     const reason = hardExclusionReason(
       grant.agency_code ?? '', grant.title ?? '', '',
       [extractedFields.geographic_scope ?? '', ...(extractedFields.geographic_states ?? [])].join(' '),
+      exclusionRules,
     );
     if (reason) { excluded += 1; continue; }
 
