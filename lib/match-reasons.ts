@@ -153,5 +153,30 @@ export function buildMatchReasons(
     });
   }
 
+  // ── CRA evidence ───────────────────────────────────────────────────────────
+  // Phase 4: surface the LMI tract match and any bank funders with CRA
+  // assessment areas covering the org's service area. These are signals
+  // the directories don't expose — banks aren't on Grants.gov, and no
+  // competitor reverse-screens applicant addresses against CRA
+  // obligations.
+  if (score.craEvidence) {
+    const ev = score.craEvidence;
+    if (ev.lmi_match) {
+      const community = ev.community ? `${ev.community} site` : 'service area';
+      reasons.push({
+        category: 'eligibility',
+        text: `Your ${community} qualifies as ${ev.lmi_status === 'low' ? 'low-income' : 'low-to-moderate income'} (CRA-eligible tract)`,
+      });
+    }
+    if (ev.bank_funders.length > 0) {
+      const sample = ev.bank_funders.slice(0, 2).join(' and ');
+      const extra  = ev.bank_funders.length > 2 ? ` plus ${ev.bank_funders.length - 2} more` : '';
+      reasons.push({
+        category: 'strategic',
+        text: `${ev.bank_funders.length} bank${ev.bank_funders.length > 1 ? 's' : ''} legally serve your tract under CRA — ${sample}${extra}`,
+      });
+    }
+  }
+
   return reasons.slice(0, 6);
 }

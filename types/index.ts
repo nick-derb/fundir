@@ -98,6 +98,21 @@ export interface ScoreBreakdown {
    * with older match_results rows scored before per-program embeddings.
    */
   matchedProgram?: string;
+  /**
+   * Phase 4 CRA evidence. Carried on the breakdown so the evidence-list
+   * surface in match-reasons can render the "your service area
+   * qualifies under CRA" bullet without re-running the heuristic.
+   */
+  craEvidence?: {
+    /** true when org.lmi_flag AND grant prioritizes LMI populations. */
+    lmi_match:     boolean;
+    /** Org's primary tract LMI status: 'low' | 'moderate' | 'middle' | 'upper' | 'unknown'. */
+    lmi_status:    string;
+    /** Names of bank funders whose CRA AA covers the org's tract (up to 6). */
+    bank_funders:  string[];
+    /** Community label for the org's primary tract, when known. */
+    community?:    string | null;
+  };
 }
 
 export interface FederalProgram {

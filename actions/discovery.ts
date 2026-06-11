@@ -16,6 +16,7 @@ import { getAuthContext } from '@/lib/auth-context';
 import { fetchOrgOutcomeCounts, buildHistoricalWinRates } from '@/lib/win-rate-bayes';
 import { getOrgFinancialProfile } from '@/lib/org-financials';
 import { getOrgConfig } from '@/lib/config/loader';
+import { loadOrgCraSnapshot } from '@/lib/cra/repo';
 import type { ExclusionRules } from '@/lib/matching';
 import type { Segment } from '@/lib/config/types';
 import { ExtractedFields } from '@/types';
@@ -239,10 +240,16 @@ export async function runDiscovery(params: SearchParams, orgId?: string, orgCode
       ? [{ name: 'Custom', params }]
       : allProfiles.slice(0, 4);
 
-    const [programEmbeddings, financialProfile, observedOutcomes] = await Promise.all([
+    const [programEmbeddings, financialProfile, observedOutcomes, craSnapshot] = await Promise.all([
       getOrgProgramEmbeddings(resolvedOrgCode),
       getFinancialProfile(resolvedOrgCode),
       orgId ? fetchOrgOutcomeCounts(orgId) : Promise.resolve(null),
+      // Phase 4: org's primary tract + LMI status + bank funders whose
+      // CRA AA covers it. Loaded once per run, passed by reference to
+      // every grant's score call. Returns null when the org has no
+      // census_tract resolved yet — the matcher treats absent snapshot
+      // identically to lmi_status='unknown', so the absence is safe.
+      orgId ? loadOrgCraSnapshot(orgId) : Promise.resolve(null),
     ]);
 
     // Merge Bayesian win rates from real submission history on top of the
@@ -364,6 +371,7 @@ export async function runDiscovery(params: SearchParams, orgId?: string, orgCode
           const scoreBreakdown = computeMatchScore(
             embedding, programEmbeddings, extractedFields,
             hit.agencyCode, hit.alnlist || [], financialResult, orgProfile,
+            craSnapshot,
           );
 
           // ── 8. Minimum score gate — skip low-signal grants ─────────────────

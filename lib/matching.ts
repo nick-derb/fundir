@@ -1,5 +1,6 @@
 import { ExtractedFields, ScoreBreakdown } from '@/types';
 import { FinancialEligibilityResult, neutralFinancialResult } from './990-screener';
+import type { OrgCraSnapshot } from './cra/types';
 
 export interface OrgMatchProfile {
   name: string;
@@ -106,7 +107,26 @@ export function hardExclusionReason(
 
 // ── Eligibility scoring ─────────────────────────────────────────────────────
 
-function computeEligibility(fields: ExtractedFields, profile: OrgMatchProfile): number {
+/**
+ * Heuristic for "does this grant prioritize LMI populations / low-income
+ * communities?" Conservative — only fires on explicit signals. The CRA
+ * eligibility booster relies on this being precise; false positives would
+ * inflate scores for the wrong grants.
+ */
+function grantRequiresLmi(fields: ExtractedFields): boolean {
+  const haystack = [
+    ...(fields.target_population ?? []),
+    ...(fields.program_areas ?? []),
+    ...(fields.key_requirements ?? []),
+  ].join(' ').toLowerCase();
+  return /\b(low.?income|lmi|low.?to.?moderate|underserved|disadvantaged communities?|economically distressed|opportunity zones?)\b/.test(haystack);
+}
+
+function computeEligibility(
+  fields:      ExtractedFields,
+  profile:     OrgMatchProfile,
+  craSnapshot?: OrgCraSnapshot | null,
+): number {
   let score = 0;
 
   // Entity type (35%)
@@ -167,6 +187,19 @@ function computeEligibility(fields: ExtractedFields, profile: OrgMatchProfile): 
   // Compliance (15%)
   const requiresGATA = fields.compliance_frameworks?.some(f => f.toUpperCase().includes('GATA'));
   score += (!requiresGATA || profile.gataRegistered ? 1.0 : 0.2) * 0.15;
+
+  // ── CRA booster ───────────────────────────────────────────────────────
+  // PHASE_0_PLAN.md Section 3: CRA enters as a booster, never as its own
+  // factor. +0.15 to eligibility (capped at 1.0) when BOTH:
+  //   (a) the org's primary tract is LMI (low or moderate), AND
+  //   (b) the grant explicitly prioritizes LMI populations.
+  // This is the signal Instrumentl literally can't generate because it
+  // doesn't know the org's census tract or its LMI status.
+  const isLmiOrg   = craSnapshot?.lmi_status === 'low' || craSnapshot?.lmi_status === 'moderate';
+  const isLmiGrant = grantRequiresLmi(fields);
+  if (isLmiOrg && isLmiGrant) {
+    score = Math.min(1.0, score + 0.15);
+  }
 
   return Math.min(1.0, score);
 }
@@ -259,6 +292,7 @@ export function computeMatchScore(
   alnCodes: string[],
   financialResult: FinancialEligibilityResult | undefined,
   orgProfile: OrgMatchProfile,
+  craSnapshot?: OrgCraSnapshot | null,
 ): ScoreBreakdown {
   // Per-program semantic: take the best matching program and remember which
   // one it was so the UI can surface "This matches your Teen Leadership
@@ -278,7 +312,7 @@ export function computeMatchScore(
   // the composite.
   const semantic = Math.min(1, bestSemantic);
 
-  const eligibility = computeEligibility(extractedFields, orgProfile);
+  const eligibility = computeEligibility(extractedFields, orgProfile, craSnapshot);
   const financial   = (financialResult ?? neutralFinancialResult()).score / 100;
 
   const historical =
@@ -310,6 +344,20 @@ export function computeMatchScore(
     historical  * 0.06
   ) * 100;
 
+  // CRA evidence — surface what the matcher saw on the org's tract so
+  // the evidence-list UI can render a concrete bullet without re-running
+  // the lookup. Only populated when a snapshot was supplied.
+  const isLmiOrgEvidence   = craSnapshot?.lmi_status === 'low' || craSnapshot?.lmi_status === 'moderate';
+  const isLmiGrantEvidence = grantRequiresLmi(extractedFields);
+  const craEvidence = craSnapshot
+    ? {
+        lmi_match:    isLmiOrgEvidence && isLmiGrantEvidence,
+        lmi_status:   craSnapshot.lmi_status,
+        bank_funders: craSnapshot.bank_funders.slice(0, 6).map(b => b.name),
+        community:    craSnapshot.community,
+      }
+    : undefined;
+
   return {
     composite:     Math.min(100, Math.max(0, composite)),
     semantic:      semantic    * 100,
@@ -318,6 +366,7 @@ export function computeMatchScore(
     historical:    historical  * 100,
     strategic:     strategic   * 100,
     matchedProgram: bestProgram || undefined,
+    craEvidence,
   };
 }
 
