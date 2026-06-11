@@ -9,6 +9,8 @@ import { FinancialVerdict } from '@/components/financial-verdict';
 import { GrantTasks } from '@/components/grant-tasks';
 import { buildMatchReasons } from '@/lib/match-reasons';
 import { getOrgConfig } from '@/lib/config/loader';
+import { loadOrgCraSnapshot } from '@/lib/cra/repo';
+import { grantRequiresLmi } from '@/lib/matching';
 import { GrantNotes } from '@/components/grant-notes';
 import { GrantWorkspace } from '@/components/grant-workspace';
 import { getTasks } from '@/actions/tasks';
@@ -252,6 +254,34 @@ export default async function GrantDetailPage({
 
   const grant  = match.grant;
   const days   = getDaysUntil(grant?.close_date);
+  const fields        = grant?.extracted_fields || {};
+  const deadlineUrgent = days !== null && days >= 0 && days <= 14;
+  const award         = fields.award_floor || fields.award_ceiling;
+
+  const [tasks, note, integrations, orgConfig, craSnapshot] = await Promise.all([
+    getTasks(match.grant_id),
+    getNote(match.grant_id),
+    getAllIntegrations(ctx.orgCode),
+    getOrgConfig(ctx.orgCode),
+    loadOrgCraSnapshot(ctx.orgId),
+  ]);
+  // Org's primary state derives from its region config. Falls back to '' so
+  // buildMatchReasons skips the state-specific bullets cleanly rather than
+  // claiming a state the org isn't in.
+  const orgState = orgConfig?.region?.geo_scope?.states?.[0] ?? '';
+
+  // Phase 4: derive craEvidence live from the snapshot + grant fields.
+  // match_results doesn't store the evidence, so we recompute on every
+  // render. The snapshot read is cheap (already in this Promise.all) and
+  // grantRequiresLmi is a pure regex check.
+  const craEvidence = craSnapshot ? {
+    lmi_match:    (craSnapshot.lmi_status === 'low' || craSnapshot.lmi_status === 'moderate')
+                    && grantRequiresLmi(fields),
+    lmi_status:   craSnapshot.lmi_status,
+    bank_funders: craSnapshot.bank_funders.slice(0, 6).map(b => b.name),
+    community:    craSnapshot.community,
+  } : undefined;
+
   const score: ScoreBreakdown = {
     composite:     match.composite_score,
     semantic:      match.semantic_similarity,
@@ -259,21 +289,8 @@ export default async function GrantDetailPage({
     financial_990: match.financial_score ?? 50,
     historical:    match.historical_score,
     strategic:     match.strategic_score,
+    craEvidence,
   };
-  const fields        = grant?.extracted_fields || {};
-  const deadlineUrgent = days !== null && days >= 0 && days <= 14;
-  const award         = fields.award_floor || fields.award_ceiling;
-
-  const [tasks, note, integrations, orgConfig] = await Promise.all([
-    getTasks(match.grant_id),
-    getNote(match.grant_id),
-    getAllIntegrations(ctx.orgCode),
-    getOrgConfig(ctx.orgCode),
-  ]);
-  // Org's primary state derives from its region config. Falls back to '' so
-  // buildMatchReasons skips the state-specific bullets cleanly rather than
-  // claiming a state the org isn't in.
-  const orgState = orgConfig?.region?.geo_scope?.states?.[0] ?? '';
 
   const googleConnected    = integrations.some(i => i.provider === 'google');
   const microsoftConnected = integrations.some(i => i.provider === 'microsoft');

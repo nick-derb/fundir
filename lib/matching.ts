@@ -112,8 +112,11 @@ export function hardExclusionReason(
  * communities?" Conservative — only fires on explicit signals. The CRA
  * eligibility booster relies on this being precise; false positives would
  * inflate scores for the wrong grants.
+ *
+ * Exported so the grant detail page can derive the same `lmi_match`
+ * flag at render time (match_results doesn't store craEvidence).
  */
-function grantRequiresLmi(fields: ExtractedFields): boolean {
+export function grantRequiresLmi(fields: ExtractedFields): boolean {
   const haystack = [
     ...(fields.target_population ?? []),
     ...(fields.program_areas ?? []),
