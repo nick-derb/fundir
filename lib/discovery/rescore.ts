@@ -132,23 +132,37 @@ export async function rescoreOrgCorpus(orgIdInput: string, orgCode: string): Pro
     historicalWinRates: { ...baseProfile.historicalWinRates, ...observedRates },
   };
 
-  // Pull stored matches + their grants in one round trip.
-  const { data: rows, error: fetchErr } = await db
-    .from('match_results')
-    .select(`
-      id, grant_id, composite_score,
-      grant:grant_opportunities(
-        id, agency_code, agency_name, title, aln_codes,
-        extracted_fields, embedding
-      )
-    `)
-    .eq('org_id', orgIdInput);
+  // Pull every grant in the corpus + this org's existing match_results
+  // (if any) in two round trips. We treat first-scoring and re-scoring
+  // identically: UPSERT against match_results(grant_id, org_id) at the
+  // end. That way orgs whose discovery never ran (the common case after
+  // adding a new factor) still pick up the change.
+  const [{ data: grants, error: grantsErr }, { data: existing }] = await Promise.all([
+    db.from('grant_opportunities')
+      .select('id, agency_code, agency_name, title, aln_codes, extracted_fields, embedding'),
+    db.from('match_results')
+      .select('grant_id, composite_score, pipeline_stage')
+      .eq('org_id', orgIdInput),
+  ]);
 
-  if (fetchErr) {
+  if (grantsErr) {
     return {
       org_id: orgIdInput, scanned: 0, rescored: 0, excluded: 0, cra_boosts: 0,
-      composite_delta_avg: null, errors: [`fetch match_results: ${fetchErr.message}`],
+      composite_delta_avg: null, errors: [`fetch grants: ${grantsErr.message}`],
     };
+  }
+
+  // Index prior composite_score + pipeline_stage by grant_id so the
+  // UPSERT preserves stage transitions the user made manually.
+  const priorByGrantId = new Map<string, { composite: number | null; stage: string | null }>();
+  for (const row of (existing ?? [])) {
+    priorByGrantId.set(
+      row.grant_id as string,
+      {
+        composite: (row.composite_score as number) ?? null,
+        stage:     (row.pipeline_stage as string) ?? null,
+      },
+    );
   }
 
   let scanned    = 0;
@@ -157,23 +171,8 @@ export async function rescoreOrgCorpus(orgIdInput: string, orgCode: string): Pro
   let cra_boosts = 0;
   const deltas: number[] = [];
 
-  for (const row of (rows ?? [])) {
+  for (const grant of (grants ?? [])) {
     scanned += 1;
-    type Grant = {
-      id: string; agency_code: string; agency_name: string; title: string;
-      aln_codes: string[] | null;
-      extracted_fields: ExtractedFields | null;
-      embedding: unknown;
-    };
-    // Supabase types the joined relation as an array even though our FK
-    // resolves to one row.
-    const grant = (Array.isArray((row as Record<string, unknown>).grant)
-      ? ((row as Record<string, unknown>).grant as Grant[])[0]
-      : ((row as Record<string, unknown>).grant as Grant | undefined)) ?? null;
-    if (!grant) {
-      errors.push(`match ${row.id}: no grant joined`);
-      continue;
-    }
 
     const embedding = parseEmbedding(grant.embedding);
     if (!embedding || embedding.length !== 1536) {
@@ -211,24 +210,32 @@ export async function rescoreOrgCorpus(orgIdInput: string, orgCode: string): Pro
     const eligibilityFlags = getEligibilityFlags(extractedFields, orgProfile);
 
     if (breakdown.craEvidence?.lmi_match) cra_boosts += 1;
-    deltas.push(breakdown.composite - (row.composite_score ?? 0));
+    const prior = priorByGrantId.get(grant.id as string);
+    deltas.push(breakdown.composite - (prior?.composite ?? 0));
 
-    const { error: updErr } = await db
+    const { error: upsertErr } = await db
       .from('match_results')
-      .update({
-        composite_score:      breakdown.composite,
-        semantic_similarity:  breakdown.semantic,
-        eligibility_score:    breakdown.eligibility,
-        financial_score:      breakdown.financial_990,
-        historical_score:     breakdown.historical,
-        strategic_score:      breakdown.strategic,
-        eligibility_flags:    eligibilityFlags,
-        financial_signals:    financialResult.signals,
-        recommendation,
-      })
-      .eq('id', row.id);
-    if (updErr) {
-      errors.push(`update match ${row.id}: ${updErr.message}`);
+      .upsert(
+        {
+          grant_id:            grant.id,
+          org_id:              orgIdInput,
+          composite_score:     breakdown.composite,
+          semantic_similarity: breakdown.semantic,
+          eligibility_score:   breakdown.eligibility,
+          financial_score:     breakdown.financial_990,
+          historical_score:    breakdown.historical,
+          strategic_score:     breakdown.strategic,
+          eligibility_flags:   eligibilityFlags,
+          financial_signals:   financialResult.signals,
+          recommendation,
+          // Preserve the user's manual pipeline_stage progression. New
+          // matches default to 'discovered'.
+          pipeline_stage:      prior?.stage ?? 'discovered',
+        },
+        { onConflict: 'grant_id,org_id' },
+      );
+    if (upsertErr) {
+      errors.push(`upsert match for grant ${grant.id}: ${upsertErr.message}`);
     } else {
       rescored += 1;
     }
