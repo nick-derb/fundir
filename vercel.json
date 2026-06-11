@@ -7,6 +7,10 @@
     {
       "path": "/api/cron/refresh-corpus",
       "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/cron/ingest-funders",
+      "schedule": "0 8 * * *"
     }
   ]
 }
