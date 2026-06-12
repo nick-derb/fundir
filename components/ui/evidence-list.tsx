@@ -1,3 +1,5 @@
+'use client';
+
 /**
  * <EvidenceList> — the signature surface.
  *
@@ -7,9 +9,12 @@
  *
  * This is the component the directories can't ship — they have no
  * per-factor evidence to show. Treat it as a first-class differentiator.
+ *
+ * Client component because the "show all evidence" expansion uses
+ * useState. Importable from server components — Next.js boundary
+ * handles the interop transparently.
  */
 
-import * as React from 'react';
 import { useState } from 'react';
 import clsx from 'clsx';
 

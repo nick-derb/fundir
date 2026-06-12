@@ -10,8 +10,10 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import {
   Target, AlertTriangle, ArrowUpRight, DollarSign,
-  ChevronRight, Activity, Flame, Sparkles,
+  Activity, Flame, Sparkles, ChevronRight,
 } from 'lucide-react';
+import { GrantCard } from '@/components/ui/grant-card';
+import { RecommendationGroup } from '@/components/ui/recommendation-group';
 
 // ── Logo auto-fetch via ProPublica EIN → website → Clearbit ──────────────────
 async function getOrgLogoUrl(ein?: string | null): Promise<string | null> {
@@ -82,10 +84,16 @@ async function getDashboardData(orgId: string, orgCode: string) {
 
   const logoUrl = await getOrgLogoUrl(org?.ein);
 
+  // Win-triage buckets — pursue/maybe/skip per DESIGN_SYSTEM.md §2.9.
+  // Thresholds match the rest of the matcher (≥70 pursue, ≥50 maybe).
+  const pursue = matches.filter(m => m.composite_score >= 70);
+  const maybe  = matches.filter(m => m.composite_score >= 50 && m.composite_score < 70);
+  const skip   = matches.filter(m => m.composite_score < 50);
+
   return {
     matches,
     totalTracked:      matches.length,
-    highMatches:       matches.filter(m => m.composite_score >= 70).length,
+    highMatches:       pursue.length,
     upcomingDeadlines: upcoming.length,
     urgentGrants:      urgent.sort((a, b) => {
       const da = new Date(a.grant?.close_date || '9999').getTime();
@@ -94,10 +102,35 @@ async function getDashboardData(orgId: string, orgCode: string) {
     }),
     totalAwardPotential,
     pipelineActive,
-    topGrants: matches.slice(0, 5),
+    triagePursue: pursue.slice(0, 5),
+    triageMaybe:  maybe.slice(0, 5),
+    triageSkip:   skip.slice(0, 8),
+    triageCounts: { pursue: pursue.length, maybe: maybe.length, skip: skip.length },
     org,
     logoUrl,
   };
+}
+
+function formatGrantCardEyebrow(match: MatchResult): string {
+  const award = match.grant?.extracted_fields?.award_ceiling || match.grant?.extracted_fields?.award_floor;
+  const parts: string[] = [];
+  if (award) parts.push(`Up to ${formatCompactPublic(award)}`);
+  if (match.grant?.agency_code) parts.push(match.grant.agency_code);
+  if (match.grant?.aln_codes?.length) parts.push(`ALN ${match.grant.aln_codes[0]}`);
+  return parts.join(' · ');
+}
+
+function formatCompactPublic(n: number) {
+  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000)     return `$${(n / 1_000).toFixed(0)}K`;
+  return `$${n}`;
+}
+
+function daysUntil(close: string | null | undefined): number | null {
+  if (!close) return null;
+  const ms = new Date(close).getTime();
+  if (Number.isNaN(ms)) return null;
+  return Math.ceil((ms - Date.now()) / 86400000);
 }
 
 function formatCompact(n: number) {
@@ -315,45 +348,68 @@ export default async function DashboardPage() {
               </Link>
             </div>
 
-            <div className="theme-divide">
-              {data.topGrants.map((match, i) => {
-                const award = match.grant?.extracted_fields?.award_ceiling || match.grant?.extracted_fields?.award_floor;
-                const days  = match.grant?.close_date
-                  ? Math.ceil((new Date(match.grant.close_date).getTime() - Date.now()) / 86400000)
-                  : null;
-                return (
-                  <Link key={match.id} href={`/grant/${match.grant_id}`}>
-                    <div className="row-hover flex items-center gap-3 px-5 py-3 group">
-                      <span className="text-[11px] font-bold w-4 flex-shrink-0"
-                        style={{ color: 'var(--rank-color)' }}>#{i + 1}</span>
-                      <ScoreArc score={match.composite_score} />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[13px] font-semibold truncate group-hover:text-[#0d9488] transition-colors"
-                          style={{ color: 'var(--text-primary)' }}>
-                          {match.grant?.title}
-                        </p>
-                        <p className="text-[11px] truncate" style={{ color: 'var(--text-tertiary)' }}>
-                          {match.grant?.agency_name}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        {award && (
-                          <span className="text-[11px] font-semibold px-2 py-0.5 rounded border"
-                            style={{
-                              background: 'var(--badge-bg)',
-                              color: 'var(--badge-text)',
-                              borderColor: 'var(--badge-border)',
-                            }}>
-                            {formatCompact(award)}
-                          </span>
-                        )}
-                        {days !== null && days >= 0 && days <= 30 && <DaysChip days={days} />}
-                        <ChevronRight className="w-3.5 h-3.5 text-[#0d9488] opacity-0 group-hover:opacity-100 transition-opacity" />
-                      </div>
-                    </div>
-                  </Link>
-                );
-              })}
+            {/* Win-triage primitive — Pursue/Maybe/Skip sections via the
+                design-system <RecommendationGroup>. The Skip section is a
+                feature: saying no is the value the directories can't deliver
+                (DESIGN_SYSTEM.md §2.9). */}
+            <div className="px-5 py-5">
+              {data.totalTracked === 0 ? (
+                <div className="text-center text-[12px] text-[var(--text-tertiary)] py-6">
+                  No matches yet. Run discovery from <Link href="/discover" className="text-[#0d9488] hover:underline">/discover</Link>.
+                </div>
+              ) : (
+                <RecommendationGroup
+                  pursue={{
+                    count: data.triageCounts.pursue,
+                    children: data.triagePursue.map(m => (
+                      <GrantCard
+                        key={m.id}
+                        href={`/grant/${m.grant_id}`}
+                        title={m.grant?.title ?? '—'}
+                        funder={m.grant?.agency_name ?? ''}
+                        eyebrow={formatGrantCardEyebrow(m)}
+                        score={m.composite_score}
+                        recommendation="pursue"
+                        deadlineDays={daysUntil(m.grant?.close_date)}
+                        deadlineDate={m.grant?.close_date}
+                      />
+                    )),
+                  }}
+                  maybe={{
+                    count: data.triageCounts.maybe,
+                    children: data.triageMaybe.map(m => (
+                      <GrantCard
+                        key={m.id}
+                        href={`/grant/${m.grant_id}`}
+                        title={m.grant?.title ?? '—'}
+                        funder={m.grant?.agency_name ?? ''}
+                        eyebrow={formatGrantCardEyebrow(m)}
+                        score={m.composite_score}
+                        recommendation="maybe"
+                        deadlineDays={daysUntil(m.grant?.close_date)}
+                        deadlineDate={m.grant?.close_date}
+                      />
+                    )),
+                  }}
+                  skip={{
+                    count: data.triageCounts.skip,
+                    children: data.triageSkip.map(m => (
+                      <GrantCard
+                        key={m.id}
+                        href={`/grant/${m.grant_id}`}
+                        title={m.grant?.title ?? '—'}
+                        funder={m.grant?.agency_name ?? ''}
+                        eyebrow={formatGrantCardEyebrow(m)}
+                        score={m.composite_score}
+                        recommendation="skip"
+                        reason={m.recommendation ?? undefined}
+                        deadlineDays={daysUntil(m.grant?.close_date)}
+                        deadlineDate={m.grant?.close_date}
+                      />
+                    )),
+                  }}
+                />
+              )}
             </div>
 
             {/* Pipeline distribution */}
