@@ -7,10 +7,12 @@ import { AppShell } from '@/components/app-shell';
 import { ScoreBreakdownChart } from '@/components/score-breakdown';
 import { FinancialVerdict } from '@/components/financial-verdict';
 import { GrantTasks } from '@/components/grant-tasks';
-import { buildMatchReasons } from '@/lib/match-reasons';
+import { buildMatchReasons, type ReasonCategory } from '@/lib/match-reasons';
 import { getOrgConfig } from '@/lib/config/loader';
 import { loadOrgCraSnapshot } from '@/lib/cra/repo';
 import { grantRequiresLmi } from '@/lib/matching';
+import { EvidenceList, type EvidenceItem, type FactorKey } from '@/components/ui/evidence-list';
+import { RecommendationPill, type Recommendation } from '@/components/ui/recommendation-pill';
 import { GrantNotes } from '@/components/grant-notes';
 import { GrantWorkspace } from '@/components/grant-workspace';
 import { getTasks } from '@/actions/tasks';
@@ -423,26 +425,48 @@ export default async function GrantDetailPage({
                     orgState,
                   );
                   if (!reasons.length) return null;
+                  // Map match-reason categories onto the design-system
+                  // FactorKey so the colored leading dot + factor tag
+                  // surface correctly in the EvidenceList. The mapping
+                  // collapses geography/population/compliance into the
+                  // eligibility factor — they're sub-signals of it.
+                  const categoryToFactor: Record<ReasonCategory, FactorKey> = {
+                    mission:     'semantic',
+                    eligibility: 'eligibility',
+                    geography:   'eligibility',
+                    population:  'eligibility',
+                    financial:   'financial_990',
+                    strategic:   'strategic',
+                    compliance:  'eligibility',
+                  };
+                  const items: EvidenceItem[] = reasons.map(r => ({
+                    text:   r.text,
+                    factor: categoryToFactor[r.category],
+                  }));
+                  // Pursue/Maybe/Skip pill mirrors the dashboard
+                  // RecommendationGroup thresholds.
+                  const rec: Recommendation = score.composite >= 70
+                    ? 'pursue'
+                    : score.composite >= 50
+                      ? 'maybe'
+                      : 'skip';
                   return (
-                    <div className="rounded-xl border border-[#0d9488]/25 shadow-card p-5 overflow-hidden relative"
-                      style={{ background: 'linear-gradient(180deg, #f0fdfa 0%, #ffffff 35%)' }}>
-                      <div className="flex items-center gap-2 mb-3">
-                        <div className="w-6 h-6 rounded-[5px] flex items-center justify-center"
-                          style={{ background: 'linear-gradient(135deg, #0d9488, #0891b2)' }}>
-                          <Sparkles className="w-3.5 h-3.5 text-white" />
+                    <div className="bg-canvas-1 rounded-lg shadow-flat p-5">
+                      <div className="flex items-center justify-between gap-2 mb-3">
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 rounded-[5px] flex items-center justify-center"
+                            style={{ background: 'linear-gradient(135deg, #0a4d3c, #0891b2)' }}>
+                            <Sparkles className="w-3.5 h-3.5 text-white" />
+                          </div>
+                          <p className="text-eyebrow font-semibold text-ink-2 uppercase tracking-wider">
+                            Why it&apos;s a match
+                          </p>
                         </div>
-                        <p className="text-[11px] font-bold text-[#0d9488] uppercase tracking-widest">Why it&apos;s a match</p>
+                        <RecommendationPill recommendation={rec} />
                       </div>
-                      <ul className="space-y-2">
-                        {reasons.map((r, i) => (
-                          <li key={i} className="flex items-start gap-2 text-[13px] text-[#0f172a]">
-                            <CheckCircle className="w-4 h-4 text-[#0d9488] mt-0.5 flex-shrink-0" />
-                            <span className="leading-relaxed">{r.text}</span>
-                          </li>
-                        ))}
-                      </ul>
-                      <p className="text-[10px] text-[#94a3b8] mt-3 pt-3 border-t border-[#0d9488]/15">
-                        Derived deterministically from Fundir&apos;s 7-factor score and extracted grant data.
+                      <EvidenceList items={items} />
+                      <p className="text-caption text-ink-3 mt-4 pt-3 border-t border-canvas-3">
+                        Derived deterministically from Fundir&apos;s composite score and extracted grant data.
                       </p>
                     </div>
                   );
