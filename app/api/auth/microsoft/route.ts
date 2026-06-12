@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getAuthContext } from '@/lib/auth-context';
 
 const SCOPES = [
   'offline_access',
@@ -7,11 +8,21 @@ const SCOPES = [
 ].join(' ');
 
 export async function GET(req: NextRequest) {
-  const orgCode = req.nextUrl.searchParams.get('org');
+  const orgCode  = req.nextUrl.searchParams.get('org');
   const returnTo = req.nextUrl.searchParams.get('return') ?? '/settings';
 
   if (!orgCode) {
     return NextResponse.json({ error: 'missing required `org` query param' }, { status: 400 });
+  }
+
+  // Same membership gate as the Google init route — see comment there.
+  const ctx = await getAuthContext();
+  if (!ctx) {
+    return NextResponse.json({ error: 'not authenticated' }, { status: 401 });
+  }
+  const isMember = ctx.orgCode === orgCode || ctx.availableOrgs.some(o => o.org_code === orgCode);
+  if (!isMember) {
+    return NextResponse.json({ error: 'forbidden: not a member of this org' }, { status: 403 });
   }
 
   const state = Buffer.from(JSON.stringify({ orgCode, returnTo })).toString(
