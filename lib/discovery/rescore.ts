@@ -100,6 +100,10 @@ export interface RescoreResult {
   scanned:          number;
   rescored:         number;
   excluded:         number;
+  /** Count of match_results rows removed because the underlying grant
+   *  newly failed the hard-exclusion gate (e.g. after a segment
+   *  exclusion-rules edit). */
+  pruned:           number;
   cra_boosts:       number;
   composite_delta_avg: number | null;
   errors:           string[];
@@ -160,8 +164,9 @@ export async function rescoreOrgCorpus(orgIdInput: string, orgCode: string): Pro
 
   if (grantsErr) {
     return {
-      org_id: orgIdInput, scanned: 0, rescored: 0, excluded: 0, cra_boosts: 0,
-      composite_delta_avg: null, errors: [`fetch grants: ${grantsErr.message}`],
+      org_id: orgIdInput, scanned: 0, rescored: 0, excluded: 0, pruned: 0,
+      cra_boosts: 0, composite_delta_avg: null,
+      errors: [`fetch grants: ${grantsErr.message}`],
     };
   }
 
@@ -183,6 +188,9 @@ export async function rescoreOrgCorpus(orgIdInput: string, orgCode: string): Pro
   let excluded   = 0;
   let cra_boosts = 0;
   const deltas: number[] = [];
+  // Track grants the gate newly excludes so we can DELETE stale
+  // match_results that reference them (e.g. after segment rules tighten).
+  const newlyExcludedGrantIds: string[] = [];
 
   for (const grant of (grants ?? [])) {
     scanned += 1;
@@ -198,7 +206,11 @@ export async function rescoreOrgCorpus(orgIdInput: string, orgCode: string): Pro
       [extractedFields.geographic_scope ?? '', ...(extractedFields.geographic_states ?? [])].join(' '),
       exclusionRules,
     );
-    if (reason) { excluded += 1; continue; }
+    if (reason) {
+      excluded += 1;
+      newlyExcludedGrantIds.push(grant.id as string);
+      continue;
+    }
 
     let financialResult: FinancialEligibilityResult;
     if (financialProfile) {
@@ -259,8 +271,25 @@ export async function rescoreOrgCorpus(orgIdInput: string, orgCode: string): Pro
     ? Math.round((deltas.reduce((s, x) => s + x, 0) / deltas.length) * 100) / 100
     : null;
 
+  // Prune stale match_results for grants that no longer pass the gate.
+  // Scoped to (this org × these grant_ids) so we never touch another
+  // tenant's rows.
+  let pruned = 0;
+  if (newlyExcludedGrantIds.length > 0) {
+    const { error: pruneErr, count } = await db
+      .from('match_results')
+      .delete({ count: 'exact' })
+      .eq('org_id', orgIdInput)
+      .in('grant_id', newlyExcludedGrantIds);
+    if (pruneErr) {
+      errors.push(`prune stale match_results: ${pruneErr.message}`);
+    } else {
+      pruned = count ?? 0;
+    }
+  }
+
   return {
-    org_id: orgIdInput, scanned, rescored, excluded, cra_boosts,
+    org_id: orgIdInput, scanned, rescored, excluded, pruned, cra_boosts,
     composite_delta_avg, errors,
   };
 }
