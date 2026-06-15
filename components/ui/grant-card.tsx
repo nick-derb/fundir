@@ -6,7 +6,6 @@
  * Whole card is the link to detail.
  */
 
-import * as React from 'react';
 import Link from 'next/link';
 import clsx from 'clsx';
 import { ScoreBadge } from './score-badge';
@@ -31,6 +30,10 @@ interface GrantCardProps {
   deadlineDate?:  string | null;
   /** Optional one-liner reason on the recommendation pill. */
   reason?:        string;
+  /** Phase 6: short rationale rendered inline below the funder. Always
+   *  visible, no hover required — the win-triage "saying no is a feature"
+   *  pattern. Truncated by the card; pass ~180 chars max. */
+  rationale?:     string;
 }
 
 function formatDeadline(days: number | null | undefined, date: string | null | undefined): string {
@@ -44,7 +47,7 @@ function formatDeadline(days: number | null | undefined, date: string | null | u
 
 export function GrantCard({
   href, title, funder, eyebrow, score, recommendation, matchedProgram,
-  evidence = [], deadlineDays, deadlineDate, reason,
+  evidence = [], deadlineDays, deadlineDate, reason, rationale,
 }: GrantCardProps) {
   return (
     <Link
@@ -67,6 +70,16 @@ export function GrantCard({
         </div>
         <div className="text-caption text-ink-1 mt-0.5">{funder}</div>
       </div>
+
+      {/* Inline rationale (Phase 6B): a single short line beneath the funder,
+          visible at-a-glance. Surfaces the matcher's recommendation for
+          Pursue/Maybe AND the reason-to-skip for Skip — the "saying no is
+          a feature" pattern. line-clamp-2 caps growth on dense cards. */}
+      {rationale && (
+        <p className="mt-2 text-body text-ink-1 leading-snug line-clamp-2">
+          {rationale}
+        </p>
+      )}
 
       {evidence.length > 0 && (
         <div className="mt-3">

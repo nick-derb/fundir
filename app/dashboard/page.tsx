@@ -10,10 +10,12 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import {
   Target, AlertTriangle, ArrowUpRight, DollarSign,
-  Activity, Flame, Sparkles, ChevronRight,
+  Activity, Flame, Sparkles,
 } from 'lucide-react';
 import { GrantCard } from '@/components/ui/grant-card';
 import { RecommendationGroup } from '@/components/ui/recommendation-group';
+import { ConcentrationPanel } from '@/components/concentration-panel';
+import { loadLatestConcentration } from '@/lib/discovery/concentration';
 
 // ── Logo auto-fetch via ProPublica EIN → website → Clearbit ──────────────────
 async function getOrgLogoUrl(ein?: string | null): Promise<string | null> {
@@ -83,6 +85,10 @@ async function getDashboardData(orgId: string, orgCode: string) {
   ).length;
 
   const logoUrl = await getOrgLogoUrl(org?.ein);
+  // Phase 6: latest funding-concentration snapshot. Null until the user
+  // runs /api/admin/compute-concentration once; ConcentrationPanel
+  // renders the empty-state CTA in that case.
+  const concentration = await loadLatestConcentration(orgId);
 
   // Win-triage buckets — pursue/maybe/skip per DESIGN_SYSTEM.md §2.9.
   // Thresholds match the rest of the matcher (≥70 pursue, ≥50 maybe).
@@ -108,6 +114,7 @@ async function getDashboardData(orgId: string, orgCode: string) {
     triageCounts: { pursue: pursue.length, maybe: maybe.length, skip: skip.length },
     org,
     logoUrl,
+    concentration,
   };
 }
 
@@ -118,6 +125,26 @@ function formatGrantCardEyebrow(match: MatchResult): string {
   if (match.grant?.agency_code) parts.push(match.grant.agency_code);
   if (match.grant?.aln_codes?.length) parts.push(`ALN ${match.grant.aln_codes[0]}`);
   return parts.join(' · ');
+}
+
+/**
+ * Single-line rationale for the GrantCard inline slot. Strips the
+ * "Best program fit: X." prefix (already surfaced as matchedProgram on
+ * the score badge) and trims the trailing planning verb that's generic
+ * ("Recommend immediate eligibility review and application planning.").
+ * Caps at ~180 chars so the card stays compact.
+ */
+function buildRationale(match: MatchResult): string | undefined {
+  const r = match.recommendation;
+  if (!r) return undefined;
+  // Strip leading "Best program fit: <name>. " prefix.
+  const stripped = r.replace(/^Best program fit:[^.]+\.\s*/i, '');
+  // Strip trailing generic planning advice; the body of the rationale is
+  // the interesting part.
+  const trimmed = stripped
+    .replace(/\s*Recommend [^.]+\.\s*$/i, '')
+    .replace(/\s*Verify full eligibility[^.]+\.\s*$/i, '');
+  return trimmed.length > 180 ? `${trimmed.slice(0, 177)}…` : trimmed;
 }
 
 function formatCompactPublic(n: number) {
@@ -137,38 +164,6 @@ function formatCompact(n: number) {
   if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
   if (n >= 1_000)     return `$${(n / 1_000).toFixed(0)}K`;
   return `$${n}`;
-}
-
-function ScoreArc({ score }: { score: number }) {
-  const color = score >= 70 ? '#16a34a' : score >= 40 ? '#d97706' : '#dc2626';
-  const r = 14, cx = 16, cy = 16, circumference = 2 * Math.PI * r;
-  const dash = (score / 100) * circumference;
-  return (
-    <div className="relative flex-shrink-0 w-8 h-8">
-      <svg width="32" height="32" viewBox="0 0 32 32" className="rotate-[-90deg]">
-        <circle cx={cx} cy={cy} r={r} fill="none" stroke="var(--score-track)" strokeWidth="3" />
-        <circle cx={cx} cy={cy} r={r} fill="none" stroke={color} strokeWidth="3"
-          strokeDasharray={`${dash} ${circumference}`} strokeLinecap="round" />
-      </svg>
-      <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold" style={{ color }}>
-        {score.toFixed(0)}
-      </span>
-    </div>
-  );
-}
-
-function DaysChip({ days }: { days: number }) {
-  const color = days <= 7
-    ? { bg: '#fef2f2', text: '#dc2626', border: '#fecaca' }
-    : days <= 14
-    ? { bg: '#fff7ed', text: '#c2410c', border: '#fed7aa' }
-    : { bg: '#fffbeb', text: '#d97706', border: '#fde68a' };
-  return (
-    <span className="text-[11px] font-bold px-2 py-0.5 rounded-full border flex-shrink-0"
-      style={{ background: color.bg, color: color.text, borderColor: color.border }}>
-      {days}d
-    </span>
-  );
 }
 
 export default async function DashboardPage() {
@@ -330,6 +325,13 @@ export default async function DashboardPage() {
           ))}
         </div>
 
+        {/* ── Funding concentration (Phase 6) ───────────────────── */}
+        {/* Surfaces only when there's actual financial data to compute against.
+            Without a snapshot the panel renders the small CTA empty-state. */}
+        {data.totalTracked > 0 && (
+          <ConcentrationPanel snapshot={data.concentration} />
+        )}
+
         {/* ── Main content row ──────────────────────────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
 
@@ -370,6 +372,7 @@ export default async function DashboardPage() {
                         eyebrow={formatGrantCardEyebrow(m)}
                         score={m.composite_score}
                         recommendation="pursue"
+                        rationale={buildRationale(m)}
                         deadlineDays={daysUntil(m.grant?.close_date)}
                         deadlineDate={m.grant?.close_date}
                       />
@@ -386,6 +389,7 @@ export default async function DashboardPage() {
                         eyebrow={formatGrantCardEyebrow(m)}
                         score={m.composite_score}
                         recommendation="maybe"
+                        rationale={buildRationale(m)}
                         deadlineDays={daysUntil(m.grant?.close_date)}
                         deadlineDate={m.grant?.close_date}
                       />
@@ -402,6 +406,7 @@ export default async function DashboardPage() {
                         eyebrow={formatGrantCardEyebrow(m)}
                         score={m.composite_score}
                         recommendation="skip"
+                        rationale={buildRationale(m)}
                         reason={m.recommendation ?? undefined}
                         deadlineDays={daysUntil(m.grant?.close_date)}
                         deadlineDate={m.grant?.close_date}
@@ -479,7 +484,17 @@ export default async function DashboardPage() {
                             style={{ color: 'var(--text-primary)' }}>
                             {match.grant?.title}
                           </p>
-                          <DaysChip days={days} />
+                          <span
+                            className="text-eyebrow font-semibold tabular-nums px-2 py-0.5 rounded-sm border shrink-0"
+                            style={
+                              days <= 7
+                                ? { background: '#F4E3E5', color: '#7A1E2E', borderColor: '#E7C4C9' }
+                              : days <= 14
+                                ? { background: '#FBF1DC', color: '#9A6B00', borderColor: '#EBD9B0' }
+                                : { background: '#F2F1EC', color: '#3A3D44', borderColor: '#E5E4DE' }
+                            }>
+                            {days}d
+                          </span>
                         </div>
                         <p className="text-[11px] truncate" style={{ color: 'var(--text-tertiary)' }}>
                           {match.grant?.agency_name}
