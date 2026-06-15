@@ -108,21 +108,29 @@ export function hardExclusionReason(
 // ── Eligibility scoring ─────────────────────────────────────────────────────
 
 /**
- * Heuristic for "does this grant prioritize LMI populations / low-income
- * communities?" Conservative — only fires on explicit signals. The CRA
- * eligibility booster relies on this being precise; false positives would
- * inflate scores for the wrong grants.
+ * "Does this grant prioritize LMI populations / low-income communities?"
+ * Drives the CRA eligibility +0.15 booster.
+ *
+ * Phase 4 cont.: prefer the Claude-extracted `requires_lmi` field when
+ * present (a precise yes/no/null from the extraction layer). Fall back
+ * to a regex over the structured fields for older rows extracted before
+ * the prompt added requires_lmi — bounded recall but acceptable since
+ * those rows will be re-extracted on the next discovery pass.
  *
  * Exported so the grant detail page can derive the same `lmi_match`
  * flag at render time (match_results doesn't store craEvidence).
  */
 export function grantRequiresLmi(fields: ExtractedFields): boolean {
+  if (fields.requires_lmi === true)  return true;
+  if (fields.requires_lmi === false) return false;
+  // Null / undefined → fall through to the legacy regex heuristic so
+  // pre-Phase-4-cont rows still get a signal (just a noisier one).
   const haystack = [
     ...(fields.target_population ?? []),
     ...(fields.program_areas ?? []),
     ...(fields.key_requirements ?? []),
   ].join(' ').toLowerCase();
-  return /\b(low.?income|lmi|low.?to.?moderate|underserved|disadvantaged communities?|economically distressed|opportunity zones?)\b/.test(haystack);
+  return /\b(low.?income|lmi|low.?to.?moderate|underserved|disadvantaged communities?|economically distressed|opportunity zones?|persistent poverty|promise zone|title i schools?)\b/.test(haystack);
 }
 
 function computeEligibility(

@@ -39,6 +39,8 @@ Return JSON:
   "grant_duration_months": number | null,
   "compliance_frameworks": ["2 CFR 200", "GATA", ...],
   "key_requirements": ["Must serve Title I schools", ...],
+  "requires_lmi": boolean | null,
+  "lmi_evidence": "<one-sentence quote or paraphrase from the text>" | null,
   "financial_requirements": {
     "cost_share_required": boolean | null,
     "cost_share_pct": number | null,
@@ -53,6 +55,19 @@ Return JSON:
   },
   "confidence_score": 0.0 to 1.0
 }
+
+requires_lmi guidance — this drives the Community Reinvestment Act eligibility booster (+0.15 on eligibility when the org operates in an LMI census tract AND the grant prioritizes LMI populations), so precision matters more than recall:
+- Set TRUE when the grant text EXPLICITLY prioritizes low-income / low-to-moderate income / underserved / disadvantaged / economically distressed populations or communities. Examples that should fire:
+  - "Must serve low-income families"
+  - "Targets disadvantaged communities"
+  - "Eligible applicants must serve high-poverty neighborhoods"
+  - "Persistent Poverty Counties"
+  - "Promise Zone / Opportunity Zone designated area"
+  - "Title I schools"
+  - "Programs in census tracts with median family income below 80% AMI"
+- Set FALSE when the text is silent on LMI priority, OR when the grant explicitly targets a different cohort (researchers, faculty, tribal-only, military, etc).
+- Set NULL only when the text is genuinely ambiguous.
+- lmi_evidence: when requires_lmi is true, capture the strongest one-sentence quote or paraphrase that justified it. When false or null, leave lmi_evidence null. The UI uses this to render a citation under the LMI bullet.
 
 financial_requirements guidance — this drives reverse-990 financial screening, so be precise:
 - payment_structure: how the funder pays out. "reimbursement" = applicant spends first, is repaid later; "advance" = funds paid up front. Most FEDERAL grants operate on reimbursement — if the grant is federal and the text does not say otherwise, use "reimbursement". Otherwise only set this if stated.

@@ -48,6 +48,18 @@ export interface ExtractedFields {
   grant_duration_months?: number | null;
   compliance_frameworks?: string[];
   key_requirements?: string[];
+  /**
+   * Phase 4 cont.: Claude-extracted flag for "this grant explicitly
+   * prioritizes LMI populations/communities." Drives the CRA eligibility
+   * +0.15 boost. Null on older rows extracted before this field existed —
+   * the matcher's grantRequiresLmi() falls back to a regex over
+   * target_population/program_areas/key_requirements in that case.
+   */
+  requires_lmi?: boolean | null;
+  /** Captured quote/paraphrase from the grant text that justified
+   *  requires_lmi=true. Null otherwise. Surfaced under the LMI evidence
+   *  bullet so the user can audit the claim. */
+  lmi_evidence?: string | null;
   financial_requirements?: FinancialRequirements;
   confidence_score?: number;
 }
