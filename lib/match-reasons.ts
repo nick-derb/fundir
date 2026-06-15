@@ -153,6 +153,26 @@ export function buildMatchReasons(
     });
   }
 
+  // ── Funder affinity ────────────────────────────────────────────────────────
+  // Phase 3: surface the graph signal. "N of your peer orgs were funded by
+  // this funder in the last 3 FY" is the bullet no other tool can produce.
+  if (score.funderAffinityEvidence) {
+    const ev = score.funderAffinityEvidence;
+    if (ev.peer_total_count > 0 && ev.peers_funded_count > 0) {
+      const funderLabel = ev.funder_name ? `the ${ev.funder_name}` : 'this funder';
+      reasons.push({
+        category: 'strategic',
+        text: `${ev.peers_funded_count} of your ${ev.peer_total_count} peer orgs were funded by ${funderLabel} in the last 3 years`,
+      });
+    }
+    if (ev.cra_aa_covers_tract && ev.funder_name) {
+      reasons.push({
+        category: 'eligibility',
+        text: `${ev.funder_name}'s CRA assessment area covers your service tract`,
+      });
+    }
+  }
+
   // ── CRA evidence ───────────────────────────────────────────────────────────
   // Phase 4: surface the LMI tract match and any bank funders with CRA
   // assessment areas covering the org's service area. These are signals

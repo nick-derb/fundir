@@ -24,6 +24,9 @@ import { getOrgFinancialProfile } from '@/lib/org-financials';
 import { generateEmbedding } from '@/lib/embeddings';
 import { fetchOrgOutcomeCounts, buildHistoricalWinRates } from '@/lib/win-rate-bayes';
 import { loadOrgCraSnapshot } from '@/lib/cra/repo';
+import {
+  loadFunderAffinitySnapshot, computeFunderAffinity,
+} from '@/lib/factors/funder-affinity';
 import { CYC_PROFILE } from '@/lib/cyc-profile';
 import { YMCA_MATCH_PROFILE } from '@/lib/ymca-live-data';
 import type { OrgMatchProfile } from '@/lib/matching';
@@ -143,6 +146,16 @@ export async function rescoreOrgCorpus(orgIdInput: string, orgCode: string): Pro
     loadOrgCraSnapshot(orgIdInput),
   ]);
 
+  // Phase 3D: peer set + region presence + bank-AA coverage. Loaded
+  // sequentially after craSnapshot so we have the org's census tract
+  // for the CRA-boost gate inside the affinity formula.
+  const affinitySnapshot = await loadFunderAffinitySnapshot(
+    orgIdInput,
+    orgConfig?.region?.geo_scope?.states ?? [],
+    craSnapshot?.census_tract ?? null,
+    orgConfig?.segment?.funder_categories ?? [],
+  );
+
   const observedRates = observedOutcomes ? buildHistoricalWinRates(observedOutcomes) : {};
   const orgProfile: OrgMatchProfile = {
     ...baseProfile,
@@ -156,7 +169,7 @@ export async function rescoreOrgCorpus(orgIdInput: string, orgCode: string): Pro
   // adding a new factor) still pick up the change.
   const [{ data: grants, error: grantsErr }, { data: existing }] = await Promise.all([
     db.from('grant_opportunities')
-      .select('id, agency_code, agency_name, title, aln_codes, extracted_fields, embedding'),
+      .select('id, agency_code, agency_name, title, aln_codes, extracted_fields, embedding, funder_id'),
     db.from('match_results')
       .select('grant_id, composite_score, pipeline_stage')
       .eq('org_id', orgIdInput),
@@ -223,10 +236,20 @@ export async function rescoreOrgCorpus(orgIdInput: string, orgCode: string): Pro
       financialResult = neutralFinancialResult();
     }
 
+    // Phase 3D: compute affinity using the per-pass snapshot + the
+    // grant's resolved funder. When funder_id is null (federal NOFOs,
+    // region adapters), computeFunderAffinity returns the documented
+    // neutral 0.35 fallback — same effect as not passing it, but with
+    // the evidence blob populated for the UI.
+    const funderAffinity = await computeFunderAffinity(
+      (grant.funder_id as string | null) ?? null,
+      affinitySnapshot,
+    );
     const breakdown = computeMatchScore(
       embedding, programEmbeddings, extractedFields,
       grant.agency_code ?? '', grant.aln_codes ?? [],
       financialResult, orgProfile, craSnapshot,
+      funderAffinity,
     );
 
     const baseRec = generateRecommendation(breakdown, extractedFields, orgProfile);

@@ -105,6 +105,22 @@ export interface ScoreBreakdown {
   historical: number;
   strategic: number;
   /**
+   * Phase 3 funder-affinity factor 0-100. Defaults to 35 (neutral
+   * fallback) when the grant has no resolvable funder — that's the
+   * documented behavior in PHASE_0_PLAN.md SS 3, not a missing-data
+   * signal.
+   */
+  funder_affinity?: number;
+  /** Per-factor evidence for the funder-affinity bullet renderer. */
+  funderAffinityEvidence?: {
+    peers_funded_count:    number;
+    peer_total_count:      number;
+    focus_overlap_count:   number;
+    gave_in_region:        boolean;
+    cra_aa_covers_tract:   boolean;
+    funder_name?:          string | null;
+  };
+  /**
    * The name of the program within the org that this grant best matched
    * (from per-program embedding scoring). Optional for backwards-compat
    * with older match_results rows scored before per-program embeddings.

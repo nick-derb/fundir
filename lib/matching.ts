@@ -1,6 +1,7 @@
 import { ExtractedFields, ScoreBreakdown } from '@/types';
 import { FinancialEligibilityResult, neutralFinancialResult } from './990-screener';
 import type { OrgCraSnapshot } from './cra/types';
+import type { FunderAffinityResult } from './factors/funder-affinity';
 
 export interface OrgMatchProfile {
   name: string;
@@ -304,6 +305,7 @@ export function computeMatchScore(
   financialResult: FinancialEligibilityResult | undefined,
   orgProfile: OrgMatchProfile,
   craSnapshot?: OrgCraSnapshot | null,
+  funderAffinity?: FunderAffinityResult | null,
 ): ScoreBreakdown {
   // Per-program semantic: take the best matching program and remember which
   // one it was so the UI can surface "This matches your Teen Leadership
@@ -344,13 +346,27 @@ export function computeMatchScore(
     };
   }
 
-  // Weights: semantic 40% · eligibility 22% · financial_990 20% · strategic 12% · historical 6%
-  // Rationale: semantic now dominant (we have better full-text); historical de-weighted
-  // since it defaults high and shouldn't carry unknown grants
+  // Phase 3D weights: shift to the Phase 0 target now that funder_affinity
+  // has real signal. semantic drops from 0.40 → 0.32 to make room for
+  // funder_affinity 0.12; eligibility, financial_990, strategic, historical
+  // hold within ~0.02 of where they were so live scores don't move
+  // dramatically on cutover.
+  //   semantic         0.32
+  //   eligibility      0.20
+  //   financial_990    0.18
+  //   funder_affinity  0.12
+  //   strategic        0.12
+  //   historical       0.06
+  // When the grant has no resolvable funder, funderAffinity is undefined
+  // and we treat affinity as the neutral 0.35 fallback the factor itself
+  // would return — same policy, just precomputed here so the composite
+  // arithmetic doesn't branch.
+  const affinity = funderAffinity?.score ?? 0.35;
   const composite = (
-    semantic    * 0.40 +
-    eligibility * 0.22 +
-    financial   * 0.20 +
+    semantic    * 0.32 +
+    eligibility * 0.20 +
+    financial   * 0.18 +
+    affinity    * 0.12 +
     strategic   * 0.12 +
     historical  * 0.06
   ) * 100;
@@ -376,6 +392,8 @@ export function computeMatchScore(
     financial_990: financial   * 100,
     historical:    historical  * 100,
     strategic:     strategic   * 100,
+    funder_affinity:        affinity * 100,
+    funderAffinityEvidence: funderAffinity?.evidence,
     matchedProgram: bestProgram || undefined,
     craEvidence,
   };

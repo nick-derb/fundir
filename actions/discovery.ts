@@ -17,6 +17,9 @@ import { fetchOrgOutcomeCounts, buildHistoricalWinRates } from '@/lib/win-rate-b
 import { getOrgFinancialProfile } from '@/lib/org-financials';
 import { getOrgConfig } from '@/lib/config/loader';
 import { loadOrgCraSnapshot } from '@/lib/cra/repo';
+import {
+  loadFunderAffinitySnapshot, computeFunderAffinity,
+} from '@/lib/factors/funder-affinity';
 import type { ExclusionRules } from '@/lib/matching';
 import type { Segment } from '@/lib/config/types';
 import { ExtractedFields } from '@/types';
@@ -252,6 +255,20 @@ export async function runDiscovery(params: SearchParams, orgId?: string, orgCode
       orgId ? loadOrgCraSnapshot(orgId) : Promise.resolve(null),
     ]);
 
+    // Phase 3D: funder-affinity snapshot. Loaded sequentially after the
+    // batch above so the CRA snapshot's census_tract can feed the bank-
+    // AA gate in the affinity formula. Skipped when there's no orgId
+    // (the runDiscovery contract returns early on missing orgCode before
+    // we ever get here, so this is a safety check rather than a path).
+    const affinitySnapshot = orgId
+      ? await loadFunderAffinitySnapshot(
+          orgId,
+          orgConfig?.region?.geo_scope?.states ?? [],
+          craSnapshot?.census_tract ?? null,
+          orgConfig?.segment?.funder_categories ?? [],
+        )
+      : null;
+
     // Merge Bayesian win rates from real submission history on top of the
     // baseline hand-coded historicalWinRates so the historical component
     // reflects what the org has actually won and lost, not what we
@@ -368,10 +385,19 @@ export async function runDiscovery(params: SearchParams, orgId?: string, orgCode
           // Per-program scoring: cosine is computed against each program
           // embedding and the max wins, with the winning program name
           // surfaced on scoreBreakdown.matchedProgram.
+          // Phase 3D: federal NOFOs from Grants.gov don't resolve to a
+          // funder row (we haven't created funders for federal agencies),
+          // so funder_id stays null and computeFunderAffinity returns the
+          // documented neutral 0.35 fallback. The evidence blob still
+          // populates so the UI surfaces a consistent shape.
+          const funderAffinity = affinitySnapshot
+            ? await computeFunderAffinity(null, affinitySnapshot)
+            : null;
           const scoreBreakdown = computeMatchScore(
             embedding, programEmbeddings, extractedFields,
             hit.agencyCode, hit.alnlist || [], financialResult, orgProfile,
             craSnapshot,
+            funderAffinity,
           );
 
           // ── 8. Minimum score gate — skip low-signal grants ─────────────────

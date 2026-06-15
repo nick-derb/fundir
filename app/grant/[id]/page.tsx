@@ -11,6 +11,9 @@ import { buildMatchReasons, type ReasonCategory } from '@/lib/match-reasons';
 import { getOrgConfig } from '@/lib/config/loader';
 import { loadOrgCraSnapshot } from '@/lib/cra/repo';
 import { grantRequiresLmi } from '@/lib/matching';
+import {
+  loadFunderAffinitySnapshot, computeFunderAffinity,
+} from '@/lib/factors/funder-affinity';
 import { EvidenceList, type EvidenceItem, type FactorKey } from '@/components/ui/evidence-list';
 import { RecommendationPill, type Recommendation } from '@/components/ui/recommendation-pill';
 import { GrantNotes } from '@/components/grant-notes';
@@ -267,6 +270,17 @@ export default async function GrantDetailPage({
     getOrgConfig(ctx.orgCode),
     loadOrgCraSnapshot(ctx.orgId),
   ]);
+
+  // Phase 3D: compute funder affinity live. Sequential after the
+  // Promise.all so craSnapshot.census_tract can feed the bank-AA gate.
+  const affinitySnapshot = await loadFunderAffinitySnapshot(
+    ctx.orgId,
+    orgConfig?.region?.geo_scope?.states ?? [],
+    craSnapshot?.census_tract ?? null,
+    orgConfig?.segment?.funder_categories ?? [],
+  );
+  const funderId = (grant?.funder_id as string | null) ?? null;
+  const funderAffinity = await computeFunderAffinity(funderId, affinitySnapshot);
   // Org's primary state derives from its region config. Falls back to '' so
   // buildMatchReasons skips the state-specific bullets cleanly rather than
   // claiming a state the org isn't in.
@@ -291,6 +305,8 @@ export default async function GrantDetailPage({
     financial_990: match.financial_score ?? 50,
     historical:    match.historical_score,
     strategic:     match.strategic_score,
+    funder_affinity:        funderAffinity.score * 100,
+    funderAffinityEvidence: funderAffinity.evidence,
     craEvidence,
   };
 
