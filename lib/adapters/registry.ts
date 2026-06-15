@@ -14,10 +14,22 @@
 import type { GrantSourceAdapter } from './types';
 import { grantsGovAdapter }        from './grants-gov-adapter';
 import { foundationSeedAdapter }   from './foundation-seed-adapter';
+import { chicagoDfssAdapter }      from './chicago-dfss-adapter';
+import { cookCountyAdapter }       from './cook-county-adapter';
+import { illinoisGataAdapter }     from './illinois-gata-adapter';
+import { isbeAdapter }             from './isbe-adapter';
 
 const ADAPTERS: Record<string, GrantSourceAdapter> = {
   [grantsGovAdapter.adapterKey]:      grantsGovAdapter,
   [foundationSeedAdapter.adapterKey]: foundationSeedAdapter,
+  // Phase 5: Chicago Metro region-scoped state/local sources. Each one is
+  // a hand-curated seed of recurring funding streams today; Phase 5B
+  // upgrades each adapter's fetch() to a real scrape against its source
+  // website without changing the registry or downstream pipeline.
+  [chicagoDfssAdapter.adapterKey]:    chicagoDfssAdapter,
+  [cookCountyAdapter.adapterKey]:     cookCountyAdapter,
+  [illinoisGataAdapter.adapterKey]:   illinoisGataAdapter,
+  [isbeAdapter.adapterKey]:           isbeAdapter,
 };
 
 export function getAdapter(adapterKey: string): GrantSourceAdapter | null {
