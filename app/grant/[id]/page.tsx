@@ -14,6 +14,7 @@ import { grantRequiresLmi } from '@/lib/matching';
 import {
   loadFunderAffinitySnapshot, computeFunderAffinity,
 } from '@/lib/factors/funder-affinity';
+import { DraftViewer, type DraftRecord } from '@/components/draft-viewer';
 import { EvidenceList, type EvidenceItem, type FactorKey } from '@/components/ui/evidence-list';
 import { RecommendationPill, type Recommendation } from '@/components/ui/recommendation-pill';
 import { GrantNotes } from '@/components/grant-notes';
@@ -44,6 +45,18 @@ async function getGrantDetail(matchId: string, orgId: string) {
     .eq('org_id', orgId)
     .single();
   return match;
+}
+
+async function loadDraftForOrgOpportunity(orgId: string, opportunityId: string): Promise<DraftRecord | null> {
+  const supabase = createServerClient();
+  const { data } = await supabase
+    .from('drafts')
+    .select('id, content, source_citations, status, tokens_used, generated_at')
+    .eq('organization_id', orgId)
+    .eq('opportunity_id', opportunityId)
+    .maybeSingle();
+  if (!data) return null;
+  return data as unknown as DraftRecord;
 }
 
 // ── 990 Assessment ───────────────────────────────────────────────────────────
@@ -235,6 +248,7 @@ function LargeScoreArc({ score }: { score: number }) {
 const TABS = [
   { key: 'overview',   label: 'Overview',   icon: Info },
   { key: 'data',       label: 'Grant Data', icon: BarChart2 },
+  { key: 'draft',      label: 'Draft',      icon: Sparkles },
   { key: 'tasks',      label: 'Tasks',      icon: ClipboardList },
   { key: 'notes',      label: 'Notes',      icon: FileText },
   { key: 'workspace',  label: 'Documents',  icon: FolderOpen },
@@ -263,12 +277,13 @@ export default async function GrantDetailPage({
   const deadlineUrgent = days !== null && days >= 0 && days <= 14;
   const award         = fields.award_floor || fields.award_ceiling;
 
-  const [tasks, note, integrations, orgConfig, craSnapshot] = await Promise.all([
+  const [tasks, note, integrations, orgConfig, craSnapshot, draftRow] = await Promise.all([
     getTasks(match.grant_id),
     getNote(match.grant_id),
     getAllIntegrations(ctx.orgCode),
     getOrgConfig(ctx.orgCode),
     loadOrgCraSnapshot(ctx.orgId),
+    loadDraftForOrgOpportunity(ctx.orgId, match.grant_id),
   ]);
 
   // Phase 3D: compute funder affinity live. Sequential after the
@@ -641,6 +656,11 @@ export default async function GrantDetailPage({
                   )}
                 </div>
               </div>
+            )}
+
+            {/* DRAFT TAB (Phase 6 cont) */}
+            {tab === 'draft' && (
+              <DraftViewer draft={draftRow} />
             )}
 
             {/* TASKS TAB */}
