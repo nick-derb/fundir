@@ -42,12 +42,17 @@ async function getOrgLogoUrl(ein?: string | null): Promise<string | null> {
 async function getDashboardData(orgId: string, orgCode: string) {
   const supabase = createServerClient();
   const [matchesRes, opportunitiesRes, orgRes] = await Promise.all([
+    // Fetch every match. The previous .limit(100) cap distorted the
+    // triage counts: when CYC had 197 matches, the top-100-by-score slice
+    // hid ~95% of the Skip bucket and reported it as "3" instead of the
+    // real ~140. PostgREST's default ceiling is 1000 which comfortably
+    // covers a single org's match set; if any tenant exceeds that we
+    // switch to a paginated fetch.
     supabase
       .from('match_results')
       .select('*, grant:grant_opportunities(*)')
       .eq('org_id', orgId)
-      .order('composite_score', { ascending: false })
-      .limit(100),
+      .order('composite_score', { ascending: false }),
     supabase
       .from('grant_opportunities')
       .select('id, close_date, status')

@@ -145,7 +145,14 @@ function DroppableColumn({ col, children, count, totalPotential }: {
           )}
         </div>
 
-        <div ref={setNodeRef} className="p-2 space-y-2 min-h-[100px]">
+        {/* Each column scrolls independently. Without max-h the tallest column
+            dictated whole-page height (~28k px on mobile when "discovered"
+            had 100 cards). Now: column is capped, drag-drop still works
+            inside the scroll region. */}
+        <div
+          ref={setNodeRef}
+          className="p-2 space-y-2 min-h-[120px] max-h-[calc(100vh-260px)] overflow-y-auto"
+        >
           {children}
           {count === 0 && (
             <div className={`h-16 border-2 border-dashed rounded-[8px] flex items-center justify-center transition-colors ${isOver ? 'border-[#0d9488] bg-[#f0fdfa]' : 'border-[#e2e8f0]'}`}>
