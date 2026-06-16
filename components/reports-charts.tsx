@@ -396,7 +396,7 @@ function ScoreWinCorrelation({ data }: { data: ReportsData['matchScoreVsWin'] })
 // ── Main export ───────────────────────────────────────────────────────────────
 export function ReportsCharts({ data }: { data: ReportsData }) {
   return (
-    <div style={{ background: '#070d1a', minHeight: '100vh' }}>
+    <div style={{ background: 'var(--fin-page-bg)', minHeight: '100vh' }}>
 
       {/* Hero */}
       <div className="relative overflow-hidden border-b" style={{
