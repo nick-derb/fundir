@@ -61,44 +61,54 @@ function KanbanCard({ match }: { match: MatchResult }) {
     : days < 30 ? 'text-amber-600'
     : 'text-[#94a3b8]';
 
+  // dnd-kit listeners live on the OUTER wrapper so the card stays
+  // draggable. Only the grant title navigates — its <Link> stops the
+  // pointer-down event from reaching the listeners, otherwise the
+  // dnd-kit drag would intercept the click before navigation could fire.
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-      <Link href={`/grant/${match.grant_id}`} onClick={(e: React.MouseEvent) => e.stopPropagation()}>
-        <div className="bg-white rounded-[8px] border border-[#e2e8f0] p-3 cursor-grab active:cursor-grabbing hover:border-[#0d9488]/50 hover:shadow-md transition-all group">
-          {/* Title + score */}
-          <div className="flex items-start justify-between gap-2 mb-2">
-            <h4 className="text-[12px] font-semibold text-[#0f172a] line-clamp-2 flex-1 leading-snug group-hover:text-[#0d9488] transition-colors">
-              {match.grant?.title}
-            </h4>
-            <ScorePill score={match.composite_score} />
-          </div>
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className="bg-white rounded-[8px] border border-[#e2e8f0] p-3 cursor-grab active:cursor-grabbing hover:border-[#0d9488]/50 hover:shadow-md transition-all"
+    >
+      {/* Title + score */}
+      <div className="flex items-start justify-between gap-2 mb-2">
+        <Link
+          href={`/grant/${match.grant_id}`}
+          onPointerDown={(e: React.PointerEvent) => e.stopPropagation()}
+          className="flex-1 text-[12px] font-semibold text-[#0f172a] line-clamp-2 leading-snug cursor-pointer hover:text-[#0d9488] hover:underline transition-colors"
+        >
+          {match.grant?.title}
+        </Link>
+        <ScorePill score={match.composite_score} />
+      </div>
 
-          {/* Agency */}
-          <p className="text-[10px] text-[#94a3b8] mb-2.5 truncate font-medium">{match.grant?.agency_name}</p>
+      {/* Agency */}
+      <p className="text-[10px] text-[#94a3b8] mb-2.5 truncate font-medium">{match.grant?.agency_name}</p>
 
-          {/* Deadline + Award */}
-          <div className="flex items-center justify-between">
-            <div className={`flex items-center gap-1 text-[10px] ${deadlineColor}`}>
-              <Calendar className="w-3 h-3" />
-              {days === null ? 'No deadline'
-                : days < 0 ? 'Closed'
-                : days === 0 ? 'Due today'
-                : `${days}d left`}
-            </div>
-            {award && (
-              <div className="flex items-center gap-0.5 text-[10px] text-[#64748b] font-medium">
-                <DollarSign className="w-3 h-3" />
-                {award >= 1_000_000
-                  ? `${(award / 1_000_000).toFixed(1)}M`
-                  : `${(award / 1_000).toFixed(0)}K`}
-              </div>
-            )}
-          </div>
-
-          {/* 990 signal mini-bar */}
-          <MiniSignalBar signals={match.financial_signals} />
+      {/* Deadline + Award */}
+      <div className="flex items-center justify-between">
+        <div className={`flex items-center gap-1 text-[10px] ${deadlineColor}`}>
+          <Calendar className="w-3 h-3" />
+          {days === null ? 'No deadline'
+            : days < 0 ? 'Closed'
+            : days === 0 ? 'Due today'
+            : `${days}d left`}
         </div>
-      </Link>
+        {award && (
+          <div className="flex items-center gap-0.5 text-[10px] text-[#64748b] font-medium">
+            <DollarSign className="w-3 h-3" />
+            {award >= 1_000_000
+              ? `${(award / 1_000_000).toFixed(1)}M`
+              : `${(award / 1_000).toFixed(0)}K`}
+          </div>
+        )}
+      </div>
+
+      {/* 990 signal mini-bar */}
+      <MiniSignalBar signals={match.financial_signals} />
     </div>
   );
 }
