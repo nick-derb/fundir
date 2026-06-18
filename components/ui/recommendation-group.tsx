@@ -1,12 +1,13 @@
 /**
  * <RecommendationGroup> — the win-triage primitive.
  *
- * DESIGN_SYSTEM.md §2.9. Three sections (Pursue, Maybe, Skip), each with
- * heading + count + GrantCards. Skip is collapsed by default and, when
- * expanded, each card surfaces the reason it's a skip.
+ * Three sections (Pursue, Maybe, Skip), each with a quiet eyebrow header
+ * (uppercase + semantic dot + mono count) and a stack of GrantCards. Skip
+ * is collapsed by default — and when expanded, each card surfaces the
+ * reason it's a skip. Saying no is a feature.
  *
- * Saying no is a feature — the directories literally can't ship this
- * because their data layer has no notion of "why not."
+ * Phase 2 redesign: quiet section headers (per brief), mono count, no
+ * h1-weight title that risked clipping at the top of the panel.
  */
 
 'use client';
@@ -25,18 +26,18 @@ export function RecommendationGroup({ pursue, maybe, skip }: GroupProps) {
   const [skipOpen, setSkipOpen] = useState(false);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {pursue.count > 0 && (
         <section>
           <SectionHeading variant="pursue" label="Pursue" count={pursue.count} />
-          <div className="mt-3 grid gap-3">{pursue.children}</div>
+          <div className="mt-2 grid gap-2">{pursue.children}</div>
         </section>
       )}
 
       {maybe.count > 0 && (
         <section>
           <SectionHeading variant="maybe" label="Maybe" count={maybe.count} />
-          <div className="mt-3 grid gap-3">{maybe.children}</div>
+          <div className="mt-2 grid gap-2">{maybe.children}</div>
         </section>
       )}
 
@@ -45,17 +46,17 @@ export function RecommendationGroup({ pursue, maybe, skip }: GroupProps) {
           <button
             type="button"
             onClick={() => setSkipOpen(v => !v)}
-            className="flex items-center gap-2 group"
             aria-expanded={skipOpen}
+            className="flex items-center gap-2 group"
           >
             <SectionHeading variant="skip" label="Skip" count={skip.count} />
-            <span className="text-ink-2 group-hover:text-ink-0 transition-colors">
+            <span className="text-tertiary group-hover:text-primary transition-colors">
               {skipOpen
-                ? <ChevronDown  className="w-4 h-4" aria-hidden />
-                : <ChevronRight className="w-4 h-4" aria-hidden />}
+                ? <ChevronDown  className="w-3.5 h-3.5" aria-hidden />
+                : <ChevronRight className="w-3.5 h-3.5" aria-hidden />}
             </span>
           </button>
-          {skipOpen && <div className="mt-3 grid gap-3">{skip.children}</div>}
+          {skipOpen && <div className="mt-2 grid gap-2">{skip.children}</div>}
         </section>
       )}
     </div>
@@ -65,14 +66,15 @@ export function RecommendationGroup({ pursue, maybe, skip }: GroupProps) {
 function SectionHeading({
   variant, label, count,
 }: { variant: 'pursue' | 'maybe' | 'skip'; label: string; count: number }) {
-  const color =
-    variant === 'pursue' ? 'text-signal-pursue'
-  : variant === 'maybe'  ? 'text-signal-maybe'
-                         : 'text-signal-skip';
+  const dotCls =
+    variant === 'pursue' ? 'bg-success'
+  : variant === 'maybe'  ? 'bg-warning'
+                         : 'bg-critical';
   return (
-    <h2 className="flex items-center gap-2 text-h1 font-semibold">
-      <span className={color}>{label}</span>
-      <span className="text-ink-2 font-medium">· {count}</span>
-    </h2>
+    <div className="flex items-baseline gap-2">
+      <span className={`w-1.5 h-1.5 rounded-full ${dotCls}`} aria-hidden />
+      <span className="text-eyebrow uppercase text-primary font-semibold">{label}</span>
+      <span className="font-mono text-caption text-secondary tabular-nums">{count}</span>
+    </div>
   );
 }

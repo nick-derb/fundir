@@ -20,8 +20,7 @@
 
 import Link from 'next/link';
 import {
-  Landmark, ArrowUpRight, ShieldCheck, ExternalLink, Sparkles,
-  Eye, AlertCircle,
+  Landmark, ArrowUpRight, ExternalLink, AlertCircle,
 } from 'lucide-react';
 import type { BankIntelligenceRow, SuggestedAction } from '@/lib/cra/intelligence';
 
@@ -31,17 +30,18 @@ interface Props {
   community?:     string | null;
 }
 
-const ACTION_STYLE: Record<SuggestedAction, { label: string; cls: string; icon: typeof Sparkles }> = {
-  deepen:  { label: 'Deepen',  cls: 'bg-signal-pursue-soft text-signal-pursue ring-signal-pursue/20', icon: ShieldCheck },
-  open:    { label: 'Open',    cls: 'bg-action-soft        text-action       ring-action/20',         icon: Sparkles    },
-  monitor: { label: 'Monitor', cls: 'bg-canvas-2           text-ink-2        ring-canvas-3',          icon: Eye         },
+// Quiet uppercase tags — text-only, no fill, color reads from token.
+const ACTION_STYLE: Record<SuggestedAction, { label: string; cls: string }> = {
+  deepen:  { label: 'Deepen',  cls: 'text-success' },
+  open:    { label: 'Open',    cls: 'text-accent'  },
+  monitor: { label: 'Monitor', cls: 'text-tertiary' },
 };
 
-const RELATIONSHIP_LABEL: Record<BankIntelligenceRow['relationship'], string> = {
-  existing:  'Existing',
-  prospect:  'Prospect',
-  declined:  'Declined',
-  dormant:   'Dormant',
+const RELATIONSHIP_STYLE: Record<BankIntelligenceRow['relationship'], { label: string; cls: string }> = {
+  existing: { label: 'Existing', cls: 'text-primary'   },
+  prospect: { label: 'Prospect', cls: 'text-secondary' },
+  declined: { label: 'Declined', cls: 'text-tertiary'  },
+  dormant:  { label: 'Dormant',  cls: 'text-tertiary'  },
 };
 
 function fmtMoney(n: number): string {
@@ -53,18 +53,14 @@ function fmtMoney(n: number): string {
 export function CraIntelligencePanel({ rows, community }: Props) {
   if (rows.length === 0) {
     return (
-      <div className="bg-canvas-1 rounded-lg shadow-flat p-5">
+      <div className="bg-surface border border-hairline rounded-sm p-5">
         <div className="flex items-center gap-2 mb-1">
-          <div className="w-6 h-6 rounded-sm flex items-center justify-center bg-action-soft text-action">
-            <Landmark className="w-3.5 h-3.5" />
-          </div>
-          <p className="text-eyebrow font-semibold text-ink-2 uppercase tracking-wider">
-            CRA bank intelligence
-          </p>
+          <Landmark className="w-3.5 h-3.5 text-accent" />
+          <p className="text-eyebrow uppercase text-secondary">CRA bank intelligence</p>
         </div>
-        <p className="text-body text-ink-1 mt-1">
+        <p className="text-body text-muted mt-1">
           No CRA bank funders detected for your tract. If your primary address has
-          changed, confirm it in <Link href="/settings" className="text-action hover:text-action-hover underline font-medium">Settings</Link> and re-run the CRA refresh.
+          changed, confirm it in <Link href="/settings" className="text-accent hover:text-accent-hover underline font-medium">Settings</Link> and re-run the CRA refresh.
         </p>
       </div>
     );
@@ -75,147 +71,149 @@ export function CraIntelligencePanel({ rows, community }: Props) {
   const totalPeerFunding    = rows.reduce((s, r) => s + r.peer_total_amount, 0);
 
   return (
-    <div className="bg-canvas-1 rounded-lg shadow-flat overflow-hidden">
+    <div className="bg-surface border border-hairline rounded-sm overflow-hidden">
       {/* ── Header ──────────────────────────────────────────────── */}
-      <div className="px-5 py-4 border-b border-canvas-3">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-start gap-2 min-w-0">
-            <div className="w-6 h-6 rounded-sm flex items-center justify-center bg-action-soft text-action shrink-0 mt-0.5">
-              <Landmark className="w-3.5 h-3.5" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-eyebrow font-semibold text-ink-2 uppercase tracking-wider">
-                CRA bank intelligence
-              </p>
-              <p className="text-h2 font-semibold text-ink-0 mt-0.5">
-                {rows.length} bank{rows.length === 1 ? '' : 's'} with CRA reach into your {community ?? 'service area'}
-              </p>
-            </div>
-          </div>
+      <div className="px-5 py-4 border-b border-hairline">
+        <div className="flex items-center gap-2 mb-1">
+          <Landmark className="w-3.5 h-3.5 text-accent" />
+          <p className="text-eyebrow uppercase text-secondary">CRA bank intelligence</p>
         </div>
+        <p className="text-h2 text-primary">
+          <span className="font-mono tabular-nums">{rows.length}</span> bank{rows.length === 1 ? '' : 's'} with CRA reach into your {community ?? 'service area'}
+        </p>
 
-        {/* Inline metric strip — same label:value rhythm as the rest of the dashboard */}
-        <div className="flex flex-wrap items-baseline gap-x-6 gap-y-1.5 mt-3 text-caption text-ink-2">
+        {/* Inline metric strip — mono counts, label:value rhythm */}
+        <div className="flex flex-wrap items-baseline gap-x-6 gap-y-1 mt-3 text-caption text-secondary">
           <span>
             Existing
-            <strong className="text-body font-semibold text-ink-0 tabular-nums ml-1">{existingCount}</strong>
+            <span className="font-mono text-body-strong text-primary tabular-nums ml-1.5">{existingCount}</span>
           </span>
           <span>
             Warm prospects
-            <strong className="text-body font-semibold text-signal-pursue tabular-nums ml-1">{prospectsWithSignal}</strong>
-            <span className="text-eyebrow ml-1">· peer-funded</span>
+            <span className="font-mono text-body-strong text-success tabular-nums ml-1.5">{prospectsWithSignal}</span>
+            <span className="text-eyebrow uppercase text-tertiary ml-1">· peer-funded</span>
           </span>
           {totalPeerFunding > 0 && (
             <span>
               Peer funding scanned
-              <strong className="text-body font-semibold text-ink-0 tabular-nums ml-1">{fmtMoney(totalPeerFunding)}</strong>
+              <span className="font-mono text-body-strong text-primary tabular-nums ml-1.5">{fmtMoney(totalPeerFunding)}</span>
             </span>
           )}
         </div>
       </div>
 
+      {/* ── Header row — sticky table-style column labels ──────── */}
+      <div className="px-5 py-2 grid grid-cols-[1fr_auto_auto] gap-4 text-eyebrow uppercase text-tertiary border-b border-hairline bg-elevated/40">
+        <span>Bank · relationship · action</span>
+        <span className="w-24 text-right">Confidence</span>
+        <span className="w-3" aria-hidden />
+      </div>
+
       {/* ── Rows ───────────────────────────────────────────────── */}
-      <ul className="divide-y divide-canvas-3">
+      <ul className="divide-y divide-hairline">
         {rows.map(row => (
           <BankRow key={row.funder_id} row={row} />
         ))}
       </ul>
 
       {/* ── Footer disclaimer (the reframe) ───────────────────── */}
-      <div className="px-5 py-3 border-t border-canvas-3 text-caption text-ink-2 leading-relaxed">
-        CRA obligations run to a bank&apos;s whole assessment area, not to any one nonprofit. Rows here are
-        ranked, justified prospects — not owed funding. Confidence-{'<'}50% rows are hidden.
+      <div className="px-5 py-3 border-t border-hairline text-caption text-tertiary leading-relaxed">
+        CRA obligations run to a bank&apos;s whole assessment area, not to any one nonprofit.
+        Rows here are ranked, justified prospects — not owed funding. Confidence-{'<'}50% rows are hidden.
       </div>
     </div>
   );
 }
 
-// ── One bank row ────────────────────────────────────────────────────────────
+// ── One bank row — table-style ─────────────────────────────────────────────
 
 function BankRow({ row }: { row: BankIntelligenceRow }) {
   const actionMeta = ACTION_STYLE[row.action];
-  const ActionIcon = actionMeta.icon;
-  const detailsId  = `cra-bank-${row.funder_id}`;
-  // Show the row at-rest with the action + rationale; full peer breakdown +
-  // evidence links live inside the <details> expander.
+  const relMeta    = RELATIONSHIP_STYLE[row.relationship];
+  const confPct    = Math.round(row.confidence * 100);
+
   return (
     <li>
       <details className="group">
-        <summary className="px-5 py-4 cursor-pointer list-none hover:bg-canvas-2/40 transition-colors">
-          <div className="flex items-start gap-3">
-            {/* Left: bank name + status badges */}
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-2 mb-1">
-                <h3 className="text-body font-semibold text-ink-0">{row.bank_name}</h3>
-                <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-sm text-eyebrow font-semibold uppercase tracking-wider ring-1 ${actionMeta.cls}`}>
-                  <ActionIcon className="w-3 h-3" />
-                  {actionMeta.label}
+        <summary className="px-5 py-3 cursor-pointer list-none grid grid-cols-[1fr_auto_auto] gap-4 items-center row-hover transition-colors">
+          {/* Left: bank name + relationship + action — quiet uppercase tags */}
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 mb-0.5">
+              <span className="text-body-strong text-primary truncate">{row.bank_name}</span>
+              <span className={`text-eyebrow uppercase tracking-wider ${relMeta.cls}`}>
+                {relMeta.label}
+              </span>
+              <span className="text-tertiary">·</span>
+              <span className={`text-eyebrow uppercase tracking-wider ${actionMeta.cls}`}>
+                {actionMeta.label}
+              </span>
+              {!row.ein_verified && (
+                <span
+                  className="inline-flex items-center gap-1 text-eyebrow uppercase text-warning"
+                  title="EIN not yet verified against an authoritative source."
+                >
+                  <AlertCircle className="w-3 h-3" />
+                  EIN pending
                 </span>
-                <span className="text-eyebrow font-semibold uppercase tracking-wider text-ink-2">
-                  {RELATIONSHIP_LABEL[row.relationship]}
-                </span>
-                {!row.ein_verified && (
-                  <span
-                    className="inline-flex items-center gap-1 text-eyebrow font-medium text-signal-maybe"
-                    title="EIN not yet verified against an authoritative source. Cross-source matching disabled for this row until confirmed."
-                  >
-                    <AlertCircle className="w-3 h-3" />
-                    EIN verification pending
-                  </span>
-                )}
-              </div>
-              <p className="text-caption text-ink-1 leading-snug">{row.rationale}</p>
-
-              {/* Quick peer-signal chips inline (collapsed view) */}
-              {row.peer_signal_count > 0 && (
-                <div className="flex flex-wrap gap-1.5 mt-2">
-                  {row.peer_signal.slice(0, 3).map(p => (
-                    <span
-                      key={p.recipient_id}
-                      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-sm bg-signal-pursue-soft text-signal-pursue text-eyebrow font-medium"
-                    >
-                      {p.name} <span className="opacity-70">· {fmtMoney(p.total_amount)}</span>
-                    </span>
-                  ))}
-                  {row.peer_signal_count > 3 && (
-                    <span className="text-eyebrow text-ink-2">+{row.peer_signal_count - 3} more</span>
-                  )}
-                </div>
               )}
             </div>
+            <p className="text-caption text-secondary leading-snug">{row.rationale}</p>
 
-            {/* Right: confidence + expand affordance */}
-            <div className="flex flex-col items-end gap-1 shrink-0">
-              <span className="text-eyebrow text-ink-2">
-                Confidence <strong className="text-ink-0 tabular-nums ml-0.5">{Math.round(row.confidence * 100)}</strong>
-              </span>
-              <ArrowUpRight
-                className="w-3.5 h-3.5 text-ink-2 transition-transform group-open:rotate-90"
-                aria-label="Expand row"
+            {/* Subtle peer-signal chips */}
+            {row.peer_signal_count > 0 && (
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5">
+                {row.peer_signal.slice(0, 3).map(p => (
+                  <span key={p.recipient_id} className="inline-flex items-baseline gap-1 text-eyebrow text-secondary">
+                    <span className="w-1 h-1 rounded-full bg-accent" aria-hidden />
+                    {p.name}
+                    <span className="font-mono text-tertiary tabular-nums">{fmtMoney(p.total_amount)}</span>
+                  </span>
+                ))}
+                {row.peer_signal_count > 3 && (
+                  <span className="text-eyebrow text-tertiary">+{row.peer_signal_count - 3} more</span>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Confidence: mono number + thin 4px track bar (per brief) */}
+          <div className="w-24 flex flex-col items-end gap-1">
+            <span className="font-mono text-body-strong text-primary tabular-nums">{confPct}</span>
+            <div className="h-1 w-20 bg-elevated">
+              <div
+                className="h-full bg-accent"
+                style={{ width: `${Math.max(0, Math.min(100, confPct))}%` }}
+                aria-label={`Confidence ${confPct}%`}
               />
             </div>
           </div>
+
+          {/* Expand affordance */}
+          <ArrowUpRight
+            className="w-3.5 h-3.5 text-tertiary transition-transform group-open:rotate-90"
+            aria-label="Expand row"
+          />
         </summary>
 
-        {/* Expanded panel: full peer-edge table + evidence links + notes */}
-        <div id={detailsId} className="px-5 pb-5 -mt-1 space-y-3">
+        {/* Expanded panel: peer-edge table + notes + evidence */}
+        <div className="px-5 pb-5 -mt-1 space-y-4">
           {row.peer_signal_count > 0 && (
             <div>
-              <p className="text-eyebrow font-semibold text-ink-2 uppercase tracking-wider mb-2">
+              <p className="text-eyebrow uppercase text-tertiary mb-2">
                 Disclosed funding to your peers
               </p>
-              <ul className="divide-y divide-canvas-3 ring-1 ring-canvas-3 rounded-md">
+              <ul className="border border-hairline divide-y divide-hairline">
                 {row.peer_signal.map(p => (
-                  <li key={p.recipient_id} className="flex items-center justify-between gap-3 px-3 py-2">
+                  <li key={p.recipient_id} className="grid grid-cols-[1fr_auto] items-center gap-3 px-3 py-2">
                     <div className="min-w-0">
-                      <p className="text-body text-ink-0 font-medium truncate">{p.name}</p>
-                      <p className="text-eyebrow text-ink-2">
+                      <p className="text-body text-primary font-medium truncate">{p.name}</p>
+                      <p className="font-mono text-eyebrow text-tertiary tabular-nums">
                         FY {p.most_recent_year}
                         {p.ein && <> · EIN {p.ein}</>}
-                        <> · confidence {Math.round(p.max_confidence * 100)}%</>
+                        {' '}· confidence {Math.round(p.max_confidence * 100)}%
                       </p>
                     </div>
-                    <span className="text-body font-semibold text-ink-0 tabular-nums shrink-0">
+                    <span className="font-mono text-body-strong text-primary tabular-nums shrink-0">
                       {fmtMoney(p.total_amount)}
                     </span>
                   </li>
@@ -226,17 +224,15 @@ function BankRow({ row }: { row: BankIntelligenceRow }) {
 
           {row.notes && (
             <div>
-              <p className="text-eyebrow font-semibold text-ink-2 uppercase tracking-wider mb-1">
+              <p className="text-eyebrow uppercase text-tertiary mb-1">
                 Internal note
               </p>
-              <p className="text-body text-ink-1">{row.notes}</p>
+              <p className="text-body text-muted">{row.notes}</p>
             </div>
           )}
 
           <div>
-            <p className="text-eyebrow font-semibold text-ink-2 uppercase tracking-wider mb-1">
-              Evidence
-            </p>
+            <p className="text-eyebrow uppercase text-tertiary mb-1">Evidence</p>
             <ul className="flex flex-col gap-1.5">
               {row.evidence_links.map(l => (
                 <li key={l.url}>
@@ -244,7 +240,7 @@ function BankRow({ row }: { row: BankIntelligenceRow }) {
                     href={l.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 text-body text-action hover:text-action-hover font-medium"
+                    className="inline-flex items-center gap-1.5 text-body text-accent hover:text-accent-hover font-medium transition-colors"
                   >
                     <ExternalLink className="w-3.5 h-3.5" />
                     {l.label}

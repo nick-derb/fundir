@@ -1,4 +1,6 @@
 import type { Metadata } from 'next';
+import { GeistSans } from 'geist/font/sans';
+import { GeistMono } from 'geist/font/mono';
 import './globals.css';
 import { RecoveryDetector } from '@/components/recovery-detector';
 
@@ -9,18 +11,17 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    // suppressHydrationWarning — the anti-flash inline script below mutates
-    // <html data-theme="..."> from localStorage before React hydrates. The
-    // server renders without that attribute (no localStorage on the server),
-    // so React would otherwise log a hydration mismatch every page load.
-    // Suppressing the warning at the <html> level is the standard Next.js
-    // pattern for theme persistence.
-    <html lang="en" suppressHydrationWarning>
+    // Phase 2 redesign: LIGHT default theme (operations-console brief).
+    // Geist (sans + mono) loaded via next/font, exposed as CSS variables
+    // and consumed by Tailwind's `font-sans` / `font-mono`. The anti-flash
+    // inline script reads the saved theme so dark-mode users don't see a
+    // light flash on cold load. suppressHydrationWarning is required
+    // because the script mutates <html data-theme> before React hydrates.
+    <html lang="en" suppressHydrationWarning className={`${GeistSans.variable} ${GeistMono.variable}`}>
       <head>
-        {/* Anti-flash: apply saved theme before first paint */}
-        <script dangerouslySetInnerHTML={{ __html: `(function(){try{var t=localStorage.getItem('fundir-theme')||'dark';document.documentElement.setAttribute('data-theme',t);}catch(e){}})();` }} />
+        <script dangerouslySetInnerHTML={{ __html: `(function(){try{var t=localStorage.getItem('fundir-theme')||'light';document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','light');}})();` }} />
       </head>
-      <body className="antialiased" style={{ background: 'var(--page-bg)', color: 'var(--text)' }}>
+      <body className="antialiased">
         <RecoveryDetector />
         {children}
       </body>

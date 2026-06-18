@@ -1,12 +1,23 @@
 import type { Config } from 'tailwindcss'
 
 // ════════════════════════════════════════════════════════════════════════════
-// Fundir Design System tokens. See DESIGN_SYSTEM.md for the POV + rationale.
+// Fundir Design System — Phase 2 "Operations Console" tokens.
 //
-// The `canvas/ink/action/signal/alert/focus` token names are the contract
-// going forward. The legacy `brand/surface/border/ink/score` tokens are
-// kept as a transitional layer so existing screens compile during the
-// Phase 1E refactor — they get dropped once every screen migrates.
+// Color utilities map onto CSS variables defined in app/globals.css.
+// This file is the contract between component code (Tailwind utility
+// classes) and the runtime token system. The new utility names map
+// directly to the brief's token vocabulary:
+//
+//   bg-page / bg-surface / bg-elevated     → page bg, card surface, panel inset
+//   border-hairline / border-strong         → 1px hairlines + visible separators
+//   text-primary / text-secondary           → text roles
+//   ink-50 … ink-900                        → raw graphite scale (use sparingly)
+//   accent / accent-hover / accent-bright   → brand accent
+//   success / warning / critical / info     → semantic, used as left border + tag
+//
+// Legacy aliases (canvas/ink-0..3/action/signal/brand/surface/border/score)
+// are kept so unmigrated screens compile during the screen-by-screen rollout.
+// They all resolve to the same CSS variables as the new tokens.
 // ════════════════════════════════════════════════════════════════════════════
 
 const config: Config = {
@@ -18,112 +29,161 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // ── Design system tokens (DESIGN_SYSTEM.md §1.1) ─────────────────
-        canvas: {
-          0: '#FAFAF7',   // page
-          1: '#FFFFFF',   // card
-          2: '#F2F1EC',   // panel / hover row / code chip
-          3: '#E5E4DE',   // border / divider
-        },
+        // ── Surfaces ────────────────────────────────────────────────────
+        page:     'var(--bg-page)',
+        surface:  'var(--bg-surface)',
+        elevated: 'var(--bg-elevated)',
+        subtle:   'var(--bg-subtle)',
+
+        // ── Borders ─────────────────────────────────────────────────────
+        hairline: 'var(--border-hairline)',
+        'border-strong': 'var(--border-strong)',
+
+        // ── Text roles ──────────────────────────────────────────────────
+        primary:   'var(--text-primary)',
+        secondary: 'var(--text-secondary)',
+        tertiary:  'var(--text-tertiary)',
+        muted:     'var(--text-muted)',
+        inverse:   'var(--text-inverse)',
+
+        // ── Ink scale — full graphite range ─────────────────────────────
         ink: {
-          DEFAULT: '#0E0F11',  // primary text / display
-          0: '#0E0F11',
-          1: '#3A3D44',        // secondary
-          2: '#6B6F77',        // tertiary, captions
-          3: '#9CA0A7',        // disabled, placeholder
-          // legacy aliases kept until Phase 1E migrations finish:
-          dim:   '#3A3D44',
-          faint: '#9CA0A7',
-        },
-        action: {
-          DEFAULT: '#0A4D3C',
-          hover:   '#073A2D',
-          soft:    '#E6EFEB',
-        },
-        signal: {
-          pursue:      '#0A4D3C',
-          'pursue-soft':'#E6EFEB',
-          maybe:       '#9A6B00',
-          'maybe-soft':'#FBF1DC',
-          skip:        '#7A1E2E',
-          'skip-soft': '#F4E3E5',
-        },
-        alert: {
-          DEFAULT: '#B0212F',
-        },
-        focus: {
-          DEFAULT: '#0A4D3C',
+          DEFAULT: 'var(--text-primary)',
+          50:  '#F6F8FB',
+          100: '#EEF2F7',
+          200: '#DCE3ED',
+          300: '#B6C2D4',
+          400: '#8696AE',
+          500: '#5A6B86',
+          600: '#33425C',
+          700: '#1E2A40',
+          800: '#131C2E',
+          900: '#0B1220',
+          // legacy aliases kept for unmigrated code (resolve to text roles):
+          0:    'var(--text-primary)',
+          1:    'var(--text-muted)',
+          2:    'var(--text-secondary)',
+          3:    'var(--text-tertiary)',
+          dim:   'var(--text-muted)',
+          faint: 'var(--text-tertiary)',
         },
 
-        // ── Legacy tokens (DO NOT USE in new code) ───────────────────────
-        // Instrumentl-derived teal. Replaced by `action` + `canvas`. Kept
-        // so the existing screens build during Phase 1E migration; removed
-        // once /dashboard, /discover, /grant/[id] all read from the new
-        // tokens.
-        brand: {
-          50:  '#f0fdfa',
-          100: '#ccfbf1',
-          200: '#99f6e4',
-          300: '#5eead4',
-          400: '#2dd4bf',
-          500: '#14b8a6',
-          600: '#0d9488',
-          700: '#0f766e',
-          800: '#115e59',
-          900: '#134e4a',
-          950: '#042f2e',
+        // ── Brand accent ────────────────────────────────────────────────
+        accent: {
+          DEFAULT: 'var(--accent)',
+          hover:   'var(--accent-hover)',
+          bright:  'var(--accent-bright)',
+          tint:    'var(--accent-tint)',
+          on:      'var(--accent-on)',
         },
-        surface: {
-          DEFAULT: '#f8fafc',
-          card:    '#ffffff',
-          hover:   '#f1f5f9',
-          subtle:  '#f8fafc',
+
+        // ── Semantic signal colors ──────────────────────────────────────
+        success:  { DEFAULT: 'var(--success)',  tint: 'var(--success-tint)'  },
+        warning:  { DEFAULT: 'var(--warning)',  tint: 'var(--warning-tint)'  },
+        critical: { DEFAULT: 'var(--critical)', tint: 'var(--critical-tint)' },
+        info:     { DEFAULT: 'var(--info)',     tint: 'var(--info-tint)'     },
+
+        // ──────────────────────────────────────────────────────────────────
+        // LEGACY ALIASES — same vars as above, named for unmigrated code.
+        // ──────────────────────────────────────────────────────────────────
+        canvas: {
+          0: 'var(--bg-page)',
+          1: 'var(--bg-surface)',
+          2: 'var(--bg-elevated)',
+          3: 'var(--border-hairline)',
+        },
+        action: {
+          DEFAULT: 'var(--accent)',
+          hover:   'var(--accent-hover)',
+          soft:    'var(--accent-tint)',
+        },
+        signal: {
+          pursue:        'var(--success)',
+          'pursue-soft': 'var(--success-tint)',
+          maybe:         'var(--warning)',
+          'maybe-soft':  'var(--warning-tint)',
+          skip:          'var(--critical)',
+          'skip-soft':   'var(--critical-tint)',
+        },
+        alert: { DEFAULT: 'var(--critical)' },
+        focus: { DEFAULT: 'var(--focus-ring)' },
+        brand: {
+          50:  '#F6F8FB',
+          100: '#EEF2F7',
+          500: 'var(--accent)',
+          600: 'var(--accent)',
+          700: 'var(--accent-hover)',
+        },
+        surfaceLegacy: {
+          DEFAULT: 'var(--bg-page)',
+          card:    'var(--bg-surface)',
+          hover:   'var(--bg-elevated)',
+          subtle:  'var(--bg-page)',
         },
         border: {
-          DEFAULT: '#e2e8f0',
-          strong:  '#cbd5e1',
+          DEFAULT: 'var(--border-hairline)',
+          strong:  'var(--border-strong)',
         },
         score: {
-          high:   '#16a34a',
-          medium: '#d97706',
-          low:    '#dc2626',
+          high:   'var(--success)',
+          medium: 'var(--warning)',
+          low:    'var(--critical)',
         },
       },
+
       fontFamily: {
-        // System stack — see DESIGN_SYSTEM.md §1.2 (no web font load).
+        // Geist sans + mono are loaded via next/font in app/layout.tsx
+        // and exposed as CSS variables. Fall back to the system stack so
+        // the page still renders if the font ever fails to load.
         sans: [
+          'var(--font-geist-sans)',
           'ui-sans-serif', 'system-ui', '-apple-system', 'BlinkMacSystemFont',
           'Segoe UI', 'Helvetica', 'Arial', 'sans-serif',
         ],
-        mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
+        mono: [
+          'var(--font-geist-mono)',
+          'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace',
+        ],
       },
+
       fontSize: {
-        // Design-system type scale (size · line-height).
-        // Weight is applied via Tailwind utilities (`font-semibold`, etc).
-        display:  ['32px', { lineHeight: '36px', letterSpacing: '-0.01em' }],
-        h1:       ['24px', { lineHeight: '30px' }],
-        h2:       ['18px', { lineHeight: '26px' }],
-        h3:       ['15px', { lineHeight: '22px' }],
-        body:     ['14px', { lineHeight: '22px' }],
-        caption:  ['12px', { lineHeight: '18px' }],
-        eyebrow:  ['11px', { lineHeight: '16px', letterSpacing: '0.06em' }],
+        // Operations-console type scale (size · line-height · tracking).
+        display:        ['30px', { lineHeight: '34px', letterSpacing: '-0.02em', fontWeight: '600' }],
+        h1:             ['22px', { lineHeight: '28px', letterSpacing: '-0.01em', fontWeight: '600' }],
+        h2:             ['17px', { lineHeight: '24px', fontWeight: '600' }],
+        h3:             ['15px', { lineHeight: '22px', fontWeight: '600' }],
+        body:           ['14px', { lineHeight: '22px' }],
+        'body-strong':  ['14px', { lineHeight: '22px', fontWeight: '500' }],
+        data:           ['14px', { lineHeight: '20px', fontWeight: '500' }],
+        kpi:            ['28px', { lineHeight: '32px', letterSpacing: '-0.01em', fontWeight: '600' }],
+        caption:        ['12px', { lineHeight: '18px' }],
+        eyebrow:        ['11px', { lineHeight: '14px', letterSpacing: '0.08em', fontWeight: '600' }],
       },
-      boxShadow: {
-        // Two shadows only — DESIGN_SYSTEM.md §1.5
-        flat: '0 0 0 1px #E5E4DE',
-        lift: '0 1px 2px rgb(14 15 17 / 0.06), 0 0 0 1px #E5E4DE',
-        // legacy:
-        card:  '0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)',
-        panel: '0 4px 12px rgba(0,0,0,0.08)',
-        drop:  '0 10px 30px rgba(0,0,0,0.12)',
-      },
+
       borderRadius: {
-        DEFAULT: '6px',  // md
-        sm:  '4px',      // chips, badges
-        md:  '6px',      // buttons, inputs
-        lg:  '10px',     // cards
-        xl:  '14px',     // hero panels, modals
+        // One radius system — no pills (except via rounded-full for avatars).
+        DEFAULT: '8px',
+        sm:      '6px',
+        md:      '8px',
+        lg:      '8px',
+        xl:      '8px',
+        pill:    '9999px',
       },
+
+      boxShadow: {
+        // Per brief: NO drop shadows on static cards. The only shadow
+        // is `overlay` for floating popovers/menus.
+        overlay: 'var(--shadow-overlay)',
+        // Legacy aliases — all flatten to a 1px hairline ring or no-op
+        // so unmigrated `shadow-flat` / `shadow-card` etc. visually
+        // simplify to "no shadow" without crashing the build.
+        flat:  '0 0 0 1px var(--border-hairline)',
+        lift:  '0 0 0 1px var(--border-hairline)',
+        card:  '0 0 0 1px var(--border-hairline)',
+        panel: '0 0 0 1px var(--border-hairline)',
+        drop:  'var(--shadow-overlay)',
+      },
+
       transitionTimingFunction: {
         ease: 'cubic-bezier(0.4, 0, 0.2, 1)',
       },
@@ -131,6 +191,10 @@ const config: Config = {
         fast: '120ms',
         base: '200ms',
         slow: '320ms',
+      },
+
+      maxWidth: {
+        content: '1280px',
       },
     },
   },

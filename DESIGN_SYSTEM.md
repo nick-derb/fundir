@@ -1,4 +1,4 @@
-# Fundir Design System
+# Fundir Design System — v2 "Operations Console"
 
 A specification, not a marketing page. This is the source of truth for tokens,
 core components, and the visual point-of-view that distinguishes Fundir from
@@ -6,303 +6,335 @@ the grant directories we're trying to beat.
 
 ---
 
-## POV (read this first)
+## POV
 
-Fundir is a **sharp analyst's tool**, not a directory. Every visual decision
-serves that.
+Fundir is an **operations console** for grant teams — precise, dense-but-calm,
+instrument-grade. References: Palantir Foundry, Bloomberg Terminal, Linear,
+Stripe Sigma. The opposite of a generic AI-built dashboard.
 
-- **Anti-list.** Instrumentl, Candid, and GrantStation all lead with "100,000+ funders / 34,000+ active grants" as their wedge. We don't. Our screens lead with **what to do today**: 3–5 grants the org can plausibly win, ranked, with the "why" inspectable on every row. Listing more is anti-feature for us.
-- **Win-focused.** "Pursue / Maybe / Skip" is a first-class visual element, not buried in a detail page. The Skip column is a feature — saying no is the value the directories can't deliver.
-- **Evidence beats vibes.** Every score component is openable. Every match reason cites a concrete signal (peer funded, win rate at agency, CRA tract match). The competition shows a number; we show *why*.
-- **Dense, calm.** Analyst dashboards (Bloomberg, Linear, Stripe Sigma) earned tabular figures, mono $$, and tight vertical rhythm. We adopt that register. The animated, color-blocked SaaS marketing style we saw on Instrumentl works for sign-ups; it works against trust on a daily work surface.
+- **Anti-list.** Instrumentl, Candid, GrantStation all lead with "100,000+
+  funders". We don't. Our screens lead with **what to do today**: a small set
+  of ranked, justified opportunities, every "why" inspectable on every row.
+  Listing more is anti-feature.
+- **Win-focused.** "Pursue / Maybe / Skip" is a first-class visual element,
+  with a quiet eyebrow + semantic dot + mono count — not a buried detail.
+- **Evidence beats vibes.** Every score component opens. Every match reason
+  cites a concrete signal. The competition shows a number; we show *why*.
+- **Dense, calm.** Tabular figures, mono $$, tight vertical rhythm. The
+  animated, color-blocked SaaS marketing style works against trust on a daily
+  work surface.
 
-What we **adapt** from the audit:
+---
 
-| Pattern | From | Why we keep it |
+## §1 — Tokens
+
+Single source of truth: CSS variables in [`app/globals.css`](app/globals.css),
+mapped onto Tailwind utility names in [`tailwind.config.ts`](tailwind.config.ts).
+Both light and dark are produced from one token set.
+
+### §1.1 Color
+
+#### Ink scale — cool graphite neutrals (never pure gray/black/white)
+
+| Token | Hex | Role |
 |---|---|---|
-| Score-as-colored-badge | Instrumentl | Cheap, scannable, dual-encodes color + number |
-| Grant card with top-label (award range) | Instrumentl | The dollar figure earns its own slot above the funder name |
-| Chip filter row over a left-rail facet panel | Instrumentl | Lower cognitive load for the 3–5 filters that actually matter |
-| Conversational headline copy | Instrumentl | But about wins, not directory size |
+| `--ink-900` | `#0B1220` | Dark-mode page bg; light-mode primary text/display |
+| `--ink-800` | `#131C2E` | Dark-mode card surface |
+| `--ink-700` | `#1E2A40` | Dark-mode elevated/inset |
+| `--ink-600` | `#33425C` | Muted text (light) |
+| `--ink-500` | `#5A6B86` | Secondary text |
+| `--ink-400` | `#8696AE` | Tertiary text, dark-mode secondary |
+| `--ink-300` | `#B6C2D4` | Stronger separators |
+| `--ink-200` | `#DCE3ED` | Hairline border |
+| `--ink-100` | `#EEF2F7` | Elevated surface (hover row, code chip) |
+| `--ink-50`  | `#F6F8FB` | Page background |
+| `--surface` | `#FFFFFF` | Card surface |
 
-What we **reject**:
+#### Role tokens (resolve via theme)
 
-| Pattern | Where seen | Why we reject |
+```
+Light                              Dark
+--bg-page         = ink-50         ink-900
+--bg-surface      = surface        ink-800
+--bg-elevated     = ink-100        ink-700
+--border-hairline = ink-200        rgba(255,255,255,.08)
+--text-primary    = ink-900        ink-100
+--text-secondary  = ink-500        ink-400
+--text-tertiary   = ink-400        ink-500
+--text-muted      = ink-600        ink-300
+```
+
+#### Brand accent — deepened, NOT default emerald
+
+| Token | Light | Dark | Use |
+|---|---|---|---|
+| `--accent`        | `#0C6B5A` | `#1A8B77` | Primary actions, active nav, KPI emphasis. Sparingly. |
+| `--accent-hover`  | `#0A5648` | `#15917A` | Button hover |
+| `--accent-bright` | `#15917A` | `#2BAB95` | Active nav text in dark mode |
+| `--accent-tint`   | `rgba(12,107,90,.10)` | `rgba(26,139,119,.18)` | Citation chip background, selection |
+
+#### Semantic — desaturated, signal-only
+
+| Token | Light | Dark |
 |---|---|---|
-| "Find 100,000+ funders" hero | Candid, GrantStation, Instrumentl | This is the directory positioning we're explicitly leaving behind |
-| Heavy color-block marketing aesthetic | Instrumentl `/` | Reads as a sales page on a daily work surface |
-| Dense facet sidebars (20+ filters) | Candid Foundation Directory | Surfaces complexity instead of decision-readiness |
-| FAQ-as-design | GrantStation | A daily tool that ships an FAQ has lost the room |
+| `--success`  | `#2F9E6E` | `#3FB07F` |
+| `--warning`  | `#C0852B` | `#D4A152` |
+| `--critical` | `#C24E3E` | `#D86B5C` |
+| `--info`     | `#3E6CA8` | `#5F8DC9` |
 
----
+**Each semantic is used as:**
+- a 3px **left border** on the card row
+- a small **uppercase tag** (text-color only, no fill)
+- and/or text — with a `~8% tint` background **only** when a fill is truly needed
 
-## 1. Tokens
+**Never** as a full-saturation solid-fill status card.
 
-Tokens live in [tailwind.config.ts](tailwind.config.ts) under `theme.extend` and in CSS variables in [app/globals.css](app/globals.css). Source these — never inline a literal hex.
+### §1.2 Typography
 
-### 1.1 Color
-
-Three semantic roles: **canvas, ink, action**. One narrow analyst accent ribbon (`signal`) used only for the score-evidence surfaces. No incidental colors.
-
-| Token | Hex | Where it lives |
+| Family | Token | Used for |
 |---|---|---|
-| `--canvas-0` | `#FAFAF7` | Page background. Off-white, slightly warm. Avoids the harshness of pure white. |
-| `--canvas-1` | `#FFFFFF` | Card background. |
-| `--canvas-2` | `#F2F1EC` | Secondary panels, hover rows, code-style chips. |
-| `--canvas-3` | `#E5E4DE` | Borders, dividers. |
-| `--ink-0` | `#0E0F11` | Primary text, headlines. Near-black, never `#000`. |
-| `--ink-1` | `#3A3D44` | Secondary text. |
-| `--ink-2` | `#6B6F77` | Tertiary text, captions, table secondary cells. |
-| `--ink-3` | `#9CA0A7` | Disabled, placeholder. |
-| `--action` | `#0A4D3C` | Primary CTA fill (deep moss-green — distinct from competitor coral/orange). |
-| `--action-hover` | `#073A2D` | |
-| `--action-soft` | `#E6EFEB` | Tinted background for "pursue" badges, primary chips. |
-| `--signal-pursue` | `#0A4D3C` | Same as `--action` — pursue uses the action color, deliberately. |
-| `--signal-maybe` | `#9A6B00` | Amber, never yellow (yellow tests poorly on off-white). |
-| `--signal-skip` | `#7A1E2E` | Burgundy, not red. Skip is a thoughtful recommendation, not an alert. |
-| `--signal-pursue-soft` | `#E6EFEB` | |
-| `--signal-maybe-soft` | `#FBF1DC` | |
-| `--signal-skip-soft` | `#F4E3E5` | |
-| `--alert` | `#B0212F` | Reserved for true errors (data load failure, integration broken). NOT used for `skip`. |
-| `--focus` | `#0A4D3C` | Outline-color for keyboard focus. 2px solid, 2px offset. |
+| Geist (sans) | `var(--font-geist-sans)` | All UI prose, headings, labels |
+| Geist Mono   | `var(--font-geist-mono)` | All numerals — $, scores, confidence, EINs, dates, IDs, % |
 
-**Rationale on the action color:** every direct competitor uses coral/orange or amber as their primary action (Instrumentl coral, Candid amber, GrantStation orange). Deep moss-green signals "results" without warming up the screen the way orange does, and it places us visibly outside the three-incumbent cluster.
+Loaded via `next/font` in [`app/layout.tsx`](app/layout.tsx). All mono text
+sets `font-variant-numeric: tabular-nums` so columns of numbers align.
 
-### 1.2 Type scale
+**Scale** (Tailwind utility · size/leading · weight · tracking)
 
-One sans family for everything. Tabular numerals for any digit that compares (scores, $, dates, counts).
+| Utility | px / lh | Weight | Tracking | Use |
+|---|---|---|---|---|
+| `text-display` | 30 / 34 | 600 | -0.02em | Big hero numbers (rare) |
+| `text-h1`      | 22 / 28 | 600 | -0.01em | Page titles |
+| `text-h2`      | 17 / 24 | 600 | — | Section headlines |
+| `text-h3`      | 15 / 22 | 600 | — | Sub-section |
+| `text-body`    | 14 / 22 | 400 | — | Body prose |
+| `text-body-strong` | 14 / 22 | 500 | — | Emphasized labels in tables |
+| `text-data`    | 14 / 20 | 500 | — | (mono) Inline data cells |
+| `text-kpi`     | 28 / 32 | 600 | -0.01em | (mono) KpiCard value |
+| `text-caption` | 12 / 18 | 400 | — | Secondary line under headings |
+| `text-eyebrow` | 11 / 14 | 600 | 0.08em | UPPERCASE section labels (`text-secondary`) |
 
-| Token | Size / line-height / weight | Use |
-|---|---|---|
-| `display` | 32 / 36 / 600 | Page hero ("Three grants you can plausibly win this month") |
-| `h1` | 24 / 30 / 600 | Section heading, grant detail title |
-| `h2` | 18 / 26 / 600 | Card heading, side-panel section |
-| `h3` | 15 / 22 / 600 | Inline group label |
-| `body` | 14 / 22 / 400 | Default running text |
-| `body-strong` | 14 / 22 / 600 | Field label, emphasized inline |
-| `caption` | 12 / 18 / 500 | Secondary detail, table secondary cell |
-| `eyebrow` | 11 / 16 / 600 / +0.06em / uppercase | Card top-label ("UP TO $250K", "FEDERAL · ALN 84.287") |
-| `mono` | `font-variant-numeric: tabular-nums` | Applied to every $, %, date, score |
+### §1.3 Shape, border, elevation
 
-Font: stay on the system stack inherited via Tailwind (`ui-sans-serif`, `system-ui`, ...). No web font load — pages must paint in <100ms on the analyst dashboards.
+- **Radius:** `8px` default, `6px` for chips/inputs/buttons. `rounded-full`
+  only for avatars and status dots. **No pill-shaped buttons.**
+- **Borders:** 1px hairline everywhere — `border-hairline`. Visible separators
+  use `border-strong`.
+- **Elevation = surface tint, NOT shadow.** Static cards have a 1px hairline
+  border and no shadow. The only shadow token is `shadow-overlay` —
+  `0 1px 2px rgba(11,18,32,.06), 0 4px 12px rgba(11,18,32,.05)` — used
+  **only** for floating popovers and menus.
 
-### 1.3 Spacing
+### §1.4 Spacing
 
-Restricted scale; everything composes from this. No `gap-7`, no `mt-9`.
+4px base. Steps `4 / 8 / 12 / 16 / 20 / 24 / 32 / 48`. Card padding `20–24`.
+Section gap `24–32`. Content max-width `max-w-content` (1280px).
+
+### §1.5 Motion
 
 ```
-1  →  4px
-2  →  8px
-3  →  12px
-4  →  16px
-5  →  20px
-6  →  24px
-8  →  32px
-12 →  48px
-16 →  64px
+--motion-fast: 120ms cubic-bezier(0.4, 0, 0.2, 1)
+--motion-base: 200ms cubic-bezier(0.4, 0, 0.2, 1)
+--motion-slow: 320ms cubic-bezier(0.4, 0, 0.2, 1)
 ```
 
-Default page gutter: `24px` desktop, `16px` mobile. Default card padding: `20px`. Default vertical rhythm between sections: `32px`.
-
-### 1.4 Radii
-
-| Token | px |
-|---|---|
-| `radius-sm` | 4 — chips, badges |
-| `radius-md` | 6 — buttons, inputs |
-| `radius-lg` | 10 — cards |
-| `radius-xl` | 14 — hero panels, modals |
-
-No fully-rounded (`9999px`) pills. The directories use them everywhere; we don't. Buttons are 6px-rounded rectangles, deliberately.
-
-### 1.5 Elevation
-
-Two shadows only. Most surfaces use borders, not shadow.
-
-| Token | Definition |
-|---|---|
-| `shadow-flat` | `0 0 0 1px var(--canvas-3)` — every card by default |
-| `shadow-lift` | `0 1px 2px rgb(14 15 17 / 0.06), 0 0 0 1px var(--canvas-3)` — hover, sticky headers |
-
-### 1.6 Motion
-
-| Token | Duration / curve |
-|---|---|
-| `motion-fast` | 120ms / cubic-bezier(0.4, 0, 0.2, 1) — hover, focus, color |
-| `motion-base` | 200ms / cubic-bezier(0.4, 0, 0.2, 1) — opens/closes |
-| `motion-slow` | 320ms / cubic-bezier(0.4, 0, 0.2, 1) — page transition |
-
-No spring animation on data UI. No parallax. No hero animation.
+Transitions on `background-color`, `color`, `transform`. Never on `opacity`
+for things meant to convey state — opacity changes hide state.
 
 ---
 
-## 2. Core components
+## §2 — Component patterns
 
-Specs only. Implementations land in [components/ui/](components/ui/) in Phase 1E.
+### §2.1 KpiCard
 
-### 2.1 `<Card>`
-
-Default container. `bg-canvas-1`, `radius-lg`, `shadow-flat`, padding `20px`. Borderless when nested inside another Card; bordered when freestanding.
-
-Variants:
-- `Card.Header` — `display: flex`, gap 12, items center; renders an optional eyebrow + title + right-aligned action slot.
-- `Card.Section` — divider above (1px `canvas-3`), padding-top 16; vertical rhythm primitive.
-- `Card.Empty` — empty-state slot, see §2.8.
-
-### 2.2 `<ScoreBadge score={0-100} variant?>`
-
-A 28×28 (sm) or 40×40 (lg) rounded-square badge with the composite number, optional pursue/maybe/skip color. Variants pull from `--signal-*`. Never displays decimals. Sub-70 scores switch to caption-weight to de-emphasize.
+`bg-surface border border-hairline rounded-sm` · padding `px-4 py-3` · contents:
 
 ```
-[ 82 ]  pursue   (--signal-pursue text, --signal-pursue-soft fill)
-[ 64 ]  maybe    (--signal-maybe  text, --signal-maybe-soft  fill)
-[ 41 ]  skip     (--signal-skip   text, --signal-skip-soft   fill)
+[eyebrow uppercase text-secondary  ]   ← label, e.g. "Tracked"
+[font-mono text-kpi  text-primary  ]   ← value, e.g. "197"
+[text-caption text-tertiary        ]   ← caption, e.g. "12 high-match"
 ```
 
-Use `<ScoreBadge.Stack>` to show composite + matched-program tag underneath:
-```
-[ 82 ]
-Teen Leadership
-```
+Optional `tone="success" | "warning" | "critical" | "info"` adds a 3px left
+border in that semantic color. Tones are **value judgements** — most KPIs
+leave it off (a count of "tracked grants" carries no signal on its own).
 
-### 2.3 `<RecommendationPill recommendation={'pursue'|'maybe'|'skip'} reason?>`
+Reference: [`app/dashboard/page.tsx`](app/dashboard/page.tsx) → `<KpiCard>` helper.
 
-Horizontal pill, height 24, padding-x 10, eyebrow type. Variant fills from `--signal-*-soft`, text uses `--signal-*`. Hover reveals the one-line `reason` if provided. This is the first-class visual element — every grant row carries one.
+### §2.2 Quiet section heading
 
-### 2.4 `<EvidenceList items={Evidence[]}>`
-
-The signature surface. Renders the per-factor evidence (Section 3 of `PHASE_0_PLAN.md`) as a tight scannable list:
+For Pursue / Maybe / Skip, dashboard sub-sections, and panel sub-divisions.
 
 ```
-● 55% prior at HHS-ACF (n=12 outcomes)        historical
-● Best fit for your Teen Leadership program   semantic
-● 3 of 18 peers funded by this funder         funder_affinity
-● Census tract qualifies for CRA              eligibility
+[●] EYEBROW LABEL  font-mono count
 ```
 
-Each row: leading dot (color from factor), bullet text, right-aligned faded factor tag. No row truncation — if it's worth showing, it's worth reading. Cap at 6 items; rest collapses behind "Show all evidence".
+- 1.5px semantic dot
+- `text-eyebrow uppercase text-primary` label
+- `font-mono text-caption text-secondary` count
 
-### 2.5 `<GrantCard>`
+Used by [`<RecommendationGroup>`](components/ui/recommendation-group.tsx).
 
-The atomic unit of the discover surface. Composition:
+### §2.3 Quiet uppercase status tag (text only, no fill)
 
-```
-┌──────────────────────────────────────────────────────────┐
-│  EYEBROW  UP TO $250K · FEDERAL · ALN 84.287   [Pursue]  │
-│                                                          │
-│  Grant Title (h2, two lines max)                         │
-│  Funder Name                                             │
-│                                                          │
-│  ● 55% prior at HHS-ACF                                  │
-│  ● Best fit for your Teen Leadership program             │
-│  ● 3 of 18 peers funded                                  │
-│                                                          │
-│  Deadline · 28 days   |  [ScoreBadge 82]                 │
-└──────────────────────────────────────────────────────────┘
-```
-
-Card hover: `shadow-lift` + cursor pointer. Entire card is the link to detail.
-
-### 2.6 `<FilterBar chips={Chip[]}>`
-
-Horizontal chip row, no left-rail. Each chip is a single dimension (Amount, Deadline, Source, Funder type, State). Click opens a small popover. Active filters render as filled chips; inactive as outlined. Includes a `Clear all` text button when ≥2 active.
-
-Explicitly NOT a 20-facet faceted sidebar. If a filter doesn't earn a chip, it doesn't ship.
-
-### 2.7 `<DataTable>`
-
-For the cases where a card grid is wrong (pipeline view, reports, peer-orgs panel). Spec:
-
-- Header row: `caption` type, `--ink-2`, uppercase, no background.
-- Body rows: 56px tall, hover background `--canvas-2`, click takes you to detail.
-- Right-align all numeric columns; left-align text. Mono on $ and %.
-- Skip striping — rows separate via 1px `--canvas-3` borders, no zebra.
-- Sticky first column on mobile.
-- Empty state replaces the body entirely (Card.Empty), never an empty grid.
-
-### 2.8 `<EmptyState icon? title body cta?>`
-
-Used wherever a list / table / score chart has no data. Three variants:
-
-- **`no-data`**: title leads with what they're missing ("No grants discovered yet"), body explains the path forward in one sentence, CTA is the next action ("Run a discovery pass").
-- **`filtered-out`**: title says "Filtered out everything" — clears the filters rather than the data.
-- **`waiting`**: title leads with what's happening ("Building your peer-funder graph…"), body cites the ETA, no CTA. Skeleton lines in `--canvas-2` for ~3 rows.
-
-No clip-art illustration. A single 16x16 lucide icon at top, muted `--ink-2`.
-
-### 2.9 `<RecommendationGroup pursue maybe skip>`
-
-The win-triage primitive (Phase 6). Renders a `Pursue` heading + count + GrantCards, then `Maybe` heading + count + GrantCards, then `Skip` heading + count + collapsed by default. The Skip section is a feature — when expanded, each card shows the one-line *reason it's a skip* (eligibility hard-zero, deadline passed, funder doesn't fund this segment).
+For relationship state (Existing / Prospect / Declined / Dormant), action verb
+(Deepen / Open / Monitor), tracked_status, etc. Color reads from the text
+token; no chip background.
 
 ```
-Pursue · 3
-  [GrantCard]
-  [GrantCard]
-  [GrantCard]
-
-Maybe · 7
-  [GrantCard]
-  ...
-
-Skip · 14   [▸ Expand]
+text-eyebrow uppercase tracking-wider text-{success|accent|tertiary|...}
 ```
 
-This is **the** screen Instrumentl literally can't produce, because their data layer has no notion of "why not." It needs to feel obvious.
+### §2.4 Risk-flag row (3px left border + uppercase tag)
 
-### 2.10 Buttons
+The pattern for any severity-bearing row — concentration risk flags, financial
+intelligence flags, validation warnings.
 
-| Variant | Use |
-|---|---|
-| `primary` | One per surface. `--action` fill, white text, 6px radius, 40px height. |
-| `secondary` | `--canvas-2` fill, `--ink-0` text. |
-| `ghost` | Transparent; underline on hover. For destructive or in-row actions. |
-| `link` | Inline text, `--action` color, underline on hover. |
+```html
+<li class="flex items-start gap-3 pl-3 border-l-[3px] border-l-warning">
+  <span class="text-eyebrow uppercase text-warning">Elevated</span>
+  <div>
+    <div class="text-body-strong text-primary">Metric headline</div>
+    <div class="text-caption text-secondary">Remediation copy</div>
+  </div>
+</li>
+```
 
-No outline-on-white pill, no gradient.
+Never use a full-saturation fill card. Severity reads from border + tag.
 
-### 2.11 Inputs
+### §2.5 Confidence / score with mono number + thin track bar
 
-| Variant | Use |
-|---|---|
-| `text` | 40px height, 1px `--canvas-3` border, 6px radius, focus-ring `--focus` 2px. |
-| `search` | Same, with leading `Search` icon. |
-| `combobox` | Same; popover list uses Card style. |
+For CRA panel confidence, ScoreBreakdown bars, any 0-100 signal:
 
-Field labels render above (never floating). Help text below in `caption` `--ink-2`. Errors below in `caption` `--alert`.
+```
+[mono number, right-aligned, w-24]
+[thin 4px bar: bg-elevated, fill bg-accent at value%]
+```
+
+Reference: `<BankRow>` in [`components/cra-intelligence-panel.tsx`](components/cra-intelligence-panel.tsx).
+
+### §2.6 Table-style row (CRA, Funder Intelligence)
+
+Grid layout with hairline dividers; sticky-style header row in
+`text-eyebrow uppercase text-tertiary border-b border-hairline bg-elevated/40`.
+Columns right-aligned for numerics, left-aligned for prose.
+
+### §2.7 Citation chip + Unverified field tag (briefs)
+
+- **Citation chip:** mono superscript number, `bg-accent-tint text-accent`,
+  hovers to `bg-accent text-accent-on`. Click → source URL.
+- **Unverified field tag:** muted text with `<Info>` icon, never alarming red.
+  Hidden by default behind a "Show unverified fields" toggle
+  ([`components/funder-brief-detail.tsx`](components/funder-brief-detail.tsx)).
+  The honesty stays in the data; it just shouldn't look like leftover scaffolding.
+
+### §2.8 Sidebar nav — active = accent text + 2px left bar
+
+No filled pill. Active link:
+
+```css
+.shell-nav-active {
+  color: var(--nav-active-text);   /* accent */
+  font-weight: 500;
+}
+.shell-nav-active::before {
+  content: '';
+  position: absolute;
+  left: -10px; top: 6px; bottom: 6px;
+  width: 2px;
+  background: var(--nav-active-bar);
+}
+```
+
+### §2.9 Win-triage (Pursue / Maybe / Skip)
+
+Three sections; each with the §2.2 quiet header. Skip is collapsed by default
+— and that's the differentiator: directories can't ship "why not".
 
 ---
 
-## 3. POV in copy
+## §3 — Charts
 
-A non-visual token. The copy register is consistent.
+- Bars scale to actual values; **no equal-length bars** for distinct numbers.
+- 1px baselines, no gridlines on bar charts (only horizontal for line charts).
+- **No gradients, no shadows** on chart elements.
+- **≤1 accent + neutrals** per chart. Pipeline stage strips: one accent (the
+  active / destination state), `ink-300 / ink-400 / ink-500` for the others.
+- Direct labels on bars, not legends.
 
-| Don't say | Say |
+Reference: pipeline distribution bar in [`app/dashboard/page.tsx`](app/dashboard/page.tsx);
+HHI precision scale in [`components/concentration-panel.tsx`](components/concentration-panel.tsx).
+
+---
+
+## §4 — Hard rules (the "AI-built" tells we remove)
+
+1. **No drop shadows on static cards** → hairline borders + tint steps.
+2. **No default-emerald** → `--accent` only.
+3. **No saturated solid-fill status cards** → 3px semantic left border + tag.
+4. **One radius system** → no mixing pills + rounded + sharp.
+5. **All data in mono tabular numerals.**
+6. **One icon set, one stroke weight, consistent sizing** (Lucide,
+   `w-3.5 h-3.5` chrome / `w-4 h-4` interactive).
+7. **Light is the default theme.** Dark works from the same tokens.
+8. **WCAG AA contrast**, visible focus states (2px accent outline).
+
+---
+
+## §5 — Migration & legacy
+
+The token system in [`globals.css`](app/globals.css) and
+[`tailwind.config.ts`](tailwind.config.ts) defines the new vocabulary
+(`bg-page / bg-surface / bg-elevated`, `border-hairline`, `text-primary`,
+`accent`, `success/warning/critical/info`) **and** keeps every legacy alias
+mapped to the new tokens, so unmigrated screens keep building:
+
+- `canvas-0/1/2/3` → `bg-page / bg-surface / bg-elevated / border-hairline`
+- `ink-0/1/2/3`     → `text-primary / text-muted / text-secondary / text-tertiary`
+- `action / action-hover / action-soft` → `accent / accent-hover / accent-tint`
+- `signal-pursue / signal-maybe / signal-skip` → `success / warning / critical`
+- `shadow-flat / shadow-card / shadow-lift` → flattened to a 1px ring (no shadow)
+
+Aliases drop after every screen is migrated. The reference implementation as
+of Phase 0 is `/dashboard` + the AppShell — see §6 for the files to read.
+
+---
+
+## §6 — Files
+
+| Layer | File |
 |---|---|
-| "We searched 34,000+ grants" | "Three grants worth pursuing this week" |
-| "Showing 1-50 of 1,287 results" | "8 fit your profile · 14 don't" |
-| "Loading…" | "Re-ranking against tonight's 990 graph refresh" |
-| "Score: 82" | "82 — pursue. Strong fit on Teen Leadership and 55% prior at HHS-ACF" |
-| "Save grant" | "Add to pipeline" |
-| Empty state: "Nothing to show" | Empty state: "No grants pass your filters yet. The morning refresh runs at 6am UTC." |
+| Tokens (runtime) | [`app/globals.css`](app/globals.css) |
+| Tokens (Tailwind mapping) | [`tailwind.config.ts`](tailwind.config.ts) |
+| Font load | [`app/layout.tsx`](app/layout.tsx) |
+| Global shell | [`components/app-shell.tsx`](components/app-shell.tsx) |
+| Reference screen | [`app/dashboard/page.tsx`](app/dashboard/page.tsx) |
+| Panel: HHI precision scale + risk flags | [`components/concentration-panel.tsx`](components/concentration-panel.tsx) |
+| Panel: CRA table-style list + thin track | [`components/cra-intelligence-panel.tsx`](components/cra-intelligence-panel.tsx) |
+| Panel: Funder Intelligence + Unverified toggle | [`components/funder-intelligence-panel.tsx`](components/funder-intelligence-panel.tsx) + [`components/funder-brief-detail.tsx`](components/funder-brief-detail.tsx) |
+| Quiet section headers | [`components/ui/recommendation-group.tsx`](components/ui/recommendation-group.tsx) |
 
 ---
 
-## 4. Phase 1E refactor targets
+## §7 — Phase 0 acceptance gates (Dashboard reference)
 
-Phase 1E moves three screens onto this system:
+Before extending Phase 1+ to other screens, the following must hold on
+`/dashboard` in **both** light and dark:
 
-1. **`/dashboard`** — the page that's open all day. Replace generic cards with the `RecommendationGroup` primitive.
-2. **`/discover`** — `FilterBar` over chips, `GrantCard` grid, no facet sidebar.
-3. **`/grant/[id]`** — `ScoreBadge.Stack` + `EvidenceList` lead above the fold; existing financial/notes/tasks tabs keep their structure.
-
-Lower-traffic surfaces (`/settings`, `/onboarding`, `/reports`) are out of scope until Phase 7 polish — but new components built there must use these tokens.
-
----
-
-## 5. Implementation order in Phase 1E
-
-1. Tokens land in `tailwind.config.ts` + `app/globals.css`.
-2. `components/ui/{card,score-badge,recommendation-pill,evidence-list,grant-card,filter-bar,empty-state,recommendation-group}.tsx` ship together.
-3. Three target screens refactor in three commits, one per screen, so each diff is reviewable.
-
-Nothing in Phase 2+ should accept an inline color, ad-hoc shadow, or one-off rounded value. The tokens are the contract.
+- [x] No drop shadows on static cards
+- [x] No default-emerald (`#0d9488`); accent is `--accent`
+- [x] No solid-fill status cards — flags read as 3px left border + uppercase tag
+- [x] One radius system — `rounded-sm` everywhere; `rounded-full` only on
+      avatars / status dots
+- [x] All data displayed in mono tabular numerals
+- [x] Light is the default theme (`localStorage` default flipped)
+- [x] Org name not truncated in sidebar (two-line treatment with tooltip)
+- [x] Active nav = accent text + 2px left bar (no filled pill)
+- [x] Quiet section headers with mono counts (no clipped triage banner)
+- [x] Urgent Deadlines day badge color rule: `≤1d` critical, `≤7d` warning,
+      else neutral
+- [x] `[TODO: ...]` markers hidden by default; "Show unverified fields"
+      toggle reveals muted "Unverified" tags inline
+- [x] `tsc --noEmit` clean
+- [x] `next build` succeeds
+- [x] No runtime console errors at 1440 / 1024 / 390 px

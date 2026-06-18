@@ -187,6 +187,34 @@ function formatCompact(n: number) {
   return `$${n}`;
 }
 
+// ── KpiCard ─────────────────────────────────────────────────────────────────
+// Operations-console KPI tile. Section-label eyebrow + mono KPI value + a
+// caption sub-line. Hairline border, no shadow, no fill — semantic tone (if
+// any) reads only as a 3px left border. Tone is intentionally optional: most
+// KPIs have no value-judgement attached.
+function KpiCard({
+  label, value, caption, tone,
+}: {
+  label:   string;
+  value:   string;
+  caption?: string;
+  tone?:   'success' | 'warning' | 'critical' | 'info';
+}) {
+  const toneBorder =
+      tone === 'success'  ? 'border-l-[3px] border-l-success'
+    : tone === 'warning'  ? 'border-l-[3px] border-l-warning'
+    : tone === 'critical' ? 'border-l-[3px] border-l-critical'
+    : tone === 'info'     ? 'border-l-[3px] border-l-info'
+                          : '';
+  return (
+    <div className={`bg-surface border border-hairline rounded-sm px-4 py-3 ${toneBorder}`}>
+      <p className="text-eyebrow uppercase text-secondary">{label}</p>
+      <p className="font-mono text-kpi text-primary mt-1.5">{value}</p>
+      {caption && <p className="text-caption text-tertiary mt-0.5">{caption}</p>}
+    </div>
+  );
+}
+
 export default async function DashboardPage() {
   const ctx = await getAuthContext();
   if (!ctx) redirect('/login');
@@ -201,12 +229,16 @@ export default async function DashboardPage() {
     ? Math.round(data.matches.reduce((s, m) => s + m.composite_score, 0) / data.matches.length)
     : 0;
 
+  // Pipeline stage strip — one accent + neutral ramp, no rainbow.
+  // The brief is firm on ≤1 accent + neutrals per chart. We carry the
+  // accent on the two stages closest to a submitted state (drafting +
+  // submitted), and use ink shades for earlier funnel stages.
   const STAGES = [
-    { stage: 'discovered', label: 'Discovered', color: '#94a3b8' },
-    { stage: 'reviewing',  label: 'Reviewing',  color: '#2563eb' },
-    { stage: 'preparing',  label: 'Preparing',  color: '#7c3aed' },
-    { stage: 'drafting',   label: 'Drafting',   color: '#d97706' },
-    { stage: 'submitted',  label: 'Submitted',  color: '#16a34a' },
+    { stage: 'discovered', label: 'Discovered', color: 'var(--ink-300)' },
+    { stage: 'reviewing',  label: 'Reviewing',  color: 'var(--ink-400)' },
+    { stage: 'preparing',  label: 'Preparing',  color: 'var(--ink-500)' },
+    { stage: 'drafting',   label: 'Drafting',   color: 'var(--accent)' },
+    { stage: 'submitted',  label: 'Submitted',  color: 'var(--success)' },
   ];
 
   return (
@@ -220,97 +252,86 @@ export default async function DashboardPage() {
     >
       <div className="px-4 sm:px-6 md:px-8 py-6 max-w-7xl mx-auto space-y-5">
 
-        {/* ── Brand-new org: light hero empty-state ─────────────────── */}
+        {/* ── Brand-new org: empty-state hero ─────────────────── */}
         {data.totalTracked === 0 && (
-          <div className="bg-canvas-1 rounded-lg shadow-flat px-6 md:px-10 py-10 md:py-12 max-w-3xl">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="w-6 h-6 rounded-sm flex items-center justify-center bg-action-soft text-action">
-                <Sparkles className="w-3.5 h-3.5" />
-              </div>
-              <span className="text-eyebrow font-semibold text-action uppercase tracking-wider">Welcome to Fundir</span>
-            </div>
-            <h2 className="text-display font-semibold text-ink-0 leading-tight mb-3">
+          <div className="bg-surface border border-hairline rounded-sm px-6 md:px-10 py-10 md:py-12 max-w-3xl">
+            <p className="text-eyebrow uppercase text-accent mb-3">Welcome to Fundir</p>
+            <h2 className="text-display text-primary leading-tight mb-3">
               Let&apos;s find your first matching grants
             </h2>
-            <p className="text-body text-ink-1 leading-relaxed mb-6 max-w-xl">
+            <p className="text-body text-muted leading-relaxed mb-6 max-w-xl">
               Run discovery once and Fundir will surface federal and foundation grants
               matched to {data.org?.name ?? ctx.orgName}&apos;s mission, programs, and
               financial profile — scored, ranked, and reverse-screened against your 990.
             </p>
             <div className="flex flex-wrap items-center gap-2.5">
               <Link href="/discover"
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md text-body font-semibold bg-action text-canvas-1 hover:bg-action-hover transition-colors">
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-sm text-body-strong bg-accent text-accent-on hover:bg-accent-hover transition-colors">
                 <Sparkles className="w-3.5 h-3.5" />
                 Run your first discovery
               </Link>
               <Link href="/settings"
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md text-body font-semibold text-ink-0 ring-1 ring-canvas-3 hover:bg-canvas-2 transition-colors">
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-sm text-body-strong text-primary border border-hairline bg-surface hover:bg-elevated transition-colors">
                 Sync 990 financials
               </Link>
             </div>
           </div>
         )}
 
-        {/* ── Page header + inline KPI strip ──────────────────────── */}
+        {/* ── Page header ─────────────────────────────────────────── */}
         <div>
-          <div className="flex flex-wrap items-start justify-between gap-3 sm:gap-4">
-            <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="flex items-center gap-4 min-w-0">
               {data.logoUrl && <OrgLogo src={data.logoUrl} alt={ctx.orgName} />}
-              <div>
-                <p className="text-caption" style={{ color: 'var(--text-tertiary)' }}>{today}</p>
-                <h1 className="text-h1 font-semibold leading-tight" style={{ color: 'var(--text-primary)' }}>
+              <div className="min-w-0">
+                <p className="text-eyebrow uppercase text-tertiary">{today}</p>
+                <h1 className="text-h1 text-primary truncate">
                   {data.org?.name ?? ctx.orgName}
                 </h1>
               </div>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
               <Link href="/discover"
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-md text-body font-semibold bg-action text-canvas-1 hover:bg-action-hover transition-colors">
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-sm text-body-strong bg-accent text-accent-on hover:bg-accent-hover transition-colors">
                 <Sparkles className="w-3.5 h-3.5" />
                 Run discovery
               </Link>
               <Link href="/pipeline"
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-md text-body font-semibold ring-1 ring-canvas-3 hover:bg-canvas-2 transition-colors"
-                style={{ color: 'var(--text-primary)' }}>
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-sm text-body-strong text-primary border border-hairline bg-surface hover:bg-elevated transition-colors">
                 Open pipeline
               </Link>
             </div>
           </div>
 
-          {/* Inline KPI strip — four numbers, label:value rhythm, no boxes */}
+          {/* ── KPI strip — equal cards on a 4-col grid ───────────────
+             Section-label eyebrow + mono KPI value + caption sub-line.
+             No drop shadow; hairline border only. Delta slot is left
+             out for now — it'd require period-over-period data we
+             don't yet compute. */}
           {data.totalTracked > 0 && (
-            <div className="flex flex-wrap items-baseline gap-x-6 gap-y-1.5 mt-4 text-caption" style={{ color: 'var(--text-secondary)' }}>
-              <span>
-                Tracked
-                <strong className="text-h2 font-semibold tabular-nums ml-1" style={{ color: 'var(--text-primary)' }}>
-                  {data.totalTracked}
-                </strong>
-                <span className="text-eyebrow ml-1">· {data.highMatches} high</span>
-              </span>
-              <span>
-                Avg score
-                <strong className={`text-h2 font-semibold tabular-nums ml-1 ${
-                    avgScore >= 60 ? 'text-signal-pursue'
-                  : avgScore >= 40 ? 'text-signal-maybe'
-                                   : 'text-signal-skip'
-                }`}>
-                  {avgScore}
-                </strong>
-              </span>
-              <span>
-                Potential
-                <strong className="text-h2 font-semibold tabular-nums ml-1" style={{ color: 'var(--text-primary)' }}>
-                  {formatCompact(data.totalAwardPotential)}
-                </strong>
-              </span>
-              <span>
-                Urgent
-                <strong className={`text-h2 font-semibold tabular-nums ml-1 ${data.urgentGrants.length > 0 ? 'text-signal-skip' : ''}`}
-                  style={data.urgentGrants.length > 0 ? undefined : { color: 'var(--text-primary)' }}>
-                  {data.urgentGrants.length}
-                </strong>
-                <span className="text-eyebrow ml-1">· ≤ 14d</span>
-              </span>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-5">
+              <KpiCard
+                label="Tracked"
+                value={String(data.totalTracked)}
+                caption={`${data.highMatches} high-match`}
+              />
+              <KpiCard
+                label="Avg score"
+                value={String(avgScore)}
+                tone={avgScore >= 60 ? 'success' : avgScore >= 40 ? 'warning' : 'critical'}
+                caption="composite, all matches"
+              />
+              <KpiCard
+                label="Award potential"
+                value={formatCompact(data.totalAwardPotential)}
+                caption="score ≥ 60 grants"
+              />
+              <KpiCard
+                label="Urgent"
+                value={String(data.urgentGrants.length)}
+                tone={data.urgentGrants.length > 0 ? 'critical' : undefined}
+                caption="closing ≤ 14 days"
+              />
             </div>
           )}
         </div>
@@ -348,16 +369,13 @@ export default async function DashboardPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
 
           {/* Top opportunities (2/3 on desktop, full-width on mobile) */}
-          <div className="lg:col-span-2 rounded-[10px] border overflow-hidden"
-            style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)' }}>
-            <div className="px-5 py-3.5 border-b flex items-center justify-between"
-              style={{ borderColor: 'var(--row-divider)' }}>
+          <div className="lg:col-span-2 rounded-sm border border-hairline bg-surface overflow-hidden">
+            <div className="px-5 py-3 border-b border-hairline flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Sparkles className="w-3.5 h-3.5 text-[#0d9488]" />
-                <h2 className="text-[13px] font-bold" style={{ color: 'var(--text-primary)' }}>Top Opportunities</h2>
-                <span className="text-[11px]" style={{ color: 'var(--text-tertiary)' }}>by match score</span>
+                <h2 className="text-eyebrow uppercase text-secondary">Top opportunities</h2>
+                <span className="text-eyebrow uppercase text-tertiary">· by match score</span>
               </div>
-              <Link href="/discover" className="text-[12px] text-[#0d9488] font-medium hover:underline flex items-center gap-1">
+              <Link href="/discover" className="text-caption text-accent hover:text-accent-hover flex items-center gap-1 transition-colors">
                 View all <ArrowUpRight className="w-3 h-3" />
               </Link>
             </div>
@@ -368,8 +386,8 @@ export default async function DashboardPage() {
                 (DESIGN_SYSTEM.md §2.9). */}
             <div className="px-5 py-5">
               {data.totalTracked === 0 ? (
-                <div className="text-center text-[12px] text-[var(--text-tertiary)] py-6">
-                  No matches yet. Run discovery from <Link href="/discover" className="text-[#0d9488] hover:underline">/discover</Link>.
+                <div className="text-center text-caption text-tertiary py-6">
+                  No matches yet. Run discovery from <Link href="/discover" className="text-accent hover:text-accent-hover transition-colors">/discover</Link>.
                 </div>
               ) : (
                 <RecommendationGroup
@@ -431,26 +449,25 @@ export default async function DashboardPage() {
 
             {/* Pipeline distribution */}
             {data.totalTracked > 0 && (
-              <div className="px-5 py-4 border-t" style={{ borderColor: 'var(--row-divider)' }}>
-                <p className="text-[10px] font-bold uppercase tracking-widest mb-2"
-                  style={{ color: 'var(--text-tertiary)' }}>Pipeline</p>
-                <div className="flex gap-0.5 h-1.5 rounded-full overflow-hidden mb-2">
+              <div className="px-5 py-4 border-t border-hairline">
+                <p className="text-eyebrow uppercase text-tertiary mb-2">Pipeline</p>
+                <div className="flex gap-0.5 h-1 mb-2 bg-elevated">
                   {STAGES.map(({ stage, color }) => {
                     const count = data.matches.filter(m => m.pipeline_stage === stage).length;
                     const pct = (count / data.totalTracked) * 100;
                     return pct > 0 ? (
-                      <div key={stage} className="h-full transition-all" style={{ width: `${pct}%`, background: color }} />
+                      <div key={stage} className="h-full" style={{ width: `${pct}%`, background: color }} />
                     ) : null;
                   })}
                 </div>
-                <div className="flex flex-wrap gap-3">
+                <div className="flex flex-wrap gap-x-4 gap-y-1">
                   {STAGES.map(({ stage, label, color }) => {
                     const count = data.matches.filter(m => m.pipeline_stage === stage).length;
                     return count > 0 ? (
-                      <div key={stage} className="flex items-center gap-1">
-                        <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: color }} />
-                        <span className="text-[11px]" style={{ color: 'var(--text-secondary)' }}>
-                          {label} <strong style={{ color: 'var(--text-primary)' }}>{count}</strong>
+                      <div key={stage} className="flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: color }} />
+                        <span className="text-caption text-secondary">
+                          {label} <span className="font-mono font-semibold text-primary">{count}</span>
                         </span>
                       </div>
                     ) : null;
@@ -461,15 +478,12 @@ export default async function DashboardPage() {
           </div>
 
           {/* Urgent deadlines (1/3) */}
-          <div className="rounded-[10px] border overflow-hidden flex flex-col"
-            style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)' }}>
-            <div className="px-4 py-3.5 border-b flex items-center gap-2"
-              style={{ borderColor: 'var(--row-divider)' }}>
-              <Flame className={`w-3.5 h-3.5 ${data.urgentGrants.length > 0 ? 'text-red-500' : ''}`}
-                style={{ color: data.urgentGrants.length === 0 ? 'var(--text-tertiary)' : undefined }} />
-              <h2 className="text-[13px] font-bold" style={{ color: 'var(--text-primary)' }}>Urgent Deadlines</h2>
+          <div className="rounded-sm border border-hairline bg-surface overflow-hidden flex flex-col">
+            <div className="px-4 py-3 border-b border-hairline flex items-center gap-2">
+              <Flame className={`w-3.5 h-3.5 ${data.urgentGrants.length > 0 ? 'text-critical' : 'text-tertiary'}`} />
+              <h2 className="text-eyebrow uppercase text-secondary">Urgent deadlines</h2>
               {data.urgentGrants.length > 0 && (
-                <span className="ml-auto text-[10px] font-bold px-1.5 py-0.5 bg-red-50 text-red-600 rounded-full border border-red-100">
+                <span className="ml-auto font-mono text-eyebrow font-semibold px-1.5 py-0.5 text-critical bg-critical-tint rounded-sm">
                   {data.urgentGrants.length}
                 </span>
               )}
@@ -478,8 +492,8 @@ export default async function DashboardPage() {
             <div className="flex-1 overflow-y-auto theme-divide">
               {data.urgentGrants.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full py-10 px-4 text-center">
-                  <p className="text-[13px] font-medium" style={{ color: 'var(--text-muted)' }}>No urgent deadlines</p>
-                  <p className="text-[11px] mt-1" style={{ color: 'var(--text-tertiary)' }}>
+                  <p className="text-body font-medium text-muted">No urgent deadlines</p>
+                  <p className="text-caption mt-1 text-tertiary">
                     All grants have &gt; 14 days remaining
                   </p>
                 </div>
@@ -488,27 +502,23 @@ export default async function DashboardPage() {
                   const days = Math.ceil(
                     (new Date(match.grant!.close_date!).getTime() - Date.now()) / 86400000
                   );
+                  // Per brief: ≤1d → critical, ≤7d → warning, else neutral.
+                  const badgeCls =
+                      days <= 1 ? 'text-critical bg-critical-tint'
+                    : days <= 7 ? 'text-warning  bg-warning-tint'
+                                : 'text-secondary bg-elevated';
                   return (
                     <Link key={match.id} href={`/grant/${match.grant_id}`}>
                       <div className="row-urgent-hover px-4 py-3 group">
                         <div className="flex items-start justify-between gap-2 mb-1">
-                          <p className="text-[12px] font-semibold line-clamp-2 group-hover:text-red-500 transition-colors leading-snug"
-                            style={{ color: 'var(--text-primary)' }}>
+                          <p className="text-caption font-medium text-primary line-clamp-2 group-hover:text-accent transition-colors leading-snug">
                             {match.grant?.title}
                           </p>
-                          <span
-                            className="text-eyebrow font-semibold tabular-nums px-2 py-0.5 rounded-sm border shrink-0"
-                            style={
-                              days <= 7
-                                ? { background: '#F4E3E5', color: '#7A1E2E', borderColor: '#E7C4C9' }
-                              : days <= 14
-                                ? { background: '#FBF1DC', color: '#9A6B00', borderColor: '#EBD9B0' }
-                                : { background: '#F2F1EC', color: '#3A3D44', borderColor: '#E5E4DE' }
-                            }>
+                          <span className={`font-mono text-eyebrow font-semibold tabular-nums px-1.5 py-0.5 rounded-sm shrink-0 ${badgeCls}`}>
                             {days}d
                           </span>
                         </div>
-                        <p className="text-[11px] truncate" style={{ color: 'var(--text-tertiary)' }}>
+                        <p className="text-eyebrow text-tertiary truncate">
                           {match.grant?.agency_name}
                         </p>
                       </div>
@@ -518,42 +528,39 @@ export default async function DashboardPage() {
               )}
             </div>
 
-            <div className="px-4 py-3 border-t" style={{ borderColor: 'var(--row-divider)' }}>
-              <Link href="/discover" className="flex items-center justify-center gap-1 text-[12px] font-semibold text-[#0d9488] hover:underline">
+            <div className="px-4 py-3 border-t border-hairline">
+              <Link href="/discover" className="flex items-center justify-center gap-1 text-caption text-accent hover:text-accent-hover transition-colors">
                 View all deadlines <ArrowUpRight className="w-3 h-3" />
               </Link>
             </div>
           </div>
         </div>
 
-        {/* ── Full match list — demoted behind a disclosure ─────────
-            The triage groups above already surface the top picks per
-            bucket. The full table is still here for users who want to
-            scan everything, but it no longer competes for attention. */}
+        {/* ── Full match list — demoted behind a disclosure ────────── */}
         {data.matches.length === 0 ? (
-          <div className="rounded-lg ring-1 ring-dashed ring-canvas-3 p-12 text-center bg-canvas-1">
-            <AlertTriangle className="w-8 h-8 mx-auto mb-3 text-ink-3" />
-            <p className="text-body font-medium mb-4 text-ink-1">No grant matches yet.</p>
+          <div className="rounded-sm border border-dashed border-hairline bg-surface p-12 text-center">
+            <AlertTriangle className="w-8 h-8 mx-auto mb-3 text-tertiary" />
+            <p className="text-body font-medium mb-4 text-muted">No grant matches yet.</p>
             <Link
               href="/discover"
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md text-body font-semibold bg-action text-canvas-1 hover:bg-action-hover transition-colors"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-sm text-body-strong bg-accent text-accent-on hover:bg-accent-hover transition-colors"
             >
               <Sparkles className="w-3.5 h-3.5" />
               Run your first discovery
             </Link>
           </div>
         ) : (
-          <details className="group bg-canvas-1 rounded-lg shadow-flat">
-            <summary className="flex items-center justify-between gap-2 px-5 py-3.5 cursor-pointer list-none">
+          <details className="group bg-surface border border-hairline rounded-sm">
+            <summary className="flex items-center justify-between gap-2 px-5 py-3 cursor-pointer list-none">
               <div>
-                <h2 className="text-h2 font-semibold" style={{ color: 'var(--text-primary)' }}>All matches</h2>
-                <p className="text-caption mt-0.5" style={{ color: 'var(--text-secondary)' }}>
+                <h2 className="text-h2 text-primary">All matches</h2>
+                <p className="text-caption mt-0.5 text-secondary">
                   {data.totalTracked} opportunities · click to expand the full table
                 </p>
               </div>
-              <ArrowUpRight className="w-4 h-4 transition-transform group-open:rotate-90 text-ink-2" />
+              <ArrowUpRight className="w-4 h-4 transition-transform group-open:rotate-90 text-tertiary" />
             </summary>
-            <div className="border-t border-canvas-3">
+            <div className="border-t border-hairline">
               <GrantTable matches={data.matches} />
             </div>
           </details>

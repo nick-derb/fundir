@@ -65,7 +65,7 @@ export function AppShell({
   const [gPressed, setGPressed]         = useState(false);
   const [orgMenuOpen, setOrgMenuOpen]   = useState(false);
   const [switching, setSwitching]       = useState(false);
-  const [theme, setTheme]               = useState<'dark' | 'light'>('dark');
+  const [theme, setTheme]               = useState<'dark' | 'light'>('light');
   const [teamOpen, setTeamOpen]         = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const orgMenuRef = useRef<HTMLDivElement>(null);
@@ -95,7 +95,7 @@ export function AppShell({
   }, [gPressed, router]);
 
   useEffect(() => {
-    const saved = (localStorage.getItem('fundir-theme') as 'dark' | 'light') || 'dark';
+    const saved = (localStorage.getItem('fundir-theme') as 'dark' | 'light') || 'light';
     setTheme(saved);
     document.documentElement.setAttribute('data-theme', saved);
   }, []);
@@ -141,7 +141,7 @@ export function AppShell({
   const initials = orgName.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase();
 
   return (
-    <div className="flex min-h-screen" style={{ background: 'var(--page-bg)' }}>
+    <div className="flex min-h-screen bg-page">
       {paletteOpen && <CommandPalette />}
 
       {/* ── Mobile backdrop (sub-md only, when drawer is open) ── */}
@@ -153,60 +153,61 @@ export function AppShell({
         />
       )}
 
-      {/* ── Sidebar ─ desktop: always visible; mobile: slide-in drawer ── */}
+      {/* ── Sidebar — desktop: always visible; mobile: slide-in drawer ── */}
       <aside
-        className={`w-52 flex flex-col fixed inset-y-0 left-0 z-50 border-r transform transition-transform duration-200 ease-out md:translate-x-0 ${
+        className={`w-56 flex flex-col fixed inset-y-0 left-0 z-50 border-r border-hairline bg-surface transform transition-transform duration-200 ease-out md:translate-x-0 ${
           mobileNavOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
-        style={{ background: 'var(--sidebar-bg)', borderColor: 'var(--sidebar-border)' }}>
+      >
 
-        {/* Brand + org switcher */}
-        <div className="px-4 py-4 border-b" style={{ borderColor: 'var(--sidebar-border)' }}>
+        {/* Brand + org */}
+        <div className="px-4 pt-4 pb-3 border-b border-hairline">
           <div className="flex items-center gap-2 mb-3">
-            <div className="w-7 h-7 rounded-[6px] flex items-center justify-center text-white text-[11px] font-extrabold flex-shrink-0"
-              style={{ background: 'linear-gradient(135deg, #0d9488, #0891b2)' }}>
+            <div className="w-7 h-7 rounded-sm flex items-center justify-center bg-accent text-accent-on text-[12px] font-semibold flex-shrink-0">
               F
             </div>
-            <span className="font-bold text-[15px] tracking-tight" style={{ color: 'var(--brand-text)' }}>Fundir</span>
+            <span className="text-h3 font-semibold tracking-tight text-primary">Fundir</span>
           </div>
 
-          {/* Org switcher — dropdown for admin, static for regular users */}
+          {/* Org switcher — two-line treatment, full org name with tooltip,
+              dropdown only for admins with multiple orgs. */}
           <div className="relative" ref={orgMenuRef}>
             <button
               onClick={() => isAdmin && availableOrgs.length > 1 && setOrgMenuOpen(o => !o)}
-              className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-[6px] transition-colors text-left shell-nav-item ${
-                isAdmin && availableOrgs.length > 1 ? 'cursor-pointer' : 'cursor-default'
+              title={orgName}
+              className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-sm transition-colors text-left ${
+                isAdmin && availableOrgs.length > 1 ? 'cursor-pointer hover:bg-elevated' : 'cursor-default'
               }`}
             >
-              <div className="w-5 h-5 rounded-[4px] flex items-center justify-center text-[9px] font-bold text-[#0d9488] flex-shrink-0"
-                style={{ background: 'rgba(13,148,136,0.1)' }}>
+              <div className="w-6 h-6 rounded-sm flex items-center justify-center bg-elevated text-secondary text-[10px] font-semibold flex-shrink-0">
                 {initials}
               </div>
-              <span className="text-[12px] font-medium truncate flex-1" style={{ color: 'var(--org-text)' }}>{orgName}</span>
+              <span className="text-[12px] font-medium text-secondary leading-tight flex-1 line-clamp-2 break-words">
+                {orgName}
+              </span>
               {isAdmin && availableOrgs.length > 1 && (
-                <ChevronDown className={`w-3 h-3 flex-shrink-0 transition-transform ${orgMenuOpen ? 'rotate-180' : ''}`} style={{ color: 'var(--faint-text)' }} />
+                <ChevronDown className={`w-3 h-3 flex-shrink-0 text-tertiary transition-transform ${orgMenuOpen ? 'rotate-180' : ''}`} />
               )}
             </button>
 
             {/* Admin org dropdown */}
             {orgMenuOpen && availableOrgs.length > 1 && (
-              <div className="absolute top-full left-0 right-0 mt-1 rounded-[8px] shadow-lg z-50 overflow-hidden border"
-                style={{ background: 'var(--dropdown-bg)', borderColor: 'var(--dropdown-border)' }}>
-                <p className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-widest" style={{ color: 'var(--faint-text)' }}>Switch organization</p>
+              <div className="absolute top-full left-0 right-0 mt-1 rounded-sm overflow-hidden border border-hairline bg-surface z-50"
+                style={{ boxShadow: 'var(--shadow-overlay)' }}>
+                <p className="px-3 pt-2 pb-1 text-eyebrow text-tertiary uppercase">Switch organization</p>
                 {availableOrgs.map(org => (
                   <button
                     key={org.id}
                     onClick={() => handleOrgSwitch(org.org_code)}
                     disabled={switching}
-                    className="w-full flex items-center gap-2 px-3 py-2 text-left transition-colors disabled:opacity-50 shell-nav-item"
+                    className="w-full flex items-center gap-2 px-3 py-2 text-left transition-colors hover:bg-elevated disabled:opacity-50"
                   >
-                    <div className="w-5 h-5 rounded-[4px] flex items-center justify-center text-[9px] font-bold text-[#0d9488] flex-shrink-0"
-                      style={{ background: 'rgba(13,148,136,0.1)' }}>
+                    <div className="w-5 h-5 rounded-sm flex items-center justify-center bg-elevated text-secondary text-[9px] font-semibold flex-shrink-0">
                       {org.name.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase()}
                     </div>
-                    <span className="text-[12px] truncate flex-1" style={{ color: 'var(--org-text)' }}>{org.name}</span>
+                    <span className="text-caption text-primary truncate flex-1">{org.name}</span>
                     {org.org_code === currentOrgCode && (
-                      <Check className="w-3 h-3 text-[#0d9488] flex-shrink-0" />
+                      <Check className="w-3 h-3 text-accent flex-shrink-0" />
                     )}
                   </button>
                 ))}
@@ -215,30 +216,31 @@ export function AppShell({
           </div>
 
           {isAdmin && (
-            <p className="mt-1 px-2 text-[10px] font-medium" style={{ color: 'var(--faint-text)' }}>Admin view</p>
+            <p className="mt-1 px-2 text-eyebrow uppercase text-tertiary">Admin view</p>
           )}
         </div>
 
         {/* Main nav */}
-        <nav className="flex-1 px-2 py-3 overflow-y-auto space-y-0.5">
+        <nav className="flex-1 px-3 py-3 overflow-y-auto">
           {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
             const active = isActive(href);
             return (
               <Link key={href} href={href} prefetch={false}
-                className={`flex items-center gap-2.5 px-3 py-[7px] rounded-[6px] text-[13px] font-medium transition-colors shell-nav-item ${active ? 'shell-nav-active' : ''}`}>
-                <Icon className="w-4 h-4 flex-shrink-0 shell-nav-icon" />
+                className={`shell-nav-item flex items-center gap-2.5 pl-3 pr-2 py-[7px] text-[13px] mb-0.5 ${active ? 'shell-nav-active' : ''}`}>
+                <Icon className="shell-nav-icon w-4 h-4 flex-shrink-0" />
                 {label}
               </Link>
             );
           })}
 
-          <div className="pt-3 mt-3 border-t space-y-0.5" style={{ borderColor: 'var(--nav-divider)' }}>
+          {/* Hairline divider before utility nav */}
+          <div className="pt-3 mt-3 border-t border-hairline">
             {SETTINGS_ITEMS.map(({ href, label, icon: Icon }) => {
               const active = isActive(href);
               return (
                 <Link key={href} href={href} prefetch={false}
-                  className={`flex items-center gap-2.5 px-3 py-[7px] rounded-[6px] text-[13px] font-medium transition-colors shell-nav-item ${active ? 'shell-nav-active' : ''}`}>
-                  <Icon className="w-4 h-4 flex-shrink-0 shell-nav-icon" />
+                  className={`shell-nav-item flex items-center gap-2.5 pl-3 pr-2 py-[7px] text-[13px] mb-0.5 ${active ? 'shell-nav-active' : ''}`}>
+                  <Icon className="shell-nav-icon w-4 h-4 flex-shrink-0" />
                   {label}
                 </Link>
               );
@@ -247,43 +249,41 @@ export function AppShell({
         </nav>
 
         {/* Footer */}
-        <div className="px-2 py-3 border-t space-y-0.5" style={{ borderColor: 'var(--sidebar-border)' }}>
+        <div className="px-3 py-3 border-t border-hairline">
           {isAdmin && (
             <Link href="/admin" prefetch={false}
-              className="flex items-center gap-2.5 px-3 py-[7px] rounded-[6px] text-[12px] transition-colors shell-nav-item">
-              <Shield className="w-4 h-4 flex-shrink-0 shell-nav-icon" />
+              className="shell-nav-item flex items-center gap-2.5 pl-3 pr-2 py-[7px] text-caption mb-0.5">
+              <Shield className="shell-nav-icon w-4 h-4 flex-shrink-0" />
               Admin Console
             </Link>
           )}
           {userEmail && (
-            <p className="px-3 py-1 text-[11px] truncate" style={{ color: 'var(--faint-text)' }}>{userEmail}</p>
+            <p className="px-3 py-1 text-eyebrow text-tertiary truncate uppercase">{userEmail}</p>
           )}
           <button onClick={toggleTheme}
-            className="w-full flex items-center gap-2.5 px-3 py-[7px] rounded-[6px] text-[13px] transition-colors shell-nav-item">
+            className="shell-nav-item w-full flex items-center gap-2.5 pl-3 pr-2 py-[7px] text-[13px] mb-0.5">
             {theme === 'dark'
-              ? <><Sun className="w-4 h-4 flex-shrink-0 shell-nav-icon" /><span>Light mode</span></>
-              : <><Moon className="w-4 h-4 flex-shrink-0 shell-nav-icon" /><span>Dark mode</span></>
+              ? <><Sun className="shell-nav-icon w-4 h-4 flex-shrink-0" /><span>Light mode</span></>
+              : <><Moon className="shell-nav-icon w-4 h-4 flex-shrink-0" /><span>Dark mode</span></>
             }
           </button>
           <button onClick={handleSignOut}
-            className="w-full flex items-center gap-2.5 px-3 py-[7px] rounded-[6px] text-[13px] transition-colors shell-nav-item">
-            <LogOut className="w-4 h-4 flex-shrink-0 shell-nav-icon" />
+            className="shell-nav-item w-full flex items-center gap-2.5 pl-3 pr-2 py-[7px] text-[13px]">
+            <LogOut className="shell-nav-icon w-4 h-4 flex-shrink-0" />
             Sign out
           </button>
         </div>
       </aside>
 
-      {/* ── Content area ─ ml-52 on desktop; full width on mobile ── */}
-      <div className="flex-1 md:ml-52 flex flex-col min-h-screen w-full">
-        {/* Top bar */}
-        <header className="sticky top-0 z-40 h-12 flex items-center px-3 md:px-6 gap-3 md:gap-4 border-b"
-          style={{ background: 'var(--header-bg)', borderColor: 'var(--sidebar-border)' }}>
+      {/* ── Content area — ml-56 on desktop; full width on mobile ── */}
+      <div className="flex-1 md:ml-56 flex flex-col min-h-screen w-full">
+        {/* Top bar — quiet, hairline-bottom, grid-aligned. */}
+        <header className="sticky top-0 z-40 h-12 flex items-center px-4 md:px-6 gap-3 md:gap-4 bg-surface border-b border-hairline">
           {/* Mobile hamburger — opens the sidebar drawer */}
           <button
             onClick={() => setMobileNavOpen(o => !o)}
             aria-label={mobileNavOpen ? 'Close navigation' : 'Open navigation'}
-            className="md:hidden w-8 h-8 -ml-1 rounded-lg flex items-center justify-center hover:bg-white/5"
-            style={{ color: 'var(--brand-text)' }}
+            className="md:hidden w-8 h-8 -ml-1 rounded-sm flex items-center justify-center text-primary hover:bg-elevated transition-colors"
           >
             {mobileNavOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
           </button>
@@ -297,15 +297,14 @@ export function AppShell({
             />
           )}
           <div
-            className="w-7 h-7 rounded-full flex items-center justify-center text-white text-[11px] font-bold flex-shrink-0 cursor-default"
-            style={{ background: 'linear-gradient(135deg, #0d9488, #0891b2)' }}
+            className="w-7 h-7 rounded-full flex items-center justify-center text-accent-on bg-accent text-[11px] font-semibold flex-shrink-0 cursor-default"
             title={userEmail}
           >
             {userEmail ? userEmail[0].toUpperCase() : 'U'}
           </div>
         </header>
 
-        <main className="flex-1" style={{ background: 'var(--page-bg)' }}>
+        <main className="flex-1 bg-page">
           {children}
         </main>
       </div>
