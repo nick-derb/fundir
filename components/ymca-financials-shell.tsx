@@ -5,7 +5,7 @@ import Link from 'next/link';
 import {
   BarChart3, TrendingDown, AlertTriangle,
   DollarSign, Users, Building2,
-  ChevronRight, TrendingUp, Brain, Library, Wand2, Zap,
+  ChevronRight, Brain, Library, Wand2, Zap,
   ArrowUp, ArrowDown, Minus,
 } from 'lucide-react';
 import {
@@ -13,7 +13,7 @@ import {
   YMCA_CONTRACTORS, YMCA_INTELLIGENCE_FLAGS,
 } from '@/lib/ymca-live-data';
 import {
-  Card, CardHeader, SectionTitle,
+  Card, SectionTitle,
   AITab, DocumentLibraryTab, StrategyBriefTab,
   type CommonTab,
 } from './financials-shell';
@@ -30,36 +30,41 @@ function fmtFull(n: number): string {
 }
 
 // ── Revenue sparkline bars ────────────────────────────────────────────────────
+//
+// Same bug fix as CYC: container height bumped (now 140px), no clipping,
+// tokens replace dark/saturated colors. Paired bars per year (revenue +
+// expenses) so the gap between them reads as surplus or deficit.
 function RevenueBars() {
+  const CHART_H = 140;
   const years = YMCA_REVENUE_HISTORY.slice(-7);
-  const max = Math.max(...years.map(y => y.expenses));
+  const max = Math.max(...years.map(y => Math.max(y.revenue, y.expenses)));
   return (
-    <div className="flex items-end gap-3" style={{ height: 110 }}>
+    <div className="flex items-end gap-3 pt-2">
       {years.map(y => {
         const rev    = y.revenue;
         const exp    = y.expenses;
-        const revH   = Math.round((rev / max) * 64);
-        const expH   = Math.round((exp / max) * 64);
+        const revH   = Math.round((rev / max) * CHART_H);
+        const expH   = Math.round((exp / max) * CHART_H);
         const isPos  = rev >= exp;
         return (
-          <div key={y.year} className="flex-1 flex flex-col items-center gap-1">
-            <span className={`text-[10px] font-bold font-mono ${isPos ? 'text-green-400' : 'text-red-400'}`}>
+          <div key={y.year} className="flex-1 flex flex-col items-center gap-1.5">
+            <span className={`font-mono text-[10.5px] font-semibold tabular-nums ${isPos ? 'text-success' : 'text-critical'}`}>
               {isPos ? `+${fmt(rev - exp)}` : `(${fmt(exp - rev)})`}
             </span>
-            <div className="w-full relative flex items-end gap-px justify-center" style={{ height: 60 }}>
-              <div className="flex-1 rounded-[3px]" style={{
+            <div className="w-full relative flex items-end gap-1 justify-center bg-page border border-hairline rounded-sm" style={{ height: CHART_H }}>
+              <div className="flex-1 rounded-sm" style={{
                 height: revH,
-                background: 'linear-gradient(to top,rgba(13,148,136,0.8),rgba(13,148,136,0.25))',
-                borderTop: '2px solid #0d9488',
+                background: 'linear-gradient(to top, var(--accent), color-mix(in srgb, var(--accent) 35%, transparent))',
+                borderTop: '2px solid var(--accent)',
               }} />
-              <div className="flex-1 rounded-[3px]" style={{
+              <div className="flex-1 rounded-sm" style={{
                 height: expH,
-                background: 'linear-gradient(to top,rgba(239,68,68,0.6),rgba(239,68,68,0.15))',
-                borderTop: '2px solid #ef4444',
+                background: 'linear-gradient(to top, var(--critical), color-mix(in srgb, var(--critical) 35%, transparent))',
+                borderTop: '2px solid var(--critical)',
               }} />
             </div>
-            <span className="text-[10px] font-mono text-slate-400">{fmt(rev)}</span>
-            <span className="text-[9px] text-slate-600">{y.year}</span>
+            <span className="font-mono text-[10.5px] font-semibold text-primary tabular-nums">{fmt(rev)}</span>
+            <span className="font-mono text-[10.5px] text-tertiary tabular-nums">{y.year}</span>
           </div>
         );
       })}
@@ -74,27 +79,30 @@ function Flag({
   severity: 'critical' | 'warning' | 'info';
   headline: string; detail: string; metric: string; action: string; category: string;
 }) {
-  const isCrit = severity === 'critical', isWarn = severity === 'warning';
-  const color  = isCrit ? '#f87171' : isWarn ? '#fbbf24' : '#38bdf8';
-  const bg     = isCrit ? 'rgba(239,68,68,0.07)' : isWarn ? 'rgba(251,191,36,0.07)' : 'rgba(56,189,248,0.07)';
-  const border = isCrit ? 'rgba(239,68,68,0.22)' : isWarn ? 'rgba(251,191,36,0.22)' : 'rgba(56,189,248,0.22)';
-  const tagBg  = isCrit ? '#dc2626' : isWarn ? '#d97706' : '#0284c7';
+  const sev = {
+    critical: { tone: 'text-critical', left: 'border-l-critical' },
+    warning:  { tone: 'text-warning',  left: 'border-l-warning'  },
+    info:     { tone: 'text-info',     left: 'border-l-info'     },
+  }[severity];
+
   return (
-    <div className="rounded-[10px] border p-4" style={{ background: bg, borderColor: border }}>
-      <div className="flex items-start justify-between gap-2 mb-2">
-        <div className="flex items-center gap-2">
-          <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" style={{ color }} />
-          <p className="text-[13px] font-bold" style={{ color }}>{headline}</p>
+    <div className={`rounded-sm border border-hairline border-l-[3px] ${sev.left} bg-surface p-4`}>
+      <div className="flex items-start justify-between gap-3 mb-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <AlertTriangle className={`w-3.5 h-3.5 flex-shrink-0 ${sev.tone}`} />
+          <p className={`text-[13px] font-semibold ${sev.tone} truncate`}>{headline}</p>
         </div>
-        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded text-white flex-shrink-0"
-          style={{ background: tagBg }}>{category.toUpperCase()}</span>
+        <span className={`font-mono text-[9.5px] font-semibold uppercase tracking-[0.08em] ${sev.tone} flex-shrink-0`}>
+          {category}
+        </span>
       </div>
-      <p className="text-[11px] text-slate-400 leading-relaxed mb-2">{detail}</p>
-      <div className="flex items-center gap-2 pt-2 border-t" style={{ borderColor: border }}>
-        <Zap className="w-3 h-3 flex-shrink-0" style={{ color }} />
-        <p className="text-[11px] font-medium leading-relaxed" style={{ color }}>{action}</p>
-        <span className="ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full text-white flex-shrink-0"
-          style={{ background: tagBg }}>{metric}</span>
+      <p className="text-[11.5px] text-muted leading-relaxed mb-3">{detail}</p>
+      <div className="flex items-center gap-2 pt-2.5 border-t border-hairline">
+        <Zap className={`w-3 h-3 flex-shrink-0 ${sev.tone}`} />
+        <p className="text-[11.5px] font-medium leading-relaxed text-primary">{action}</p>
+        <span className={`ml-auto font-mono text-[10.5px] font-semibold tabular-nums ${sev.tone} flex-shrink-0`}>
+          {metric}
+        </span>
       </div>
     </div>
   );
@@ -115,8 +123,8 @@ function OverviewTab() {
       value: fmt(core.revenue),
       sub: 'FY2024 (YE Dec 31)',
       icon: DollarSign,
-      color: '#0d9488',
-      bg: 'rgba(13,148,136,0.15)',
+      color: 'var(--accent)',
+      bg: 'var(--accent-tint)',
       neg: false,
     },
     {
@@ -124,8 +132,8 @@ function OverviewTab() {
       value: fmt(core.expenses),
       sub: 'Expenses exceed revenue 30%',
       icon: TrendingDown,
-      color: '#f87171',
-      bg: 'rgba(239,68,68,0.15)',
+      color: 'var(--critical)',
+      bg: 'var(--critical-tint)',
       neg: true,
     },
     {
@@ -133,8 +141,8 @@ function OverviewTab() {
       value: `(${fmt(Math.abs(core.netChange))})`,
       sub: `${deficitPct}% of revenue`,
       icon: TrendingDown,
-      color: '#f87171',
-      bg: 'rgba(239,68,68,0.15)',
+      color: 'var(--critical)',
+      bg: 'var(--critical-tint)',
       neg: true,
     },
     {
@@ -142,8 +150,8 @@ function OverviewTab() {
       value: `${compPct}%`,
       sub: `${fmt(core.employeeCompensation)} of revenue`,
       icon: Users,
-      color: '#fbbf24',
-      bg: 'rgba(251,191,36,0.15)',
+      color: 'var(--warning)',
+      bg: 'var(--warning-tint)',
       neg: false,
     },
   ] as const;
@@ -155,13 +163,13 @@ function OverviewTab() {
         {kpis.map(({ label, value, sub, icon: Icon, color, bg, neg }) => (
           <Card key={label} className="p-4">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">{label}</span>
+              <span className="text-[10px] font-bold text-secondary uppercase tracking-wide">{label}</span>
               <div className="w-6 h-6 rounded-[5px] flex items-center justify-center" style={{ background: bg }}>
                 <Icon className="w-3.5 h-3.5" style={{ color }} />
               </div>
             </div>
-            <div className={`text-[22px] font-bold leading-none mb-1 ${neg ? 'text-red-400' : 'text-white'}`}>{value}</div>
-            <p className="text-[10px] text-slate-600">{sub}</p>
+            <div className={`text-[22px] font-bold leading-none mb-1 ${neg ? 'text-critical' : 'text-primary'}`}>{value}</div>
+            <p className="text-[10px] text-tertiary">{sub}</p>
           </Card>
         ))}
       </div>
@@ -170,15 +178,15 @@ function OverviewTab() {
       <Card className="p-5">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <p className="text-[12px] font-bold text-slate-300">Revenue vs. Expenses — 7-Year Trend</p>
-            <p className="text-[11px] text-slate-600">
-              <span className="inline-block w-2 h-2 rounded-sm bg-teal-500 mr-1" />Revenue&nbsp;&nbsp;
-              <span className="inline-block w-2 h-2 rounded-sm bg-red-500 mr-1" />Expenses
+            <p className="text-[12px] font-bold text-muted">Revenue vs. Expenses — 7-Year Trend</p>
+            <p className="text-[11px] text-tertiary">
+              <span className="inline-block w-2 h-2 rounded-sm bg-accent mr-1" />Revenue&nbsp;&nbsp;
+              <span className="inline-block w-2 h-2 rounded-sm bg-critical mr-1" />Expenses
             </p>
           </div>
           <div className="text-right">
-            <p className="text-[11px] text-slate-500">FY2024 Gap</p>
-            <p className="text-[16px] font-bold text-red-400 font-mono">{fmt(Math.abs(core.netChange))}</p>
+            <p className="text-[11px] text-secondary">FY2024 Gap</p>
+            <p className="text-[16px] font-bold text-critical font-mono">{fmt(Math.abs(core.netChange))}</p>
           </div>
         </div>
         <RevenueBars />
@@ -197,14 +205,14 @@ function OverviewTab() {
 
       {/* CTA */}
       <div className="flex items-center gap-3 py-3.5 px-5 rounded-xl border"
-        style={{ background: 'rgba(13,148,136,0.06)', borderColor: 'rgba(13,148,136,0.18)' }}>
-        <Zap className="w-4 h-4 text-teal-400 flex-shrink-0" />
-        <p className="text-slate-400 text-[12px]">
-          YMCA Metro Chicago carries a <strong className="text-white">$24.1M operating deficit</strong> —
+        style={{ background: 'var(--accent-tint)', borderColor: 'var(--accent)' }}>
+        <Zap className="w-4 h-4 text-accent flex-shrink-0" />
+        <p className="text-secondary text-[12px]">
+          YMCA Metro Chicago carries a <strong className="text-primary">$24.1M operating deficit</strong> —
           prioritize unrestricted general operating grants and workforce development funding.
         </p>
         <Link href="/discover"
-          className="ml-auto flex-shrink-0 text-[11px] font-bold text-teal-400 hover:text-teal-300 transition-colors flex items-center gap-1 whitespace-nowrap">
+          className="ml-auto flex-shrink-0 text-[11px] font-bold text-accent hover:text-accent transition-colors flex items-center gap-1 whitespace-nowrap">
           Find matching grants <ChevronRight className="w-3 h-3" />
         </Link>
       </div>
@@ -224,13 +232,13 @@ function CompensationTab() {
       {/* Summary stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: 'Total Employees',     value: core.totalEmployees.toLocaleString(), color: '#0d9488' },
-          { label: 'Employee Comp (Total)',value: fmt(core.employeeCompensation),       color: '#fbbf24' },
-          { label: 'Disclosed Executives', value: `${YMCA_LEADERSHIP.length} officers`, color: '#38bdf8' },
-          { label: 'Avg Exec Comp',        value: fmt(avgComp),                         color: '#a78bfa' },
+          { label: 'Total Employees',     value: core.totalEmployees.toLocaleString(), color: 'var(--accent)' },
+          { label: 'Employee Comp (Total)',value: fmt(core.employeeCompensation),       color: 'var(--warning)' },
+          { label: 'Disclosed Executives', value: `${YMCA_LEADERSHIP.length} officers`, color: 'var(--info)' },
+          { label: 'Avg Exec Comp',        value: fmt(avgComp),                         color: 'var(--info)' },
         ].map(({ label, value, color }) => (
           <Card key={label} className="p-4">
-            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-2">{label}</p>
+            <p className="text-[10px] font-bold text-secondary uppercase tracking-wide mb-2">{label}</p>
             <p className="text-[20px] font-bold font-mono" style={{ color }}>{value}</p>
           </Card>
         ))}
@@ -244,9 +252,9 @@ function CompensationTab() {
       <Card className="overflow-hidden">
         <table className="w-full">
           <thead>
-            <tr className="border-b" style={{ borderColor: 'rgba(255,255,255,0.06)', background: 'rgba(255,255,255,0.02)' }}>
+            <tr className="border-b" style={{ borderColor: 'var(--border-hairline)', background: 'var(--bg-elevated)' }}>
               {['Name / Title', 'From Org', 'Other', 'Total', 'YoY'].map((h, i) => (
-                <th key={h} className={`py-2.5 px-4 text-[10px] font-bold text-slate-500 uppercase tracking-wide ${i === 0 ? 'text-left' : 'text-right'}`}>{h}</th>
+                <th key={h} className={`py-2.5 px-4 text-[10px] font-bold text-secondary uppercase tracking-wide ${i === 0 ? 'text-left' : 'text-right'}`}>{h}</th>
               ))}
             </tr>
           </thead>
@@ -254,34 +262,34 @@ function CompensationTab() {
             {YMCA_LEADERSHIP.map(leader => {
               const yoy = leader.vsLastYear;
               return (
-                <tr key={leader.name} className="border-t hover:bg-white/[0.02] transition-colors"
-                  style={{ borderColor: 'rgba(255,255,255,0.04)' }}>
+                <tr key={leader.name} className="border-t hover:bg-elevated transition-colors"
+                  style={{ borderColor: 'var(--bg-elevated)' }}>
                   <td className="py-3 px-4">
                     <div className="flex items-center gap-2">
                       <div>
-                        <p className="text-[13px] font-semibold text-slate-100">{leader.name}</p>
-                        <p className="text-[11px] text-teal-400 mt-0.5">{leader.title}</p>
+                        <p className="text-[13px] font-semibold text-primary">{leader.name}</p>
+                        <p className="text-[11px] text-accent mt-0.5">{leader.title}</p>
                       </div>
                       {leader.isNew && (
-                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded text-green-400 border border-green-400/20 flex-shrink-0"
-                          style={{ background: 'rgba(34,197,94,0.08)' }}>NEW</span>
+                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded text-success border border-success/20 flex-shrink-0"
+                          style={{ background: 'var(--success-tint)' }}>NEW</span>
                       )}
                     </div>
                   </td>
                   <td className="py-3 px-4 text-right">
-                    <span className="text-[13px] font-mono text-slate-300">{fmtFull(leader.fromOrg)}</span>
+                    <span className="text-[13px] font-mono text-muted">{fmtFull(leader.fromOrg)}</span>
                   </td>
                   <td className="py-3 px-4 text-right">
-                    <span className="text-[13px] font-mono text-slate-500">{fmtFull(leader.other)}</span>
+                    <span className="text-[13px] font-mono text-secondary">{fmtFull(leader.other)}</span>
                   </td>
                   <td className="py-3 px-4 text-right">
-                    <span className="text-[14px] font-bold font-mono text-slate-100">{fmtFull(leader.total)}</span>
+                    <span className="text-[14px] font-bold font-mono text-primary">{fmtFull(leader.total)}</span>
                   </td>
                   <td className="py-3 px-4 text-right">
                     {yoy === null ? (
-                      <span className="text-[11px] text-slate-600">—</span>
+                      <span className="text-[11px] text-tertiary">—</span>
                     ) : (
-                      <span className={`inline-flex items-center gap-0.5 text-[12px] font-bold ${yoy > 0 ? 'text-green-400' : yoy < 0 ? 'text-red-400' : 'text-slate-400'}`}>
+                      <span className={`inline-flex items-center gap-0.5 text-[12px] font-bold ${yoy > 0 ? 'text-success' : yoy < 0 ? 'text-critical' : 'text-secondary'}`}>
                         {yoy > 0 ? <ArrowUp className="w-3 h-3" /> : yoy < 0 ? <ArrowDown className="w-3 h-3" /> : <Minus className="w-3 h-3" />}
                         {Math.abs(yoy).toFixed(1)}%
                       </span>
@@ -292,13 +300,13 @@ function CompensationTab() {
             })}
           </tbody>
           <tfoot>
-            <tr className="border-t-2" style={{ borderColor: 'rgba(255,255,255,0.10)', background: 'rgba(255,255,255,0.02)' }}>
-              <td className="py-3 px-4 text-[12px] font-bold text-slate-200">
+            <tr className="border-t-2" style={{ borderColor: 'var(--border-strong)', background: 'var(--bg-elevated)' }}>
+              <td className="py-3 px-4 text-[12px] font-bold text-primary">
                 Total ({YMCA_LEADERSHIP.length} disclosed) · {core.totalEmployees.toLocaleString()} total employees
               </td>
               <td />
               <td />
-              <td className="py-3 px-4 text-right text-[13px] font-bold text-slate-200 font-mono">
+              <td className="py-3 px-4 text-right text-[13px] font-bold text-primary font-mono">
                 {fmtFull(YMCA_LEADERSHIP.reduce((s, l) => s + l.total, 0))}
               </td>
               <td />
@@ -308,9 +316,9 @@ function CompensationTab() {
       </Card>
 
       <div className="rounded-xl border p-4 flex items-start gap-3"
-        style={{ background: 'rgba(251,191,36,0.06)', borderColor: 'rgba(251,191,36,0.2)' }}>
-        <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
-        <p className="text-[12px] text-amber-300 leading-relaxed">
+        style={{ background: 'var(--warning-tint)', borderColor: 'var(--warning)' }}>
+        <AlertTriangle className="w-4 h-4 text-warning flex-shrink-0 mt-0.5" />
+        <p className="text-[12px] text-warning leading-relaxed">
           <strong>Employee compensation totals $59.4M</strong> — 57% of total revenue and 56.8% of all expenses.
           Only 15 executive salaries are disclosed on Schedule J; the remaining {(core.totalEmployees - 15).toLocaleString()} employees average ~$19,359.
           For grant applications, address this ratio directly and emphasize direct service delivery impact per dollar.
@@ -327,12 +335,12 @@ function ContractorsTab() {
     <div className="space-y-6">
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         {[
-          { label: 'Total Contractor Spend',  value: fmt(core.contractorCompensation), color: '#f87171' },
-          { label: 'Reported Vendors',         value: '5 vendors',                      color: '#38bdf8' },
-          { label: 'New in FY2024',            value: '3 of 5 new',                    color: '#fbbf24' },
+          { label: 'Total Contractor Spend',  value: fmt(core.contractorCompensation), color: 'var(--critical)' },
+          { label: 'Reported Vendors',         value: '5 vendors',                      color: 'var(--info)' },
+          { label: 'New in FY2024',            value: '3 of 5 new',                    color: 'var(--warning)' },
         ].map(({ label, value, color }) => (
           <Card key={label} className="p-4">
-            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-2">{label}</p>
+            <p className="text-[10px] font-bold text-secondary uppercase tracking-wide mb-2">{label}</p>
             <p className="text-[20px] font-bold font-mono" style={{ color }}>{value}</p>
           </Card>
         ))}
@@ -346,9 +354,9 @@ function ContractorsTab() {
       <Card className="overflow-hidden">
         <table className="w-full">
           <thead>
-            <tr className="border-b" style={{ borderColor: 'rgba(255,255,255,0.06)', background: 'rgba(255,255,255,0.02)' }}>
+            <tr className="border-b" style={{ borderColor: 'var(--border-hairline)', background: 'var(--bg-elevated)' }}>
               {['Contractor', 'Category', 'Amount', 'YoY'].map((h, i) => (
-                <th key={h} className={`py-2.5 px-4 text-[10px] font-bold text-slate-500 uppercase tracking-wide ${i === 0 || i === 1 ? 'text-left' : 'text-right'}`}>{h}</th>
+                <th key={h} className={`py-2.5 px-4 text-[10px] font-bold text-secondary uppercase tracking-wide ${i === 0 || i === 1 ? 'text-left' : 'text-right'}`}>{h}</th>
               ))}
             </tr>
           </thead>
@@ -356,32 +364,32 @@ function ContractorsTab() {
             {YMCA_CONTRACTORS.map(c => {
               const yoy = c.vsLastYear;
               return (
-                <tr key={c.name} className="border-t hover:bg-white/[0.02] transition-colors"
-                  style={{ borderColor: 'rgba(255,255,255,0.04)' }}>
+                <tr key={c.name} className="border-t hover:bg-elevated transition-colors"
+                  style={{ borderColor: 'var(--bg-elevated)' }}>
                   <td className="py-3 px-4">
                     <div className="flex items-center gap-2">
-                      <Building2 className="w-4 h-4 text-slate-600 flex-shrink-0" />
+                      <Building2 className="w-4 h-4 text-tertiary flex-shrink-0" />
                       <div>
-                        <p className="text-[13px] font-semibold text-slate-100">{c.name}</p>
+                        <p className="text-[13px] font-semibold text-primary">{c.name}</p>
                         {c.isNew && (
-                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded text-green-400 border border-green-400/20 inline-block mt-0.5"
-                            style={{ background: 'rgba(34,197,94,0.08)' }}>NEW IN 2024</span>
+                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded text-success border border-success/20 inline-block mt-0.5"
+                            style={{ background: 'var(--success-tint)' }}>NEW IN 2024</span>
                         )}
                       </div>
                     </div>
                   </td>
                   <td className="py-3 px-4">
-                    <span className="text-[11px] px-2 py-0.5 rounded text-teal-400 border border-teal-400/20"
-                      style={{ background: 'rgba(13,148,136,0.08)' }}>{c.category}</span>
+                    <span className="text-[11px] px-2 py-0.5 rounded text-accent border border-accent/20"
+                      style={{ background: 'var(--accent-tint)' }}>{c.category}</span>
                   </td>
                   <td className="py-3 px-4 text-right">
-                    <span className="text-[14px] font-bold font-mono text-slate-100">{fmtFull(c.amount)}</span>
+                    <span className="text-[14px] font-bold font-mono text-primary">{fmtFull(c.amount)}</span>
                   </td>
                   <td className="py-3 px-4 text-right">
                     {yoy === null ? (
-                      <span className="text-[11px] text-slate-600">New</span>
+                      <span className="text-[11px] text-tertiary">New</span>
                     ) : (
-                      <span className={`inline-flex items-center gap-0.5 text-[12px] font-bold ${yoy > 0 ? 'text-green-400' : yoy < 0 ? 'text-red-400' : 'text-slate-400'}`}>
+                      <span className={`inline-flex items-center gap-0.5 text-[12px] font-bold ${yoy > 0 ? 'text-success' : yoy < 0 ? 'text-critical' : 'text-secondary'}`}>
                         {yoy > 0 ? <ArrowUp className="w-3 h-3" /> : yoy < 0 ? <ArrowDown className="w-3 h-3" /> : <Minus className="w-3 h-3" />}
                         {yoy === 0 ? 'Flat' : `${Math.abs(yoy).toFixed(1)}%`}
                       </span>
@@ -392,10 +400,10 @@ function ContractorsTab() {
             })}
           </tbody>
           <tfoot>
-            <tr className="border-t-2" style={{ borderColor: 'rgba(255,255,255,0.10)', background: 'rgba(255,255,255,0.02)' }}>
-              <td className="py-3 px-4 text-[12px] font-bold text-slate-200">Total Contractor Compensation</td>
+            <tr className="border-t-2" style={{ borderColor: 'var(--border-strong)', background: 'var(--bg-elevated)' }}>
+              <td className="py-3 px-4 text-[12px] font-bold text-primary">Total Contractor Compensation</td>
               <td />
-              <td className="py-3 px-4 text-right text-[13px] font-bold text-slate-200 font-mono">
+              <td className="py-3 px-4 text-right text-[13px] font-bold text-primary font-mono">
                 {fmtFull(core.contractorCompensation)}
               </td>
               <td />
@@ -405,22 +413,22 @@ function ContractorsTab() {
       </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="rounded-xl border p-4" style={{ background: 'rgba(251,191,36,0.06)', borderColor: 'rgba(251,191,36,0.2)' }}>
+        <div className="rounded-xl border p-4" style={{ background: 'var(--warning-tint)', borderColor: 'var(--warning)' }}>
           <div className="flex items-start gap-2 mb-2">
-            <AlertTriangle className="w-3.5 h-3.5 text-amber-400 flex-shrink-0 mt-0.5" />
-            <p className="text-[12px] font-bold text-amber-300">High Contractor Turnover Signal</p>
+            <AlertTriangle className="w-3.5 h-3.5 text-warning flex-shrink-0 mt-0.5" />
+            <p className="text-[12px] font-bold text-warning">High Contractor Turnover Signal</p>
           </div>
-          <p className="text-[11px] text-slate-400 leading-relaxed">
+          <p className="text-[11px] text-secondary leading-relaxed">
             3 of 5 top contractors are new in FY2024, suggesting a significant shift in facility and operational strategy.
             P4 Security dropped 36.4%, replaced by Stanton Mechanical ($1.9M) and Rmb Interiors ($676K) — indicating capital investment in facilities.
           </p>
         </div>
-        <div className="rounded-xl border p-4" style={{ background: 'rgba(13,148,136,0.06)', borderColor: 'rgba(13,148,136,0.18)' }}>
+        <div className="rounded-xl border p-4" style={{ background: 'var(--accent-tint)', borderColor: 'var(--accent)' }}>
           <div className="flex items-start gap-2 mb-2">
-            <Zap className="w-3.5 h-3.5 text-teal-400 flex-shrink-0 mt-0.5" />
-            <p className="text-[12px] font-bold text-teal-300">Grant Opportunity: Child Care Staffing</p>
+            <Zap className="w-3.5 h-3.5 text-accent flex-shrink-0 mt-0.5" />
+            <p className="text-[12px] font-bold text-accent">Grant Opportunity: Child Care Staffing</p>
           </div>
-          <p className="text-[11px] text-slate-400 leading-relaxed">
+          <p className="text-[11px] text-secondary leading-relaxed">
             Childcare Careers ($844K) signals contracted child care staffing — a direct grant opportunity for workforce development in early childhood education. Target DCFS and CCAP-adjacent funding streams.
           </p>
         </div>
@@ -460,61 +468,66 @@ export function YMCAFinancialsShell({
   const [tab, setTab] = useState<AnyTab>('overview');
 
   return (
-    <div style={{ background: 'var(--fin-page-bg)', minHeight: '100vh' }}>
+    <div className="bg-page min-h-screen">
 
-      {/* ── Hero ─────────────────────────────────────────────── */}
-      <div className="relative overflow-hidden border-b" style={{
-        background: 'var(--fin-hero-bg)',
-        borderColor: 'var(--fin-border)',
-      }}>
-        <div className="absolute inset-0 opacity-[0.025]" style={{
-          backgroundImage: 'linear-gradient(#fff 1px,transparent 1px),linear-gradient(90deg,#fff 1px,transparent 1px)',
-          backgroundSize: '48px 48px',
-        }} />
-        <div className="absolute top-0 right-1/3 w-80 h-36 rounded-full blur-3xl pointer-events-none"
-          style={{ background: 'radial-gradient(circle,rgba(13,148,136,0.10),transparent)' }} />
-        <div className="relative px-8 py-7 max-w-7xl mx-auto flex items-start justify-between gap-6">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <BarChart3 className="w-3.5 h-3.5 text-teal-500" />
-              <span className="text-[10px] font-bold text-teal-500 uppercase tracking-widest">Org Intelligence · Financials</span>
+      {/* ── Hero — light surface, hairline bottom, accent eyebrow ────────── */}
+      <div className="bg-surface border-b border-hairline">
+        <div className="px-8 py-7 max-w-7xl mx-auto flex items-start justify-between gap-6 flex-wrap">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 mb-1.5">
+              <BarChart3 className="w-3.5 h-3.5 text-accent" />
+              <span className="font-mono text-[10.5px] font-semibold text-accent uppercase tracking-[0.14em]">
+                Org Intelligence · Financials
+              </span>
             </div>
-            <h1 className="text-[26px] font-bold text-white leading-tight">YMCA of Metropolitan Chicago</h1>
-            <p className="text-slate-400 text-[13px] mt-0.5">
-              Founded {YMCA_CORE.founded} · {YMCA_CORE.totalEmployees.toLocaleString()} employees · Chicago, IL · EIN {YMCA_CORE.ein}
+            <h1 className="text-h1 text-primary leading-tight">YMCA of Metropolitan Chicago</h1>
+            <p className="text-secondary text-[13px] mt-1">
+              Founded <span className="font-mono tabular-nums">{YMCA_CORE.founded}</span> ·{' '}
+              <span className="font-mono tabular-nums">{YMCA_CORE.totalEmployees.toLocaleString()}</span> employees · Chicago, IL · EIN{' '}
+              <span className="font-mono tabular-nums">{YMCA_CORE.ein}</span>
             </p>
           </div>
           <div className="flex flex-col items-end gap-2 flex-shrink-0">
-            <span className="px-3 py-1.5 rounded-full text-[11px] font-bold text-red-400 border border-red-400/20"
-              style={{ background: 'rgba(239,68,68,0.08)' }}>FY2024 IRS 990 · ($24.1M) Deficit</span>
-            <span className="px-3 py-1.5 rounded-full text-[11px] font-bold text-sky-400 border border-sky-400/20"
-              style={{ background: 'rgba(56,189,248,0.08)' }}>#9 &amp; #10 Human Services · Chicago</span>
+            <span className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.08em] text-critical inline-flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-critical" />
+              FY2024 IRS 990 · ($24.1M) Deficit
+            </span>
+            <span className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.08em] text-info inline-flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-info" />
+              #9 &amp; #10 Human Services · Chicago
+            </span>
           </div>
         </div>
       </div>
 
-      {/* ── Sticky tab nav ───────────────────────────────────── */}
-      <div className="sticky top-0 z-20 border-b" style={{
-        background: 'var(--fin-nav-bg)',
-        backdropFilter: 'blur(12px)',
-        WebkitBackdropFilter: 'blur(12px)',
-        borderColor: 'var(--fin-border)',
-      }}>
-        <div className="px-8 max-w-7xl mx-auto flex items-center overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
-          {ALL_TABS.map(({ id, label, icon: Icon }) => (
-            <button key={id} onClick={() => setTab(id as AnyTab)}
-              className="flex items-center gap-2 px-4 py-3.5 text-[12px] font-semibold whitespace-nowrap border-b-2 transition-all"
-              style={{
-                color: tab === id ? 'var(--fin-tab-active)' : 'var(--fin-tab-inactive)',
-                borderBottomColor: tab === id ? '#0d9488' : 'transparent',
-              }}>
-              <Icon className="w-3.5 h-3.5" />
-              {label}
-              {id === 'ai' && (googleConnected || microsoftConnected) && (
-                <span className="w-1.5 h-1.5 rounded-full bg-green-400 flex-shrink-0" />
-              )}
-            </button>
-          ))}
+      {/* ── Sticky tab nav — light, hairline bottom, 2px accent on active ─ */}
+      <div className="sticky top-0 z-20 bg-surface border-b border-hairline">
+        <div
+          className="px-8 max-w-7xl mx-auto flex items-center overflow-x-auto"
+          style={{ scrollbarWidth: 'none' }}
+        >
+          {ALL_TABS.map(({ id, label, icon: Icon }) => {
+            const active = tab === id;
+            return (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setTab(id as AnyTab)}
+                aria-current={active ? 'page' : undefined}
+                className={`flex items-center gap-2 px-4 py-3.5 text-[12.5px] font-semibold whitespace-nowrap border-b-2 transition-colors ${
+                  active
+                    ? 'text-primary border-accent'
+                    : 'text-tertiary border-transparent hover:text-primary'
+                }`}
+              >
+                <Icon className="w-3.5 h-3.5" />
+                {label}
+                {id === 'ai' && (googleConnected || microsoftConnected) && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-success flex-shrink-0" />
+                )}
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -538,11 +551,11 @@ export function YMCAFinancialsShell({
       {/* ── Footer ───────────────────────────────────────────── */}
       <div className="px-8 pb-8 max-w-7xl mx-auto">
         <div className="flex items-center justify-between py-4 border-t" style={{ borderColor: 'var(--fin-border)' }}>
-          <p className="text-[11px] text-slate-700">
+          <p className="text-[11px] text-tertiary">
             Source: IRS Form 990 (FY2024) · Compensation990.com · EIN 36-2179782 · ymcachicago.org
           </p>
           <Link href="/dashboard"
-            className="flex items-center gap-1 text-[11px] text-teal-500 hover:text-teal-400 transition-colors">
+            className="flex items-center gap-1 text-[11px] text-accent hover:text-accent transition-colors">
             Back to dashboard <ChevronRight className="w-3 h-3" />
           </Link>
         </div>

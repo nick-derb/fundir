@@ -3,9 +3,9 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import {
-  BarChart3, TrendingDown, Shield, AlertTriangle,
+  BarChart3, Shield, AlertTriangle,
   DollarSign, Clock, CheckCircle, Users, MapPin,
-  Target, Landmark, Activity, Zap,
+  Target, Landmark, Activity,
   ChevronRight, TrendingUp, Brain, Library, Wand2,
 } from 'lucide-react';
 import {
@@ -17,8 +17,9 @@ import {
 import {
   Card, CardHeader, SectionTitle,
   AITab, DocumentLibraryTab, StrategyBriefTab,
-  COMMON_TABS, type CommonTab,
+  type CommonTab,
 } from './financials-shell';
+import { FinancialsOverview } from './financials-overview';
 
 // ── Formatters ────────────────────────────────────────────────────────────────
 function fmt(n: number, dec = 1): string {
@@ -54,95 +55,9 @@ function computeHealthScore(): number {
 }
 const HEALTH_SCORE = computeHealthScore();
 
-// ── Health gauge SVG ──────────────────────────────────────────────────────────
-function HealthGauge({ score }: { score: number }) {
-  const R = 36, cx = 50, cy = 56;
-  const fromDeg = -220, toDeg = 40;
-  const toRad = (d: number) => (d * Math.PI) / 180;
-  const arc = (from: number, to: number) => {
-    const x1 = cx + R * Math.cos(toRad(from));
-    const y1 = cy + R * Math.sin(toRad(from));
-    const x2 = cx + R * Math.cos(toRad(to));
-    const y2 = cy + R * Math.sin(toRad(to));
-    return `M ${x1} ${y1} A ${R} ${R} 0 ${to - from > 180 ? 1 : 0} 1 ${x2} ${y2}`;
-  };
-  const filled = fromDeg + (score / 100) * (toDeg - fromDeg);
-  const color  = score >= 70 ? '#22c55e' : score >= 45 ? '#f59e0b' : '#ef4444';
-  const label  = score >= 70 ? 'Strong' : score >= 45 ? 'Needs Attention' : 'Critical';
-  return (
-    <svg viewBox="0 0 100 100" className="w-28 h-28">
-      <path d={arc(fromDeg, toDeg)} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth={7} strokeLinecap="round" />
-      <path d={arc(fromDeg, filled)} fill="none" stroke={color} strokeWidth={7} strokeLinecap="round" />
-      <text x={50} y={54} textAnchor="middle" fill="white" fontSize={20} fontWeight="700" fontFamily="monospace">{score}</text>
-      <text x={50} y={66} textAnchor="middle" fill="#475569" fontSize={7}>{label}</text>
-    </svg>
-  );
-}
-
-// ── Revenue sparkline bars ────────────────────────────────────────────────────
-function RevenueBars() {
-  const max = Math.max(...CYC_REVENUE_TREND.map(t => t.revenue));
-  return (
-    <div className="flex items-end gap-3" style={{ height: 100 }}>
-      {CYC_REVENUE_TREND.map(t => {
-        const barH = Math.round((t.revenue / max) * 64);
-        const isPos = t.surplus >= 0;
-        return (
-          <div key={t.year} className="flex-1 flex flex-col items-center gap-1">
-            <span className={`text-[10px] font-bold font-mono ${isPos ? 'text-green-400' : 'text-red-400'}`}>
-              {isPos ? `+${fmt(t.surplus)}` : `(${fmt(Math.abs(t.surplus))})`}
-            </span>
-            <div className="w-full rounded-[4px] flex flex-col-reverse overflow-hidden"
-              style={{ height: 60, background: 'rgba(255,255,255,0.04)' }}>
-              <div className="w-full rounded-[4px]" style={{
-                height: barH,
-                background: isPos
-                  ? 'linear-gradient(to top,rgba(13,148,136,0.8),rgba(13,148,136,0.25))'
-                  : 'linear-gradient(to top,rgba(239,68,68,0.8),rgba(239,68,68,0.25))',
-                borderTop: `2px solid ${isPos ? '#0d9488' : '#ef4444'}`,
-              }} />
-            </div>
-            <span className="text-[10px] font-mono text-slate-400">{fmt(t.revenue)}</span>
-            <span className="text-[9px] text-slate-600">{t.year}</span>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-// ── Flag component ────────────────────────────────────────────────────────────
-function Flag({
-  severity, headline, detail, metric, action, category,
-}: {
-  severity: 'critical' | 'warning' | 'info';
-  headline: string; detail: string; metric: string; action: string; category: string;
-}) {
-  const isCrit = severity === 'critical', isWarn = severity === 'warning';
-  const color  = isCrit ? '#f87171' : isWarn ? '#fbbf24' : '#38bdf8';
-  const bg     = isCrit ? 'rgba(239,68,68,0.07)' : isWarn ? 'rgba(251,191,36,0.07)' : 'rgba(56,189,248,0.07)';
-  const border = isCrit ? 'rgba(239,68,68,0.22)' : isWarn ? 'rgba(251,191,36,0.22)' : 'rgba(56,189,248,0.22)';
-  const tagBg  = isCrit ? '#dc2626' : isWarn ? '#d97706' : '#0284c7';
-  return (
-    <div className="rounded-[10px] border p-4" style={{ background: bg, borderColor: border }}>
-      <div className="flex items-start justify-between gap-2 mb-2">
-        <div className="flex items-center gap-2">
-          <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" style={{ color }} />
-          <p className="text-[13px] font-bold" style={{ color }}>{headline}</p>
-        </div>
-        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded text-white flex-shrink-0"
-          style={{ background: tagBg }}>{category.toUpperCase()}</span>
-      </div>
-      <p className="text-[11px] text-slate-400 leading-relaxed mb-2">{detail}</p>
-      <div className="flex items-center gap-2 pt-2 border-t" style={{ borderColor: border }}>
-        <Zap className="w-3 h-3 flex-shrink-0" style={{ color }} />
-        <p className="text-[11px] font-medium leading-relaxed" style={{ color }}>{action}</p>
-        <span className="ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full text-white flex-shrink-0"
-          style={{ background: tagBg }}>{metric}</span>
-      </div>
-    </div>
-  );
-}
+// NOTE: HealthGauge / RevenueBars / Flag (the Overview-only helpers) are
+// gone — the new <FinancialsOverview> from ./financials-overview now
+// renders the gauge, the trajectory chart, and the flag cards.
 
 // ── DRow component ────────────────────────────────────────────────────────────
 function DRow({ label, value, prior, highlight = false }: {
@@ -150,20 +65,20 @@ function DRow({ label, value, prior, highlight = false }: {
 }) {
   const delta = prior && prior !== 0 ? ((value - prior) / Math.abs(prior)) * 100 : null;
   return (
-    <div className={`flex items-center justify-between py-2 px-3 rounded-[6px] ${highlight ? 'bg-white/[0.04] font-semibold' : ''}`}>
-      <span className={`text-[12px] ${highlight ? 'text-slate-200' : 'text-slate-400'}`}>{label}</span>
+    <div className={`flex items-center justify-between py-2 px-3 rounded-sm ${highlight ? 'bg-elevated' : ''}`}>
+      <span className={`text-[12px] ${highlight ? 'text-primary font-semibold' : 'text-secondary'}`}>{label}</span>
       <div className="flex items-center gap-3">
         {delta !== null && (
-          <span className={`text-[10px] font-medium ${delta >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+          <span className={`font-mono text-[10.5px] font-medium tabular-nums ${delta >= 0 ? 'text-success' : 'text-critical'}`}>
             {delta >= 0 ? '+' : ''}{delta.toFixed(1)}%
           </span>
         )}
         {prior !== undefined && (
-          <span className="text-[11px] text-slate-600 tabular-nums font-mono w-20 text-right">
+          <span className="text-[11px] text-tertiary tabular-nums font-mono w-20 text-right">
             {prior < 0 ? `(${fmt(Math.abs(prior))})` : fmt(prior)}
           </span>
         )}
-        <span className={`text-[13px] tabular-nums font-mono w-20 text-right ${value < 0 ? 'text-red-400' : highlight ? 'text-white font-bold' : 'text-slate-300'}`}>
+        <span className={`text-[13px] tabular-nums font-mono w-20 text-right ${value < 0 ? 'text-critical' : highlight ? 'text-primary font-semibold' : 'text-muted'}`}>
           {value < 0 ? `(${fmt(Math.abs(value))})` : fmt(value)}
         </span>
       </div>
@@ -172,83 +87,122 @@ function DRow({ label, value, prior, highlight = false }: {
 }
 
 // ── TAB: Overview ─────────────────────────────────────────────────────────────
+//
+// Rebuilt against the financials-overview-reference.html brief. All chart
+// composition lives in <FinancialsOverview>; this function only maps the
+// audited CYC numbers onto the shape that component consumes.
+//
+// Driver bars on Composite Health are derived from real audited inputs using
+// transparent formulas (no fabrication) — the model already computes these
+// dimensions; here we surface them.
 function OverviewTab() {
   const inc  = CYC_INCOME_STATEMENT;
   const liq  = CYC_LIQUIDITY;
   const prog = CYC_PROGRAM_ANALYSIS;
-  const govtPct   = ((inc.revenue.governmentFeesGrants / inc.revenue.totalRevenue) * 100).toFixed(1);
-  const critCount = CYC_INTELLIGENCE_FLAGS.filter(f => f.severity === 'critical').length;
-  const warnCount = CYC_INTELLIGENCE_FLAGS.filter(f => f.severity === 'warning').length;
-  const infoCount = CYC_INTELLIGENCE_FLAGS.filter(f => f.severity === 'info').length;
-  const totalGap  = (prog.schoolAge.fundingGap ?? 0) + (prog.teenLeadership.fundingGap ?? 0);
+  const trend = CYC_REVENUE_TREND;
 
-  const kpis = [
-    { label: 'Total Revenue',   value: fmt(inc.revenue.totalRevenue), sub: 'FY2025 (YE Jun 30)',         icon: DollarSign,  color: '#0d9488', bg: 'rgba(13,148,136,0.15)', neg: false },
-    { label: 'Net Change',      value: `(${fmt(Math.abs(inc.netChange))})`, sub: 'Operating deficit',    icon: TrendingDown, color: '#f87171', bg: 'rgba(239,68,68,0.15)',  neg: true  },
-    { label: 'Liquidity',       value: `${liq.monthsOfLiquidity}mo`,        sub: `${fmt(liq.netUnrestrictedLiquidity)} usable`, icon: Clock, color: '#fbbf24', bg: 'rgba(251,191,36,0.15)', neg: false },
-    { label: 'Govt Dependency', value: `${govtPct}%`,                       sub: 'Critical >50% threshold', icon: Shield,   color: '#f87171', bg: 'rgba(239,68,68,0.15)',  neg: true  },
-  ] as const;
+  const totalRev    = inc.revenue.totalRevenue;
+  const totalRevPY  = inc.revenue.totalRevenuePrior;
+  const yoyPct      = ((totalRev - totalRevPY) / totalRevPY) * 100;
+  const govtPct     = (inc.revenue.governmentFeesGrants / totalRev) * 100;
+  const govtAmt     = inc.revenue.governmentFeesGrants;
+  const headStartAmt = prog.earlyChildhood.revenueFromGovt;
+  const headStartPct = (headStartAmt / totalRev) * 100;
+  const otherGovtPct = ((govtAmt - headStartAmt) / totalRev) * 100;
+  const publicSupportPct = (inc.revenue.totalPublicSupport / totalRev) * 100;
+  const programFeesPct   = (inc.revenue.programServiceFees / totalRev) * 100;
+  const otherIncomePct   = 100 - headStartPct - otherGovtPct - publicSupportPct - programFeesPct;
 
-  return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
-        <Card className="p-5 flex flex-col items-center justify-center gap-0.5 text-center">
-          <HealthGauge score={HEALTH_SCORE} />
-          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">Financial Health</p>
-          <p className="text-[9px] text-slate-700 mt-0.5">Composite score · FY2025</p>
-        </Card>
-        <div className="lg:col-span-4 grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {kpis.map(({ label, value, sub, icon: Icon, color, bg, neg }) => (
-            <Card key={label} className="p-4">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">{label}</span>
-                <div className="w-6 h-6 rounded-[5px] flex items-center justify-center" style={{ background: bg }}>
-                  <Icon className="w-3.5 h-3.5" style={{ color }} />
-                </div>
-              </div>
-              <div className={`text-[22px] font-bold leading-none mb-1 ${neg ? 'text-red-400' : 'text-white'}`}>{value}</div>
-              <p className="text-[10px] text-slate-600">{sub}</p>
-            </Card>
-          ))}
-        </div>
-      </div>
+  const progRatio       = (inc.expenses.totalProgramServices / inc.expenses.totalExpenses) * 100;
+  const mgRatio         = (inc.expenses.managementGeneral    / inc.expenses.totalExpenses) * 100;
+  const fundraisingPct  = (inc.expenses.developmentFundraising / inc.expenses.totalExpenses) * 100;
 
-      <Card className="p-5">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <p className="text-[12px] font-bold text-slate-300">3-Year Revenue Trend</p>
-            <p className="text-[11px] text-slate-600">FY2023–FY2025 · surplus / deficit annotated</p>
-          </div>
-          <span className="text-[10px] text-slate-600 italic max-w-[200px] text-right">
-            {CYC_REVENUE_TREND[CYC_REVENUE_TREND.length - 1]?.note}
-          </span>
-        </div>
-        <RevenueBars />
-      </Card>
+  // Health-driver sub-scores — all derived from audited inputs.
+  const efficiencyScore = Math.round(progRatio);                                 // 86
+  const liquidityScore  = Math.round(Math.min(100, (liq.monthsOfLiquidity / 6) * 100)); // 40
+  const concScore       = Math.round(Math.max(0, 100 - govtPct));                // 25
+  const reservesRatio   = CYC_BALANCE_SHEET.netAssets.totalNetAssets / inc.expenses.totalExpenses;
+  const reservesScore   = Math.round(Math.max(0, Math.min(100, 50 + (reservesRatio - 1) * 50))); // ~52
+  const revStabScore    = Math.round(Math.max(0, Math.min(100, 50 + yoyPct * 1.0))); // -10 → 40
 
-      <div>
-        <SectionTitle
-          title="Intelligence Flags"
-          sub={`${critCount} critical · ${warnCount} warning · ${infoCount} informational — derived from FY2025 audited statements`}
-        />
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-          {CYC_INTELLIGENCE_FLAGS.map((f, i) => <Flag key={i} {...f} />)}
-        </div>
-      </div>
+  const data: import('./financials-overview').FinancialsOverviewData = {
+    healthScore:   HEALTH_SCORE,
+    healthVerdict: HEALTH_SCORE >= 70 ? 'STRONG' : HEALTH_SCORE >= 45 ? 'NEEDS ATTENTION' : 'CRITICAL',
+    healthSubcopy: 'Strong program efficiency is offset by high government concentration and thin reserves.',
+    healthDrivers: [
+      { label: 'Efficiency',        value: efficiencyScore, tone: efficiencyScore >= 70 ? 'success' : 'warning'  },
+      { label: 'Reserves',          value: reservesScore,   tone: reservesScore   >= 70 ? 'success' : reservesScore  >= 40 ? 'warning' : 'critical' },
+      { label: 'Revenue stability', value: revStabScore,    tone: revStabScore    >= 70 ? 'success' : revStabScore   >= 40 ? 'warning' : 'critical' },
+      { label: 'Liquidity',         value: liquidityScore,  tone: liquidityScore  >= 70 ? 'success' : liquidityScore >= 40 ? 'warning' : 'critical' },
+      { label: 'Concentration',     value: concScore,       tone: concScore       >= 70 ? 'success' : concScore      >= 40 ? 'warning' : 'critical' },
+    ],
 
-      <div className="flex items-center gap-3 py-3.5 px-5 rounded-xl border"
-        style={{ background: 'rgba(13,148,136,0.06)', borderColor: 'rgba(13,148,136,0.18)' }}>
-        <Zap className="w-4 h-4 text-teal-400 flex-shrink-0" />
-        <p className="text-slate-400 text-[12px]">
-          CYC carries a <strong className="text-white">{fmt(totalGap)} funding gap</strong> across School Age and Teen Leadership programs — {critCount} flags require immediate attention.
-        </p>
-        <Link href="/discover"
-          className="ml-auto flex-shrink-0 text-[11px] font-bold text-teal-400 hover:text-teal-300 transition-colors flex items-center gap-1 whitespace-nowrap">
-          Find matching grants <ChevronRight className="w-3 h-3" />
-        </Link>
-      </div>
-    </div>
-  );
+    totalRevenue:        totalRev,
+    totalRevenueYoYPct:  yoyPct,
+
+    netResult:        inc.netChange,
+    netResultPrior:   inc.netChangePrior,
+
+    liquidityMonths:  liq.monthsOfLiquidity,
+    liquidityHealthy: { min: 3, max: 6 },
+
+    govtDependencyPct:       govtPct,
+    govtDependencyThreshold: 50,
+
+    revenueSparklinePoints: trend.map(t => t.revenue),
+    netSparklinePoints:     trend.map(t => t.surplus),
+
+    revenueSeries: trend.map(t => ({ label: t.year, revenue: t.revenue, net: t.surplus })),
+
+    concentration: {
+      thresholdPct:     60,
+      governmentPct:    govtPct,
+      governmentAmount: govtAmt,
+      totalRevenue:     totalRev,
+      dominantProgram:  { name: 'Head Start (Early Childhood)', amount: headStartAmt },
+      callout:          `Single-program exposure: Head Start drives ~${headStartPct.toFixed(0)}% of revenue ($${(headStartAmt / 1_000_000).toFixed(1)}M). Auditors flag that any significant reduction could materially affect programs. Diversifying private/foundation revenue is the primary mitigation.`,
+      segments: [
+        { label: 'Head Start', pct: headStartPct,           tone: 'critical' },
+        { label: 'Other govt', pct: Math.max(0, otherGovtPct), tone: 'neutral'  },
+        { label: 'Private',    pct: publicSupportPct,       tone: 'accent'   },
+        { label: 'Program',    pct: programFeesPct,         tone: 'info'     },
+        { label: 'Other',      pct: Math.max(0, otherIncomePct), tone: 'muted' },
+      ],
+    },
+
+    liquidity: {
+      months:          liq.monthsOfLiquidity,
+      financialAssets: liq.availableForGeneralUse,
+      payables:        Math.abs(liq.outstandingObligations),
+      netLiquid:       liq.netUnrestrictedLiquidity,
+      healthyMin:      3,
+      healthyMax:      6,
+      scaleMax:        6,
+      lineOfCredit:    {
+        drawn: 455_000,
+        limit: 1_500_000,
+        note:  'first draw on record',
+      },
+    },
+
+    expense: {
+      programPct:           progRatio,
+      managementGeneralPct: mgRatio,
+      fundraisingPct,
+      benchmarkLabel:       progRatio >= 75 ? '4★ Charity Navigator threshold met' : undefined,
+    },
+
+    flags: CYC_INTELLIGENCE_FLAGS.map(f => ({
+      severity:       f.severity,
+      headline:       f.headline,
+      category:       f.category,
+      body:           f.detail,
+      recommendation: f.action,
+      chip:           f.metric,
+    })),
+  };
+
+  return <FinancialsOverview data={data} />;
 }
 
 // ── TAB: Income Statement ─────────────────────────────────────────────────────
@@ -257,29 +211,29 @@ function IncomeTab() {
   const progRatio = ((inc.expenses.totalProgramServices / inc.expenses.totalExpenses) * 100).toFixed(1);
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between text-[11px] text-slate-600 mb-1">
+      <div className="flex items-center justify-between text-[11px] text-tertiary mb-1">
         <span>FY2025 · Year ended June 30, 2025 · Kearney & Company, P.C. (audited)</span>
         <div className="flex items-center gap-4">
           <span>FY2024</span>
-          <span className="font-bold text-slate-300">FY2025</span>
+          <span className="font-bold text-muted">FY2025</span>
         </div>
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card className="overflow-hidden">
-          <CardHeader accent="rgba(13,148,136,0.08)">
-            <p className="text-[11px] font-bold text-teal-400 uppercase tracking-widest">Revenue</p>
+          <CardHeader accent="var(--accent-tint)">
+            <p className="text-[11px] font-bold text-accent uppercase tracking-widest">Revenue</p>
           </CardHeader>
           <div className="p-3 space-y-0.5">
-            <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest px-3 py-1.5">Public Support</p>
+            <p className="text-[10px] font-bold text-tertiary uppercase tracking-widest px-3 py-1.5">Public Support</p>
             <DRow label="Contributions (cash)"    value={inc.revenue.contributionsCash}   prior={inc.revenue.contributionsCashPrior} />
             <DRow label="Contributions (in-kind)" value={inc.revenue.contributionsInKind} />
             <DRow label="Special events (net)"    value={inc.revenue.specialEventsNet} />
             <DRow label="Total Public Support"    value={inc.revenue.totalPublicSupport}  highlight />
-            <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest px-3 py-1.5 mt-2">Direct Program Revenue</p>
+            <p className="text-[10px] font-bold text-tertiary uppercase tracking-widest px-3 py-1.5 mt-2">Direct Program Revenue</p>
             <DRow label="Government fees & grants" value={inc.revenue.governmentFeesGrants} prior={inc.revenue.governmentFeesGrantsPrior} />
             <DRow label="Program service fees"     value={inc.revenue.programServiceFees} />
             <DRow label="Total Program Revenue"    value={inc.revenue.totalDirectProgram}   highlight />
-            <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest px-3 py-1.5 mt-2">Other Income</p>
+            <p className="text-[10px] font-bold text-tertiary uppercase tracking-widest px-3 py-1.5 mt-2">Other Income</p>
             <DRow label="Investment return (net)" value={inc.revenue.investmentReturnNet} />
             <DRow label="Realized gains"          value={inc.revenue.realizedGains} />
             <DRow label="Unrealized gains"        value={inc.revenue.unrealizedGains} />
@@ -288,44 +242,44 @@ function IncomeTab() {
         </Card>
         <div className="space-y-4">
           <Card className="overflow-hidden">
-            <CardHeader accent="rgba(239,68,68,0.06)">
-              <p className="text-[11px] font-bold text-red-400 uppercase tracking-widest">Expenses</p>
+            <CardHeader accent="var(--critical-tint)">
+              <p className="text-[11px] font-bold text-critical uppercase tracking-widest">Expenses</p>
             </CardHeader>
             <div className="p-3 space-y-0.5">
-              <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest px-3 py-1.5">Program Services</p>
+              <p className="text-[10px] font-bold text-tertiary uppercase tracking-widest px-3 py-1.5">Program Services</p>
               <DRow label="Early Childhood Education" value={inc.expenses.earlyChildhoodEducation} prior={inc.expenses.earlyChildhoodPrior} />
               <DRow label="School Age Child Dev."     value={inc.expenses.schoolAgeChildDev}        prior={inc.expenses.schoolAgePrior} />
               <DRow label="Teen Leadership Dev."      value={inc.expenses.teenLeadershipDev}         prior={inc.expenses.teenPrior} />
               <DRow label="Total Program Services"    value={inc.expenses.totalProgramServices}      prior={inc.expenses.totalProgramPrior} highlight />
-              <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest px-3 py-1.5 mt-2">Supporting Services</p>
+              <p className="text-[10px] font-bold text-tertiary uppercase tracking-widest px-3 py-1.5 mt-2">Supporting Services</p>
               <DRow label="Management & General"      value={inc.expenses.managementGeneral} />
               <DRow label="Development & Fundraising" value={inc.expenses.developmentFundraising} />
               <DRow label="Total Expenses"            value={inc.expenses.totalExpenses} prior={inc.expenses.totalExpensesPrior} highlight />
             </div>
           </Card>
-          <div className="rounded-xl border p-4" style={{ background: 'rgba(239,68,68,0.07)', borderColor: 'rgba(239,68,68,0.22)' }}>
+          <div className="rounded-xl border p-4" style={{ background: 'var(--critical-tint)', borderColor: 'var(--critical)' }}>
             <div className="flex items-center justify-between mb-1">
-              <p className="text-[13px] font-bold text-red-400">Net Change in Assets</p>
-              <p className="text-[20px] font-bold text-red-400 font-mono">({fmt(Math.abs(inc.netChange))})</p>
+              <p className="text-[13px] font-bold text-critical">Net Change in Assets</p>
+              <p className="text-[20px] font-bold text-critical font-mono">({fmt(Math.abs(inc.netChange))})</p>
             </div>
-            <p className="text-[11px] text-slate-500">
+            <p className="text-[11px] text-secondary">
               FY2025 deficit vs +{fmt(inc.netChangePrior)} surplus in FY2024.
               Revenue fell {fmt(inc.revenue.totalRevenuePrior - inc.revenue.totalRevenue)} while expenses grew {fmt(inc.expenses.totalExpenses - inc.expenses.totalExpensesPrior)}.
             </p>
           </div>
           <Card className="p-4">
-            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">Program Expense Ratio</p>
+            <p className="text-[10px] font-bold text-secondary uppercase tracking-widest mb-3">Program Expense Ratio</p>
             <div className="flex items-end justify-between mb-2">
-              <span className="text-[32px] font-bold text-green-400">{progRatio}%</span>
-              <span className="text-[11px] text-slate-500 mb-1">★★★★ Charity Navigator</span>
+              <span className="text-[32px] font-bold text-success">{progRatio}%</span>
+              <span className="text-[11px] text-secondary mb-1">★★★★ Charity Navigator</span>
             </div>
-            <div className="h-2 rounded-full overflow-hidden mb-2" style={{ background: 'rgba(255,255,255,0.08)' }}>
-              <div className="h-full rounded-full bg-green-500" style={{ width: `${progRatio}%` }} />
+            <div className="h-2 rounded-full overflow-hidden mb-2" style={{ background: 'var(--bg-elevated)' }}>
+              <div className="h-full rounded-full bg-success" style={{ width: `${progRatio}%` }} />
             </div>
             <div className="grid grid-cols-3 gap-2 text-center text-[11px]">
-              <div><p className="font-bold text-green-400">{progRatio}%</p><p className="text-slate-600">Programs</p></div>
-              <div><p className="font-bold text-slate-400">10.5%</p><p className="text-slate-600">Mgmt & G</p></div>
-              <div><p className="font-bold text-slate-400">3.5%</p><p className="text-slate-600">Fundraising</p></div>
+              <div><p className="font-bold text-success">{progRatio}%</p><p className="text-tertiary">Programs</p></div>
+              <div><p className="font-bold text-secondary">10.5%</p><p className="text-tertiary">Mgmt & G</p></div>
+              <div><p className="font-bold text-secondary">3.5%</p><p className="text-tertiary">Fundraising</p></div>
             </div>
           </Card>
         </div>
@@ -340,12 +294,12 @@ function BalanceTab() {
   const liq = CYC_LIQUIDITY;
   return (
     <div className="space-y-4">
-      <p className="text-[11px] text-slate-600">Statement of Financial Position · Year ended June 30, 2025</p>
+      <p className="text-[11px] text-tertiary">Statement of Financial Position · Year ended June 30, 2025</p>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card className="overflow-hidden">
-          <CardHeader accent="rgba(13,148,136,0.08)">
-            <p className="text-[11px] font-bold text-teal-400 uppercase tracking-widest">Assets</p>
-            <p className="text-[11px] text-slate-500">{fmtFull(bal.assets.totalAssets)}</p>
+          <CardHeader accent="var(--accent-tint)">
+            <p className="text-[11px] font-bold text-accent uppercase tracking-widest">Assets</p>
+            <p className="text-[11px] text-secondary">{fmtFull(bal.assets.totalAssets)}</p>
           </CardHeader>
           <div className="p-3 space-y-0.5">
             <DRow label="Cash & equivalents"         value={bal.assets.cash}                    prior={bal.assets.cashPrior} />
@@ -360,9 +314,9 @@ function BalanceTab() {
           </div>
         </Card>
         <Card className="overflow-hidden">
-          <CardHeader accent="rgba(239,68,68,0.06)">
-            <p className="text-[11px] font-bold text-red-400 uppercase tracking-widest">Liabilities</p>
-            <p className="text-[11px] text-slate-500">{fmtFull(bal.liabilities.totalLiabilities)}</p>
+          <CardHeader accent="var(--critical-tint)">
+            <p className="text-[11px] font-bold text-critical uppercase tracking-widest">Liabilities</p>
+            <p className="text-[11px] text-secondary">{fmtFull(bal.liabilities.totalLiabilities)}</p>
           </CardHeader>
           <div className="p-3 space-y-0.5">
             <DRow label="Accounts payable"           value={bal.liabilities.accountsPayable} />
@@ -372,23 +326,23 @@ function BalanceTab() {
             <DRow label="Operating lease liability"   value={bal.liabilities.leaseLiabilityOperating} />
             <DRow label="Total Liabilities"           value={bal.liabilities.totalLiabilities} prior={bal.liabilities.totalLiabilitiesPrior} highlight />
           </div>
-          <div className="px-4 py-3 border-t flex items-center gap-2" style={{ borderColor: 'rgba(255,255,255,0.06)', background: 'rgba(251,191,36,0.06)' }}>
-            <AlertTriangle className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
-            <p className="text-[11px] text-amber-400 leading-snug">Line of credit drawn for first time — $455K of $1.5M outstanding (FY2024: $0).</p>
+          <div className="px-4 py-3 border-t flex items-center gap-2" style={{ borderColor: 'var(--border-hairline)', background: 'var(--warning-tint)' }}>
+            <AlertTriangle className="w-3.5 h-3.5 text-warning flex-shrink-0" />
+            <p className="text-[11px] text-warning leading-snug">Line of credit drawn for first time — $455K of $1.5M outstanding (FY2024: $0).</p>
           </div>
         </Card>
         <Card className="overflow-hidden">
-          <CardHeader accent="rgba(34,197,94,0.06)">
-            <p className="text-[11px] font-bold text-green-400 uppercase tracking-widest">Net Assets</p>
-            <p className="text-[11px] text-slate-500">{fmtFull(bal.netAssets.totalNetAssets)}</p>
+          <CardHeader accent="var(--success-tint)">
+            <p className="text-[11px] font-bold text-success uppercase tracking-widest">Net Assets</p>
+            <p className="text-[11px] text-secondary">{fmtFull(bal.netAssets.totalNetAssets)}</p>
           </CardHeader>
           <div className="p-3 space-y-0.5">
-            <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest px-3 py-1">Without Donor Restrictions</p>
+            <p className="text-[10px] font-bold text-tertiary uppercase tracking-widest px-3 py-1">Without Donor Restrictions</p>
             <DRow label="Undesignated"         value={bal.netAssets.unrestrictedUndesignated} />
             <DRow label="Board-designated"     value={bal.netAssets.boardDesignatedInvestment} />
             <DRow label="Invested in property" value={bal.netAssets.investedInPropertyEquip} />
             <DRow label="Subtotal"             value={bal.netAssets.totalWithoutRestriction} prior={bal.netAssets.totalWithoutRestrictionPrior} highlight />
-            <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest px-3 py-1 mt-2">With Donor Restrictions</p>
+            <p className="text-[10px] font-bold text-tertiary uppercase tracking-widest px-3 py-1 mt-2">With Donor Restrictions</p>
             <DRow label="Time/purpose restricted" value={bal.netAssets.timePurposeRestricted} />
             <DRow label="Endowment fund"          value={bal.netAssets.endowmentFund} />
             <DRow label="Subtotal"                value={bal.netAssets.totalWithRestriction} prior={bal.netAssets.totalWithRestrictionPrior} highlight />
@@ -397,17 +351,17 @@ function BalanceTab() {
         </Card>
       </div>
       <Card className="p-5">
-        <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-4">Liquidity & Availability (Note 2) — Usable Cash Analysis</p>
+        <p className="text-[11px] font-bold text-secondary uppercase tracking-widest mb-4">Liquidity & Availability (Note 2) — Usable Cash Analysis</p>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {([
-            { label: 'Gross Financial Assets',    value: liq.grossFinancialAssets,     color: 'text-slate-200' },
-            { label: 'Less: Unavailable',          value: liq.unavailableWithinOneYear, color: 'text-red-400'   },
-            { label: 'Available for General Use', value: liq.availableForGeneralUse,   color: 'text-teal-400'  },
-            { label: 'Net Unrestricted Liquidity', value: liq.netUnrestrictedLiquidity, color: 'text-amber-400' },
+            { label: 'Gross Financial Assets',    value: liq.grossFinancialAssets,     color: 'text-primary' },
+            { label: 'Less: Unavailable',          value: liq.unavailableWithinOneYear, color: 'text-critical'   },
+            { label: 'Available for General Use', value: liq.availableForGeneralUse,   color: 'text-accent'  },
+            { label: 'Net Unrestricted Liquidity', value: liq.netUnrestrictedLiquidity, color: 'text-warning' },
           ] as { label: string; value: number; color: string }[]).map(({ label, value, color }) => (
             <div key={label} className="text-center p-3 rounded-[8px]"
-              style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
-              <p className="text-[10px] text-slate-500 mb-1.5 leading-snug">{label}</p>
+              style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-hairline)' }}>
+              <p className="text-[10px] text-secondary mb-1.5 leading-snug">{label}</p>
               <p className={`text-[18px] font-bold font-mono ${color}`}>
                 {value < 0 ? `(${fmt(Math.abs(value))})` : fmt(value)}
               </p>
@@ -416,16 +370,16 @@ function BalanceTab() {
         </div>
         <div className="mt-4 flex flex-wrap items-center gap-6 text-[11px]">
           <div className="flex items-center gap-2">
-            <Clock className="w-3.5 h-3.5 text-amber-400" />
-            <span className="text-slate-500"><strong className="text-slate-300">{liq.monthsOfLiquidity} months</strong> of operating expenses covered</span>
+            <Clock className="w-3.5 h-3.5 text-warning" />
+            <span className="text-secondary"><strong className="text-muted">{liq.monthsOfLiquidity} months</strong> of operating expenses covered</span>
           </div>
           <div className="flex items-center gap-2">
-            <Activity className="w-3.5 h-3.5 text-teal-400" />
-            <span className="text-slate-500">LOC available: <strong className="text-slate-300">{fmt(liq.lineOfCreditAvailable)}</strong> of $1.5M limit</span>
+            <Activity className="w-3.5 h-3.5 text-accent" />
+            <span className="text-secondary">LOC available: <strong className="text-muted">{fmt(liq.lineOfCreditAvailable)}</strong> of $1.5M limit</span>
           </div>
           <div className="flex items-center gap-2">
-            <TrendingUp className="w-3.5 h-3.5 text-indigo-400" />
-            <span className="text-slate-500">Grant pipeline: <strong className="text-slate-300">{fmt(liq.unconditionalGrantPipeline)}</strong> (unrecognized)</span>
+            <TrendingUp className="w-3.5 h-3.5 text-info" />
+            <span className="text-secondary">Grant pipeline: <strong className="text-muted">{fmt(liq.unconditionalGrantPipeline)}</strong> (unrecognized)</span>
           </div>
         </div>
       </Card>
@@ -448,44 +402,44 @@ function ProgramsTab() {
       <Card className="p-4">
         <div className="flex items-start justify-between mb-3">
           <div>
-            <p className="text-[13px] font-bold text-slate-100">{title}</p>
-            <p className="text-[11px] text-slate-500">{pct}% of program expenses</p>
+            <p className="text-[13px] font-bold text-primary">{title}</p>
+            <p className="text-[11px] text-secondary">{pct}% of program expenses</p>
           </div>
-          <span className="text-[11px] font-bold px-2 py-0.5 rounded-full text-teal-400 border border-teal-400/20"
-            style={{ background: 'rgba(13,148,136,0.08)' }}>{fmt(expense)}</span>
+          <span className="text-[11px] font-bold px-2 py-0.5 rounded-full text-accent border border-hairline"
+            style={{ background: 'var(--accent-tint)' }}>{fmt(expense)}</span>
         </div>
         <div className="space-y-2.5 mb-3">
           <div>
             <div className="flex justify-between text-[11px] mb-1">
-              <span className="text-slate-500">Govt contract coverage</span>
-              <span className="font-bold text-slate-200">{coverage.toFixed(0)}%</span>
+              <span className="text-secondary">Govt contract coverage</span>
+              <span className="font-bold text-primary">{coverage.toFixed(0)}%</span>
             </div>
-            <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.08)' }}>
+            <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--bg-elevated)' }}>
               <div className="h-full rounded-full" style={{
                 width: `${Math.min(coverage, 100)}%`,
-                background: coverage >= 90 ? '#22c55e' : coverage >= 60 ? '#f59e0b' : '#ef4444',
+                background: coverage >= 90 ? 'var(--success)' : coverage >= 60 ? 'var(--warning)' : 'var(--critical)',
               }} />
             </div>
           </div>
           {gap !== undefined && (
             <div className="flex justify-between text-[11px]">
-              <span className="text-slate-500">Funding gap (private needed)</span>
-              <span className="font-bold text-red-400">{fmt(gap)}</span>
+              <span className="text-secondary">Funding gap (private needed)</span>
+              <span className="font-bold text-critical">{fmt(gap)}</span>
             </div>
           )}
           <div className="flex justify-between text-[11px]">
-            <span className="text-slate-500">Cost {perLabel}</span>
-            <span className="font-bold text-slate-200 font-mono">{fmtFull(costPer)}</span>
+            <span className="text-secondary">Cost {perLabel}</span>
+            <span className="font-bold text-primary font-mono">{fmtFull(costPer)}</span>
           </div>
           {trend !== undefined && (
             <div className="flex justify-between text-[11px]">
-              <span className="text-slate-500">vs prior year</span>
-              <span className={`font-bold ${trend > 0 ? 'text-red-400' : 'text-green-400'}`}>{trend > 0 ? '+' : ''}{trend.toFixed(1)}%</span>
+              <span className="text-secondary">vs prior year</span>
+              <span className={`font-bold ${trend > 0 ? 'text-critical' : 'text-success'}`}>{trend > 0 ? '+' : ''}{trend.toFixed(1)}%</span>
             </div>
           )}
         </div>
-        <p className="text-[11px] text-slate-600 leading-relaxed border-t pt-2"
-          style={{ borderColor: 'rgba(255,255,255,0.06)' }}>{note}</p>
+        <p className="text-[11px] text-tertiary leading-relaxed border-t pt-2"
+          style={{ borderColor: 'var(--border-hairline)' }}>{note}</p>
       </Card>
     );
   }
@@ -502,9 +456,9 @@ function ProgramsTab() {
       <Card className="overflow-hidden">
         <table className="w-full">
           <thead>
-            <tr className="border-b" style={{ borderColor: 'rgba(255,255,255,0.06)', background: 'rgba(255,255,255,0.02)' }}>
+            <tr className="border-b" style={{ borderColor: 'var(--border-hairline)', background: 'var(--bg-elevated)' }}>
               {['Federal Program', 'ALN', 'Est. Amount', '% Revenue', 'Risk', 'Program Impact'].map((h, i) => (
-                <th key={h} className={`py-2.5 px-4 text-[10px] font-bold text-slate-500 uppercase tracking-wide ${i === 0 || i === 5 ? 'text-left' : i >= 4 ? 'text-left' : 'text-right'}`}>{h}</th>
+                <th key={h} className={`py-2.5 px-4 text-[10px] font-bold text-secondary uppercase tracking-wide ${i === 0 || i === 5 ? 'text-left' : i >= 4 ? 'text-left' : 'text-right'}`}>{h}</th>
               ))}
             </tr>
           </thead>
@@ -512,31 +466,31 @@ function ProgramsTab() {
             {CYC_FEDERAL_PROGRAMS.map(p => {
               const isCrit = p.risk === 'critical';
               return (
-                <tr key={p.name} className="border-t hover:bg-white/[0.02] transition-colors" style={{ borderColor: 'rgba(255,255,255,0.04)' }}>
+                <tr key={p.name} className="border-t hover:bg-elevated transition-colors" style={{ borderColor: 'var(--bg-elevated)' }}>
                   <td className="py-3 px-4">
-                    <p className="text-[13px] font-semibold text-slate-200">{p.name}</p>
-                    <p className="text-[10px] text-slate-600 mt-0.5 max-w-xs">{p.riskReason}</p>
+                    <p className="text-[13px] font-semibold text-primary">{p.name}</p>
+                    <p className="text-[10px] text-tertiary mt-0.5 max-w-xs">{p.riskReason}</p>
                   </td>
-                  <td className="py-3 px-4 text-right"><span className="text-[11px] font-mono text-slate-600">{p.aln}</span></td>
-                  <td className="py-3 px-4 text-right"><span className="text-[13px] font-bold font-mono text-slate-200">{fmt(p.estimatedAmount)}</span></td>
-                  <td className="py-3 px-4 text-right"><span className="text-[13px] font-bold" style={{ color: isCrit ? '#f87171' : '#fbbf24' }}>{p.pctOfRevenue}%</span></td>
+                  <td className="py-3 px-4 text-right"><span className="text-[11px] font-mono text-tertiary">{p.aln}</span></td>
+                  <td className="py-3 px-4 text-right"><span className="text-[13px] font-bold font-mono text-primary">{fmt(p.estimatedAmount)}</span></td>
+                  <td className="py-3 px-4 text-right"><span className="text-[13px] font-bold" style={{ color: isCrit ? 'var(--critical)' : 'var(--warning)' }}>{p.pctOfRevenue}%</span></td>
                   <td className="py-3 px-4">
                     <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border"
-                      style={{ color: isCrit ? '#f87171' : '#fbbf24', borderColor: isCrit ? 'rgba(239,68,68,0.25)' : 'rgba(251,191,36,0.25)', background: isCrit ? 'rgba(239,68,68,0.1)' : 'rgba(251,191,36,0.1)' }}>
+                      style={{ color: isCrit ? 'var(--critical)' : 'var(--warning)', borderColor: isCrit ? 'var(--critical)' : 'var(--warning)', background: isCrit ? 'var(--critical-tint)' : 'var(--warning-tint)' }}>
                       <AlertTriangle className="w-2.5 h-2.5" />
                       {isCrit ? 'CRITICAL' : 'MODERATE'}
                     </span>
                   </td>
-                  <td className="py-3 px-4"><span className="text-[11px] text-slate-500">{p.programImpact}</span></td>
+                  <td className="py-3 px-4"><span className="text-[11px] text-secondary">{p.programImpact}</span></td>
                 </tr>
               );
             })}
           </tbody>
           <tfoot>
-            <tr className="border-t-2" style={{ borderColor: 'rgba(255,255,255,0.10)', background: 'rgba(255,255,255,0.02)' }}>
-              <td className="py-3 px-4 text-[12px] font-bold text-slate-200">Total Federal/State</td>
-              <td /><td className="py-3 px-4 text-right text-[13px] font-bold text-slate-200 font-mono">{fmt(inc.revenue.governmentFeesGrants)}</td>
-              <td className="py-3 px-4 text-right text-[13px] font-bold text-red-400">{govtPct}%</td>
+            <tr className="border-t-2" style={{ borderColor: 'var(--border-strong)', background: 'var(--bg-elevated)' }}>
+              <td className="py-3 px-4 text-[12px] font-bold text-primary">Total Federal/State</td>
+              <td /><td className="py-3 px-4 text-right text-[13px] font-bold text-primary font-mono">{fmt(inc.revenue.governmentFeesGrants)}</td>
+              <td className="py-3 px-4 text-right text-[13px] font-bold text-critical">{govtPct}%</td>
               <td /><td />
             </tr>
           </tfoot>
@@ -557,55 +511,55 @@ function CapitalTab() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card className="p-5">
           <div className="flex items-center gap-2 mb-4">
-            <Target className="w-4 h-4 text-indigo-400" />
-            <h3 className="text-[14px] font-bold text-slate-100">{camp.name}</h3>
+            <Target className="w-4 h-4 text-info" />
+            <h3 className="text-[14px] font-bold text-primary">{camp.name}</h3>
           </div>
           <div className="mb-4">
             <div className="flex justify-between text-[12px] mb-1.5">
-              <span className="text-slate-500">Progress</span>
-              <span className="font-bold text-slate-200">{fmt(camp.pledgesInBook)} / {fmt(camp.goal)}</span>
+              <span className="text-secondary">Progress</span>
+              <span className="font-bold text-primary">{fmt(camp.pledgesInBook)} / {fmt(camp.goal)}</span>
             </div>
-            <div className="h-3 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.08)' }}>
-              <div className="h-full rounded-full" style={{ width: `${campPct}%`, background: 'linear-gradient(90deg,#6366f1,#8b5cf6)' }} />
+            <div className="h-3 rounded-full overflow-hidden" style={{ background: 'var(--bg-elevated)' }}>
+              <div className="h-full rounded-full" style={{ width: `${campPct}%`, background: 'var(--info)' }} />
             </div>
-            <p className="text-[10px] text-slate-600 mt-1">{campPct}% of {fmt(camp.goal)} goal pledged</p>
+            <p className="text-[10px] text-tertiary mt-1">{campPct}% of {fmt(camp.goal)} goal pledged</p>
           </div>
           <div className="space-y-2">
             {camp.pledgeDueDates.map(pd => (
               <div key={pd.year} className="flex justify-between text-[12px]">
-                <span className="text-slate-500">{pd.year} pledge payments</span>
-                <span className="font-semibold text-slate-200 font-mono">{fmtFull(pd.amount)}</span>
+                <span className="text-secondary">{pd.year} pledge payments</span>
+                <span className="font-semibold text-primary font-mono">{fmtFull(pd.amount)}</span>
               </div>
             ))}
           </div>
-          <div className="mt-3 pt-3 border-t text-[11px] text-slate-600" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+          <div className="mt-3 pt-3 border-t text-[11px] text-tertiary" style={{ borderColor: 'var(--border-hairline)' }}>
             Board pledges: {fmtFull(camp.boardPledgesIncluded)} · FY2025 released: {fmtFull(camp.releasedToDate)}
           </div>
         </Card>
         <Card className="p-5">
           <div className="flex items-center gap-2 mb-4">
-            <Landmark className="w-4 h-4 text-teal-400" />
-            <h3 className="text-[14px] font-bold text-slate-100">Endowment Fund</h3>
-            <span className="text-[11px] text-slate-500">5% spending policy</span>
+            <Landmark className="w-4 h-4 text-accent" />
+            <h3 className="text-[14px] font-bold text-primary">Endowment Fund</h3>
+            <span className="text-[11px] text-secondary">5% spending policy</span>
           </div>
           <div className="grid grid-cols-2 gap-3 mb-4">
-            <div className="p-3 rounded-[8px]" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
-              <p className="text-[10px] text-slate-500 mb-1">Total Endowment</p>
-              <p className="text-[18px] font-bold text-slate-100">{fmt(end.totalEndowment)}</p>
-              <p className="text-[10px] text-green-400">+{fmt(end.totalEndowment - end.priorYearTotal)} from FY2024</p>
+            <div className="p-3 rounded-[8px]" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-hairline)' }}>
+              <p className="text-[10px] text-secondary mb-1">Total Endowment</p>
+              <p className="text-[18px] font-bold text-primary">{fmt(end.totalEndowment)}</p>
+              <p className="text-[10px] text-success">+{fmt(end.totalEndowment - end.priorYearTotal)} from FY2024</p>
             </div>
-            <div className="p-3 rounded-[8px]" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
-              <p className="text-[10px] text-slate-500 mb-1">FY2025 Investment Return</p>
-              <p className="text-[18px] font-bold text-green-400">{fmt(end.investmentReturnFY2025)}</p>
-              <p className="text-[10px] text-slate-600">{fmt(end.expenditures)} distributed</p>
+            <div className="p-3 rounded-[8px]" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-hairline)' }}>
+              <p className="text-[10px] text-secondary mb-1">FY2025 Investment Return</p>
+              <p className="text-[18px] font-bold text-success">{fmt(end.investmentReturnFY2025)}</p>
+              <p className="text-[10px] text-tertiary">{fmt(end.expenditures)} distributed</p>
             </div>
           </div>
-          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Named Funds</p>
+          <p className="text-[10px] font-bold text-secondary uppercase tracking-widest mb-2">Named Funds</p>
           <div className="space-y-1.5">
             {end.namedFunds.map(f => (
               <div key={f.name} className="flex justify-between text-[12px]">
-                <span className="text-slate-400">{f.name}</span>
-                <span className="font-mono font-semibold text-slate-200">{fmtFull(f.amount)}</span>
+                <span className="text-secondary">{f.name}</span>
+                <span className="font-mono font-semibold text-primary">{fmtFull(f.amount)}</span>
               </div>
             ))}
           </div>
@@ -614,10 +568,10 @@ function CapitalTab() {
 
       <Card className="p-5">
         <div className="flex items-center gap-2 mb-4">
-          <Users className="w-4 h-4 text-teal-400" />
-          <h2 className="text-[14px] font-bold text-slate-100">Board Intelligence</h2>
-          <span className="text-[10px] px-2 py-0.5 rounded-full text-green-400 border border-green-400/20 font-bold"
-            style={{ background: 'rgba(34,197,94,0.08)' }}>{bd.totalMembers} members</span>
+          <Users className="w-4 h-4 text-accent" />
+          <h2 className="text-[14px] font-bold text-primary">Board Intelligence</h2>
+          <span className="text-[10px] px-2 py-0.5 rounded-full text-success border border-hairline font-bold"
+            style={{ background: 'var(--success-tint)' }}>{bd.totalMembers} members</span>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
           {([
@@ -626,9 +580,9 @@ function CapitalTab() {
             { label: 'Secretary',   value: bd.secretary },
             { label: 'Treasurer',   value: bd.treasurer },
           ] as { label: string; value: string }[]).map(({ label, value }) => (
-            <div key={label} className="p-3 rounded-[8px]" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
-              <p className="text-[10px] text-slate-500 mb-0.5">{label}</p>
-              <p className="text-[13px] font-semibold text-slate-200">{value}</p>
+            <div key={label} className="p-3 rounded-[8px]" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-hairline)' }}>
+              <p className="text-[10px] text-secondary mb-0.5">{label}</p>
+              <p className="text-[13px] font-semibold text-primary">{value}</p>
             </div>
           ))}
         </div>
@@ -638,14 +592,14 @@ function CapitalTab() {
             { label: 'Corporate Sponsorships (via Board)', value: bd.boardGivingFY2025.affiliatedCompanySponsorships },
             { label: 'Total Board-Sourced Revenue',       value: bd.boardGivingFY2025.totalBoardSourced, sub: `${bd.boardGivingFY2025.pctOfTotalRevenue}% of total revenue` },
           ] as { label: string; value: number; sub?: string }[]).map(({ label, value, sub }) => (
-            <div key={label} className="p-4 rounded-[8px]" style={{ background: 'rgba(34,197,94,0.06)', border: '1px solid rgba(34,197,94,0.15)' }}>
-              <p className="text-[11px] text-slate-500 mb-1">{label}</p>
-              <p className="text-[20px] font-bold text-green-400">{fmtFull(value)}</p>
-              {sub && <p className="text-[10px] text-slate-600">{sub}</p>}
+            <div key={label} className="p-4 rounded-[8px]" style={{ background: 'var(--success-tint)', border: '1px solid var(--success-tint)' }}>
+              <p className="text-[11px] text-secondary mb-1">{label}</p>
+              <p className="text-[20px] font-bold text-success">{fmtFull(value)}</p>
+              {sub && <p className="text-[10px] text-tertiary">{sub}</p>}
             </div>
           ))}
         </div>
-        <p className="text-[11px] text-slate-600 mt-3">Auxiliary board: {bd.auxiliaryBoard} · Strong engagement relative to comparable nonprofits.</p>
+        <p className="text-[11px] text-tertiary mt-3">Auxiliary board: {bd.auxiliaryBoard} · Strong engagement relative to comparable nonprofits.</p>
       </Card>
 
       <SectionTitle title="Leadership Team" sub="Compensation from FY2025 audited statements · Schedule J" />
@@ -654,22 +608,22 @@ function CapitalTab() {
           <Card key={leader.name} className="p-4">
             <div className="flex items-start justify-between mb-2">
               <div>
-                <p className="text-[14px] font-bold text-slate-100">{leader.name}</p>
-                <p className="text-[11px] text-teal-400 font-semibold">{leader.title}</p>
+                <p className="text-[14px] font-bold text-primary">{leader.name}</p>
+                <p className="text-[11px] text-accent font-semibold">{leader.title}</p>
               </div>
               {leader.salary && (
-                <span className="text-[12px] font-bold text-slate-200 font-mono px-2 py-1 rounded-[6px]"
-                  style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                <span className="text-[12px] font-bold text-primary font-mono px-2 py-1 rounded-[6px]"
+                  style={{ background: 'var(--border-hairline)', border: '1px solid var(--bg-elevated)' }}>
                   {fmtFull(leader.salary)}
                 </span>
               )}
             </div>
             {leader.tenure && (
-              <span className="text-[10px] px-1.5 py-0.5 rounded border font-bold text-teal-400 border-teal-400/20 inline-block mb-2"
-                style={{ background: 'rgba(13,148,136,0.08)' }}>{leader.tenure}-year tenure</span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded border font-bold text-accent border-hairline inline-block mb-2"
+                style={{ background: 'var(--accent-tint)' }}>{leader.tenure}-year tenure</span>
             )}
-            <p className="text-[11px] text-slate-400 leading-relaxed">{leader.bio}</p>
-            {leader.note && <p className="text-[10px] text-slate-600 mt-2 italic">{leader.note}</p>}
+            <p className="text-[11px] text-secondary leading-relaxed">{leader.bio}</p>
+            {leader.note && <p className="text-[10px] text-tertiary mt-2 italic">{leader.note}</p>}
           </Card>
         ))}
       </div>
@@ -690,64 +644,64 @@ function SitesTab() {
           <Card key={site.name} className="p-4">
             <div className="flex items-start justify-between mb-2">
               <div>
-                <p className="text-[13px] font-bold text-slate-100 leading-snug">{site.name}</p>
+                <p className="text-[13px] font-bold text-primary leading-snug">{site.name}</p>
                 <div className="flex items-center gap-1 mt-0.5">
-                  <MapPin className="w-3 h-3 text-slate-600" />
-                  <span className="text-[11px] text-slate-500">{site.neighborhood}</span>
+                  <MapPin className="w-3 h-3 text-tertiary" />
+                  <span className="text-[11px] text-secondary">{site.neighborhood}</span>
                 </div>
               </div>
               {site.isNewest && (
-                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full text-green-400 border border-green-400/20 flex-shrink-0"
-                  style={{ background: 'rgba(34,197,94,0.08)' }}>NEWEST</span>
+                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full text-success border border-hairline flex-shrink-0"
+                  style={{ background: 'var(--success-tint)' }}>NEWEST</span>
               )}
             </div>
-            <p className="text-[11px] text-slate-600 mb-2">{site.address}</p>
+            <p className="text-[11px] text-tertiary mb-2">{site.address}</p>
             <div className="flex flex-wrap gap-1 mb-2">
               {site.programs.map(p => (
-                <span key={p} className="text-[10px] px-1.5 py-0.5 rounded text-teal-400 border border-teal-400/20"
-                  style={{ background: 'rgba(13,148,136,0.08)' }}>{p}</span>
+                <span key={p} className="text-[10px] px-1.5 py-0.5 rounded text-accent border border-hairline"
+                  style={{ background: 'var(--accent-tint)' }}>{p}</span>
               ))}
             </div>
-            <p className="text-[10px] text-slate-600">Ages: {site.agesServed}</p>
-            {site.note && <p className="text-[10px] text-slate-600 mt-1 leading-relaxed">{site.note}</p>}
+            <p className="text-[10px] text-tertiary">Ages: {site.agesServed}</p>
+            {site.note && <p className="text-[10px] text-tertiary mt-1 leading-relaxed">{site.note}</p>}
           </Card>
         ))}
       </div>
 
       <Card className="p-5">
         <div className="flex items-center gap-2 mb-4">
-          <CheckCircle className="w-4 h-4 text-green-400" />
-          <h2 className="text-[14px] font-bold text-slate-100">Program Outcomes — FY2024 Stewardship Report</h2>
+          <CheckCircle className="w-4 h-4 text-success" />
+          <h2 className="text-[14px] font-bold text-primary">Program Outcomes — FY2024 Stewardship Report</h2>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div>
-            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">
+            <p className="text-[10px] font-bold text-secondary uppercase tracking-widest mb-3">
               Early Learning ({CYC_IMPACT.earlyLearningParticipants} participants)
             </p>
             <div className="space-y-2.5">
               {CYC_IMPACT.outcomes.earlyLearning.map(o => (
                 <div key={o.metric} className="flex items-center justify-between">
-                  <span className="text-[11px] text-slate-400">{o.metric}</span>
-                  <span className="text-[12px] font-bold text-green-400">{o.pct}%</span>
+                  <span className="text-[11px] text-secondary">{o.metric}</span>
+                  <span className="text-[12px] font-bold text-success">{o.pct}%</span>
                 </div>
               ))}
             </div>
           </div>
           <div>
-            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">
+            <p className="text-[10px] font-bold text-secondary uppercase tracking-widest mb-3">
               Out-of-School Time ({CYC_IMPACT.ostParticipants} participants)
             </p>
             <div className="space-y-2.5">
               {CYC_IMPACT.outcomes.outOfSchoolTime.map(o => (
                 <div key={o.metric} className="flex items-center justify-between">
-                  <span className="text-[11px] text-slate-400">{o.metric}</span>
-                  <span className="text-[12px] font-bold text-green-400">{o.pct}%</span>
+                  <span className="text-[11px] text-secondary">{o.metric}</span>
+                  <span className="text-[12px] font-bold text-success">{o.pct}%</span>
                 </div>
               ))}
             </div>
           </div>
           <div>
-            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">Org Overview</p>
+            <p className="text-[10px] font-bold text-secondary uppercase tracking-widest mb-3">Org Overview</p>
             <div className="space-y-3">
               {([
                 { label: 'Total Youth Served', value: CYC_IMPACT.youthServedTotal.toLocaleString() },
@@ -756,8 +710,8 @@ function SitesTab() {
                 { label: 'Teen Participants',  value: CYC_IMPACT.teenParticipants.toLocaleString() },
               ] as { label: string; value: string }[]).map(({ label, value }) => (
                 <div key={label} className="flex justify-between">
-                  <span className="text-[12px] text-slate-400">{label}</span>
-                  <span className="text-[13px] font-bold text-slate-100">{value}</span>
+                  <span className="text-[12px] text-secondary">{label}</span>
+                  <span className="text-[13px] font-bold text-primary">{value}</span>
                 </div>
               ))}
             </div>
@@ -802,61 +756,82 @@ export function CYCFinancialsShell({
   const [tab, setTab] = useState<AnyTab>('overview');
 
   return (
-    <div style={{ background: 'var(--fin-page-bg)', minHeight: '100vh' }}>
+    <div className="bg-page min-h-screen">
 
-      {/* ── Hero ─────────────────────────────────────────────── */}
-      <div className="relative overflow-hidden border-b" style={{
-        background: 'linear-gradient(135deg,#0d1929 0%,#0a1120 60%,#070d1a 100%)',
-        borderColor: 'rgba(255,255,255,0.06)',
-      }}>
-        <div className="absolute inset-0 opacity-[0.025]" style={{
-          backgroundImage: 'linear-gradient(#fff 1px,transparent 1px),linear-gradient(90deg,#fff 1px,transparent 1px)',
-          backgroundSize: '48px 48px',
-        }} />
-        <div className="absolute top-0 right-1/3 w-80 h-36 rounded-full blur-3xl pointer-events-none"
-          style={{ background: 'radial-gradient(circle,rgba(13,148,136,0.10),transparent)' }} />
-        <div className="relative px-8 py-7 max-w-7xl mx-auto flex items-start justify-between gap-6">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <BarChart3 className="w-3.5 h-3.5 text-teal-500" />
-              <span className="text-[10px] font-bold text-teal-500 uppercase tracking-widest">Org Intelligence · Financials</span>
+      {/* ── Hero — dark command band w/ inline tab bar (per brief) ────────── */}
+      <div
+        className="text-white rounded-b-2xl"
+        style={{
+          background: 'linear-gradient(135deg, #0C1626 0%, #0B1220 100%)',
+        }}
+      >
+        <div className="px-8 pt-[30px] pb-[26px] max-w-7xl mx-auto">
+          <div className="flex items-start justify-between gap-6 flex-wrap">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <BarChart3 className="w-3.5 h-3.5" style={{ color: 'var(--accent-bright)' }} />
+                <span
+                  className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.16em]"
+                  style={{ color: 'var(--accent-bright)' }}
+                >
+                  Org Intelligence · Financials
+                </span>
+              </div>
+              <h1 className="text-[30px] font-semibold -tracking-[0.02em] mt-3 leading-tight">
+                Chicago Youth Centers
+              </h1>
+              <p className="text-[13px] mt-2" style={{ color: '#9FB0C8' }}>
+                Founded <span className="font-mono tabular-nums" style={{ color: '#C6D3E6' }}>1956</span> ·{' '}
+                <span className="font-mono tabular-nums" style={{ color: '#C6D3E6' }}>{CYC_IMPACT.yearsInOperation}</span> years ·{' '}
+                <span className="font-mono tabular-nums" style={{ color: '#C6D3E6' }}>{CYC_SITES.length}</span> centers across Chicago · EIN{' '}
+                <span className="font-mono tabular-nums" style={{ color: '#C6D3E6' }}>36-2196050</span>
+              </p>
             </div>
-            <h1 className="text-[26px] font-bold text-white leading-tight">Chicago Youth Centers</h1>
-            <p className="text-slate-400 text-[13px] mt-0.5">
-              Founded 1956 · {CYC_IMPACT.yearsInOperation} years · {CYC_SITES.length} centers across Chicago · EIN 36-2196050
-            </p>
+            <div className="flex flex-col items-end gap-2.5 flex-shrink-0">
+              <span
+                className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.08em] inline-flex items-center gap-2"
+                style={{ color: '#9FB0C8' }}
+              >
+                <span className="w-[7px] h-[7px] rounded-full bg-success" />
+                ★★★★ Charity Navigator
+              </span>
+              <span
+                className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.08em] inline-flex items-center gap-2"
+                style={{ color: '#9FB0C8' }}
+              >
+                <span className="w-[7px] h-[7px] rounded-full bg-critical" />
+                FY2025 Audited · Operating Deficit
+              </span>
+            </div>
           </div>
-          <div className="flex flex-col items-end gap-2 flex-shrink-0">
-            <span className="px-3 py-1.5 rounded-full text-[11px] font-bold text-green-400 border border-green-400/20"
-              style={{ background: 'rgba(34,197,94,0.08)' }}>★★★★ Charity Navigator</span>
-            <span className="px-3 py-1.5 rounded-full text-[11px] font-bold text-red-400 border border-red-400/20"
-              style={{ background: 'rgba(239,68,68,0.08)' }}>FY2025 Audited · Operating Deficit</span>
-          </div>
-        </div>
-      </div>
 
-      {/* ── Sticky tab nav ───────────────────────────────────── */}
-      <div className="sticky top-0 z-20 border-b" style={{
-        background: 'rgba(7,13,26,0.97)',
-        backdropFilter: 'blur(12px)',
-        WebkitBackdropFilter: 'blur(12px)',
-        borderColor: 'rgba(255,255,255,0.07)',
-      }}>
-        <div className="px-8 max-w-7xl mx-auto flex items-center overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
-          {ALL_TABS.map(({ id, label, icon: Icon }) => (
-            <button key={id} onClick={() => setTab(id as AnyTab)}
-              className="flex items-center gap-2 px-4 py-3.5 text-[12px] font-semibold whitespace-nowrap border-b-2 transition-all"
-              style={{
-                color: tab === id ? '#fff' : '#64748b',
-                borderBottomColor: tab === id ? '#0d9488' : 'transparent',
-              }}>
-              <Icon className="w-3.5 h-3.5" />
-              {label}
-              {id === 'ai' && (googleConnected || microsoftConnected) && (
-                <span className="w-1.5 h-1.5 rounded-full bg-green-400 flex-shrink-0" />
-              )}
-            </button>
-          ))}
+          {/* Tab bar — inside the hero, dark, pill-style active */}
+          <div className="flex gap-0.5 mt-[22px] flex-wrap" role="tablist">
+            {ALL_TABS.map(({ id, label, icon: Icon }) => {
+              const active = tab === id;
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  onClick={() => setTab(id as AnyTab)}
+                  className="text-[12.5px] py-[9px] px-[13px] rounded-[7px] inline-flex items-center gap-[7px] transition-colors"
+                  style={{
+                    color: active ? '#fff' : '#7E90AB',
+                    background: active ? 'rgba(255,255,255,0.07)' : 'transparent',
+                    fontWeight: active ? 500 : 400,
+                  }}
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                  {label}
+                  {id === 'ai' && (googleConnected || microsoftConnected) && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-success flex-shrink-0" />
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
@@ -882,12 +857,12 @@ export function CYCFinancialsShell({
 
       {/* ── Footer ───────────────────────────────────────────── */}
       <div className="px-8 pb-8 max-w-7xl mx-auto">
-        <div className="flex items-center justify-between py-4 border-t" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
-          <p className="text-[11px] text-slate-700">
+        <div className="flex items-center justify-between py-4 border-t" style={{ borderColor: 'var(--border-hairline)' }}>
+          <p className="text-[11px] text-tertiary">
             Source: FY2025 Audited Financial Statements · Kearney & Company, P.C. · Audit issued January 5, 2026 · chicagoyouthcenters.org
           </p>
           <Link href="/dashboard"
-            className="flex items-center gap-1 text-[11px] text-teal-500 hover:text-teal-400 transition-colors">
+            className="flex items-center gap-1 text-[11px] text-accent hover:text-accent transition-colors">
             Back to dashboard <ChevronRight className="w-3 h-3" />
           </Link>
         </div>
