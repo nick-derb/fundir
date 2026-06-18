@@ -34,53 +34,46 @@ export default async function FoundationsPage() {
       availableOrgs={ctx.availableOrgs}
       currentOrgCode={ctx.orgCode}
     >
-      {/* ── Hero ─────────────────────────────────────────────── */}
-      <div className="relative overflow-hidden border-b border-[#1e293b]"
-        style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1a2236 60%, #0f172a 100%)' }}>
-        <div className="absolute inset-0 opacity-[0.04]" style={{
-          backgroundImage: 'linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)',
-          backgroundSize: '32px 32px',
-        }} />
-        <div className="absolute top-0 right-1/4 w-96 h-48 rounded-full opacity-10 blur-3xl"
-          style={{ background: 'radial-gradient(circle, #0d9488, transparent)' }} />
-
-        <div className="relative px-4 sm:px-6 md:px-8 py-6 md:py-8 max-w-7xl mx-auto">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-7 h-7 rounded-[6px] flex items-center justify-center"
-                  style={{ background: 'linear-gradient(135deg, #0d9488, #0891b2)' }}>
-                  <Sparkles className="w-3.5 h-3.5 text-white" />
-                </div>
-                <span className="text-[#0d9488] text-[11px] font-bold tracking-widest uppercase">
-                  Fundir Exclusive · Foundation Intelligence
-                </span>
-              </div>
-              <h1 className="text-[26px] font-bold text-white leading-tight mb-2">
-                Private Foundation Funding Map
-              </h1>
-              <p className="text-[#94a3b8] text-[14px] max-w-2xl leading-relaxed">
-                {foundations.length} foundations scored against {ctx.orgName}&apos;s mission and financials —
-                surfacing funders that never appear on Grants.gov. Click any funder for its live IRS
-                990 filing history.
-              </p>
+      {/* ── Light hero on canvas ─────────────────────────────── */}
+      <div className="bg-canvas-0 border-b border-canvas-3">
+        <div className="px-4 sm:px-6 md:px-8 py-5 max-w-7xl mx-auto">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-6 h-6 rounded-sm bg-action-soft text-action flex items-center justify-center">
+              <Sparkles className="w-3.5 h-3.5" />
             </div>
+            <span className="text-eyebrow font-semibold text-action uppercase tracking-wider">
+              Fundir exclusive · Foundation intelligence
+            </span>
           </div>
+          <h1 className="text-h1 font-semibold text-ink-0 leading-tight">
+            Private foundation funding map
+          </h1>
+          <p className="text-body text-ink-1 mt-1 max-w-2xl">
+            {foundations.length} foundations scored against {ctx.orgName}&apos;s mission and financials —
+            surfacing funders that never appear on Grants.gov. Click any funder for its live IRS
+            990 filing history.
+          </p>
 
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mt-6">
-            {[
-              { label: 'Foundations Mapped',   value: `${foundations.length}`,       sub: 'scored vs your org profile',  color: '#0d9488' },
-              { label: 'Strong Fits ≥70',       value: `${topMatches.length}`,        sub: 'high mission alignment',       color: '#16a34a' },
-              { label: 'Local Funders',          value: `${localFunders.length}`,      sub: 'Chicago/IL geography',         color: '#6366f1' },
-              { label: 'Total Grant Potential', value: formatCompact(totalPotential), sub: 'avg grants, top 10',           color: '#d97706' },
-            ].map(({ label, value, sub, color }) => (
-              <div key={label} className="rounded-[10px] border border-white/10 p-4"
-                style={{ background: 'rgba(255,255,255,0.06)' }}>
-                <p className="text-[10px] font-bold text-[#64748b] uppercase tracking-widest mb-2">{label}</p>
-                <p className="text-[24px] font-bold leading-none" style={{ color }}>{value}</p>
-                <p className="text-[10px] text-[#475569] mt-1">{sub}</p>
-              </div>
-            ))}
+          {/* Inline metric strip — matches the dashboard rhythm */}
+          <div className="flex flex-wrap items-baseline gap-x-6 gap-y-1.5 mt-4 text-caption text-ink-2">
+            <span>
+              Foundations
+              <strong className="text-h2 font-semibold text-ink-0 tabular-nums ml-1">{foundations.length}</strong>
+            </span>
+            <span>
+              Strong fits
+              <strong className="text-h2 font-semibold text-signal-pursue tabular-nums ml-1">{topMatches.length}</strong>
+              <span className="text-eyebrow ml-1">· ≥70 score</span>
+            </span>
+            <span>
+              Local funders
+              <strong className="text-h2 font-semibold text-ink-0 tabular-nums ml-1">{localFunders.length}</strong>
+              <span className="text-eyebrow ml-1">· Chicago/IL</span>
+            </span>
+            <span>
+              Top-10 potential
+              <strong className="text-h2 font-semibold text-ink-0 tabular-nums ml-1">{formatCompact(totalPotential)}</strong>
+            </span>
           </div>
         </div>
       </div>

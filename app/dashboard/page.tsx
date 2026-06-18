@@ -8,14 +8,16 @@ import { OrgLogo } from '@/components/org-logo';
 import { MatchResult } from '@/types';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import {
-  Target, AlertTriangle, ArrowUpRight, DollarSign,
-  Activity, Flame, Sparkles,
-} from 'lucide-react';
+import { AlertTriangle, ArrowUpRight, Flame, Sparkles } from 'lucide-react';
 import { GrantCard } from '@/components/ui/grant-card';
 import { RecommendationGroup } from '@/components/ui/recommendation-group';
 import { ConcentrationPanel } from '@/components/concentration-panel';
 import { loadLatestConcentration } from '@/lib/discovery/concentration';
+import { CraIntelligencePanel } from '@/components/cra-intelligence-panel';
+import { loadCraIntelligence } from '@/lib/cra/intelligence';
+import { FunderIntelligencePanel } from '@/components/funder-intelligence-panel';
+import { loadFunderIntelligence } from '@/lib/funder-intel/repo';
+import { loadOrgCraSnapshot } from '@/lib/cra/repo';
 
 // ── Logo auto-fetch via ProPublica EIN → website → Clearbit ──────────────────
 async function getOrgLogoUrl(ein?: string | null): Promise<string | null> {
@@ -95,6 +97,17 @@ async function getDashboardData(orgId: string, orgCode: string) {
   // renders the empty-state CTA in that case.
   const concentration = await loadLatestConcentration(orgId);
 
+  // Phase 7 / Workstream A: CRA bank intelligence — the prospect list
+  // ranked by relationship + peer-funding signal. craSnapshot carries
+  // the tract's community label for the panel's empty-state copy.
+  // Phase 7 / Workstream B8: funder-intelligence panel — ranked prospect
+  // funders with cited briefs. Empty until B2 ingest + B5 scoring runs.
+  const [craRows, craSnapshot, funderIntelRows] = await Promise.all([
+    loadCraIntelligence(orgId),
+    loadOrgCraSnapshot(orgId),
+    loadFunderIntelligence(orgId, 30),
+  ]);
+
   // Win-triage buckets — pursue/maybe/skip per DESIGN_SYSTEM.md §2.9.
   // Thresholds match the rest of the matcher (≥70 pursue, ≥50 maybe).
   const pursue = matches.filter(m => m.composite_score >= 70);
@@ -120,6 +133,9 @@ async function getDashboardData(orgId: string, orgCode: string) {
     org,
     logoUrl,
     concentration,
+    craRows,
+    craCommunity: craSnapshot?.community ?? null,
+    funderIntelRows,
   };
 }
 
@@ -204,130 +220,99 @@ export default async function DashboardPage() {
     >
       <div className="px-4 sm:px-6 md:px-8 py-6 max-w-7xl mx-auto space-y-5">
 
-        {/* ── Brand-new org: hero empty state instead of a deflating page of zeros ── */}
+        {/* ── Brand-new org: light hero empty-state ─────────────────── */}
         {data.totalTracked === 0 && (
-          <div className="rounded-2xl border overflow-hidden relative"
-            style={{
-              background: 'linear-gradient(135deg, #0f172a 0%, #1a2236 60%, #0f172a 100%)',
-              borderColor: 'var(--card-border)',
-            }}>
-            <div className="absolute inset-0 opacity-[0.05]" style={{
-              backgroundImage: 'linear-gradient(rgba(255,255,255,0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.15) 1px, transparent 1px)',
-              backgroundSize: '40px 40px',
-            }} />
-            <div className="absolute top-0 right-1/4 w-96 h-48 rounded-full opacity-20 blur-3xl"
-              style={{ background: 'radial-gradient(circle, #0d9488, transparent)' }} />
-            <div className="relative px-6 md:px-10 py-10 md:py-14 max-w-3xl">
-              <div className="flex items-center gap-2 mb-3">
-                <Sparkles className="w-4 h-4 text-[#0d9488]" />
-                <span className="text-[11px] font-bold text-[#0d9488] uppercase tracking-widest">Welcome to Fundir</span>
+          <div className="bg-canvas-1 rounded-lg shadow-flat px-6 md:px-10 py-10 md:py-12 max-w-3xl">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-6 h-6 rounded-sm flex items-center justify-center bg-action-soft text-action">
+                <Sparkles className="w-3.5 h-3.5" />
               </div>
-              <h2 className="text-[24px] md:text-[32px] font-bold text-white leading-tight mb-3">
-                Let&apos;s find your first matching grants
-              </h2>
-              <p className="text-[14px] text-[#94a3b8] leading-relaxed mb-6 max-w-xl">
-                Run discovery once and Fundir will surface federal and foundation grants
-                matched to {data.org?.name ?? ctx.orgName}&apos;s mission, programs, and
-                financial profile — scored, ranked, and reverse-screened against your 990.
-              </p>
-              <div className="flex flex-wrap items-center gap-2.5">
-                <Link href="/discover"
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-[8px] text-[13px] font-bold text-white transition-all hover:opacity-95"
-                  style={{ background: 'linear-gradient(135deg, #0d9488, #0891b2)' }}>
-                  <Sparkles className="w-3.5 h-3.5" />
-                  Run your first discovery
-                </Link>
-                <Link href="/settings"
-                  className="flex items-center gap-1.5 px-4 py-2.5 rounded-[8px] text-[13px] font-semibold text-white/80 border border-white/15 hover:bg-white/5 transition-colors">
-                  Sync 990 financials
-                </Link>
-              </div>
+              <span className="text-eyebrow font-semibold text-action uppercase tracking-wider">Welcome to Fundir</span>
+            </div>
+            <h2 className="text-display font-semibold text-ink-0 leading-tight mb-3">
+              Let&apos;s find your first matching grants
+            </h2>
+            <p className="text-body text-ink-1 leading-relaxed mb-6 max-w-xl">
+              Run discovery once and Fundir will surface federal and foundation grants
+              matched to {data.org?.name ?? ctx.orgName}&apos;s mission, programs, and
+              financial profile — scored, ranked, and reverse-screened against your 990.
+            </p>
+            <div className="flex flex-wrap items-center gap-2.5">
+              <Link href="/discover"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md text-body font-semibold bg-action text-canvas-1 hover:bg-action-hover transition-colors">
+                <Sparkles className="w-3.5 h-3.5" />
+                Run your first discovery
+              </Link>
+              <Link href="/settings"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md text-body font-semibold text-ink-0 ring-1 ring-canvas-3 hover:bg-canvas-2 transition-colors">
+                Sync 990 financials
+              </Link>
             </div>
           </div>
         )}
 
-        {/* ── Page header ──────────────────────────────────────── */}
-        <div className="flex flex-wrap items-center justify-between gap-3 sm:gap-4">
-          <div className="flex items-center gap-4">
-            {/* Org logo — auto-fetched from ProPublica EIN → Clearbit */}
-            {data.logoUrl && <OrgLogo src={data.logoUrl} alt={ctx.orgName} />}
-            <div>
-              <p className="text-[12px] mb-0.5" style={{ color: 'var(--text-tertiary)' }}>{today}</p>
-              <h1 className="text-[22px] font-bold leading-tight" style={{ color: 'var(--text-primary)' }}>
-                {data.org?.name ?? ctx.orgName}
-              </h1>
-              <p className="text-[13px] mt-0.5" style={{ color: 'var(--text-secondary)' }}>
-                {data.totalTracked} grants tracked · {data.pipelineActive} in pipeline · {data.urgentGrants.length} urgent
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <Link href="/discover"
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-[7px] text-[13px] font-semibold text-white transition-all hover:opacity-90"
-              style={{ background: 'linear-gradient(135deg, #0d9488, #0891b2)' }}>
-              <Sparkles className="w-3.5 h-3.5" />
-              Run Discovery
-            </Link>
-            <Link href="/pipeline"
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-[7px] text-[13px] font-semibold border transition-all hover:opacity-80"
-              style={{
-                background:   'var(--sec-btn-bg)',
-                borderColor:  'var(--sec-btn-border)',
-                color:        'var(--sec-btn-text)',
-              }}>
-              Open Tracker
-            </Link>
-          </div>
-        </div>
-
-        {/* ── KPI row ───────────────────────────────────────────── */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-          {[
-            {
-              label: 'Grant Opportunities',
-              value: data.totalTracked,
-              sub: `${data.highMatches} high-match`,
-              icon: Activity,
-              color: '#0d9488',
-            },
-            {
-              label: 'Avg Match Score',
-              value: `${avgScore}`,
-              sub: 'composite score',
-              icon: Target,
-              color: avgScore >= 60 ? '#16a34a' : avgScore >= 40 ? '#d97706' : '#dc2626',
-            },
-            {
-              label: 'Award Potential',
-              value: formatCompact(data.totalAwardPotential),
-              sub: 'score ≥ 60 grants',
-              icon: DollarSign,
-              color: '#6366f1',
-            },
-            {
-              label: 'Urgent Deadlines',
-              value: data.urgentGrants.length,
-              sub: 'closing in ≤ 14 days',
-              icon: Flame,
-              color: data.urgentGrants.length > 0 ? '#dc2626' : '#16a34a',
-            },
-          ].map(({ label, value, sub, icon: Icon, color }) => (
-            <div key={label}
-              className="rounded-[10px] border p-4"
-              style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)' }}>
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-[11px] font-semibold uppercase tracking-wide"
-                  style={{ color: 'var(--text-secondary)' }}>{label}</span>
-                <div className="w-7 h-7 rounded-[6px] flex items-center justify-center"
-                  style={{ background: color + '20' }}>
-                  <Icon className="w-3.5 h-3.5" style={{ color }} />
-                </div>
+        {/* ── Page header + inline KPI strip ──────────────────────── */}
+        <div>
+          <div className="flex flex-wrap items-start justify-between gap-3 sm:gap-4">
+            <div className="flex items-center gap-4">
+              {data.logoUrl && <OrgLogo src={data.logoUrl} alt={ctx.orgName} />}
+              <div>
+                <p className="text-caption" style={{ color: 'var(--text-tertiary)' }}>{today}</p>
+                <h1 className="text-h1 font-semibold leading-tight" style={{ color: 'var(--text-primary)' }}>
+                  {data.org?.name ?? ctx.orgName}
+                </h1>
               </div>
-              <div className="text-[24px] font-bold leading-none mb-1"
-                style={{ color: 'var(--text-primary)' }}>{value}</div>
-              <p className="text-[11px]" style={{ color: 'var(--text-tertiary)' }}>{sub}</p>
             </div>
-          ))}
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <Link href="/discover"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-md text-body font-semibold bg-action text-canvas-1 hover:bg-action-hover transition-colors">
+                <Sparkles className="w-3.5 h-3.5" />
+                Run discovery
+              </Link>
+              <Link href="/pipeline"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-md text-body font-semibold ring-1 ring-canvas-3 hover:bg-canvas-2 transition-colors"
+                style={{ color: 'var(--text-primary)' }}>
+                Open pipeline
+              </Link>
+            </div>
+          </div>
+
+          {/* Inline KPI strip — four numbers, label:value rhythm, no boxes */}
+          {data.totalTracked > 0 && (
+            <div className="flex flex-wrap items-baseline gap-x-6 gap-y-1.5 mt-4 text-caption" style={{ color: 'var(--text-secondary)' }}>
+              <span>
+                Tracked
+                <strong className="text-h2 font-semibold tabular-nums ml-1" style={{ color: 'var(--text-primary)' }}>
+                  {data.totalTracked}
+                </strong>
+                <span className="text-eyebrow ml-1">· {data.highMatches} high</span>
+              </span>
+              <span>
+                Avg score
+                <strong className={`text-h2 font-semibold tabular-nums ml-1 ${
+                    avgScore >= 60 ? 'text-signal-pursue'
+                  : avgScore >= 40 ? 'text-signal-maybe'
+                                   : 'text-signal-skip'
+                }`}>
+                  {avgScore}
+                </strong>
+              </span>
+              <span>
+                Potential
+                <strong className="text-h2 font-semibold tabular-nums ml-1" style={{ color: 'var(--text-primary)' }}>
+                  {formatCompact(data.totalAwardPotential)}
+                </strong>
+              </span>
+              <span>
+                Urgent
+                <strong className={`text-h2 font-semibold tabular-nums ml-1 ${data.urgentGrants.length > 0 ? 'text-signal-skip' : ''}`}
+                  style={data.urgentGrants.length > 0 ? undefined : { color: 'var(--text-primary)' }}>
+                  {data.urgentGrants.length}
+                </strong>
+                <span className="text-eyebrow ml-1">· ≤ 14d</span>
+              </span>
+            </div>
+          )}
         </div>
 
         {/* ── Funding concentration (Phase 6) ───────────────────── */}
@@ -335,6 +320,28 @@ export default async function DashboardPage() {
             Without a snapshot the panel renders the small CTA empty-state. */}
         {data.totalTracked > 0 && (
           <ConcentrationPanel snapshot={data.concentration} />
+        )}
+
+        {/* ── CRA bank intelligence (Phase 7 / Workstream A) ────── */}
+        {/* The differentiator panel. Banks whose CRA assessment area covers
+            the org's primary tract, ranked by relationship + peer-funding
+            signal. Existing → Deepen; Prospect+peer → Open (warm); cold
+            prospects → Monitor. Hidden when the org has no tract or no
+            covering banks. */}
+        {data.craRows.length > 0 && (
+          <CraIntelligencePanel rows={data.craRows} community={data.craCommunity} />
+        )}
+
+        {/* ── Funder intelligence (Phase 7 / Workstream B8) ─────── */}
+        {/* Ranked prospect funders backing peers like this org. Each row
+            expands to a Claude-generated brief citing real grants_made
+            rows. Empty until B2 (990 ingest) + B5 (scorer) + B6 (brief
+            generator) run. */}
+        {data.funderIntelRows.length > 0 && (
+          <FunderIntelligencePanel
+            rows={data.funderIntelRows}
+            org_name={data.org?.name ?? ctx.orgName}
+          />
         )}
 
         {/* ── Main content row ──────────────────────────────────── */}
@@ -519,40 +526,38 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        {/* ── Grant table ───────────────────────────────────────── */}
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <div>
-              <h2 className="text-[15px] font-bold" style={{ color: 'var(--text-primary)' }}>All Grant Matches</h2>
-              <p className="text-[12px] mt-0.5" style={{ color: 'var(--text-secondary)' }}>
-                {data.totalTracked} opportunities matched to your profile
-              </p>
-            </div>
-            <Link href="/pipeline" className="flex items-center gap-1.5 text-[13px] text-[#0d9488] hover:underline font-semibold">
-              Open pipeline <ArrowUpRight className="w-3.5 h-3.5" />
+        {/* ── Full match list — demoted behind a disclosure ─────────
+            The triage groups above already surface the top picks per
+            bucket. The full table is still here for users who want to
+            scan everything, but it no longer competes for attention. */}
+        {data.matches.length === 0 ? (
+          <div className="rounded-lg ring-1 ring-dashed ring-canvas-3 p-12 text-center bg-canvas-1">
+            <AlertTriangle className="w-8 h-8 mx-auto mb-3 text-ink-3" />
+            <p className="text-body font-medium mb-4 text-ink-1">No grant matches yet.</p>
+            <Link
+              href="/discover"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md text-body font-semibold bg-action text-canvas-1 hover:bg-action-hover transition-colors"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              Run your first discovery
             </Link>
           </div>
-
-          {data.matches.length === 0 ? (
-            <div className="rounded-[10px] border border-dashed p-14 text-center"
-              style={{ borderColor: 'var(--empty-border)', background: 'var(--card-bg)' }}>
-              <AlertTriangle className="w-8 h-8 mx-auto mb-3" style={{ color: 'var(--rank-color)' }} />
-              <p className="text-[14px] font-medium mb-4" style={{ color: 'var(--text-secondary)' }}>
-                No grant matches yet.
-              </p>
-              <Link
-                href="/discover"
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-[8px] text-[13px] font-semibold text-white"
-                style={{ background: 'linear-gradient(135deg, #0d9488, #0891b2)' }}
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                Run your first discovery →
-              </Link>
+        ) : (
+          <details className="group bg-canvas-1 rounded-lg shadow-flat">
+            <summary className="flex items-center justify-between gap-2 px-5 py-3.5 cursor-pointer list-none">
+              <div>
+                <h2 className="text-h2 font-semibold" style={{ color: 'var(--text-primary)' }}>All matches</h2>
+                <p className="text-caption mt-0.5" style={{ color: 'var(--text-secondary)' }}>
+                  {data.totalTracked} opportunities · click to expand the full table
+                </p>
+              </div>
+              <ArrowUpRight className="w-4 h-4 transition-transform group-open:rotate-90 text-ink-2" />
+            </summary>
+            <div className="border-t border-canvas-3">
+              <GrantTable matches={data.matches} />
             </div>
-          ) : (
-            <GrantTable matches={data.matches} />
-          )}
-        </div>
+          </details>
+        )}
 
       </div>
     </AppShell>

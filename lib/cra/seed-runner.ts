@@ -43,7 +43,10 @@ export async function seedCraFromConstants(): Promise<SeedCraResult> {
   const chicagoMetroId = (region?.id as string) ?? null;
 
   // ── 1. Banks → funders ──────────────────────────────────────────────────
-  const bankFunderIds = new Map<string, string>();   // ein → funder_id
+  // Key the funder map by fdic_id (always present) instead of EIN, so
+  // banks whose EIN is pending verification (Huntington) still flow
+  // through to AA-link creation without a special case.
+  const bankFunderIds = new Map<string, string>();   // fdic_id → funder_id
 
   for (const b of CHICAGO_BANK_FUNDERS) {
     try {
@@ -52,17 +55,18 @@ export async function seedCraFromConstants(): Promise<SeedCraResult> {
         name:        b.name,
         funder_type: 'bank',
         metadata: {
-          fdic_id:      b.fdic_id,
-          presence:     [...b.presence],
-          note:         b.note,
-          source:       'cra_seed_chicago_v1',
-          last_seen_at: new Date().toISOString(),
+          fdic_id:        b.fdic_id,
+          presence:       [...b.presence],
+          note:           b.note,
+          ein_verified:   b.ein_verified !== false,  // default true unless explicitly false
+          source:         'cra_seed_chicago_v1',
+          last_seen_at:   new Date().toISOString(),
         },
       });
-      bankFunderIds.set(b.ein, row.id);
+      bankFunderIds.set(b.fdic_id, row.id);
       banks_kept += 1;
     } catch (err) {
-      errors.push(`bank ${b.name} (${b.ein}): ${String(err)}`);
+      errors.push(`bank ${b.name} (fdic ${b.fdic_id}): ${String(err)}`);
     }
   }
 

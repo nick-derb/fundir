@@ -22,6 +22,7 @@
  */
 
 import { findRecipientByEin, findRecipientCandidates, upsertRecipient } from './repo';
+import { adjudicateBatch, type AdjudicationInput } from './claude-adjudicator';
 import type { RecipientRow } from './types';
 
 export interface ResolveRecipientInput {
@@ -29,6 +30,10 @@ export interface ResolveRecipientInput {
   name:        string;
   state?:      string | null;
   ntee_code?:  string | null;
+  /** Optional purpose text from the source grant row — fed to Tier 3
+   *  Claude for disambiguation hints ("West Side youth services" picks
+   *  the West Side org over a downtown one). */
+  purpose?:    string | null;
   /** Extra metadata to persist on a newly-inserted recipient row. */
   metadata?:   Record<string, unknown>;
 }
@@ -36,7 +41,7 @@ export interface ResolveRecipientInput {
 export interface ResolvedRecipient {
   recipient:  RecipientRow;
   confidence: number;
-  source:     'ein-exact' | 'fuzzy' | 'inserted';
+  source:     'ein-exact' | 'fuzzy' | 'claude' | 'inserted';
   /** When fuzzy, the score breakdown for debugging. */
   scoring?:   {
     name_sim:    number;
@@ -44,10 +49,23 @@ export interface ResolvedRecipient {
     ntee_match:  boolean;
     total:       number;
   };
+  /** When 'claude', the identity_adjudications audit row id + cost. */
+  adjudication?: {
+    audit_id:         string;
+    cost_micro_cents: number;
+    reasoning:        string;
+  };
 }
 
 // Threshold below which we don't trust a fuzzy match. Decision 3.
 const FUZZY_ACCEPT_THRESHOLD = 0.70;
+// Gray-band bounds: below LOW, no candidate looks plausible; above HIGH,
+// the top is clearly the winner. Inside the band → ambiguous → Tier 3.
+const TIER3_GRAY_LOW  = 0.55;
+const TIER3_GRAY_HIGH = 0.85;
+// Clear-winner margin: if top - second >= this, top wins outright without
+// sending to Claude.
+const CLEAR_WINNER_MARGIN = 0.20;
 
 // Tokens stripped during name normalization. These appear in nearly
 // every recipient name and would otherwise inflate similarity.
@@ -137,24 +155,58 @@ export async function resolveRecipient(input: ResolveRecipientInput): Promise<Re
     limit:       8,
   });
 
-  let best: { candidate: RecipientRow; scoring: ReturnType<typeof scoreCandidate> } | null = null;
-  for (const c of candidates) {
-    const scoring = scoreCandidate(c, input);
-    if (!best || scoring.total > best.scoring.total) {
-      best = { candidate: c, scoring };
+  const scoredCandidates = candidates
+    .map(c => ({ candidate: c, scoring: scoreCandidate(c, input) }))
+    .sort((a, b) => b.scoring.total - a.scoring.total);
+  const best   = scoredCandidates[0];
+  const second = scoredCandidates[1];
+
+  // Step 2a: clear-winner shortcut — top candidate >= threshold AND beats
+  // the runner-up by a comfortable margin → no ambiguity, no Tier 3 cost.
+  if (best && best.scoring.total >= FUZZY_ACCEPT_THRESHOLD) {
+    const margin = second ? best.scoring.total - second.scoring.total : 1.0;
+    if (margin >= CLEAR_WINNER_MARGIN) {
+      return {
+        recipient:  best.candidate,
+        confidence: best.scoring.total,
+        source:     'fuzzy',
+        scoring:    best.scoring,
+      };
     }
   }
 
-  if (best && best.scoring.total >= FUZZY_ACCEPT_THRESHOLD) {
-    return {
-      recipient:  best.candidate,
-      confidence: best.scoring.total,
-      source:     'fuzzy',
-      scoring:    best.scoring,
+  // Step 3 (Tier 3): ambiguous case — multiple candidates in the gray band.
+  // Send to Claude only when:
+  //   - at least 2 candidates above TIER3_GRAY_LOW
+  //   - top candidate is in the gray band (not a clear winner above HIGH)
+  // Below LOW = no plausible candidate → skip Tier 3, insert fresh.
+  const grayBandCandidates = scoredCandidates.filter(c => c.scoring.total >= TIER3_GRAY_LOW);
+  const topInGrayBand = best && best.scoring.total >= TIER3_GRAY_LOW && best.scoring.total <= TIER3_GRAY_HIGH;
+  if (grayBandCandidates.length >= 2 && topInGrayBand) {
+    const adjInput: AdjudicationInput = {
+      raw_name:    input.name,
+      raw_ein:     input.ein ?? null,
+      raw_state:   input.state ?? null,
+      raw_purpose: input.purpose ?? null,
+      candidates:  grayBandCandidates.slice(0, 5).map(c => c.candidate),
     };
+    const [result] = await adjudicateBatch([adjInput]);
+    if (result.chosen) {
+      return {
+        recipient:    result.chosen,
+        confidence:   result.confidence,
+        source:       'claude',
+        adjudication: {
+          audit_id:         result.audit_id,
+          cost_micro_cents: result.cost_micro_cents,
+          reasoning:        result.reasoning,
+        },
+      };
+    }
+    // Claude said no_match — fall through to insert fresh.
   }
 
-  // Step 3: insert a fresh recipient. confidence on this recipient is
+  // Step 4: insert a fresh recipient. confidence on this recipient is
   // 1.0 (it's canonically itself); confidence on the *edge* in
   // grants_made stays high — the doubt is whether this is the same
   // org as some other name-only entry we'll see later.

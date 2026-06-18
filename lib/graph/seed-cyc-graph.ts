@@ -144,6 +144,15 @@ export const CYC_FUNDER_EDGES: readonly FunderEdgeSeed[] = [
   // ── Bank of America (EIN 13-6022000) ─────────────────────────────────────
   { funder_ein: '136022000', peer_name: 'Bottom Line Chicago',              amount: 75_000,  fiscal_year: 2024, purpose: 'workforce/college',               confidence: 0.7 },
   { funder_ein: '136022000', peer_name: 'BUILD Inc.',                       amount: 50_000,  fiscal_year: 2024, purpose: 'CRA giving',                      confidence: 0.7 },
+  // BofA → After School Matters: per user attestation a 20-year cumulative
+  // relationship of $3.7M+. The single-year amount below is a conservative
+  // recent-year estimate. Confidence is 0.6 (best-knowledge, not yet
+  // verified from a filing). Workstream B's 990-PF Schedule I parse will
+  // UPSERT over this row with the actual disclosed figure when the
+  // BofA Charitable Foundation EIN is ingested. THIS EDGE IS THE
+  // ACCEPTANCE-TEST DEPENDENCY for the CRA panel: it must surface BofA
+  // as a Prospect → Open with the peer-funding rationale.
+  { funder_ein: '136022000', peer_name: 'After School Matters',             amount: 150_000, fiscal_year: 2024, purpose: 'CRA youth workforce (recent-yr est; ~$3.7M cumulative over 20yr per attestation)', confidence: 0.6 },
 
   // ── BMO Bank N.A. (EIN 36-2967330) ────────────────────────────────────────
   { funder_ein: '362967330', peer_name: 'After School Matters',             amount: 75_000,  fiscal_year: 2024, purpose: 'workforce dev',                   confidence: 0.7 },

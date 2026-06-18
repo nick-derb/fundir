@@ -42,13 +42,20 @@ import type { LmiStatus } from './types';
 //
 // Source: FDIC institution directory + FFIEC institution lookup.
 export interface ChicagoBankSeed {
-  ein:          string;
-  name:         string;
-  fdic_id:      string;
+  /** Nullable so we can seed a bank whose EIN hasn't been verified yet
+   *  (Huntington post-TCF acquisition). Null EINs INSERT-and-stay-unique
+   *  by Postgres's NULL != NULL semantics; once the EIN is confirmed we
+   *  re-seed and the row dedupes by name+fdic_id. */
+  ein:                  string | null;
+  name:                 string;
+  fdic_id:              string;
   /** Cities where the bank has a meaningful Chicago Metro presence. Carried in metadata. */
-  presence:     readonly string[];
+  presence:             readonly string[];
   /** One-line note on the bank's CRA-relevant Chicago footprint. */
-  note:         string;
+  note:                 string;
+  /** True when we don't yet have an authoritative EIN. The dashboard
+   *  surfaces a small "verification pending" caveat on these rows. */
+  ein_verified?:        boolean;
 }
 
 export const CHICAGO_BANK_FUNDERS: readonly ChicagoBankSeed[] = [
@@ -114,6 +121,23 @@ export const CHICAGO_BANK_FUNDERS: readonly ChicagoBankSeed[] = [
     fdic_id:  '3832',
     presence: ['Chicago', 'Cook County'],
     note:     'Acquired First Midwest 2022; substantial Cook County footprint.',
+  },
+
+  // Huntington National Bank — acquired TCF Financial June 2021. CYC had
+  // an existing relationship with TCF which flowed to Huntington post-
+  // merger. EIN intentionally left null pending user verification — the
+  // public-side EIN candidates (parent Huntington Bancshares Inc. vs. the
+  // operating bank charter) need an authoritative lookup against IRS Pub
+  // 78 or SEC EDGAR before we hardcode anything that surfaces in the CYC
+  // dashboard. The seed runner will INSERT this row with null EIN; the
+  // CRA panel renders a "EIN verification pending" caveat next to it.
+  {
+    ein:           null,
+    ein_verified:  false,
+    name:          'Huntington National Bank',
+    fdic_id:       '6560',
+    presence:      ['Chicago', 'Cook County'],
+    note:          'Inherited TCF Financial AAs post-2021 acquisition; CRA AA covers Cook County.',
   },
 ] as const;
 

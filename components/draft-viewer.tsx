@@ -1,16 +1,19 @@
 /**
  * <DraftViewer> — Phase 6 cont E.
  *
- * Read-only render of a generated draft. Each {{cite:N}} marker becomes
- * a superscript citation chip linking to the source list at the bottom.
+ * Renders a generated draft. Each {{cite:N}} marker becomes a
+ * superscript citation chip linking to the source list at the bottom.
  * [TODO: ...] markers render with a distinct warning style so the user
  * can scan for what still needs confirmation.
  *
- * Server component — pure rendering; admin-side draft editing is a
- * future iteration.
+ * Section bodies are read-only — content + citations are service-role
+ * writes from the generator (see phase6cont_drafts.sql). The status
+ * pill is a client island; members can move drafting → review → final
+ * → discarded (gated by the matching RLS policy).
  */
 
 import { FileText, Sparkles, AlertCircle, ExternalLink } from 'lucide-react';
+import { DraftStatusControl } from './draft-status-control';
 
 interface DraftSource {
   id:           number;
@@ -37,7 +40,10 @@ export interface DraftRecord {
 }
 
 interface DraftViewerProps {
-  draft: DraftRecord | null;
+  draft:   DraftRecord | null;
+  /** Used to revalidate after a status change so the server-rendered
+   *  page reflects the new state on next navigation. */
+  grantId: string;
 }
 
 const SECTIONS: Array<{ key: keyof DraftRecord['content']; label: string; hint: string }> = [
@@ -112,7 +118,7 @@ function renderWithCitations(segment: string): React.ReactNode[] {
   return out;
 }
 
-export function DraftViewer({ draft }: DraftViewerProps) {
+export function DraftViewer({ draft, grantId }: DraftViewerProps) {
   if (!draft) {
     return (
       <div className="bg-canvas-1 rounded-lg shadow-flat p-6">
@@ -151,8 +157,8 @@ export function DraftViewer({ draft }: DraftViewerProps) {
     <div className="space-y-4">
       {/* Header */}
       <div className="bg-canvas-1 rounded-lg shadow-flat p-5">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-start gap-3 min-w-0">
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div className="flex items-start gap-3 min-w-0 flex-1">
             <div className="w-7 h-7 rounded-sm flex items-center justify-center bg-action-soft text-action shrink-0">
               <FileText className="w-4 h-4" />
             </div>
@@ -161,7 +167,7 @@ export function DraftViewer({ draft }: DraftViewerProps) {
                 Generated draft
               </p>
               <p className="text-h2 font-semibold text-ink-0 mt-0.5">
-                Status: {draft.status}
+                {SECTIONS.length}-section first pass
               </p>
               <p className="text-caption text-ink-2 mt-0.5">
                 Cites {cited.size} of {draft.source_citations.length} available sources
@@ -169,6 +175,11 @@ export function DraftViewer({ draft }: DraftViewerProps) {
               </p>
             </div>
           </div>
+          <DraftStatusControl
+            draftId={draft.id}
+            grantId={grantId}
+            status={draft.status}
+          />
         </div>
       </div>
 

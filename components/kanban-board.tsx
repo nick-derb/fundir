@@ -15,19 +15,24 @@ import { DollarSign, Calendar } from 'lucide-react';
 import type { EligibilitySignal } from '@/lib/990-screener';
 import { logActivity } from '@/lib/team-activity';
 
-const COLUMNS: { id: PipelineStage; label: string; accent: string; bg: string; header: string }[] = [
-  { id: 'discovered', label: 'Discovered', accent: '#64748b', bg: '#f8fafc', header: '#f1f5f9' },
-  { id: 'reviewing',  label: 'Reviewing',  accent: '#2563eb', bg: '#eff6ff', header: '#dbeafe' },
-  { id: 'preparing',  label: 'Preparing',  accent: '#7c3aed', bg: '#faf5ff', header: '#ede9fe' },
-  { id: 'drafting',   label: 'Drafting',   accent: '#d97706', bg: '#fffbeb', header: '#fef3c7' },
-  { id: 'submitted',  label: 'Submitted',  accent: '#16a34a', bg: '#f0fdf4', header: '#dcfce7' },
+// One canvas card per column with a single accent stripe — instead of 5
+// different background tints + headers (which made the board feel like 5
+// products living next to each other). The stripe carries the stage
+// identity; the rest is canvas + ink rhythm matching the rest of the app.
+const COLUMNS: { id: PipelineStage; label: string; stripe: string }[] = [
+  { id: 'discovered', label: 'Discovered', stripe: 'bg-ink-2'           },
+  { id: 'reviewing',  label: 'Reviewing',  stripe: 'bg-action'          },
+  { id: 'preparing',  label: 'Preparing',  stripe: 'bg-signal-maybe'    },
+  { id: 'drafting',   label: 'Drafting',   stripe: 'bg-signal-maybe'    },
+  { id: 'submitted',  label: 'Submitted',  stripe: 'bg-signal-pursue'   },
 ];
 
 function ScorePill({ score }: { score: number }) {
-  const color = score >= 70 ? '#16a34a' : score >= 40 ? '#d97706' : '#dc2626';
+  const cls = score >= 70 ? 'bg-signal-pursue-soft text-signal-pursue ring-signal-pursue/20'
+            : score >= 40 ? 'bg-signal-maybe-soft  text-signal-maybe  ring-signal-maybe/20'
+                          : 'bg-signal-skip-soft   text-signal-skip   ring-signal-skip/20';
   return (
-    <span className="inline-flex items-center justify-center h-6 px-2 rounded text-[11px] font-bold border flex-shrink-0 tabular-nums"
-      style={{ color, background: color + '15', borderColor: color + '40' }}>
+    <span className={`inline-flex items-center justify-center h-6 px-2 rounded-sm text-caption font-semibold ring-1 flex-shrink-0 tabular-nums ${cls}`}>
       {score.toFixed(0)}
     </span>
   );
@@ -35,16 +40,15 @@ function ScorePill({ score }: { score: number }) {
 
 function MiniSignalBar({ signals }: { signals?: EligibilitySignal[] }) {
   if (!signals?.length) return null;
-  const match   = signals.filter(s => s.status === 'match').length;
+  const match    = signals.filter(s => s.status === 'match').length;
   const mismatch = signals.filter(s => s.status === 'mismatch').length;
-  const likely  = signals.filter(s => s.status === 'likely').length;
-  const total   = signals.length;
+  const likely   = signals.filter(s => s.status === 'likely').length;
+  const total    = signals.length;
   return (
-    <div className="flex gap-0.5 h-1 rounded-full overflow-hidden mt-2">
-      <div className="rounded-full bg-[#16a34a]" style={{ width: `${(match / total) * 100}%` }} />
-      <div className="rounded-full bg-[#d97706]" style={{ width: `${(likely / total) * 100}%` }} />
-      <div className="rounded-full bg-[#dc2626]" style={{ width: `${(mismatch / total) * 100}%` }} />
-      <div className="flex-1 rounded-full bg-[#e2e8f0]" />
+    <div className="flex gap-0.5 h-1 rounded-full overflow-hidden mt-2 bg-canvas-2">
+      <div className="bg-signal-pursue" style={{ width: `${(match    / total) * 100}%` }} />
+      <div className="bg-signal-maybe"  style={{ width: `${(likely   / total) * 100}%` }} />
+      <div className="bg-signal-skip"   style={{ width: `${(mismatch / total) * 100}%` }} />
     </div>
   );
 }
@@ -55,11 +59,10 @@ function KanbanCard({ match }: { match: MatchResult }) {
   const days  = getDaysUntil(match.grant?.close_date);
   const award = match.grant?.extracted_fields?.award_ceiling || match.grant?.extracted_fields?.award_floor;
 
-  const deadlineColor = days === null ? 'text-[#94a3b8]'
-    : days <= 7 ? 'text-red-600 font-bold'
-    : days <= 14 ? 'text-orange-600 font-semibold'
-    : days < 30 ? 'text-amber-600'
-    : 'text-[#94a3b8]';
+  const deadlineCls = days === null    ? 'text-ink-2'
+                    : days <= 7        ? 'text-signal-skip  font-semibold'
+                    : days <= 14       ? 'text-signal-maybe font-semibold'
+                                       : 'text-ink-2';
 
   // dnd-kit listeners live on the OUTER wrapper so the card stays
   // draggable. Only the grant title navigates — its <Link> stops the
@@ -71,14 +74,14 @@ function KanbanCard({ match }: { match: MatchResult }) {
       style={style}
       {...attributes}
       {...listeners}
-      className="bg-white rounded-[8px] border border-[#e2e8f0] p-3 cursor-grab active:cursor-grabbing hover:border-[#0d9488]/50 hover:shadow-md transition-all"
+      className="bg-canvas-1 rounded-md ring-1 ring-canvas-3 p-3 cursor-grab active:cursor-grabbing hover:ring-action/40 hover:shadow-lift transition-shadow"
     >
       {/* Title + score */}
-      <div className="flex items-start justify-between gap-2 mb-2">
+      <div className="flex items-start justify-between gap-2 mb-1.5">
         <Link
           href={`/grant/${match.grant_id}`}
           onPointerDown={(e: React.PointerEvent) => e.stopPropagation()}
-          className="flex-1 text-[12px] font-semibold text-[#0f172a] line-clamp-2 leading-snug cursor-pointer hover:text-[#0d9488] hover:underline transition-colors"
+          className="flex-1 text-caption font-semibold text-ink-0 line-clamp-2 leading-snug cursor-pointer hover:text-action hover:underline transition-colors"
         >
           {match.grant?.title}
         </Link>
@@ -86,19 +89,19 @@ function KanbanCard({ match }: { match: MatchResult }) {
       </div>
 
       {/* Agency */}
-      <p className="text-[10px] text-[#94a3b8] mb-2.5 truncate font-medium">{match.grant?.agency_name}</p>
+      <p className="text-eyebrow text-ink-2 mb-2 truncate">{match.grant?.agency_name}</p>
 
       {/* Deadline + Award */}
       <div className="flex items-center justify-between">
-        <div className={`flex items-center gap-1 text-[10px] ${deadlineColor}`}>
+        <div className={`flex items-center gap-1 text-eyebrow ${deadlineCls}`}>
           <Calendar className="w-3 h-3" />
-          {days === null ? 'No deadline'
-            : days < 0 ? 'Closed'
-            : days === 0 ? 'Due today'
-            : `${days}d left`}
+          {days === null      ? 'No deadline'
+            : days < 0        ? 'Closed'
+            : days === 0      ? 'Due today'
+                              : `${days}d left`}
         </div>
         {award && (
-          <div className="flex items-center gap-0.5 text-[10px] text-[#64748b] font-medium">
+          <div className="flex items-center gap-0.5 text-eyebrow text-ink-1">
             <DollarSign className="w-3 h-3" />
             {award >= 1_000_000
               ? `${(award / 1_000_000).toFixed(1)}M`
@@ -122,22 +125,22 @@ function DroppableColumn({ col, children, count, totalPotential }: {
   const { setNodeRef, isOver } = useDroppable({ id: col.id });
   return (
     <div className="flex-shrink-0 w-64">
-      <div className={`rounded-[10px] overflow-hidden border transition-all ${isOver ? 'border-[#0d9488] shadow-lg shadow-[#0d9488]/10' : 'border-[#e2e8f0]'}`}
-        style={{ background: col.bg }}>
+      <div className={`bg-canvas-1 rounded-lg overflow-hidden ring-1 transition-shadow ${
+        isOver ? 'ring-action shadow-lift' : 'ring-canvas-3'
+      }`}>
+        {/* Single accent stripe carries the stage identity */}
+        <div className={`h-1 ${col.stripe}`} />
+
         {/* Column header */}
-        <div className="px-3 py-2.5 border-b border-[#e2e8f0]" style={{ background: col.header }}>
-          <div className="flex items-center justify-between mb-1">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full" style={{ background: col.accent }} />
-              <h3 className="text-[13px] font-bold text-[#0f172a]">{col.label}</h3>
-            </div>
-            <span className="text-[11px] font-bold text-white px-2 py-0.5 rounded-full"
-              style={{ background: col.accent }}>
+        <div className="px-3 py-2.5 border-b border-canvas-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-body font-semibold text-ink-0">{col.label}</h3>
+            <span className="text-eyebrow font-semibold tabular-nums px-1.5 py-0.5 rounded-sm bg-canvas-2 text-ink-1">
               {count}
             </span>
           </div>
           {totalPotential > 0 && (
-            <p className="text-[10px] font-medium ml-4" style={{ color: col.accent }}>
+            <p className="text-caption text-ink-2 mt-0.5 tabular-nums">
               {totalPotential >= 1_000_000
                 ? `$${(totalPotential / 1_000_000).toFixed(1)}M`
                 : `$${(totalPotential / 1_000).toFixed(0)}K`} potential
@@ -155,8 +158,10 @@ function DroppableColumn({ col, children, count, totalPotential }: {
         >
           {children}
           {count === 0 && (
-            <div className={`h-16 border-2 border-dashed rounded-[8px] flex items-center justify-center transition-colors ${isOver ? 'border-[#0d9488] bg-[#f0fdfa]' : 'border-[#e2e8f0]'}`}>
-              <span className="text-[11px] text-[#94a3b8]">Drop here</span>
+            <div className={`h-16 border-2 border-dashed rounded-md flex items-center justify-center transition-colors ${
+              isOver ? 'border-action bg-action-soft' : 'border-canvas-3'
+            }`}>
+              <span className="text-caption text-ink-2">Drop here</span>
             </div>
           )}
         </div>
@@ -236,12 +241,12 @@ export function KanbanBoard({ initialMatches }: { initialMatches: MatchResult[] 
       </div>
       <DragOverlay>
         {activeMatch ? (
-          <div className="bg-white rounded-[8px] border-2 border-[#0d9488] p-3 shadow-2xl w-64">
+          <div className="bg-canvas-1 rounded-md ring-2 ring-action p-3 shadow-lift w-64">
             <div className="flex items-start justify-between gap-2 mb-1">
-              <h4 className="text-[12px] font-semibold text-[#0f172a] line-clamp-2">{activeMatch.grant?.title}</h4>
+              <h4 className="text-caption font-semibold text-ink-0 line-clamp-2">{activeMatch.grant?.title}</h4>
               <ScorePill score={activeMatch.composite_score} />
             </div>
-            <p className="text-[10px] text-[#94a3b8] truncate">{activeMatch.grant?.agency_name}</p>
+            <p className="text-eyebrow text-ink-2 truncate">{activeMatch.grant?.agency_name}</p>
           </div>
         ) : null}
       </DragOverlay>

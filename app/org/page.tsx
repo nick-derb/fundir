@@ -6,7 +6,8 @@ import { AppShell } from '@/components/app-shell';
 import { OrgProfileEditor } from '@/components/org-profile-editor';
 import { getOrgProfile } from '@/actions/org-profile';
 import { redirect } from 'next/navigation';
-import { Building2 } from 'lucide-react';
+import Link from 'next/link';
+import { Building2, Users, Landmark, ArrowUpRight } from 'lucide-react';
 
 async function getFy990(orgCode: string): Promise<number | null> {
   const supabase = createServerClient();
@@ -64,6 +65,42 @@ export default async function OrgProfilePage() {
               )}
             </div>
           )}
+        </div>
+
+        {/* Sub-page nav: peers + funder relationships */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
+          <Link href="/org/peers" className="group bg-canvas-1 rounded-lg shadow-flat p-4 hover:shadow-lift transition-shadow">
+            <div className="flex items-start gap-3">
+              <div className="w-9 h-9 rounded-sm bg-action-soft text-action flex items-center justify-center shrink-0">
+                <Users className="w-4 h-4" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className="text-body font-semibold text-ink-0">Peer organizations</h3>
+                  <ArrowUpRight className="w-3.5 h-3.5 text-ink-2 group-hover:text-action transition-colors" />
+                </div>
+                <p className="text-caption text-ink-2 mt-0.5">
+                  Edit which orgs are similar to {profileData.name}. Drives funder-prospect ranking.
+                </p>
+              </div>
+            </div>
+          </Link>
+          <Link href="/org/relationships" className="group bg-canvas-1 rounded-lg shadow-flat p-4 hover:shadow-lift transition-shadow">
+            <div className="flex items-start gap-3">
+              <div className="w-9 h-9 rounded-sm bg-action-soft text-action flex items-center justify-center shrink-0">
+                <Landmark className="w-4 h-4" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className="text-body font-semibold text-ink-0">Funder relationships</h3>
+                  <ArrowUpRight className="w-3.5 h-3.5 text-ink-2 group-hover:text-action transition-colors" />
+                </div>
+                <p className="text-caption text-ink-2 mt-0.5">
+                  Tag funders as Existing / Prospect / Declined / Dormant. Renders on the CRA panel.
+                </p>
+              </div>
+            </div>
+          </Link>
         </div>
 
         {/* Editor */}

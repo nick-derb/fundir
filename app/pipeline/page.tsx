@@ -4,9 +4,9 @@ import { createServerClient } from '@/lib/supabase';
 import { getAuthContext } from '@/lib/auth-context';
 import { AppShell } from '@/components/app-shell';
 import { KanbanBoard } from '@/components/kanban-board';
-import { MatchResult, PipelineStage } from '@/types';
+import { MatchResult } from '@/types';
 import { redirect } from 'next/navigation';
-import { LayoutGrid, TrendingUp, Clock, DollarSign, AlertTriangle } from 'lucide-react';
+import { Sparkles, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 
 async function getPipelineMatches(orgId: string) {
@@ -19,18 +19,11 @@ async function getPipelineMatches(orgId: string) {
   return (data || []) as MatchResult[];
 }
 
-const STAGE_ORDER: PipelineStage[] = ['discovered', 'reviewing', 'preparing', 'drafting', 'submitted'];
-
 export default async function PipelinePage() {
   const ctx = await getAuthContext();
   if (!ctx) redirect('/login');
 
   const matches = await getPipelineMatches(ctx.orgId);
-
-  const stageCounts = STAGE_ORDER.reduce((acc, s) => {
-    acc[s] = matches.filter(m => m.pipeline_stage === s).length;
-    return acc;
-  }, {} as Record<PipelineStage, number>);
 
   const totalPotential = matches
     .filter(m => ['reviewing', 'preparing', 'drafting', 'submitted'].includes(m.pipeline_stage))
@@ -46,6 +39,11 @@ export default async function PipelinePage() {
     return d >= 0 && d <= 14;
   }).length;
 
+  const formatPotential = (n: number): string =>
+      n >= 1_000_000 ? `$${(n / 1_000_000).toFixed(1)}M`
+    : n >= 1_000     ? `$${(n / 1_000).toFixed(0)}K`
+                     : '$0';
+
   return (
     <AppShell
       orgName={ctx.orgName}
@@ -54,78 +52,55 @@ export default async function PipelinePage() {
       availableOrgs={ctx.availableOrgs}
       currentOrgCode={ctx.orgCode}
     >
-      {/* ── Header ──────────────────────────────────────────────── */}
-      <div className="border-b border-[#e2e8f0] bg-white px-4 sm:px-6 md:px-8 py-4 md:py-5">
-        <div className="max-w-full flex flex-wrap items-start justify-between gap-3 md:gap-4">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <LayoutGrid className="w-4 h-4 text-[#0d9488]" />
-              <h1 className="text-[20px] font-bold text-[#0f172a]">Grant Pipeline</h1>
+      {/* ── Light hero on canvas ────────────────────────────────── */}
+      <div className="bg-canvas-0 border-b border-canvas-3">
+        <div className="px-4 sm:px-6 md:px-8 py-5 max-w-7xl mx-auto">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h1 className="text-h1 font-semibold text-ink-0 leading-tight">Grant pipeline</h1>
+              <p className="text-caption text-ink-2 mt-1">
+                Drag between stages · {matches.length} total · click a grant title to open detail
+              </p>
             </div>
-            <p className="text-[13px] text-[#64748b]">
-              Drag and drop grants between stages · {matches.length} total opportunities
-            </p>
+            <Link
+              href="/discover"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-md text-body font-semibold bg-action text-canvas-1 hover:bg-action-hover transition-colors"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              Run discovery
+            </Link>
           </div>
-          <Link
-            href="/discover"
-            className="flex items-center gap-2 px-4 py-2 rounded-[8px] text-[13px] font-semibold text-white transition-all shadow-sm"
-            style={{ background: 'linear-gradient(135deg, #0d9488 0%, #0891b2 100%)' }}
-          >
-            + Add Grants
-          </Link>
-        </div>
 
-        {/* Pipeline stats strip */}
-        <div className="flex items-center gap-6 mt-4">
-          {[
-            { label: 'Active',     value: activeCount,    icon: TrendingUp, color: '#2563eb' },
-            { label: 'Urgent',     value: urgentCount,    icon: Clock,      color: urgentCount > 0 ? '#dc2626' : '#94a3b8' },
-            {
-              label: 'Potential',
-              value: totalPotential >= 1_000_000
-                ? `$${(totalPotential / 1_000_000).toFixed(1)}M`
-                : totalPotential >= 1_000
-                ? `$${(totalPotential / 1_000).toFixed(0)}K`
-                : '$0',
-              icon: DollarSign, color: '#0d9488',
-            },
-          ].map(({ label, value, icon: Icon, color }) => (
-            <div key={label} className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-[5px] flex items-center justify-center" style={{ background: color + '15' }}>
-                <Icon className="w-3.5 h-3.5" style={{ color }} />
-              </div>
-              <div>
-                <p className="text-[13px] font-bold text-[#0f172a] leading-none">{value}</p>
-                <p className="text-[10px] text-[#94a3b8] font-medium">{label}</p>
-              </div>
-            </div>
-          ))}
-          <div className="ml-auto flex items-center gap-4">
-            {STAGE_ORDER.map(s => (
-              <div key={s} className="text-center">
-                <p className="text-[14px] font-bold text-[#0f172a]">{stageCounts[s]}</p>
-                <p className="text-[10px] text-[#94a3b8] capitalize">{s}</p>
-              </div>
-            ))}
+          {/* Single tight metric row — three numbers, label:value rhythm */}
+          <div className="flex flex-wrap items-baseline gap-x-6 gap-y-1.5 mt-4 text-caption text-ink-2">
+            <span>
+              Active <strong className="text-h2 font-semibold text-ink-0 tabular-nums ml-1">{activeCount}</strong>
+            </span>
+            <span>
+              Urgent <strong className={`text-h2 font-semibold tabular-nums ml-1 ${urgentCount > 0 ? 'text-signal-skip' : 'text-ink-0'}`}>{urgentCount}</strong>
+            </span>
+            <span>
+              Potential <strong className="text-h2 font-semibold text-ink-0 tabular-nums ml-1">{formatPotential(totalPotential)}</strong>
+            </span>
           </div>
         </div>
       </div>
 
       {/* ── Board ───────────────────────────────────────────────── */}
-      <div className="px-4 sm:px-6 md:px-8 py-6 overflow-x-auto" style={{ background: 'linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%)', minHeight: 'calc(100vh - 160px)' }}>
+      <div className="px-4 sm:px-6 md:px-8 py-6 overflow-x-auto bg-canvas-0" style={{ minHeight: 'calc(100vh - 160px)' }}>
         {matches.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-24">
-            <div className="w-16 h-16 rounded-full bg-white border border-[#e2e8f0] flex items-center justify-center mb-4 shadow-sm">
-              <AlertTriangle className="w-7 h-7 text-[#cbd5e1]" />
+          <div className="flex flex-col items-center justify-center py-24 max-w-md mx-auto text-center">
+            <div className="w-12 h-12 rounded-md bg-canvas-2 flex items-center justify-center mb-4">
+              <AlertTriangle className="w-5 h-5 text-ink-2" />
             </div>
-            <p className="text-[15px] font-semibold text-[#64748b] mb-2">No grants in pipeline</p>
-            <p className="text-[13px] text-[#94a3b8] mb-5">Run discovery to find and track grant opportunities</p>
+            <p className="text-h2 font-semibold text-ink-0 mb-1">No grants in pipeline</p>
+            <p className="text-body text-ink-2 mb-5">Run discovery to find and track grant opportunities.</p>
             <Link
               href="/discover"
-              className="px-5 py-2.5 rounded-[8px] text-[13px] font-semibold text-white"
-              style={{ background: 'linear-gradient(135deg, #0d9488 0%, #0891b2 100%)' }}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md text-body font-semibold bg-action text-canvas-1 hover:bg-action-hover transition-colors"
             >
-              Run Discovery →
+              <Sparkles className="w-3.5 h-3.5" />
+              Run discovery
             </Link>
           </div>
         ) : (

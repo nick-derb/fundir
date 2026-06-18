@@ -1,101 +1,146 @@
 /**
  * City of Chicago — Department of Family & Support Services (DFSS).
  *
- * DFSS is Chicago's largest funder of nonprofit human-services delivery —
- * youth, workforce, early learning, domestic violence prevention, senior
- * services. Their funding opportunities run on multi-year cycles with
- * annual RFP releases.
+ * Phase 5B-cont: live scrape of
+ *   https://www.chicago.gov/city/en/depts/fss/supp_info/FundingOpportunities0.html
  *
- * Phase 5A scope: hand-curated seed of currently recurring opportunity
- * streams. Each entry represents a recurring funding line — not a
- * specific one-off RFP. The dedupe key keeps re-ingestion idempotent;
- * the ingest endpoint updates amount/deadline metadata as the stream
- * changes year over year. Phase 5B can replace the seed with a real
- * scrape against:
- *   https://www.chicago.gov/city/en/depts/dfss/provdrs/serv/svcs/funding-opportunities.html
+ * The DFSS funding-opportunities page was completely restructured in the
+ * 2026 chicago.gov refresh — the old `depts/dfss/provdrs/serv/svcs/`
+ * path returns 404 and the new path is `depts/fss/supp_info/`.
+ * Internally the page uses `<details><summary><strong>Division</strong>`
+ * accordions, each wrapping a `<ul>` of `<li><a>` RFP links. cheerio
+ * parses it cleanly without JS rendering.
+ *
+ * Each RFP becomes one NormalizedOpportunity. Detail-page descriptions
+ * are not fetched per opportunity (would mean ~20 follow-up HTTP
+ * requests against chicago.gov each cron run); the synthesized
+ * description carries the RFP title + division blurb + DFSS funder
+ * context, which is enough for the embedding pipeline to score
+ * against CYC's program embeddings.
  */
 
+import * as cheerio from 'cheerio';
 import type {
   GrantSourceAdapter, FetchOptions, FetchResult, NormalizedOpportunity,
 } from './types';
 
 const ADAPTER_KEY = 'city_of_chicago_dfss';
+const LIST_URL    = 'https://www.chicago.gov/city/en/depts/fss/supp_info/FundingOpportunities0.html';
+// chicago.gov returns 403 to any non-browser UA (verified 2026-06).
+// We're a public-page reader, not a scraper bypassing auth, so a stock
+// Chrome UA is appropriate here.
+const USER_AGENT  = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
 
-interface ChicagoDfssSeed {
-  external_id:        string;
-  title:              string;
-  description:        string;
-  program_areas:      readonly string[];
-  target_population:  readonly string[];
-  amount_min:         number | null;
-  amount_max:         number | null;
-  /** ISO date or null for rolling/annual cycle. */
-  deadline:           string | null;
-  reference_url:      string;
+// Division-level priors for LMI signal + program-area tagging. DFSS is
+// the single funder; the division is the program-area carrier. Every
+// DFSS stream is mandated to prioritize low-income Chicago residents, so
+// requires_lmi defaults true unless the division is one we don't want
+// flagged (none currently).
+const DIVISIONS: Record<string, { areas: readonly string[]; requires_lmi: boolean }> = {
+  'Homeless Services':                       { areas: ['homeless services', 'housing'],                       requires_lmi: true },
+  'Youth Services':                          { areas: ['youth development', 'afterschool', 'mentoring'],       requires_lmi: true },
+  'Human Services, Workforce, and Legal Services':
+                                             { areas: ['human services', 'workforce development', 'legal aid'], requires_lmi: true },
+  'Senior Services':                         { areas: ['senior services', 'aging'],                            requires_lmi: true },
+  'Gender-Based Violence':                   { areas: ['domestic violence', 'survivor services'],              requires_lmi: true },
+  'Other Funding Opportunities':             { areas: ['community services'],                                  requires_lmi: true },
+};
+
+interface ParsedRow {
+  title:        string;
+  url:          string;
+  division:     string;
 }
 
-const SEED: readonly ChicagoDfssSeed[] = [
-  {
-    external_id:  'dfss_youth_services_recurring',
-    title:        'DFSS Youth Services Delivery System',
-    description:  'City of Chicago Department of Family & Support Services funds a multi-year delegate agency contract system for youth services: out-of-school time programming, mentoring, leadership development, summer programs, and workforce readiness for ages 6-24, prioritizing low-income youth in high-poverty community areas. Annual RFP cycle. Eligible: 501(c)(3) nonprofits with sites in Chicago. Typical contracts $50K-$500K per year, renewable for the cycle.',
-    program_areas:     ['youth development', 'afterschool', 'mentoring', 'workforce', 'summer programs'],
-    target_population: ['youth', 'low-income youth', 'underserved communities', 'ages 6-24'],
-    amount_min:        50_000,
-    amount_max:        500_000,
-    deadline:          null, // annual cycle, no fixed date here
-    reference_url:     'https://www.chicago.gov/city/en/depts/dfss/provdrs/youth.html',
-  },
-  {
-    external_id:  'dfss_workforce_services_recurring',
-    title:        'DFSS Workforce Services',
-    description:  'City of Chicago Department of Family & Support Services funds workforce services delivery: job-readiness training, sectoral training, employment placement, and supportive services for adults and youth in low-income Chicago neighborhoods. Multi-year delegate agency contracts. Eligible: 501(c)(3) nonprofits operating in Chicago with a track record in workforce development. Contracts $75K-$750K per year.',
-    program_areas:     ['workforce development', 'job training', 'employment'],
-    target_population: ['low-income adults', 'opportunity youth', 'underserved'],
-    amount_min:        75_000,
-    amount_max:        750_000,
-    deadline:          null,
-    reference_url:     'https://www.chicago.gov/city/en/depts/dfss/provdrs/workforce.html',
-  },
-  {
-    external_id:  'dfss_early_learning_recurring',
-    title:        'DFSS Early Learning Delegate Agency Funding',
-    description:  'City of Chicago Department of Family & Support Services funds delegate agencies operating Head Start, Early Head Start, and Chicago Early Learning sites. Multi-year cycle. Eligible: 501(c)(3) nonprofits with capacity to operate licensed center-based early learning programs. Substantial funding — typical delegate agency awards $1M+ per year.',
-    program_areas:     ['early childhood education', 'head start', 'pre-kindergarten'],
-    target_population: ['low-income families', 'children 0-5', 'high-poverty communities'],
-    amount_min:        500_000,
-    amount_max:        5_000_000,
-    deadline:          null,
-    reference_url:     'https://www.chicago.gov/city/en/depts/dfss/provdrs/early.html',
-  },
-] as const;
+function parseListPage(html: string): ParsedRow[] {
+  const $ = cheerio.load(html);
+  const rows: ParsedRow[] = [];
 
-function normalize(seed: ChicagoDfssSeed): NormalizedOpportunity {
+  // Each division is a <details> with <summary><strong>Name</strong>.
+  // Its RFPs live in the immediately-following <ul><li><a>.
+  $('details').each((_, detail) => {
+    const $detail   = $(detail);
+    const division  = $detail.find('summary strong').first().text().trim();
+    if (!division || !DIVISIONS[division]) return;
+    $detail.find('ul li a').each((__, a) => {
+      const $a   = $(a);
+      const href = ($a.attr('href') ?? '').trim();
+      const text = $a.text().trim();
+      if (!href || !text) return;
+      // Resolve relative URLs against chicago.gov.
+      const url = href.startsWith('http')
+        ? href
+        : `https://www.chicago.gov${href.startsWith('/') ? '' : '/'}${href}`;
+      rows.push({ title: text, url, division });
+    });
+  });
+
+  return rows;
+}
+
+function buildDescription(r: ParsedRow): string {
+  const div = DIVISIONS[r.division];
+  const areas = div?.areas.join(', ') ?? '';
+  return [
+    `City of Chicago, Department of Family & Support Services (DFSS) — ${r.division} division.`,
+    areas ? `DFSS ${r.division} funds ${areas} for Chicago-based 501(c)(3) nonprofits and delegate agencies.` : '',
+    `RFP title: ${r.title}.`,
+    `Eligible applicants must be 501(c)(3) nonprofits with sites or service delivery in Chicago. Priority for programs serving low-income communities and underserved Chicago residents. Multi-year delegate agency contracts; awards typically $50K-$1M per year.`,
+  ].filter(Boolean).join(' ');
+}
+
+function shortIdFromUrl(url: string): string {
+  // The last path segment without the .html extension is short and
+  // stable. Falls back to a slug of the full path if needed.
+  try {
+    const u = new URL(url);
+    const seg = u.pathname.split('/').filter(Boolean).pop() ?? '';
+    return seg.replace(/\.html$/i, '') || u.pathname.replace(/\//g, '-');
+  } catch {
+    return url.slice(-80);
+  }
+}
+
+function normalize(r: ParsedRow): NormalizedOpportunity {
+  const div = DIVISIONS[r.division];
+  const requires_lmi = div?.requires_lmi ?? false;
+  const program_areas = div?.areas ? [...div.areas] : [];
   return {
-    external_id:  seed.external_id,
-    reference:    seed.reference_url,
-    title:        seed.title,
-    funder_name:  'City of Chicago, Department of Family & Support Services',
+    external_id:  shortIdFromUrl(r.url),
+    reference:    r.url,
+    title:        r.title,
+    funder_name:  `City of Chicago, DFSS — ${r.division}`,
     funder_ein:   null,
     funder_type:  'state_local',
-    amount_min:   seed.amount_min,
-    amount_max:   seed.amount_max,
-    deadline:     seed.deadline,
+    amount_min:   null,
+    amount_max:   null,
+    deadline:     null,
     open_date:    null,
-    description:  seed.description,
+    description:  buildDescription(r),
     eligibility_hints: {
       entity_types:      ['nonprofit_501c3'],
       geographic_scope:  'city',
       geographic_states: ['IL'],
-      target_population: [...seed.target_population],
-      program_areas:     [...seed.program_areas],
-      // DFSS prioritizes low-income Chicago neighborhoods — this is true
-      // across every DFSS stream, so it's safe to set on the adapter.
-      requires_lmi:      true,
+      target_population: [],
+      program_areas,
+      requires_lmi,
     },
-    segment_tags: [...seed.program_areas],
-    raw:          seed as unknown as Record<string, unknown>,
+    segment_tags: program_areas,
+    raw:          r as unknown as Record<string, unknown>,
   };
+}
+
+async function fetchListPage(): Promise<string> {
+  const res = await fetch(LIST_URL, {
+    headers: {
+      'User-Agent':      USER_AGENT,
+      'Accept':          'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      'Accept-Language': 'en-US,en;q=0.5',
+    },
+    cache: 'no-store',
+  });
+  if (!res.ok) throw new Error(`DFSS list page returned ${res.status}`);
+  return res.text();
 }
 
 export const chicagoDfssAdapter: GrantSourceAdapter = {
@@ -104,10 +149,23 @@ export const chicagoDfssAdapter: GrantSourceAdapter = {
     return { source_type: 'state_local', supports_keyword_query: false, supports_region_filter: true };
   },
   async fetch(opts: FetchOptions): Promise<FetchResult> {
+    const warnings: string[] = [];
+    let html: string;
+    try {
+      html = await fetchListPage();
+    } catch (err) {
+      warnings.push(`DFSS fetch failed: ${err instanceof Error ? err.message : String(err)}`);
+      return { opportunities: [], next_cursor: null, warnings };
+    }
+    const rows = parseListPage(html);
+    if (rows.length === 0) {
+      warnings.push('parsed zero rows — DFSS page markup may have changed');
+    }
+    const limit = opts.limit ?? rows.length;
     return {
-      opportunities: SEED.slice(0, opts.limit ?? SEED.length).map(normalize),
+      opportunities: rows.slice(0, limit).map(normalize),
       next_cursor:   null,
-      warnings:      [],
+      warnings,
     };
   },
   dedupeKey(opp: NormalizedOpportunity): string {
