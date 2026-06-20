@@ -55,13 +55,23 @@ async function checkConnections() {
     grantsGov:  false,
   };
   try {
-    const res = await fetch('https://apply07.grants.gov/v1/api/search2', {
+    // The production hostname is api.grants.gov; apply07.grants.gov is a
+    // dead path for /v1/api/search2 (returns 404) and gave a false negative
+    // here. The actual ingest pipeline in /api/test-grants already uses
+    // api.grants.gov, so discovery itself was never affected — just the
+    // status pill.
+    const res = await fetch('https://api.grants.gov/v1/api/search2', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ rows: 1, oppStatuses: 'posted' }),
       signal: AbortSignal.timeout(5000),
     });
-    checks.grantsGov = res.ok;
+    if (res.ok) {
+      // The API answers 200 with errorcode:0 on success. Tighten the check
+      // so a future HTML stub at 200 still reads as "not configured".
+      const body = await res.json().catch(() => null) as { errorcode?: number } | null;
+      checks.grantsGov = body?.errorcode === 0;
+    }
   } catch { /* noop */ }
   try {
     const supabase = createServerClient();
