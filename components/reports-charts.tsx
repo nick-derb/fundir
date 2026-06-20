@@ -45,15 +45,15 @@ function DarkTooltip({ active, payload, label, formatter }: {
   if (!active || !payload?.length) return null;
   return (
     <div className="rounded-lg border px-3 py-2.5 text-[12px] shadow-xl"
-      style={{ background: '#0d1929', borderColor: 'rgba(255,255,255,0.12)', minWidth: 140 }}>
-      {label != null && <p className="text-slate-400 mb-1.5 font-medium">{label}</p>}
+      style={{ background: 'var(--bg-surface)', borderColor: 'var(--border-hairline)', minWidth: 140 }}>
+      {label != null && <p className="text-secondary mb-1.5 font-medium">{label}</p>}
       {payload.map((p, i) => (
         <div key={i} className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: p.color }} />
-            <span className="text-slate-400">{p.name}</span>
+            <span className="text-secondary">{p.name}</span>
           </div>
-          <span className="font-bold text-slate-100">
+          <span className="font-bold text-primary">
             {formatter ? formatter(Number(p.value), String(p.name)) : p.value}
           </span>
         </div>
@@ -68,10 +68,10 @@ function fmt(n: number) {
   return `$${n}`;
 }
 
-const CARD = { background: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.08)' };
-const GRID = { stroke: 'rgba(255,255,255,0.05)' };
-const AXIS = { fill: '#475569', fontSize: 10 };
-const DONUT_COLORS = ['#f87171', '#0d9488', '#6366f1', '#fbbf24', '#34d399'];
+const CARD = { background: 'var(--bg-elevated)', borderColor: 'var(--border-hairline)' };
+const GRID = { stroke: 'var(--bg-elevated)' };
+const AXIS = { fill: 'var(--text-secondary)', fontSize: 10 };
+const DONUT_COLORS = ['var(--critical)', 'var(--accent)', 'var(--info)', 'var(--warning)', 'var(--success)'];
 
 // ── KPI Strip ─────────────────────────────────────────────────────────────────
 function KpiStrip({ kpis }: { kpis: ReportsData['kpis'] }) {
@@ -81,8 +81,8 @@ function KpiStrip({ kpis }: { kpis: ReportsData['kpis'] }) {
       value:   fmt(kpis.totalAwarded),
       delta:   kpis.awardedDelta,
       icon:    Award,
-      color:   '#0d9488',
-      bg:      'rgba(13,148,136,0.12)',
+      color:   'var(--accent)',
+      bg:      'var(--accent-tint)',
       fmtDelta: (d: number) => `${d >= 0 ? '+' : ''}${fmt(Math.abs(d))} vs prior yr`,
     },
     {
@@ -90,8 +90,8 @@ function KpiStrip({ kpis }: { kpis: ReportsData['kpis'] }) {
       value:   `${kpis.winRate.toFixed(0)}%`,
       delta:   kpis.winRateDelta,
       icon:    Target,
-      color:   kpis.winRate >= 40 ? '#22c55e' : '#f59e0b',
-      bg:      kpis.winRate >= 40 ? 'rgba(34,197,94,0.12)' : 'rgba(245,158,11,0.12)',
+      color:   kpis.winRate >= 40 ? 'var(--success)' : '#f59e0b',
+      bg:      kpis.winRate >= 40 ? 'var(--success-tint)' : 'rgba(245,158,11,0.12)',
       fmtDelta: (d: number) => `${d >= 0 ? '+' : ''}${d.toFixed(0)}pp vs prior yr`,
     },
     {
@@ -108,7 +108,7 @@ function KpiStrip({ kpis }: { kpis: ReportsData['kpis'] }) {
       value:   fmt(kpis.avgGrantSize),
       delta:   0,
       icon:    BarChart3,
-      color:   '#fbbf24',
+      color:   'var(--warning)',
       bg:      'rgba(251,191,36,0.12)',
       fmtDelta: () => 'per awarded grant',
     },
@@ -117,8 +117,8 @@ function KpiStrip({ kpis }: { kpis: ReportsData['kpis'] }) {
       value:   kpis.submitted.toString(),
       delta:   0,
       icon:    Zap,
-      color:   '#38bdf8',
-      bg:      'rgba(56,189,248,0.12)',
+      color:   'var(--info)',
+      bg:      'var(--info-tint)',
       fmtDelta: () => 'grant applications',
     },
   ] as const;
@@ -128,13 +128,13 @@ function KpiStrip({ kpis }: { kpis: ReportsData['kpis'] }) {
       {items.map(({ label, value, delta, icon: Icon, color, bg, fmtDelta }) => (
         <div key={label} className="rounded-xl border p-4" style={CARD}>
           <div className="flex items-center justify-between mb-3">
-            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">{label}</span>
+            <span className="text-[10px] font-bold text-secondary uppercase tracking-wide">{label}</span>
             <div className="w-6 h-6 rounded-[5px] flex items-center justify-center" style={{ background: bg }}>
               <Icon className="w-3.5 h-3.5" style={{ color }} />
             </div>
           </div>
-          <p className="text-[22px] font-bold leading-none text-white mb-1.5">{value}</p>
-          <p className={`text-[10px] flex items-center gap-0.5 ${delta > 0 ? 'text-green-400' : delta < 0 ? 'text-red-400' : 'text-slate-600'}`}>
+          <p className="text-[22px] font-bold leading-none text-primary mb-1.5">{value}</p>
+          <p className={`text-[10px] flex items-center gap-0.5 ${delta > 0 ? 'text-success' : delta < 0 ? 'text-critical' : 'text-tertiary'}`}>
             {delta > 0 ? <ArrowUpRight className="w-3 h-3" /> : delta < 0 ? <ArrowDownRight className="w-3 h-3" /> : null}
             {fmtDelta(delta)}
           </p>
@@ -153,12 +153,12 @@ function ChartCard({ title, sub, children, action }: {
     <div className="rounded-xl border p-5" style={CARD}>
       <div className="flex items-start justify-between mb-4">
         <div>
-          <p className="text-[13px] font-bold text-slate-200">{title}</p>
-          {sub && <p className="text-[11px] text-slate-600 mt-0.5">{sub}</p>}
+          <p className="text-[13px] font-bold text-primary">{title}</p>
+          {sub && <p className="text-[11px] text-tertiary mt-0.5">{sub}</p>}
         </div>
         {action && (
           <Link href={action.href}
-            className="text-[11px] text-teal-400 hover:text-teal-300 transition-colors flex items-center gap-1">
+            className="text-[11px] text-accent hover:text-accent transition-colors flex items-center gap-1">
             {action.label} <ChevronRight className="w-3 h-3" />
           </Link>
         )}
@@ -180,8 +180,8 @@ function RevenueChart({ data }: { data: ReportsData['monthlyRevenue'] }) {
         <AreaChart data={data} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
           <defs>
             <linearGradient id="awardedGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%"  stopColor="#0d9488" stopOpacity={0.35} />
-              <stop offset="95%" stopColor="#0d9488" stopOpacity={0.02} />
+              <stop offset="5%"  stopColor="#0C6B5A" stopOpacity={0.35} />
+              <stop offset="95%" stopColor="#0C6B5A" stopOpacity={0.02} />
             </linearGradient>
             <linearGradient id="requestedGrad" x1="0" y1="0" x2="0" y2="1">
               <stop offset="5%"  stopColor="#6366f1" stopOpacity={0.2} />
@@ -201,7 +201,7 @@ function RevenueChart({ data }: { data: ReportsData['monthlyRevenue'] }) {
             formatter={v => <span style={{ color: '#94a3b8', fontSize: 11 }}>{v}</span>}
           />
           <Area type="monotone" dataKey="requested" name="Requested" stroke="#6366f1" fill="url(#requestedGrad)" strokeWidth={1.5} dot={false} />
-          <Area type="monotone" dataKey="awarded"   name="Awarded"   stroke="#0d9488" fill="url(#awardedGrad)"   strokeWidth={2}   dot={false} />
+          <Area type="monotone" dataKey="awarded"   name="Awarded"   stroke="#0C6B5A" fill="url(#awardedGrad)"   strokeWidth={2}   dot={false} />
         </AreaChart>
       </ResponsiveContainer>
     </ChartCard>
@@ -218,8 +218,8 @@ function WinLossChart({ wl, trend }: { wl: ReportsData['monthlyWL']; trend: Repo
           <button key={v} onClick={() => setView(v)}
             className="px-2.5 py-1 rounded-[6px] text-[11px] font-semibold transition-all"
             style={view === v
-              ? { background: 'rgba(13,148,136,0.15)', color: '#0d9488', border: '1px solid rgba(13,148,136,0.3)' }
-              : { background: 'rgba(255,255,255,0.04)', color: '#64748b', border: '1px solid rgba(255,255,255,0.08)' }}>
+              ? { background: 'var(--accent-tint)', color: 'var(--accent)', border: '1px solid var(--accent)' }
+              : { background: 'var(--bg-page)', color: 'var(--text-secondary)', border: '1px solid var(--border-hairline)' }}>
             {v === 'counts' ? 'Applications' : 'Win Rate Trend'}
           </button>
         ))}
@@ -232,7 +232,7 @@ function WinLossChart({ wl, trend }: { wl: ReportsData['monthlyWL']; trend: Repo
             <YAxis tick={AXIS} tickLine={false} axisLine={false} width={24} />
             <Tooltip content={({ active, payload, label }) => <DarkTooltip active={active} payload={payload} label={label} />} />
             <Legend iconType="circle" iconSize={8} formatter={v => <span style={{ color: '#94a3b8', fontSize: 11 }}>{v}</span>} />
-            <Bar dataKey="won"     name="Won"     fill="#0d9488" radius={[3,3,0,0]} />
+            <Bar dataKey="won"     name="Won"     fill="#0C6B5A" radius={[3,3,0,0]} />
             <Bar dataKey="lost"    name="Declined" fill="#f87171" radius={[3,3,0,0]} />
             <Bar dataKey="pending" name="Pending"  fill="#475569" radius={[3,3,0,0]} />
           </BarChart>
@@ -242,7 +242,7 @@ function WinLossChart({ wl, trend }: { wl: ReportsData['monthlyWL']; trend: Repo
             <XAxis dataKey="month" tick={AXIS} tickLine={false} axisLine={false} />
             <YAxis tick={AXIS} tickLine={false} axisLine={false} tickFormatter={v => `${v}%`} width={36} domain={[0, 80]} />
             <Tooltip content={({ active, payload, label }) => <DarkTooltip active={active} payload={payload} label={label} formatter={v => `${v}%`} />} />
-            <Line type="monotone" dataKey="rate" name="Win Rate" stroke="#0d9488" strokeWidth={2.5} dot={{ fill: '#0d9488', r: 4 }} />
+            <Line type="monotone" dataKey="rate" name="Win Rate" stroke="#0C6B5A" strokeWidth={2.5} dot={{ fill: 'var(--accent)', r: 4 }} />
           </LineChart>
         )}
       </ResponsiveContainer>
@@ -254,13 +254,13 @@ function WinLossChart({ wl, trend }: { wl: ReportsData['monthlyWL']; trend: Repo
 function PipelineFunnel({ stages }: { stages: ReportsData['stages'] }) {
   const max = Math.max(...stages.map(s => s.count));
   const stageColors: Record<string, string> = {
-    Discovered:    '#475569',
-    Researching:   '#6366f1',
+    Discovered:    'var(--text-secondary)',
+    Researching:   'var(--info)',
     'LOI Drafted': '#818cf8',
-    Applied:       '#0d9488',
-    'Under Review': '#fbbf24',
-    Awarded:       '#22c55e',
-    Declined:      '#f87171',
+    Applied:       'var(--accent)',
+    'Under Review': 'var(--warning)',
+    Awarded:       'var(--success)',
+    Declined:      'var(--critical)',
     Abandoned:     '#334155',
   };
   return (
@@ -269,16 +269,16 @@ function PipelineFunnel({ stages }: { stages: ReportsData['stages'] }) {
       <div className="space-y-2.5 mt-1">
         {stages.map(({ stage, count, label }) => {
           const pct = max > 0 ? (count / max) * 100 : 0;
-          const color = stageColors[stage] ?? '#475569';
+          const color = stageColors[stage] ?? 'var(--text-secondary)';
           return (
             <div key={stage} className="flex items-center gap-3">
-              <span className="text-[11px] text-slate-500 w-24 flex-shrink-0 text-right">{label}</span>
-              <div className="flex-1 h-6 rounded-[4px] overflow-hidden" style={{ background: 'rgba(255,255,255,0.04)' }}>
+              <span className="text-[11px] text-secondary w-24 flex-shrink-0 text-right">{label}</span>
+              <div className="flex-1 h-6 rounded-[4px] overflow-hidden" style={{ background: 'var(--bg-elevated)' }}>
                 <div className="h-full rounded-[4px] flex items-center px-2 transition-all duration-500"
                   style={{ width: `${Math.max(pct, 5)}%`, background: color + '33', borderLeft: `3px solid ${color}` }}>
                 </div>
               </div>
-              <span className="text-[12px] font-bold text-slate-200 font-mono w-8 text-right">{count}</span>
+              <span className="text-[12px] font-bold text-primary font-mono w-8 text-right">{count}</span>
             </div>
           );
         })}
@@ -300,7 +300,7 @@ function ScoreDistribution({ data }: { data: ReportsData['scoreDistribution'] })
           <Bar dataKey="count" name="Grants" radius={[3,3,0,0]}>
             {data.map((entry, i) => {
               const score = parseInt(entry.range);
-              const color = score >= 80 ? '#22c55e' : score >= 60 ? '#0d9488' : score >= 40 ? '#fbbf24' : '#f87171';
+              const color = score >= 80 ? 'var(--success)' : score >= 60 ? 'var(--accent)' : score >= 40 ? 'var(--warning)' : 'var(--critical)';
               return <Cell key={i} fill={color} fillOpacity={0.8} />;
             })}
           </Bar>
@@ -346,9 +346,9 @@ function FunderTypeDonut({ data }: { data: ReportsData['funderTypes'] }) {
               onMouseLeave={() => setActive(null)}>
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: DONUT_COLORS[i % DONUT_COLORS.length] }} />
-                <span className="text-[11px] text-slate-400">{entry.name}</span>
+                <span className="text-[11px] text-secondary">{entry.name}</span>
               </div>
-              <span className="text-[11px] font-bold text-slate-200">{entry.pct}%</span>
+              <span className="text-[11px] font-bold text-primary">{entry.pct}%</span>
             </div>
           ))}
         </div>
@@ -356,8 +356,8 @@ function FunderTypeDonut({ data }: { data: ReportsData['funderTypes'] }) {
       {data.find(d => d.pct >= 60) && (
         <div className="mt-3 flex items-center gap-2 px-3 py-2 rounded-[8px] border text-[11px]"
           style={{ background: 'rgba(239,68,68,0.07)', borderColor: 'rgba(239,68,68,0.2)' }}>
-          <span className="text-red-400 font-bold">⚠ Concentration risk:</span>
-          <span className="text-slate-400">
+          <span className="text-critical font-bold">⚠ Concentration risk:</span>
+          <span className="text-secondary">
             {data.find(d => d.pct >= 60)?.name} represents {data.find(d => d.pct >= 60)?.pct}% of revenue.
             Instrumentl benchmark: diversified orgs maintain &lt;50% from any single source.
           </span>
@@ -385,7 +385,7 @@ function ScoreWinCorrelation({ data }: { data: ReportsData['matchScoreVsWin'] })
           <Bar dataKey="winRate" name="Win Rate" radius={[3,3,0,0]} fill="#6366f1" fillOpacity={0.8} />
         </BarChart>
       </ResponsiveContainer>
-      <p className="text-[10px] text-slate-700 mt-2">
+      <p className="text-[10px] text-tertiary mt-2">
         Fundir-exclusive insight: AI match score is the strongest predictor of award probability in your pipeline.
         Focus applications on 70%+ scored grants for maximum ROI.
       </p>
@@ -398,37 +398,64 @@ export function ReportsCharts({ data }: { data: ReportsData }) {
   return (
     <div style={{ background: 'var(--fin-page-bg)', minHeight: '100vh' }}>
 
-      {/* Hero */}
-      <div className="relative overflow-hidden border-b" style={{
-        background: 'linear-gradient(135deg,#0d1929 0%,#0a1120 60%,#070d1a 100%)',
-        borderColor: 'rgba(255,255,255,0.06)',
-      }}>
-        <div className="absolute inset-0 opacity-[0.025]" style={{
-          backgroundImage: 'linear-gradient(#fff 1px,transparent 1px),linear-gradient(90deg,#fff 1px,transparent 1px)',
-          backgroundSize: '48px 48px',
-        }} />
-        <div className="relative px-8 py-7 max-w-7xl mx-auto flex items-start justify-between gap-6">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <BarChart3 className="w-3.5 h-3.5 text-teal-500" />
-              <span className="text-[10px] font-bold text-teal-500 uppercase tracking-widest">Grant Intelligence · Reports</span>
+      {/* Hero — dark command band, matches Financials */}
+      <div
+        className="relative overflow-hidden border-b text-white"
+        style={{
+          background: 'linear-gradient(135deg, #0C1626 0%, #0B1220 100%)',
+          borderColor: 'var(--border-hairline)',
+        }}
+      >
+        <div
+          className="absolute inset-0 opacity-[0.025] pointer-events-none"
+          style={{
+            backgroundImage: 'linear-gradient(#fff 1px,transparent 1px),linear-gradient(90deg,#fff 1px,transparent 1px)',
+            backgroundSize: '48px 48px',
+          }}
+        />
+        <div className="relative px-8 py-7 max-w-7xl mx-auto flex items-start justify-between gap-6 flex-wrap">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 mb-1.5">
+              <BarChart3 className="w-3.5 h-3.5" style={{ color: 'var(--accent-bright)' }} />
+              <span
+                className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.16em]"
+                style={{ color: 'var(--accent-bright)' }}
+              >
+                Grant Intelligence · Reports
+              </span>
             </div>
-            <h1 className="text-[26px] font-bold text-white leading-tight">Performance Dashboard</h1>
-            <p className="text-slate-400 text-[13px] mt-0.5">
-              {data.orgName} · {data.kpis.submitted} applications tracked · Live data
+            <h1 className="text-[30px] font-semibold -tracking-[0.02em] leading-tight" style={{ color: '#fff' }}>
+              Performance Dashboard
+            </h1>
+            <p className="text-[13px] mt-2" style={{ color: '#9FB0C8' }}>
+              <span className="font-mono" style={{ color: '#C6D3E6' }}>{data.orgName}</span>{' '}
+              · <span className="font-mono tabular-nums" style={{ color: '#C6D3E6' }}>{data.kpis.submitted}</span>{' '}
+              applications tracked · Live data
             </p>
           </div>
           <div className="flex items-center gap-3 flex-shrink-0">
-            <Link href="/pipeline"
-              className="flex items-center gap-2 px-4 py-2 rounded-[8px] text-[12px] font-semibold border transition-all hover:border-teal-500/40"
-              style={{ background: 'rgba(13,148,136,0.08)', borderColor: 'rgba(13,148,136,0.2)', color: '#0d9488' }}>
+            <Link
+              href="/pipeline"
+              className="flex items-center gap-2 px-4 py-2 rounded-[8px] text-[12px] font-semibold border transition-colors"
+              style={{
+                background: 'rgba(21,145,122,0.12)',
+                borderColor: 'rgba(21,145,122,0.30)',
+                color: 'var(--accent-bright)',
+              }}
+            >
               <TrendingUp className="w-3.5 h-3.5" />
               Open Pipeline
             </Link>
-            <Link href="/discover"
-              className="flex items-center gap-2 px-4 py-2 rounded-[8px] text-[12px] font-semibold text-white border transition-all"
-              style={{ background: 'rgba(255,255,255,0.06)', borderColor: 'rgba(255,255,255,0.1)' }}>
-              <Zap className="w-3.5 h-3.5 text-amber-400" />
+            <Link
+              href="/discover"
+              className="flex items-center gap-2 px-4 py-2 rounded-[8px] text-[12px] font-semibold border transition-colors"
+              style={{
+                background: 'rgba(255,255,255,0.06)',
+                borderColor: 'rgba(255,255,255,0.12)',
+                color: '#fff',
+              }}
+            >
+              <Zap className="w-3.5 h-3.5" style={{ color: 'var(--warning)' }} />
               Find Grants
             </Link>
           </div>
@@ -462,18 +489,18 @@ export function ReportsCharts({ data }: { data: ReportsData }) {
         <div className="rounded-xl border p-5" style={{ background: 'rgba(13,148,136,0.05)', borderColor: 'rgba(13,148,136,0.15)' }}>
           <div className="flex items-start gap-4">
             <div className="w-8 h-8 rounded-[8px] flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(13,148,136,0.15)' }}>
-              <Zap className="w-4 h-4 text-teal-400" />
+              <Zap className="w-4 h-4 text-accent" />
             </div>
             <div className="flex-1">
-              <p className="text-[13px] font-bold text-slate-200 mb-1">Fundir Intelligence Advantage</p>
-              <p className="text-[12px] text-slate-500 leading-relaxed">
+              <p className="text-[13px] font-bold text-primary mb-1">Fundir Intelligence Advantage</p>
+              <p className="text-[12px] text-secondary leading-relaxed">
                 Unlike standard grant platforms, Fundir scores every grant using your organization&apos;s live financial profile — matching your liquidity position, federal dependency ratio,
-                and program expense alignment to funder priorities. Grants scored 70%+ convert at <strong className="text-teal-400">2.4× the rate</strong> of lower-scored matches.
+                and program expense alignment to funder priorities. Grants scored 70%+ convert at <strong className="text-accent">2.4× the rate</strong> of lower-scored matches.
                 Filter your pipeline to 70%+ scored grants to maximize return on application effort.
               </p>
             </div>
             <Link href="/discover?minScore=70"
-              className="flex items-center gap-1.5 px-3 py-2 rounded-[8px] text-[11px] font-bold text-teal-400 border border-teal-400/20 flex-shrink-0 hover:bg-teal-400/5 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-[8px] text-[11px] font-bold text-accent border border-teal-400/20 flex-shrink-0 hover:bg-teal-400/5 transition-colors"
               style={{ background: 'rgba(13,148,136,0.08)' }}>
               Filter 70%+ <ChevronRight className="w-3 h-3" />
             </Link>
@@ -484,10 +511,10 @@ export function ReportsCharts({ data }: { data: ReportsData }) {
 
       {/* Footer */}
       <div className="px-8 pb-8 max-w-7xl mx-auto">
-        <div className="flex items-center justify-between py-4 border-t" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
-          <p className="text-[11px] text-slate-700">Data sourced from Fundir pipeline · Updated in real-time</p>
+        <div className="flex items-center justify-between py-4 border-t" style={{ borderColor: 'var(--border-hairline)' }}>
+          <p className="text-[11px] text-tertiary">Data sourced from Fundir pipeline · Updated in real-time</p>
           <Link href="/dashboard"
-            className="flex items-center gap-1 text-[11px] text-teal-500 hover:text-teal-400 transition-colors">
+            className="flex items-center gap-1 text-[11px] text-accent hover:text-accent transition-colors">
             Back to dashboard <ChevronRight className="w-3 h-3" />
           </Link>
         </div>
