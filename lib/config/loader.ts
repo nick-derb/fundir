@@ -7,7 +7,7 @@
  * stale read matters, call `invalidateConfigCache()`.
  *
  * Every business-logic call site that used to branch on a string literal
- * ('CYC2025', 'IL', 'youth') should go through here instead.
+ * ('CYC2026', 'IL', 'youth') should go through here instead.
  */
 
 import { createServerClient } from '@/lib/supabase';

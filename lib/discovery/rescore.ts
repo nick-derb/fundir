@@ -33,7 +33,7 @@ import type { OrgMatchProfile } from '@/lib/matching';
 import type { ExtractedFields } from '@/types';
 
 const FIXTURE_PROFILES: Record<string, OrgMatchProfile> = {
-  CYC2025: CYC_PROFILE as unknown as OrgMatchProfile,
+  CYC2026: CYC_PROFILE as unknown as OrgMatchProfile,
   YOM2026: YMCA_MATCH_PROFILE,
 };
 

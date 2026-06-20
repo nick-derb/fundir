@@ -12,7 +12,7 @@ credentials and is described under §4.
 | Commit | Phase | Surface |
 |---|---|---|
 | 5250118 | 1A + 1B | `regions`, `segments`, `grant_sources` tables + seeds + adapter registry + typed loaders |
-| 276ed75 | 1C | Drop `CYC2025` / `IL` / `Chicago` / `youth` literals from business logic |
+| 276ed75 | 1C | Drop `CYC2026` / `IL` / `Chicago` / `youth` literals from business logic |
 | 50c19d8 | 1D | Design tokens + 9 core components + `DESIGN_SYSTEM.md` |
 | 5b217b8 | 1E partial | `/discover` natural-language search migrated onto `GrantCard` + `EvidenceList` |
 
@@ -65,7 +65,7 @@ correctly given the new code paths:
 ### 2.3 Backfill scoped to known tenants only
 
 `phase1_config_foundation.sql` §8 backfills `region_id` / `segment_id` /
-`ntee_code` / `budget_band` **only for `org_code IN ('CYC2025','YOM2026')`**.
+`ntee_code` / `budget_band` **only for `org_code IN ('CYC2026','YOM2026')`**.
 A new test tenant pinned to a different region/segment must do so by
 inserting an `organizations` row with explicit `region_id` and
 `segment_id` — there is no auto-assignment that could silently bind a new
@@ -83,7 +83,7 @@ The Phase 1B–1E surfaces that read/write data:
 | `lib/org-financials.ts` | Reads `organizations` row by `org_code`. Service-role client. Callers MUST be auth-gated to the right `org_code`. | ⚠ See §3.1 |
 | `app/api/chat/route.ts` | `getAuthContext()` first; uses `ctx.orgCode` only. | ✓ |
 | `app/api/financial-verdict/route.ts` | `getAuthContext()` first; uses `ctx.orgCode` only. | ✓ |
-| `app/api/auth/{google,microsoft}/route.ts` | Now requires `?org=`; no `'CYC2025'` default. | ✓ |
+| `app/api/auth/{google,microsoft}/route.ts` | Now requires `?org=`; no `'CYC2026'` default. | ✓ |
 | `app/api/auth/{google,microsoft}/callback/route.ts` | Now requires `state.orgCode`; no default. | ✓ |
 | `app/api/cron/refresh-corpus/route.ts` | Bearer `CRON_SECRET` gate; iterates ALL orgs with region+segment set. Service-role queries. | ✓ |
 | `actions/discovery.ts` | `runDiscovery` now refuses missing `orgCode` (error instead of CYC default). | ✓ |
@@ -120,7 +120,7 @@ applying `supabase/phase1_config_foundation.sql`:
 ### 4.1 Setup
 
 ```sql
--- One existing tenant (Tenant A): CYC2025, already pinned.
+-- One existing tenant (Tenant A): CYC2026, already pinned.
 -- Create a second test tenant (Tenant B) in a different region.
 
 -- 1. Add a second seed region/segment (optional, just to prove the
@@ -151,14 +151,14 @@ VALUES ('<tenant-b-user-uuid>',
 | 1. Read regions | GET via supabase-js: `select * from regions` | 1 row (chicago-metro). Pass: shared reference. |
 | 2. Read segments | `select * from segments` | 1 row (youth-ost). Pass. |
 | 3. Read grant_sources | `select * from grant_sources` | 3 rows. Pass. |
-| 4. Read organizations | `select * from organizations` | **1 row only** (TENANTB). Pass: tenant-scoped. ❌ if you see CYC2025. |
+| 4. Read organizations | `select * from organizations` | **1 row only** (TENANTB). Pass: tenant-scoped. ❌ if you see CYC2026. |
 | 5. Read match_results | `select * from match_results` | **0 rows** (Tenant B has none yet). ❌ if you see CYC's matches. |
 | 6. Read pipeline_runs | `select * from pipeline_runs` | **0 rows**. Same shape. |
 | 7. Read org_outcomes | `select * from org_outcomes` | **0 rows**. |
 | 8. Hit `/api/search` with `{query: "youth afterschool"}` | results array | Should return shared `grant_opportunities` (catalog) but `composite_score` and `pipeline_stage` must be null for Tenant B (no own rows). |
 | 9. Hit `/api/financial-verdict` with any grantId | response | Should return `message: "No 990 financial profile is loaded..."` because Tenant B has no fixture and no `financial_data`. ❌ if you see CYC's numbers. |
 | 10. Hit `/api/chat` POST `{messages:[{role:'user',content:'what's my financial picture'}]}` | streamed response | Should NOT include the CHICAGO YOUTH CENTERS intelligence block. Tenant B has no fixture → `buildIntelligenceContext` returns undefined → empty financialCtx in the system prompt. |
-| 11. Hit `/api/auth/google?org=CYC2025` while logged in as Tenant B | redirect | The route accepts the org param at face value today. **This is a known transition gap** — it'll bind Tenant B's auth code to CYC's integration record. See §5. |
+| 11. Hit `/api/auth/google?org=CYC2026` while logged in as Tenant B | redirect | The route accepts the org param at face value today. **This is a known transition gap** — it'll bind Tenant B's auth code to CYC's integration record. See §5. |
 
 If any check ❌s, stop and report — the policy or call site needs a fix
 before Phase 2.
@@ -172,7 +172,7 @@ ship rather than block Phase 1 progress:
    integration routes (`app/api/auth/{google,microsoft}/route.ts`) now
    require `?org=`, which closed the CYC-default silent-leak. But they
    don't verify the caller is a member of the supplied org. A logged-in
-   Tenant B can hit `?org=CYC2025` and start an OAuth flow whose tokens
+   Tenant B can hit `?org=CYC2026` and start an OAuth flow whose tokens
    land in CYC's integration record.
    **Fix scope (post-Phase 1):** in both init routes, read
    `getAuthContext()` and `return 400` when

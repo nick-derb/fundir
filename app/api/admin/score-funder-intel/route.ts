@@ -2,7 +2,7 @@
  * Admin: B5 — compute prospect_score for every funder × org with peer
  * overlap, write to funder_intel. No Claude. No embeddings. $0.
  *
- * POST { org_code: "CYC2025" }
+ * POST { org_code: "CYC2026" }
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -22,7 +22,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   let body: { org_code?: string } = {};
   try { body = await req.json(); } catch { /* empty body OK */ }
-  const orgCode = body.org_code ?? 'CYC2025';
+  const orgCode = body.org_code ?? 'CYC2026';
 
   try {
     const result = await scoreFunderIntelForOrg(orgCode);

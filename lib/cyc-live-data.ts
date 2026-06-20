@@ -547,7 +547,7 @@ export const CYC_FINANCIAL_PROFILE = {
 
 // ── Intelligence-context builder (advisor prompt) ───────────────────────────
 // Phase 1C move: the chat route used to inline this string-builder behind an
-// `orgCode === 'CYC2025'` check. The literal is now bounded to the fixture
+// `orgCode === 'CYC2026'` check. The literal is now bounded to the fixture
 // registry in lib/org-financials.ts; the route just calls
 // orgFin.buildIntelligenceContext?.().
 function money(n: number): string {

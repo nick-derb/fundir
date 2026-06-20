@@ -78,7 +78,7 @@ FROM funders ORDER BY name;
 -- See which briefs are stale
 SELECT f.name, fi.brief_generated_at, fi.brief_edge_hash IS NOT NULL AS cached
 FROM funder_intel fi JOIN funders f ON f.id = fi.funder_id
-WHERE fi.organization_id = (SELECT id FROM organizations WHERE org_code = 'CYC2025')
+WHERE fi.organization_id = (SELECT id FROM organizations WHERE org_code = 'CYC2026')
 ORDER BY fi.prospect_score DESC;
 
 -- Manual refresh trigger

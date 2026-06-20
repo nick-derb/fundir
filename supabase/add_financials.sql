@@ -13,4 +13,4 @@ create unique index if not exists organizations_ein_idx
 -- Seed CYC's EIN (Chicago Youth Centers — replace with actual EIN if different)
 update organizations
 set ein = '362166791'
-where org_code = 'CYC2025';
+where org_code = 'CYC2026';

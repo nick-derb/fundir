@@ -60,10 +60,10 @@ A daily cron ([app/api/cron/refresh-corpus/route.ts](app/api/cron/refresh-corpus
 ### Conflicts with the target architecture — flag these before building
 
 1. **No `region` or `segment` abstraction anywhere.** Every multi-tenant feature today branches on a hardcoded `org_code` literal:
-   - `getOrgProfile(orgCode)` dispatches on `'CYC2025'` and `'YOM2026'` strings ([actions/discovery.ts:32-50](actions/discovery.ts#L32)) and falls back to a `'Chicago'/'IL'` generic.
-   - The cron route hardcodes `.eq('org_code', 'CYC2025')` ([app/api/cron/refresh-corpus/route.ts:56](app/api/cron/refresh-corpus/route.ts#L56)).
-   - OAuth callbacks default `orgCode = 'CYC2025'`.
-   - `app/api/chat/route.ts` and `app/api/financial-verdict/route.ts` branch on `orgCode === 'CYC2025'`.
+   - `getOrgProfile(orgCode)` dispatches on `'CYC2026'` and `'YOM2026'` strings ([actions/discovery.ts:32-50](actions/discovery.ts#L32)) and falls back to a `'Chicago'/'IL'` generic.
+   - The cron route hardcodes `.eq('org_code', 'CYC2026')` ([app/api/cron/refresh-corpus/route.ts:56](app/api/cron/refresh-corpus/route.ts#L56)).
+   - OAuth callbacks default `orgCode = 'CYC2026'`.
+   - `app/api/chat/route.ts` and `app/api/financial-verdict/route.ts` branch on `orgCode === 'CYC2026'`.
    - `lib/match-reasons.ts:30` defaults `orgState = 'IL'`.
    - `lib/foundation-corpus.ts:118` hardcodes `state === 'IL' ? ['IL'] : []`.
    - `lib/matching.ts:90` returns user-visible text "not applicable to Chicago domestic nonprofit" for *any* tenant.
@@ -447,7 +447,7 @@ The rule: business logic in `/lib`, `/app/api`, `/actions` is segment- and regio
 
 | Today (literal in code) | Where it lives now | Where it goes |
 |---|---|---|
-| `'CYC2025'` org_code dispatch | [actions/discovery.ts:33](actions/discovery.ts#L33), [app/api/cron/refresh-corpus/route.ts:56](app/api/cron/refresh-corpus/route.ts#L56), 5 OAuth/chat/financial-verdict routes | `organizations.region_id`/`segment_id` lookup; cron iterates all orgs with `region_id IS NOT NULL` |
+| `'CYC2026'` org_code dispatch | [actions/discovery.ts:33](actions/discovery.ts#L33), [app/api/cron/refresh-corpus/route.ts:56](app/api/cron/refresh-corpus/route.ts#L56), 5 OAuth/chat/financial-verdict routes | `organizations.region_id`/`segment_id` lookup; cron iterates all orgs with `region_id IS NOT NULL` |
 | `CYC_PROFILE` const | [lib/cyc-profile.ts](lib/cyc-profile.ts) | one `organizations` row + its `profile_data` jsonb + the segment row for Youth/OST |
 | `CYC_FINANCIAL_PROFILE` / `CYC_LIVE_DATA` | [lib/cyc-live-data.ts](lib/cyc-live-data.ts) | `organizations.financial_data` (already there) + `organizations.profile_data` |
 | `YMCA_MATCH_PROFILE` | [lib/ymca-live-data.ts](lib/ymca-live-data.ts) | another `organizations` row |
@@ -458,10 +458,10 @@ The rule: business logic in `/lib`, `/app/api`, `/actions` is segment- and regio
 | `"not applicable to Chicago domestic nonprofit"` user-visible string | [lib/matching.ts:90](lib/matching.ts#L90) | template using `region.name` and `segment.name` |
 | `orgState = 'IL'` default | [lib/match-reasons.ts:30](lib/match-reasons.ts#L30) | required arg from caller; no default |
 | `state === 'IL' ? ['IL'] : []` | [lib/foundation-corpus.ts:118](lib/foundation-corpus.ts#L118) | resolve from the funder's `metadata.geographic_focus` or its `region_id` |
-| `isCyc = orgCode === 'CYC2025'` | [app/api/chat/route.ts:135](app/api/chat/route.ts#L135) | segment-based branch |
+| `isCyc = orgCode === 'CYC2026'` | [app/api/chat/route.ts:135](app/api/chat/route.ts#L135) | segment-based branch |
 | Hardcoded EIN `362166791` and `36-2344429` | [supabase/add_financials.sql:16](supabase/add_financials.sql#L16), [lib/cyc-profile.ts:3](lib/cyc-profile.ts#L3) | seed `organizations.ein` |
 
-**Grep target** (post-Phase 1): `rg "Chicago|CYC2025|'IL'|\"IL\"|youth" lib/ actions/ app/api/ --type ts` should return zero results from business logic — only test fixtures, generic exclusion rules ("ukraine" et al., which are segment-agnostic), and comments referencing the config tables.
+**Grep target** (post-Phase 1): `rg "Chicago|CYC2026|'IL'|\"IL\"|youth" lib/ actions/ app/api/ --type ts` should return zero results from business logic — only test fixtures, generic exclusion rules ("ukraine" et al., which are segment-agnostic), and comments referencing the config tables.
 
 ### Seed rows (the first instances)
 

@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
 
   // Phase 1 verification gap close: the caller MUST be authenticated AND a
   // member of the org they're trying to connect an integration to.
-  // Without this check, any logged-in user could hit `?org=CYC2025` and
+  // Without this check, any logged-in user could hit `?org=CYC2026` and
   // bind their Google tokens to CYC's integration record.
   const ctx = await getAuthContext();
   if (!ctx) {

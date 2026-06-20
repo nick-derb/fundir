@@ -195,7 +195,7 @@ BEGIN
          segment_id  = COALESCE(segment_id, v_segment_id),
          ntee_code   = COALESCE(ntee_code, 'O20'),
          budget_band = COALESCE(budget_band, '10m-50m')
-  WHERE  org_code IN ('CYC2025','YOM2026');
+  WHERE  org_code IN ('CYC2026','YOM2026');
 END $$;
 
 -- ════════════════════════════════════════════════════════════════════════════
@@ -206,5 +206,5 @@ END $$;
 --   SELECT slug, name, factor_weights FROM segments;
 --   SELECT adapter_key, source_type FROM grant_sources ORDER BY adapter_key;
 --   SELECT org_code, region_id, segment_id, ntee_code, budget_band
---     FROM organizations WHERE org_code IN ('CYC2025','YOM2026');
+--     FROM organizations WHERE org_code IN ('CYC2026','YOM2026');
 -- ════════════════════════════════════════════════════════════════════════════

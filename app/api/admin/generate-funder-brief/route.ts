@@ -29,7 +29,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   let body: { org_code?: string; funder_id?: string; top_n?: number; force?: boolean } = {};
   try { body = await req.json(); } catch { /* empty body OK */ }
-  const orgCode = body.org_code ?? 'CYC2025';
+  const orgCode = body.org_code ?? 'CYC2026';
   const force   = body.force ?? false;
 
   const db = createServerClient();

@@ -51,7 +51,7 @@ export default async function FinancialsPage() {
   };
 
   // CYC gets its own shell with proprietary financial data
-  if (ctx.orgCode === 'CYC2025') {
+  if (ctx.orgCode === 'CYC2026') {
     const { CYCFinancialsShell } = await import('@/components/cyc-financials-shell');
     return (
       <AppShell orgName={ctx.orgName} orgId={ctx.orgId} userEmail={ctx.email} isAdmin={ctx.isAdmin} availableOrgs={ctx.availableOrgs} currentOrgCode={ctx.orgCode}>

@@ -18,7 +18,7 @@ create table if not exists user_organizations (
 
 -- Seed CYC org
 insert into organizations (name, org_code)
-values ('Chicago Youth Centers', 'CYC2025')
+values ('Chicago Youth Centers', 'CYC2026')
 on conflict (org_code) do nothing;
 
 -- Enable RLS

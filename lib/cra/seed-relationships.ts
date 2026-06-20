@@ -18,7 +18,7 @@
 
 import { createServerClient } from '@/lib/supabase';
 
-const CYC_ORG_CODE = 'CYC2025';
+const CYC_ORG_CODE = 'CYC2026';
 
 /**
  * The seeded set. Each row identifies the funder by FDIC ID (more

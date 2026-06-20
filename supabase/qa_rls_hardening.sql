@@ -67,7 +67,7 @@ ALTER TABLE grant_notes
 -- Backfill: the only existing tenant is CYC; all existing notes belong to it.
 -- No-op if there are no rows yet.
 UPDATE grant_notes
-SET    org_id = (SELECT id FROM organizations WHERE org_code = 'CYC2025')
+SET    org_id = (SELECT id FROM organizations WHERE org_code = 'CYC2026')
 WHERE  org_id IS NULL;
 
 -- Drop the bad UNIQUE INDEX (one note per grant globally — across all orgs).
@@ -93,7 +93,7 @@ ALTER TABLE grant_tasks
   ADD COLUMN IF NOT EXISTS org_id uuid REFERENCES organizations(id) ON DELETE CASCADE;
 
 UPDATE grant_tasks
-SET    org_id = (SELECT id FROM organizations WHERE org_code = 'CYC2025')
+SET    org_id = (SELECT id FROM organizations WHERE org_code = 'CYC2026')
 WHERE  org_id IS NULL;
 
 CREATE INDEX IF NOT EXISTS idx_grant_tasks_org_id ON grant_tasks(org_id);

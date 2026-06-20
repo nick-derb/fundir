@@ -17,7 +17,7 @@ import { findFunderByEin, upsertGrantsMade } from './repo';
 import { resolveRecipient } from './identity';
 import { CYC_PEERS, CYC_FUNDER_EDGES, type PeerRecipientSeed } from './seed-cyc-graph';
 
-const CYC_ORG_CODE = 'CYC2025';
+const CYC_ORG_CODE = 'CYC2026';
 
 function normEin(ein: string): string {
   return ein.replace(/\D/g, '');

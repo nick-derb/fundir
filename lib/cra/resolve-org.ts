@@ -192,7 +192,7 @@ export async function resolveOrgAddresses(orgId: string): Promise<ResolveOrgResu
  * profile_data above; this is the one-time bridge.
  */
 export async function resolveOrgAddressesFromCycLiveData(orgCode: string): Promise<ResolveOrgResult> {
-  if (orgCode !== 'CYC2025') {
+  if (orgCode !== 'CYC2026') {
     return resolveOrgAddresses(orgCode);
   }
 
@@ -204,7 +204,7 @@ export async function resolveOrgAddressesFromCycLiveData(orgCode: string): Promi
   const { data: org, error: orgErr } = await db
     .from('organizations')
     .select('id, profile_data')
-    .eq('org_code', 'CYC2025')
+    .eq('org_code', 'CYC2026')
     .single();
   if (orgErr || !org) {
     return {

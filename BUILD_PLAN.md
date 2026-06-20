@@ -63,7 +63,7 @@ The four remaining open questions in §8 (Tier 3 confidence ceiling; Huntington 
 
 | Table | Migration | Purpose | Current state |
 |---|---|---|---|
-| `organizations` | [phase1_config_foundation.sql:76](supabase/phase1_config_foundation.sql#L76) | Adds `ein`, `census_tract`, `lmi_flag` columns. | CYC2025 row has all three populated. |
+| `organizations` | [phase1_config_foundation.sql:76](supabase/phase1_config_foundation.sql#L76) | Adds `ein`, `census_tract`, `lmi_flag` columns. | CYC2026 row has all three populated. |
 | `funders` | [phase2_funder_graph.sql:22](supabase/phase2_funder_graph.sql#L22) | EIN-keyed (nullable for federal), `funder_type` enum incl. `bank`. | Populated for the ~20 funders touched by the hand-curated seed + the ProPublica index ingest. |
 | `recipients` | [phase2_funder_graph.sql:57](supabase/phase2_funder_graph.sql#L57) | EIN-keyed (nullable; common for 990-PF rows), trigram-indexed on `name` for fuzz. `organization_id` links recipients that ARE tenant orgs. | ~15 CYC peers populated via seed. |
 | `grants_made` | [phase2_funder_graph.sql:87](supabase/phase2_funder_graph.sql#L87) | Edge table. UNIQUE on `(funder_id, recipient_id, fiscal_year, source)`. Carries `confidence`, `data_freshness`, `purpose`, raw payload. | ~65 hand-curated edges. **Zero edges from live 990-PF ingestion.** |

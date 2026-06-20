@@ -4,7 +4,7 @@
  * census_tracts for the resolved tracts.
  *
  * Body (JSON):
- *   { org_code: "CYC2025" }     // resolves CYC; for the seed tenant it
+ *   { org_code: "CYC2026" }     // resolves CYC; for the seed tenant it
  *                                // also pre-populates profile_data with
  *                                // the addresses from CYC_SITES if they
  *                                // aren't already there.
@@ -40,10 +40,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   // Resolve to an org_id (the resolver works on UUIDs).
   let org_id = body.org_id ?? null;
   if (!org_id && body.org_code) {
-    if (body.org_code === 'CYC2025') {
+    if (body.org_code === 'CYC2026') {
       // Special path: pulls addresses from CYC_SITES and writes them
       // through profile_data before resolving.
-      const result = await resolveOrgAddressesFromCycLiveData('CYC2025');
+      const result = await resolveOrgAddressesFromCycLiveData('CYC2026');
       return NextResponse.json({ ok: true, ...result });
     }
     const db = createServerClient();

@@ -6,7 +6,7 @@ differentiator is called out vs. Instrumentl / Candid / GrantStation,
 it's because I can point to a specific file or query the directories
 don't publicly expose; nothing is invented.
 
-Login: `nickderbis@gmail.com` → lands you in CYC2025 (the tenant
+Login: `nickderbis@gmail.com` → lands you in CYC2026 (the tenant
 where all the data lives).
 
 ---

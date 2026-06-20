@@ -57,7 +57,7 @@ export function AiAdvisor({ orgCode, orgId, orgName }: AiAdvisorProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef  = useRef<HTMLTextAreaElement>(null);
 
-  const isCyc    = orgCode === 'CYC2025';
+  const isCyc    = orgCode === 'CYC2026';
   const starters = isCyc ? CYC_STARTERS : GENERIC_STARTERS;
 
   useEffect(() => {

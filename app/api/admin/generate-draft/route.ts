@@ -2,7 +2,7 @@
  * Admin: generate (or regenerate) a grant draft for one org / grant.
  *
  * POST body:
- *   { org_code: "CYC2025", grant_id: "<uuid>" }
+ *   { org_code: "CYC2026", grant_id: "<uuid>" }
  *
  * Pipeline:
  *   1. Assemble the source bundle from the org's profile_data,

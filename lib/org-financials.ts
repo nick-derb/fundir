@@ -8,7 +8,7 @@
  *      it into a normalized financial-history table)
  *   2. The org's `financial_data` jsonb in the organizations table
  *
- * This replaces the inlined `if (orgCode === 'CYC2025') return CYC_…` checks
+ * This replaces the inlined `if (orgCode === 'CYC2026') return CYC_…` checks
  * that used to live in `actions/discovery.ts` and
  * `app/api/financial-verdict/route.ts`.
  */
@@ -41,7 +41,7 @@ interface FixtureRecord {
 // — every other call site asks getOrgFinancialProfile() rather than
 // branching on a literal. Phase 2 migrates each fixture to a DB row.
 const FIXTURES: Record<string, FixtureRecord> = {
-  CYC2025: {
+  CYC2026: {
     ...CYC_FINANCIAL_PROFILE,
     buildIntelligenceContext: buildCycIntelligenceContext,
   },
