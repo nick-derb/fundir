@@ -18,6 +18,7 @@ import { loadCraIntelligence } from '@/lib/cra/intelligence';
 import { FunderIntelligencePanel } from '@/components/funder-intelligence-panel';
 import { loadFunderIntelligence } from '@/lib/funder-intel/repo';
 import { loadOrgCraSnapshot } from '@/lib/cra/repo';
+import { bundledLogoFor } from '@/lib/org-logo';
 
 // ── Logo auto-fetch via ProPublica EIN → website → Clearbit ──────────────────
 async function getOrgLogoUrl(ein?: string | null): Promise<string | null> {
@@ -91,7 +92,9 @@ async function getDashboardData(orgId: string, orgCode: string) {
     ['reviewing', 'preparing', 'drafting'].includes(m.pipeline_stage)
   ).length;
 
-  const logoUrl = await getOrgLogoUrl(org?.ein);
+  // Prefer the bundled logo (instant, never breaks) over the ProPublica
+  // → Clearbit chain (network round-trip, coverage-gappy).
+  const logoUrl = bundledLogoFor(orgCode) ?? await getOrgLogoUrl(org?.ein);
   // Phase 6: latest funding-concentration snapshot. Null until the user
   // runs /api/admin/compute-concentration once; ConcentrationPanel
   // renders the empty-state CTA in that case.

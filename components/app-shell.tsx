@@ -14,6 +14,7 @@ import { CommandPalette, CommandPaletteTrigger } from '@/components/command-pale
 import { TeamPanel, TeamButton } from '@/components/team-panel';
 import { AiAdvisor } from '@/components/ai-advisor';
 import { switchAdminOrg } from '@/actions/admin-org';
+import { bundledLogoFor } from '@/lib/org-logo';
 
 const NAV_ITEMS = [
   { href: '/dashboard',   label: 'Dashboard',   icon: LayoutDashboard },
@@ -139,6 +140,7 @@ export function AppShell({
   }
 
   const initials = orgName.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase();
+  const orgLogoUrl = bundledLogoFor(currentOrgCode);
 
   return (
     <div className="flex min-h-screen bg-page">
@@ -179,9 +181,18 @@ export function AppShell({
                 isAdmin && availableOrgs.length > 1 ? 'cursor-pointer hover:bg-elevated' : 'cursor-default'
               }`}
             >
-              <div className="w-6 h-6 rounded-sm flex items-center justify-center bg-elevated text-secondary text-[10px] font-semibold flex-shrink-0">
-                {initials}
-              </div>
+              {orgLogoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={orgLogoUrl}
+                  alt={orgName}
+                  className="w-6 h-6 rounded-sm bg-surface object-contain flex-shrink-0"
+                />
+              ) : (
+                <div className="w-6 h-6 rounded-sm flex items-center justify-center bg-elevated text-secondary text-[10px] font-semibold flex-shrink-0">
+                  {initials}
+                </div>
+              )}
               <span className="text-[12px] font-medium text-secondary leading-tight flex-1 line-clamp-2 break-words">
                 {orgName}
               </span>
@@ -202,9 +213,21 @@ export function AppShell({
                     disabled={switching}
                     className="w-full flex items-center gap-2 px-3 py-2 text-left transition-colors hover:bg-elevated disabled:opacity-50"
                   >
-                    <div className="w-5 h-5 rounded-sm flex items-center justify-center bg-elevated text-secondary text-[9px] font-semibold flex-shrink-0">
-                      {org.name.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase()}
-                    </div>
+                    {(() => {
+                      const itemLogo = bundledLogoFor(org.org_code);
+                      return itemLogo ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={itemLogo}
+                          alt={org.name}
+                          className="w-5 h-5 rounded-sm bg-surface object-contain flex-shrink-0"
+                        />
+                      ) : (
+                        <div className="w-5 h-5 rounded-sm flex items-center justify-center bg-elevated text-secondary text-[9px] font-semibold flex-shrink-0">
+                          {org.name.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase()}
+                        </div>
+                      );
+                    })()}
                     <span className="text-caption text-primary truncate flex-1">{org.name}</span>
                     {org.org_code === currentOrgCode && (
                       <Check className="w-3 h-3 text-accent flex-shrink-0" />
