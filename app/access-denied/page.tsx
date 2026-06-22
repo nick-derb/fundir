@@ -14,9 +14,10 @@ export const dynamic = 'force-dynamic';
  */
 
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { createServerClient as createSSRClient } from '@supabase/ssr';
-import { latestRequestStatus, recordAccessRequest } from '@/lib/access-control';
+import { latestRequestStatus, provisionMembership } from '@/lib/access-control';
 import { SignOutButton } from '@/components/sign-out-button';
 import { ShieldAlert, Mail, Clock } from 'lucide-react';
 
@@ -44,11 +45,19 @@ export default async function AccessDeniedPage({ searchParams }: PageProps) {
   const email = user?.email ?? params.email ?? null;
   const provider = (user?.app_metadata?.provider as string | undefined) ?? params.provider ?? null;
 
-  // Ensure a pending request exists. Idempotent.
+  // Auto-provision attempt. provisionMembership() short-circuits on
+  // existing membership, creates one if the email matches the allowlist,
+  // and otherwise records a pending access_requests row. This handles
+  // email+password sign-ins (which bypass the OAuth callback's provision
+  // step) and any case where an admin added a user to the allowlist
+  // AFTER the user authenticated for the first time.
   if (email && user) {
-    await recordAccessRequest(user.id, email, provider);
-  } else if (email) {
-    await recordAccessRequest(null, email, provider);
+    const result = await provisionMembership(user.id, email, provider);
+    if (result.status === 'provisioned' || result.status === 'already_member') {
+      redirect('/dashboard');
+    }
+    // 'denied' → fall through to render the deny screen below.
+    // provisionMembership already recorded the access_requests row.
   }
 
   const reqStatus = email ? await latestRequestStatus(email) : { status: null, createdAt: null };
