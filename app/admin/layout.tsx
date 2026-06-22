@@ -1,18 +1,20 @@
 import { redirect } from 'next/navigation';
 import { getSession } from '@/lib/session';
 import { AdminNav } from '@/components/admin-nav';
+import { isAdminEmail, adminEmailCount } from '@/lib/admin-emails';
 
 export const metadata = { title: 'Admin Console · Fundir' };
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await getSession();
-  const adminEmail = (process.env.ADMIN_EMAIL ?? '').toLowerCase();
 
   // If not authenticated, send to login
   if (!session) redirect('/login?next=/admin');
 
-  // If ADMIN_EMAIL is configured, enforce it; redirect to dashboard (not /login) to avoid loop
-  if (adminEmail && session.user.email?.toLowerCase() !== adminEmail) {
+  // ADMIN_EMAIL accepts a comma-separated list. When at least one admin
+  // is configured, enforce membership; redirect to /dashboard (not
+  // /login) to avoid a loop on accidental non-admin access.
+  if (adminEmailCount() > 0 && !isAdminEmail(session.user.email)) {
     redirect('/dashboard');
   }
 

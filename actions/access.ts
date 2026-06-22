@@ -3,19 +3,20 @@
 /**
  * Admin actions for the access-control flow.
  *
- * All actions verify the caller is the configured ADMIN_EMAIL.
- * Errors throw, so Next.js routes them to the error boundary — these
- * forms are admin-only and errors are exceptional.
+ * All actions verify the caller is on the configured ADMIN_EMAIL list
+ * (comma-separated; see lib/admin-emails.ts). Errors throw, so Next.js
+ * routes them to the error boundary — these forms are admin-only and
+ * errors are exceptional.
  */
 
 import { revalidatePath } from 'next/cache';
 import { cookies } from 'next/headers';
 import { createServerClient as createSSRClient } from '@supabase/ssr';
 import { createServerClient } from '@/lib/supabase';
+import { isAdminEmail, adminEmailCount } from '@/lib/admin-emails';
 
 async function requireAdmin(): Promise<{ email: string }> {
-  const adminEmail = (process.env.ADMIN_EMAIL ?? '').toLowerCase();
-  if (!adminEmail) throw new Error('ADMIN_EMAIL is not configured');
+  if (adminEmailCount() === 0) throw new Error('ADMIN_EMAIL is not configured');
 
   const cookieStore = await cookies();
   const supabase = createSSRClient(
@@ -30,7 +31,7 @@ async function requireAdmin(): Promise<{ email: string }> {
   );
   const { data: { user } } = await supabase.auth.getUser();
   if (!user?.email) throw new Error('Not authenticated');
-  if (user.email.toLowerCase() !== adminEmail) throw new Error('Not authorized');
+  if (!isAdminEmail(user.email)) throw new Error('Not authorized');
   return { email: user.email };
 }
 

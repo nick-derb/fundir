@@ -1,8 +1,7 @@
 import { cookies } from 'next/headers';
 import { createServerClient as createSSRClient } from '@supabase/ssr';
 import { createServerClient } from '@/lib/supabase';
-
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL?.toLowerCase();
+import { isAdminEmail } from '@/lib/admin-emails';
 
 export interface AuthContext {
   userId: string;
@@ -33,7 +32,7 @@ export async function getAuthContext(): Promise<AuthContext | null> {
   const { data: { user } } = await sessionClient.auth.getUser();
   if (!user) return null;
 
-  const isAdmin = !!(ADMIN_EMAIL && user.email?.toLowerCase() === ADMIN_EMAIL);
+  const isAdmin = isAdminEmail(user.email);
   const db = createServerClient(); // service role — bypasses RLS for lookups
 
   if (isAdmin) {
