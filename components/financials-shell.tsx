@@ -67,34 +67,24 @@ export function AITab({ orgCode, orgId, orgName, googleConnected, microsoftConne
             </span>
           )}
         </div>
-        <div className="px-5 pt-4 pb-2">
-          <div className="flex items-center gap-3 mb-5">
-            {['Connect cloud storage', 'Select document type', 'AI analyzes & saves'].map((step, i) => (
-              <div key={step} className="flex items-center gap-2">
-                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold flex-shrink-0 ${(i === 0 && anyConnected) ? 'bg-green-500 text-primary' : i === 0 ? 'bg-teal-500 text-primary' : ''}`}
-                  style={i > 0 ? { background: 'var(--badge-bg)', color: 'var(--text-tertiary)' } : {}}>
-                  {i === 0 && anyConnected ? <CheckCircle className="w-3.5 h-3.5" /> : i + 1}
-                </div>
-                <span className="text-[12px] whitespace-nowrap" style={{ color: i === 0 ? 'var(--text-muted)' : 'var(--text-tertiary)' }}>{step}</span>
-                {i < 2 && <div className="w-6 h-px mx-1" style={{ background: 'var(--row-divider)' }} />}
-              </div>
-            ))}
+        {/* Storage connect only appears when nothing is connected — once
+            connected, the header chip is the only chrome (no wizard steps). */}
+        {!anyConnected && (
+          <div className="mx-5 mt-4 mb-5 rounded-xl border overflow-hidden" style={{ borderColor: 'var(--card-border)' }}>
+            <div className="px-4 py-2.5 border-b" style={{ borderColor: 'var(--card-border)', background: 'var(--badge-bg)' }}>
+              <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-tertiary)' }}>Connect cloud storage</p>
+            </div>
+            <IntegrationConnector
+              orgCode={orgCode}
+              returnPath="/financials"
+              status={{
+                google:    { connected: googleConnected },
+                microsoft: { connected: microsoftConnected },
+              }}
+            />
           </div>
-        </div>
-        <div className="mx-5 mb-5 rounded-xl border overflow-hidden" style={{ borderColor: 'var(--card-border)' }}>
-          <div className="px-4 py-2.5 border-b" style={{ borderColor: 'var(--card-border)', background: 'var(--badge-bg)' }}>
-            <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-tertiary)' }}>Cloud Storage — Step 1</p>
-          </div>
-          <IntegrationConnector
-            orgCode={orgCode}
-            returnPath="/financials"
-            status={{
-              google:    { connected: googleConnected },
-              microsoft: { connected: microsoftConnected },
-            }}
-          />
-        </div>
-        <div className="px-5 pb-5">
+        )}
+        <div className="px-5 pb-5 pt-4">
           <FinancialAnalyzer
             orgCode={orgCode}
             orgId={orgId}

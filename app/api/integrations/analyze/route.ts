@@ -15,6 +15,67 @@ export type DocType =
   | 'board_minutes'
   | 'general';
 
+/** UI can also send 'auto' — the server classifies before analyzing. */
+export type DocTypeOrAuto = DocType | 'auto';
+
+const DOC_TYPES: DocType[] = [
+  'financial', 'strategic_plan', 'grant_application',
+  'program_report', 'board_minutes', 'general',
+];
+
+const MODEL = 'claude-sonnet-4-6';
+
+/** Content block for a PDF passed as base64 — Claude reads it natively. */
+function pdfBlock(pdfBase64: string) {
+  return {
+    type: 'document' as const,
+    source: {
+      type: 'base64' as const,
+      media_type: 'application/pdf' as const,
+      data: pdfBase64,
+    },
+  };
+}
+
+/**
+ * Fast classification pass so users never have to pick a document type.
+ * Cheap (few output tokens); falls back to 'general' on any ambiguity.
+ */
+async function classifyDocType(
+  fileName: string,
+  content?: string,
+  pdfBase64?: string,
+): Promise<DocType> {
+  const prompt = `Classify this nonprofit organizational document into exactly one category.
+
+File name: ${fileName}
+
+Categories:
+- financial (annual reports, 990s, audited statements, budgets)
+- strategic_plan (multi-year plans, org roadmaps, priority documents)
+- grant_application (proposals, LOIs, grant narratives)
+- program_report (impact reports, funder reports, outcome summaries)
+- board_minutes (meeting minutes, board resolutions, committee notes)
+- general (anything else)
+
+Respond with ONLY the category name, nothing else.${content ? `\n\nDOCUMENT (excerpt):\n${content.slice(0, 8_000)}` : ''}`;
+
+  const msg = await client.messages.create({
+    model:      MODEL,
+    max_tokens: 16,
+    messages: [{
+      role: 'user',
+      content: pdfBase64
+        ? [pdfBlock(pdfBase64), { type: 'text' as const, text: prompt }]
+        : prompt,
+    }],
+  });
+
+  const raw = (msg.content[0]?.type === 'text' ? msg.content[0].text : '')
+    .trim().toLowerCase().replace(/[^a-z_]/g, '');
+  return (DOC_TYPES as string[]).includes(raw) ? (raw as DocType) : 'general';
+}
+
 // ── System prompt ──────────────────────────────────────────────────────────────
 const SYSTEM = `You are a senior nonprofit strategic advisor and financial analyst. You extract structured intelligence from organizational documents to support grant strategy and funding optimization.
 
@@ -154,31 +215,56 @@ export async function POST(req: NextRequest) {
 
   const {
     content,
+    pdfBase64,
     fileName    = 'Document',
     docType     = 'financial',
     provider    = 'upload',
   } = await req.json() as {
-    content:   string;
-    fileName?: string;
-    docType?:  DocType;
-    provider?: string;
+    content?:   string;
+    pdfBase64?: string;   // base64 PDF — analyzed natively, no text extraction
+    fileName?:  string;
+    docType?:   DocTypeOrAuto;
+    provider?:  string;
   };
   const orgCode = ctx.orgCode;
   const orgId   = ctx.orgId;
 
-  if (!content || content.length < 50) {
+  if (!pdfBase64 && (!content || content.length < 50)) {
     return NextResponse.json({ error: 'Document content too short to analyze' }, { status: 400 });
+  }
+  if (pdfBase64 && pdfBase64.length > 6_000_000) {
+    // ~4.5MB binary — keeps the JSON body inside serverless request limits
+    return NextResponse.json({ error: 'PDF too large to analyze (max ~4MB). Try exporting the relevant pages, or upload as .docx/.xlsx.' }, { status: 413 });
   }
   if (!process.env.ANTHROPIC_API_KEY) {
     return NextResponse.json({ error: 'Anthropic API key not configured' }, { status: 503 });
   }
 
   try {
+    // Resolve 'auto' via a fast classification pass; invalid values → 'general'
+    let resolvedType: DocType;
+    if (docType === 'auto') {
+      resolvedType = await classifyDocType(fileName, content, pdfBase64).catch(() => 'general' as DocType);
+    } else {
+      resolvedType = (DOC_TYPES as string[]).includes(docType) ? (docType as DocType) : 'general';
+    }
+
+    const promptText = buildPrompt(
+      pdfBase64 ? '[The document is attached above as a PDF — analyze its full contents.]' : content!,
+      fileName,
+      resolvedType,
+    );
+
     const message = await client.messages.create({
-      model:      'claude-sonnet-4-6',
+      model:      MODEL,
       max_tokens: 4096,
       system:     SYSTEM,
-      messages:   [{ role: 'user', content: buildPrompt(content, fileName, docType as DocType) }],
+      messages: [{
+        role: 'user',
+        content: pdfBase64
+          ? [pdfBlock(pdfBase64), { type: 'text' as const, text: promptText }]
+          : promptText,
+      }],
     });
 
     const rawText = message.content[0].type === 'text' ? message.content[0].text : '';
@@ -210,7 +296,7 @@ export async function POST(req: NextRequest) {
             org_code:    orgCode,
             file_name:   fileName,
             provider,
-            doc_type:    docType,
+            doc_type:    resolvedType,
             summary,
             analysis,
             analyzed_at: new Date().toISOString(),
@@ -223,7 +309,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({ analysis, savedId, usage: message.usage });
+    return NextResponse.json({ analysis, savedId, detectedType: resolvedType, usage: message.usage });
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Analysis failed';
     return NextResponse.json({ error: msg }, { status: 500 });

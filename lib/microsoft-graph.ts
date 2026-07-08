@@ -34,7 +34,7 @@ async function graphFetch(
 }
 
 const FINANCIAL_EXTENSIONS = [
-  '.xlsx', '.xls', '.csv', '.docx', '.doc', '.pdf',
+  '.xlsx', '.xls', '.csv', '.docx', '.doc', '.pdf', '.pptx',
 ];
 
 function isFinancialFile(f: GraphFile): boolean {
@@ -130,6 +130,34 @@ export async function extractWordContent(
   return text.slice(0, 100_000);
 }
 
+export async function extractPowerPointContent(
+  token: string,
+  itemId: string,
+): Promise<string> {
+  // Best-effort: pptx slide text lives in <a:t> runs (same ZIP-XML trick as docx)
+  const res = await graphFetch(token, `/me/drive/items/${itemId}/content`);
+  const buf = Buffer.from(await res.arrayBuffer());
+  const raw = buf.toString('binary');
+  const matches = raw.match(/<a:t[^>]*>([^<]*)<\/a:t>/g) ?? [];
+  return matches
+    .map(m => m.replace(/<[^>]+>/g, ''))
+    .filter(t => t.trim().length > 0)
+    .join(' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 100_000);
+}
+
+/** Raw file bytes as base64 — used to hand PDFs to Claude natively. */
+export async function downloadFileBase64(
+  token: string,
+  itemId: string,
+): Promise<{ base64: string; bytes: number }> {
+  const res = await graphFetch(token, `/me/drive/items/${itemId}/content`);
+  const buf = Buffer.from(await res.arrayBuffer());
+  return { base64: buf.toString('base64'), bytes: buf.byteLength };
+}
+
 export async function extractContent(
   token: string,
   file: GraphFile,
@@ -140,6 +168,9 @@ export async function extractContent(
   }
   if (name.endsWith('.docx') || name.endsWith('.doc')) {
     return extractWordContent(token, file.id);
+  }
+  if (name.endsWith('.pptx')) {
+    return extractPowerPointContent(token, file.id);
   }
   // CSV or text files
   const res = await graphFetch(token, `/me/drive/items/${file.id}/content`);

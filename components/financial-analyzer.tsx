@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { FilePicker } from '@/components/file-picker';
 import { formatCurrency } from '@/lib/utils';
-import type { DocType } from '@/app/api/integrations/analyze/route';
+import type { DocType, DocTypeOrAuto } from '@/app/api/integrations/analyze/route';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 interface FinancialAnalysis {
@@ -548,18 +548,24 @@ export function FinancialAnalyzer({
   const [errorMsg, setErrorMsg] = useState('');
   const [dragging, setDragging] = useState(false);
   const [fileName, setFileName] = useState('');
-  const [docType,  setDocType]  = useState<DocType>('financial');
+  const [docType,  setDocType]  = useState<DocTypeOrAuto>('auto');
   const [provider, setProvider] = useState<string>('upload');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const runAnalysis = useCallback(async (content: string, name: string, prov: string) => {
+  const runAnalysis = useCallback(async (
+    doc: { content?: string; pdfBase64?: string },
+    name: string,
+    prov: string,
+  ) => {
     setPhase('analyzing');
-    setStatus(`Running AI analysis on "${name}"…`);
+    setStatus(docType === 'auto'
+      ? `Detecting document type and analyzing "${name}"…`
+      : `Running AI analysis on "${name}"…`);
     try {
       const res  = await fetch('/api/integrations/analyze', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ content, fileName: name, docType, orgCode, orgId, provider: prov }),
+        body:    JSON.stringify({ ...doc, fileName: name, docType, orgCode, orgId, provider: prov }),
       });
       const data = await res.json();
       if (data.error) throw new Error(data.error as string);
@@ -584,8 +590,14 @@ export function FinancialAnalyzer({
       const data = await res.json();
       if (data.error) throw new Error(data.error as string);
       setPhase('extracting');
-      setStatus(`Extracted ${(data.chars / 1000).toFixed(0)}K characters — analyzing…`);
-      await runAnalysis(data.content as string, data.name as string, 'upload');
+      setStatus(data.pdfBase64
+        ? 'Reading PDF — analyzing…'
+        : `Extracted ${(data.chars / 1000).toFixed(0)}K characters — analyzing…`);
+      await runAnalysis(
+        { content: data.content as string | undefined, pdfBase64: data.pdfBase64 as string | undefined },
+        data.name as string,
+        'upload',
+      );
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : 'Upload failed');
       setPhase('error');
@@ -613,7 +625,11 @@ export function FinancialAnalyzer({
       });
       const extractData = await extractRes.json();
       if (extractData.error) throw new Error(extractData.error as string);
-      await runAnalysis(extractData.content as string, file.name, prov);
+      await runAnalysis(
+        { content: extractData.content as string | undefined, pdfBase64: extractData.pdfBase64 as string | undefined },
+        file.name,
+        prov,
+      );
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : 'Extraction failed');
       setPhase('error');
@@ -711,39 +727,12 @@ export function FinancialAnalyzer({
       : <GeneralDoneView   a={analysis as GeneralAnalysis}   savedId={savedId} onReset={handleReset} />;
   }
 
-  // ── Idle: doc type selector + upload zone + recent analyses ────────────────
+  // ── Idle: one-action upload — OneDrive first, doc type auto-detected ───────
   const anyConnected = googleConnected || microsoftConnected;
-  const ACCEPT = '.xlsx,.xls,.csv,.docx,.txt,.pdf';
-  const selectedDt = DOC_TYPES.find(t => t.id === docType)!;
+  const ACCEPT = '.xlsx,.xls,.csv,.docx,.pptx,.txt,.pdf';
 
   return (
-    <div className="space-y-5">
-      {/* Doc type selector */}
-      <div>
-        <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest mb-2.5">Document Type</p>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-          {DOC_TYPES.map(dt => {
-            const DIcon = dt.icon;
-            const badge = docTypeBadgeColor(dt.id);
-            const active = docType === dt.id;
-            return (
-              <button key={dt.id} onClick={() => setDocType(dt.id)}
-                className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-[8px] border text-left transition-all"
-                style={{
-                  borderColor: active ? badge.text + '66' : 'rgba(255,255,255,0.07)',
-                  background:  active ? badge.bg : 'rgba(255,255,255,0.02)',
-                }}>
-                <DIcon className="w-3.5 h-3.5 flex-shrink-0" style={{ color: active ? badge.text : '#475569' }} />
-                <span className="text-[12px] font-semibold" style={{ color: active ? badge.text : '#64748b' }}>
-                  {dt.label}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-        <p className="text-[11px] text-slate-600 mt-2 ml-0.5">{selectedDt.hint}</p>
-      </div>
-
+    <div className="space-y-4">
       {/* Hidden file input */}
       <input
         ref={fileInputRef}
@@ -753,20 +742,60 @@ export function FinancialAnalyzer({
         onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ''; }}
       />
 
+      {/* Cloud storage first — OneDrive is the primary path (CYC runs on M365) */}
+      {anyConnected && (
+        <div className="flex flex-col md:flex-row gap-3">
+          {microsoftConnected && (
+            <button onClick={() => setPhase('picking_microsoft')}
+              className="flex-1 flex items-center justify-center gap-2.5 py-3.5 rounded-[10px] text-[13px] font-bold text-white transition-all hover:opacity-90"
+              style={{ background: '#0d9488' }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <rect x="1"  y="1"  width="10" height="10" fill="#F25022"/>
+                <rect x="13" y="1"  width="10" height="10" fill="#7FBA00"/>
+                <rect x="1"  y="13" width="10" height="10" fill="#00A4EF"/>
+                <rect x="13" y="13" width="10" height="10" fill="#FFB900"/>
+              </svg>
+              Browse OneDrive
+            </button>
+          )}
+          {googleConnected && (
+            <button onClick={() => setPhase('picking_google')}
+              className={`${microsoftConnected ? 'md:w-52' : 'flex-1'} flex items-center justify-center gap-2 py-3.5 rounded-[10px] border text-[12px] font-semibold text-slate-300 hover:border-blue-400/30 hover:text-white transition-all`}
+              style={{ borderColor: 'rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)' }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+              </svg>
+              Google Drive
+            </button>
+          )}
+        </div>
+      )}
+
+      {anyConnected && (
+        <div className="flex items-center gap-2">
+          <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.06)' }} />
+          <span className="text-[10px] text-slate-600 font-semibold uppercase tracking-widest">or upload from this computer</span>
+          <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.06)' }} />
+        </div>
+      )}
+
       {/* Drag-and-drop zone */}
       <div
         onDragOver={e => { e.preventDefault(); setDragging(true); }}
         onDragLeave={() => setDragging(false)}
         onDrop={handleDrop}
         onClick={() => fileInputRef.current?.click()}
-        className="relative flex flex-col items-center justify-center gap-4 py-10 px-6 rounded-xl border-2 border-dashed cursor-pointer transition-all"
+        className="relative flex flex-col items-center justify-center gap-4 py-8 px-6 rounded-xl border-2 border-dashed cursor-pointer transition-all"
         style={{
           borderColor: dragging ? '#0d9488' : 'rgba(255,255,255,0.12)',
           background:  dragging ? 'rgba(13,148,136,0.06)' : 'rgba(255,255,255,0.02)',
         }}>
-        <div className="w-14 h-14 rounded-2xl flex items-center justify-center transition-all"
+        <div className="w-12 h-12 rounded-2xl flex items-center justify-center transition-all"
           style={{ background: dragging ? 'rgba(13,148,136,0.2)' : 'rgba(255,255,255,0.05)' }}>
-          <CloudUpload className="w-7 h-7 transition-colors" style={{ color: dragging ? '#0d9488' : '#475569' }} />
+          <CloudUpload className="w-6 h-6 transition-colors" style={{ color: dragging ? '#0d9488' : '#475569' }} />
         </div>
         <div className="text-center">
           <p className="text-[15px] font-bold text-slate-200">
@@ -777,7 +806,7 @@ export function FinancialAnalyzer({
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap justify-center">
-          {['Excel .xlsx', 'CSV .csv', 'Word .docx', 'PDF .pdf', 'Text .txt'].map(t => (
+          {['Excel .xlsx', 'PowerPoint .pptx', 'Word .docx', 'PDF .pdf', 'CSV .csv', 'Text .txt'].map(t => (
             <span key={t} className="text-[10px] px-2 py-0.5 rounded-full font-mono text-slate-500 border"
               style={{ borderColor: 'rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)' }}>
               {t}
@@ -785,52 +814,29 @@ export function FinancialAnalyzer({
           ))}
         </div>
         <p className="text-[10px] text-slate-700 text-center max-w-xs">
-          Fundir AI reads your document and returns structured intelligence — grant alignment, action items, and strategic insights — in under 60 seconds.
+          Fundir detects what the document is — 990, budget, strategic plan, board minutes — and returns structured intelligence in under 60 seconds. No setup needed.
         </p>
       </div>
 
-      {/* Cloud storage */}
-      {anyConnected && (
-        <div>
-          <div className="flex items-center gap-2 mb-3">
-            <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.06)' }} />
-            <span className="text-[10px] text-slate-600 font-semibold uppercase tracking-widest">or import from cloud</span>
-            <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.06)' }} />
-          </div>
-          <div className="flex gap-3">
-            {googleConnected && (
-              <button onClick={() => setPhase('picking_google')}
-                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-[8px] border text-[12px] font-semibold text-slate-300 hover:border-blue-400/30 hover:text-white transition-all"
-                style={{ borderColor: 'rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)' }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
-                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-                </svg>
-                Google Drive
-              </button>
-            )}
-            {microsoftConnected && (
-              <button onClick={() => setPhase('picking_microsoft')}
-                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-[8px] border text-[12px] font-semibold text-slate-300 hover:border-sky-400/30 hover:text-white transition-all"
-                style={{ borderColor: 'rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)' }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                  <rect x="1"  y="1"  width="10" height="10" fill="#F25022"/>
-                  <rect x="13" y="1"  width="10" height="10" fill="#7FBA00"/>
-                  <rect x="1"  y="13" width="10" height="10" fill="#00A4EF"/>
-                  <rect x="13" y="13" width="10" height="10" fill="#FFB900"/>
-                </svg>
-                OneDrive
-              </button>
-            )}
-          </div>
-        </div>
-      )}
+      {/* Quiet override for the rare case auto-detection should be bypassed */}
+      <div className="flex items-center justify-end gap-2">
+        <label htmlFor="doc-type-select" className="text-[11px] text-slate-600">Document type</label>
+        <select
+          id="doc-type-select"
+          value={docType}
+          onChange={e => setDocType(e.target.value as DocTypeOrAuto)}
+          className="text-[12px] rounded-[6px] border px-2 py-1.5 text-slate-300 focus:outline-none"
+          style={{ borderColor: 'rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)' }}>
+          <option value="auto">Auto-detect (recommended)</option>
+          {DOC_TYPES.map(dt => (
+            <option key={dt.id} value={dt.id}>{dt.label}</option>
+          ))}
+        </select>
+      </div>
 
       {!anyConnected && (
         <p className="text-center text-[11px] text-slate-700">
-          Connect Google Drive or Microsoft 365 above to also import directly from cloud storage.
+          Sign in with Microsoft to browse OneDrive directly — no separate setup required.
         </p>
       )}
 

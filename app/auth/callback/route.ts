@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import type { CookieOptions } from '@supabase/ssr';
 import { provisionMembership, safeNextPath } from '@/lib/access-control';
+import { getIntegration } from '@/lib/oauth-tokens';
 
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
@@ -36,6 +37,7 @@ export async function GET(request: NextRequest) {
   // We may rewrite this URL below once we know whether the user is
   // provisioned or denied.
   let redirectTarget = `${baseUrl}${next}`;
+  let bounceToConnect = false;
   const response = NextResponse.redirect(redirectTarget);
 
   const supabase = createServerClient(
@@ -81,6 +83,32 @@ export async function GET(request: NextRequest) {
       denyUrl.searchParams.set('email', email);
       if (provider) denyUrl.searchParams.set('provider', provider);
       redirectTarget = denyUrl.toString();
+    } else if (
+      provider === 'azure' &&
+      result.orgCode &&
+      // If a previous bounce didn't end in a connection (declined consent,
+      // tenant admin-consent block, personal account), don't wall the user
+      // off at every sign-in — try again after the marker expires.
+      !request.cookies.get('ms_storage_prompted')
+    ) {
+      // Microsoft-first: signing in with Microsoft should also connect the
+      // org's Microsoft 365 storage. If the org has no integration yet,
+      // bounce once through the Graph OAuth flow (login_hint skips the
+      // account picker; after first consent this redirect is silent).
+      // Integrations are org-scoped, so this fires at most once per org.
+      try {
+        const existing = await getIntegration(result.orgCode, 'microsoft');
+        if (!existing) {
+          const connectUrl = new URL(`${baseUrl}/api/auth/microsoft`);
+          connectUrl.searchParams.set('org', result.orgCode);
+          connectUrl.searchParams.set('return', next);
+          connectUrl.searchParams.set('login_hint', email);
+          redirectTarget = connectUrl.toString();
+          bounceToConnect = true;
+        }
+      } catch {
+        // Storage auto-connect is best-effort — never block sign-in on it.
+      }
     }
   }
 
@@ -92,6 +120,18 @@ export async function GET(request: NextRequest) {
     response.cookies.getAll().forEach(c => {
       newResponse.cookies.set(c.name, c.value, c);
     });
+    if (bounceToConnect) {
+      // Mark that we prompted for storage consent so a declined/blocked
+      // consent doesn't re-wall the user at every sign-in for a week.
+      // (A successful connection makes this moot — the org integration
+      // check short-circuits the bounce entirely.)
+      newResponse.cookies.set('ms_storage_prompted', '1', {
+        maxAge: 60 * 60 * 24 * 7,
+        path: '/',
+        httpOnly: true,
+        sameSite: 'lax',
+      });
+    }
     return newResponse;
   }
   return response;

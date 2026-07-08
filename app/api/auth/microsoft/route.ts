@@ -8,8 +8,12 @@ const SCOPES = [
 ].join(' ');
 
 export async function GET(req: NextRequest) {
-  const orgCode  = req.nextUrl.searchParams.get('org');
-  const returnTo = req.nextUrl.searchParams.get('return') ?? '/settings';
+  const orgCode   = req.nextUrl.searchParams.get('org');
+  const returnTo  = req.nextUrl.searchParams.get('return') ?? '/settings';
+  // Optional: pre-select the Microsoft account (used by the post-login
+  // auto-connect bounce so users who just signed in with Microsoft don't
+  // hit the account picker a second time).
+  const loginHint = req.nextUrl.searchParams.get('login_hint');
 
   if (!orgCode) {
     return NextResponse.json({ error: 'missing required `org` query param' }, { status: 400 });
@@ -41,6 +45,7 @@ export async function GET(req: NextRequest) {
     scope:         SCOPES,
     state,
     response_mode: 'query',
+    ...(loginHint ? { login_hint: loginHint } : {}),
   });
 
   return NextResponse.redirect(
