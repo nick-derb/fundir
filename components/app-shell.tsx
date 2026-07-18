@@ -7,7 +7,7 @@ import {
   LayoutDashboard, Search, KanbanSquare, Settings, LogOut,
   BarChart3, CalendarDays, TrendingUp, Building2,
   Landmark, Shield, ChevronDown, Check, Sun, Moon,
-  Menu, X,
+  Menu, X, Database,
 } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/supabase';
 import { CommandPalette, CommandPaletteTrigger } from '@/components/command-palette';
@@ -18,6 +18,7 @@ import { bundledLogoFor } from '@/lib/org-logo';
 
 const NAV_ITEMS = [
   { href: '/dashboard',   label: 'Dashboard',   icon: LayoutDashboard },
+  { href: '/data',        label: 'Data Hub',    icon: Database        },
   { href: '/discover',    label: 'Matches',     icon: Search          },
   { href: '/pipeline',    label: 'Tracker',     icon: KanbanSquare    },
   { href: '/calendar',    label: 'Calendar',    icon: CalendarDays    },

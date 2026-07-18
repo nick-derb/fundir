@@ -12,7 +12,7 @@ export interface GraphFile {
   webUrl?: string;
 }
 
-async function graphFetch(
+export async function graphFetch(
   token: string,
   path: string,
   options?: RequestInit,
@@ -250,4 +250,33 @@ export async function getUserEmail(token: string): Promise<string> {
   const res = await graphFetch(token, '/me?$select=mail,userPrincipalName');
   const data = await res.json();
   return data.mail ?? data.userPrincipalName ?? '';
+}
+
+/**
+ * Write a text/markdown file into a named OneDrive folder (created if absent).
+ * Always creates a NEW file (conflictBehavior=rename) — never overwrites — so
+ * the agent's "save draft to OneDrive" action can't clobber a user's document.
+ */
+export async function uploadTextFile(
+  token: string,
+  name: string,
+  content: string,
+  opts?: { folderName?: string },
+): Promise<GraphFile> {
+  const folder = await findOrCreateFolder(token, opts?.folderName ?? 'Fundir Drafts');
+  const safeName = name.replace(/[\\/:*?"<>|]/g, '-').slice(0, 120);
+  const uploadPath =
+    `/me/drive/items/${folder.id}:/${encodeURIComponent(safeName)}:/content?@microsoft.graph.conflictBehavior=rename`;
+  const res = await fetch(`${GRAPH}${uploadPath}`, {
+    method: 'PUT',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'text/plain; charset=utf-8',
+    },
+    body: content,
+  });
+  if (!res.ok) {
+    throw new Error(`Graph upload ${res.status}: ${await res.text()}`);
+  }
+  return res.json();
 }

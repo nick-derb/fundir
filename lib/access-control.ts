@@ -155,7 +155,7 @@ export async function latestRequestStatus(email: string): Promise<{
 const INTERNAL_PATH_PREFIXES = [
   '/dashboard', '/discover', '/pipeline', '/settings', '/grant',
   '/financials', '/calendar', '/reports', '/org', '/foundations',
-  '/admin',
+  '/admin', '/data',
 ];
 
 export function safeNextPath(next: string | null | undefined): string {
