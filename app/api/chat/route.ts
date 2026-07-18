@@ -1,111 +1,89 @@
 import { NextRequest } from 'next/server';
-import Anthropic from '@anthropic-ai/sdk';
-import { createServerClient } from '@/lib/supabase';
-import { getAuthContext } from '@/lib/auth-context';
+import { agentContextFromSession, type AgentContext } from '@/lib/agent/context';
+import { AGENT_TOOLS } from '@/lib/agent/tools';
+import { runAgentStream } from '@/lib/agent/loop';
 import { getOrgFinancialProfile } from '@/lib/org-financials';
 
 export const maxDuration = 60;
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-
 interface ChatMessage { role: 'user' | 'assistant'; content: string; }
 
-async function buildMatchContext(orgId: string | undefined): Promise<string> {
-  if (!orgId) return 'No organization context for live grant matches.';
-  const db = createServerClient();
+// A grounded summary of the pipeline is injected into the system prompt so simple
+// questions answer instantly without a tool round-trip; the tools cover the rest
+// (searching OneDrive, reading a specific doc, saving a draft, deeper pipeline pulls).
+async function buildMatchContext(db: AgentContext['db'], orgId: string): Promise<string> {
   const { data } = await db
     .from('match_results')
-    .select('composite_score, pipeline_stage, recommendation, grant:grant_opportunities(title, agency_name, close_date)')
+    .select('composite_score, pipeline_stage, grant:grant_opportunities(title, agency_name, close_date)')
     .eq('org_id', orgId)
     .order('composite_score', { ascending: false })
-    .limit(15);
+    .limit(12);
 
-  if (!data?.length) {
-    return 'No grants discovered yet. Suggest the user run discovery from the Matches page.';
-  }
-  return data.map(m => {
+  if (!data?.length) return 'No grants discovered yet. Suggest the user run discovery from the Matches page.';
+  return data.map((m) => {
     const g = m.grant as { title?: string; agency_name?: string; close_date?: string } | null;
-    return `  - ${g?.title ?? 'Untitled grant'} (${g?.agency_name ?? 'agency unknown'}) — match score ${Math.round(m.composite_score)}/100, pipeline stage: ${m.pipeline_stage}${g?.close_date ? `, closes ${g.close_date}` : ''}`;
+    return `  - ${g?.title ?? 'Untitled grant'} (${g?.agency_name ?? 'agency unknown'}) — score ${Math.round(m.composite_score)}/100, stage: ${m.pipeline_stage}${g?.close_date ? `, closes ${g.close_date}` : ''}`;
   }).join('\n');
 }
 
-function systemPrompt(orgName: string, hasFinancialIntel: boolean, financialCtx: string, matchCtx: string): string {
+function systemPrompt(orgName: string, financialCtx: string, matchCtx: string): string {
   return `You are the Fundir Advisor — an AI grant strategist embedded in the Fundir platform, advising ${orgName}.
 
 Your job is to help nonprofit development staff make real funding decisions: which grants to prioritize, how to reduce funding-concentration risk, how to position the organization to funders, and how to interpret their own financials.
 
 GROUND RULES:
-- Be specific and concrete. Cite real numbers, real grant names, and real ALN codes from the context below. Never give generic nonprofit advice that could apply to any org.
+- Be specific and concrete. Cite real numbers, real grant names, and real ALN codes. Never give generic nonprofit advice that could apply to any org.
 - Be concise. This is a chat panel, not a report — 2 to 4 short paragraphs, or a tight bulleted list. Lead with the answer.
-- Be honest about risk. If the organization is financially stretched, say so plainly and explain what it means for how funders will see them.
-- When asked what to prioritize, rank explicitly and give the reasoning for the ranking.
-- You can draft funder-facing language — talking points, pitch paragraphs, email openers — when asked.
-- If a question needs data you don't have, say so, and point to where in Fundir to find it (Matches, Financials, Foundations, Calendar, Reports).
-- Never invent grant opportunities, dollar amounts, or funders. Only reference what is in the context.
-${hasFinancialIntel ? `
-${financialCtx}
-` : `
-This organization does not yet have a full financial intelligence profile loaded. Work from the grant pipeline below and general grant strategy.
-`}
-CURRENT GRANT PIPELINE (live matches from Fundir's discovery engine, highest match score first):
+- Be honest about risk. If the organization is financially stretched, say so plainly.
+- When asked what to prioritize, rank explicitly and give the reasoning.
+- Never invent grant opportunities, dollar amounts, or funders. Only reference real data.
+
+TOOLS — use them when the question needs live or specific data:
+- search_grant_pipeline / get_financial_snapshot: pull fuller or fresher data than the summary below.
+- search_documents + read_document: find and read the org's own OneDrive files (990s, budgets, board minutes, strategic plans) to ground your advice in their actual documents.
+- save_draft_to_onedrive: when the user asks to save or export something you drafted, write it to their OneDrive.
+Only call a tool when it adds something the summary below doesn't already give you.
+${financialCtx ? `\nFINANCIAL INTELLIGENCE:\n${financialCtx}\n` : `\nThis organization has no full financial profile loaded yet — use get_financial_snapshot or work from the pipeline below.\n`}
+CURRENT GRANT PIPELINE (top live matches, highest score first):
 ${matchCtx}`;
 }
 
 export async function POST(req: NextRequest) {
-  // Auth FIRST — derive org identity from the session, never trust the body.
-  const ctx = await getAuthContext();
-  if (!ctx) {
-    return new Response('Not authenticated.', { status: 401 });
-  }
+  const ctx = await agentContextFromSession();
+  if (!ctx) return new Response('Not authenticated.', { status: 401 });
   if (!process.env.ANTHROPIC_API_KEY) {
     return new Response('The advisor is not configured (missing API key).', { status: 503 });
   }
 
   let body: { messages?: ChatMessage[] };
-  try {
-    body = await req.json();
-  } catch {
-    return new Response('Invalid request body.', { status: 400 });
-  }
+  try { body = await req.json(); }
+  catch { return new Response('Invalid request body.', { status: 400 }); }
 
-  const messages = body.messages ?? [];
-  if (!messages.length) {
-    return new Response('No messages provided.', { status: 400 });
-  }
-
-  // Org identity comes from auth, NOT the request body. The rich financial-
-  // intelligence prose only applies to orgs whose fixture in
-  // lib/org-financials.ts exposes a buildIntelligenceContext factory. The
-  // gate is the existence of that factory — no hardcoded org-code check.
-  const orgCode = ctx.orgCode;
-  const orgId   = ctx.orgId;
-  const orgName = ctx.orgName;
-  const orgFin  = await getOrgFinancialProfile(orgCode);
-  const financialCtx       = orgFin?.buildIntelligenceContext?.() ?? '';
-  const hasFinancialIntel  = financialCtx.length > 0;
-  const matchCtx           = await buildMatchContext(orgId);
-
-  // Cap history to the last 12 turns to control token cost
-  const trimmed = messages
+  const messages = (body.messages ?? [])
     .slice(-12)
-    .filter(m => m.content?.trim())
-    .map(m => ({ role: m.role, content: m.content }));
+    .filter((m) => m.content?.trim())
+    .map((m) => ({ role: m.role, content: m.content }));
+  if (!messages.length) return new Response('No messages provided.', { status: 400 });
 
-  const stream = client.messages.stream({
-    model:      'claude-sonnet-4-6',
-    max_tokens: 1024,
-    system:     systemPrompt(orgName, hasFinancialIntel, financialCtx, matchCtx),
-    messages:   trimmed,
-  });
+  const fin = await getOrgFinancialProfile(ctx.orgCode);
+  const financialCtx = fin?.buildIntelligenceContext?.() ?? '';
+  const matchCtx = await buildMatchContext(ctx.db, ctx.orgId);
+  const system = systemPrompt(ctx.orgName, financialCtx, matchCtx);
 
   const encoder = new TextEncoder();
   const readable = new ReadableStream({
     async start(controller) {
       try {
-        for await (const event of stream) {
-          if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
-            controller.enqueue(encoder.encode(event.delta.text));
-          }
+        for await (const event of runAgentStream({
+          context: ctx,
+          system,
+          messages,
+          tools: AGENT_TOOLS,
+          maxTokens: 1500,
+        })) {
+          if (event.type === 'text') controller.enqueue(encoder.encode(event.text));
+          // tool_start / done are progress signals — the panel shows its own
+          // "Thinking…" state, so we don't inject status text into the bubble.
         }
       } catch {
         controller.enqueue(encoder.encode('\n\n[The advisor was interrupted. Please try again.]'));
@@ -116,9 +94,6 @@ export async function POST(req: NextRequest) {
   });
 
   return new Response(readable, {
-    headers: {
-      'Content-Type':  'text/plain; charset=utf-8',
-      'Cache-Control': 'no-store',
-    },
+    headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' },
   });
 }
