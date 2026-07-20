@@ -8,7 +8,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Table2, RefreshCw, ExternalLink, Loader2, Plus, FileText,
-  FolderOpen, CloudUpload, CheckCircle2, AlertTriangle, Users,
+  FolderOpen, CloudUpload, CheckCircle2, AlertTriangle, Users, Activity,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -19,6 +19,15 @@ interface HubRow {
 interface HubDoc {
   id: string; name: string; size: number; webUrl: string | null;
   modified: string | null; modifiedBy: string | null;
+}
+interface HubHealth {
+  account: string | null;
+  connectedAt: string | null;
+  expiresAt: string | null;
+  tokenStatus: 'valid' | 'expiring' | 'expired' | 'unknown';
+  graphMs: number;
+  rowCount: number;
+  docCount: number;
 }
 
 const METRICS = [
@@ -46,11 +55,88 @@ function currentMonth() {
   return new Date().toISOString().slice(0, 7);
 }
 
+const STATUS_META: Record<HubHealth['tokenStatus'], { label: string; color: string; note: string }> = {
+  valid:    { label: 'Live',              color: 'var(--success)',  note: 'renews' },
+  expiring: { label: 'Token expiring',    color: 'var(--warning)',  note: 'renews' },
+  expired:  { label: 'Reconnect needed',  color: 'var(--critical)', note: 'expired' },
+  unknown:  { label: 'Connected',         color: 'var(--info)',     note: '' },
+};
+
+// Connection-health card — lets any CYC user confirm the shared workbook is
+// genuinely wired to Microsoft 365, and an admin spot a stale token early.
+function HealthCard({ health, workbookUrl }: { health: HubHealth; workbookUrl: string | null }) {
+  const meta = STATUS_META[health.tokenStatus];
+  const speed =
+    health.graphMs < 900   ? 'fast'
+    : health.graphMs < 2500 ? 'ok'
+    :                         'slow';
+  const speedColor =
+    speed === 'fast' ? 'var(--success)' : speed === 'ok' ? 'var(--warning)' : 'var(--critical)';
+
+  return (
+    <div className="bg-surface rounded-xl border border-hairline p-5">
+      <div className="flex items-center gap-2 mb-3">
+        <Activity className="w-4 h-4 text-accent" />
+        <h3 className="text-[13.5px] font-bold text-primary flex-1">Connection health</h3>
+        <span className="inline-flex items-center gap-1.5 text-[11.5px] font-semibold" style={{ color: meta.color }}>
+          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: meta.color }} />
+          {meta.label}
+        </span>
+      </div>
+
+      <dl className="space-y-2 text-[12px]">
+        <div className="flex items-baseline justify-between gap-3">
+          <dt className="text-secondary">Microsoft account</dt>
+          <dd className="font-medium text-primary truncate max-w-[62%] text-right" title={health.account ?? ''}>
+            {health.account ?? '—'}
+          </dd>
+        </div>
+        <div className="flex items-baseline justify-between gap-3">
+          <dt className="text-secondary">Token</dt>
+          <dd className="text-primary text-right">
+            {health.tokenStatus === 'expired'
+              ? 'Expired — reconnect in Settings'
+              : health.expiresAt
+                ? <>Valid · {meta.note} {fmtDate(health.expiresAt)}</>
+                : 'Valid'}
+          </dd>
+        </div>
+        <div className="flex items-baseline justify-between gap-3">
+          <dt className="text-secondary">Round-trip</dt>
+          <dd className="font-mono tabular-nums text-right" style={{ color: speedColor }}>
+            {health.graphMs} ms
+          </dd>
+        </div>
+        <div className="flex items-baseline justify-between gap-3">
+          <dt className="text-secondary">Live contents</dt>
+          <dd className="font-mono tabular-nums text-primary text-right">
+            {health.rowCount} {health.rowCount === 1 ? 'entry' : 'entries'} · {health.docCount} {health.docCount === 1 ? 'doc' : 'docs'}
+          </dd>
+        </div>
+      </dl>
+
+      {workbookUrl && (
+        <a href={workbookUrl} target="_blank" rel="noreferrer"
+          className="mt-3.5 w-full flex items-center justify-center gap-1.5 py-2 rounded-md border border-hairline text-[12px] font-semibold text-primary hover:border-accent/40 transition-colors">
+          Verify in Excel <ExternalLink className="w-3 h-3" />
+        </a>
+      )}
+      {health.tokenStatus === 'expired' && (
+        <Link href="/settings"
+          className="mt-2 w-full flex items-center justify-center gap-1.5 py-2 rounded-md text-[12px] font-semibold text-white bg-accent hover:bg-accent-hover transition-colors">
+          Reconnect Microsoft 365
+        </Link>
+      )}
+    </div>
+  );
+}
+
 export function DataHub({ userEmail }: { userEmail: string }) {
   const [rows, setRows]               = useState<HubRow[]>([]);
   const [docs, setDocs]               = useState<HubDoc[]>([]);
   const [workbookUrl, setWorkbookUrl] = useState<string | null>(null);
   const [docsUrl, setDocsUrl]         = useState<string | null>(null);
+  const [health, setHealth]           = useState<HubHealth | null>(null);
   const [connected, setConnected]     = useState<boolean | null>(null);
   const [loading, setLoading]         = useState(true);
   const [refreshing, setRefreshing]   = useState(false);
@@ -73,16 +159,16 @@ export function DataHub({ userEmail }: { userEmail: string }) {
     if (isRefresh) setRefreshing(true);
     setError('');
     try {
-      const [rowsRes, docsRes] = await Promise.all([
-        fetch('/api/data-hub/rows').then(r => r.json()),
-        fetch('/api/data-hub/documents').then(r => r.json()),
-      ]);
-      if (rowsRes.error) throw new Error(rowsRes.error);
-      setConnected(rowsRes.connected !== false);
-      setRows(rowsRes.rows ?? []);
-      setWorkbookUrl(rowsRes.workbookUrl ?? null);
-      setDocsUrl(rowsRes.docsUrl ?? docsRes.docsUrl ?? null);
-      if (!docsRes.error) setDocs(docsRes.documents ?? []);
+      // One request: rows + documents + connection health, resolved server-side
+      // from a cached OneDrive handle (no per-open folder rediscovery).
+      const res = await fetch('/api/data-hub/state').then(r => r.json());
+      if (res.error) throw new Error(res.error);
+      setConnected(res.connected !== false);
+      setRows(res.rows ?? []);
+      setDocs(res.documents ?? []);
+      setWorkbookUrl(res.workbookUrl ?? null);
+      setDocsUrl(res.docsUrl ?? null);
+      setHealth(res.health ?? null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not load the Data Hub');
     } finally {
@@ -249,8 +335,11 @@ export function DataHub({ userEmail }: { userEmail: string }) {
         </div>
       </div>
 
-      {/* ── RIGHT: submit form + shared documents ── */}
+      {/* ── RIGHT: connection health + submit form + shared documents ── */}
       <div className="space-y-6">
+
+        {/* Connection health — proof the Microsoft 365 link is live */}
+        {health && <HealthCard health={health} workbookUrl={workbookUrl} />}
 
         {/* Submission form */}
         <div className="bg-surface rounded-xl border border-hairline p-5">

@@ -1,29 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthContext } from '@/lib/auth-context';
 import { getValidToken } from '@/lib/oauth-tokens';
-import { listRows, appendRow } from '@/lib/data-hub';
+import { appendRow } from '@/lib/data-hub';
 
 export const maxDuration = 60;
 
-/** GET — all rows of the shared workbook (newest first) + Excel/folder links. */
-export async function GET() {
-  const ctx = await getAuthContext();
-  if (!ctx) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
-
-  const token = await getValidToken(ctx.orgCode, 'microsoft');
-  if (!token) {
-    // Not an error — the UI shows a connect prompt instead of the grid.
-    return NextResponse.json({ connected: false, rows: [] });
-  }
-
-  try {
-    const { rows, workbookUrl, docsUrl } = await listRows(token);
-    return NextResponse.json({ connected: true, rows, workbookUrl, docsUrl });
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : 'Could not read the shared workbook';
-    return NextResponse.json({ error: msg }, { status: 500 });
-  }
-}
+// Reads are served by GET /api/data-hub/state (rows + documents + health in one
+// resolve). This route is append-only.
 
 /** POST — append one submission to the shared workbook. */
 export async function POST(req: NextRequest) {
@@ -51,7 +34,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    await appendRow(token, {
+    await appendRow(token, ctx.orgCode, {
       submittedBy: ctx.email,
       site, period, metric, value, notes,
     });
