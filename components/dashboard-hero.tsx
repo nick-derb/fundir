@@ -1,5 +1,13 @@
 'use client';
 
+// ⚠ PARKED — not currently rendered anywhere (removed from /dashboard on
+// 2026-08-12 in favor of <CycHeroTransform/>). Kept intentionally so the
+// CYC × Fundir co-brand lockup with the animated data pulse (the circle that
+// travels between the two logos) can be re-implemented later. To bring it
+// back, import { DashboardHero } into app/dashboard/page.tsx and restore the
+// hero inputs (today, sources, syncedLabel, tickerMessages, heroKpis) — see
+// git history for that commit. Do not delete.
+//
 // Dashboard hero — the "clean white console" treatment (from the reference):
 // a provenance strip, an org × Fundir co-brand lockup with an animated data
 // pulse, a rotating system ticker, and an animated KPI strip (count-up +

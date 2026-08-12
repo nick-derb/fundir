@@ -11,11 +11,11 @@ import { loadCraIntelligence } from '@/lib/cra/intelligence';
 import { loadOrgCraSnapshot } from '@/lib/cra/repo';
 import { loadFunderIntelligence } from '@/lib/funder-intel/repo';
 import { bundledLogoFor } from '@/lib/org-logo';
-import { DashboardHero, type HeroKpi } from '@/components/dashboard-hero';
 import {
   DashboardConsole,
   type CraRowVM, type DeadlineVM, type FunderVM,
 } from '@/components/dashboard-console';
+import { CycHeroTransform } from '@/components/cyc-hero-transform';
 
 // ── Logo auto-fetch via ProPublica EIN → website → Clearbit ──────────────────
 async function getOrgLogoUrl(ein?: string | null): Promise<string | null> {
@@ -111,45 +111,8 @@ export default async function DashboardPage() {
   const data = await getDashboardData(ctx.orgId, ctx.orgCode);
   const now  = Date.now();
 
-  const today = new Date().toLocaleDateString('en-US', {
-    weekday: 'long', month: 'long', day: 'numeric',
-  });
-
-  const avgScore = data.matches.length
-    ? Math.round(data.matches.reduce((s, m) => s + m.composite_score, 0) / data.matches.length)
-    : 0;
-
-  // ── Console-hero inputs — all derived from real data ─────────────────────
-  const sources = [
-    data.org?.financial_year ? `IRS 990 FY${data.org.financial_year}` : 'IRS 990',
-    'GATA',
-    data.craRows.length > 0 ? 'CRA' : null,
-  ].filter(Boolean).join(' · ');
-
-  const syncedLabel = data.org?.financial_fetched_at
-    ? new Date(data.org.financial_fetched_at as string).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-    : 'today';
-
-  const tickerMessages = [
-    `${data.totalTracked} opportunities tracked · ${data.highMatches} high-match`,
-    data.urgentGrants.length > 0 ? `${data.urgentGrants.length} deadlines closing within 14 days` : null,
-    data.totalAwardPotential > 0 ? `${fmtMoney(data.totalAwardPotential)} in award potential · score-60+ grants` : null,
-    data.craRows.length > 0 ? `${data.craRows.length} CRA banks reach your community` : null,
-    data.org?.ein ? `990 filing sync verified · EIN ${data.org.ein}` : null,
-  ].filter((m): m is string => Boolean(m));
-
-  const heroKpis: HeroKpi[] = [
-    { label: 'Tracked', value: data.totalTracked, caption: `${data.highMatches} high-match`,
-      spark: '2,18 14,15 26,16 38,11 50,9 62,5' },
-    { label: 'Avg score', value: avgScore,
-      tone: avgScore >= 60 ? 'accent' : avgScore >= 40 ? 'warning' : 'critical',
-      caption: 'composite, all matches', spark: '2,13 14,12 26,14 38,12 50,13 62,12' },
-    { label: 'Award potential', value: Math.round(data.totalAwardPotential / 1000), pre: '$', suf: 'K',
-      caption: 'score ≥ 60 grants', spark: '2,20 14,17 26,13 38,12 50,8 62,4' },
-    { label: 'Urgent', value: data.urgentGrants.length,
-      tone: data.urgentGrants.length > 0 ? 'critical' : undefined,
-      caption: 'closing ≤ 14 days', spark: '2,8 14,10 26,12 38,14 50,15 62,17' },
-  ];
+  // CYC tenant gets the branded post-login skyline hero (org_code CYC*).
+  const isCyc = ctx.orgCode?.toUpperCase().startsWith('CYC') ?? false;
 
   // ── FIG-section view models (real data) ──────────────────────────────────
   const totalPeerFunding = data.craRows.reduce((s, r) => s + r.peer_total_amount, 0);
@@ -195,6 +158,13 @@ export default async function DashboardPage() {
     >
       <div className="px-4 sm:px-6 md:px-8 py-6 max-w-7xl mx-auto space-y-2">
 
+        {/* ── CYC branded post-login hero (plays once per session) ── */}
+        {isCyc && (
+          <div className="mb-3">
+            <CycHeroTransform />
+          </div>
+        )}
+
         {/* ── Brand-new org: empty-state hero ─────────────────── */}
         {data.totalTracked === 0 ? (
           <div className="bg-surface border border-hairline rounded-sm px-6 md:px-10 py-10 md:py-12 max-w-3xl">
@@ -221,18 +191,6 @@ export default async function DashboardPage() {
           </div>
         ) : (
           <>
-            {/* Console hero — provenance, CYC × Fundir lockup, animated KPIs */}
-            <DashboardHero
-              orgName={data.org?.name ?? ctx.orgName}
-              logoUrl={data.logoUrl}
-              today={today}
-              ein={data.org?.ein ?? null}
-              sources={sources}
-              syncedLabel={syncedLabel}
-              tickerMessages={tickerMessages}
-              kpis={heroKpis}
-            />
-
             {/* FIG.01 CRA · FIG.02 Deadlines · FIG.03 Funder prospects */}
             <DashboardConsole
               cra={{ rows: craRowsVM, meta: craMeta }}
