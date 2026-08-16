@@ -21,10 +21,10 @@ window.FundirField = {
       g.lineCap = 'butt'; g.strokeStyle = '#000'; g.fillStyle = '#000';
       g.lineWidth = 8 * k;
       g.beginPath(); g.moveTo(-4 * k, 43 * k); g.lineTo(61 * k, 43 * k); g.stroke();
-      g.beginPath(); g.moveTo(39 * k, 25 * k); g.lineTo(61 * k, 25 * k); g.stroke();
+      g.beginPath(); g.moveTo(39 * k, 25 * k); g.lineTo(63 * k, 25 * k); g.stroke();
       g.beginPath(); g.moveTo(39.5 * k, 22 * k); g.lineTo(31 * k, 72 * k); g.stroke();
       g.beginPath();
-      g.moveTo(61 * k, 16.5 * k); g.lineTo(75 * k, 25 * k); g.lineTo(61 * k, 33.5 * k);
+      g.moveTo(59 * k, 16.5 * k); g.lineTo(75 * k, 25 * k); g.lineTo(59 * k, 33.5 * k);
       g.closePath(); g.fill();
 
       g.globalCompositeOperation = 'destination-in';
@@ -88,10 +88,10 @@ window.FundirField = {
           var hsh = (((gx * 7301) ^ (gy * 1933)) % 977) / 977;
           var pick = (n * 0.5 + 0.5) * 0.70 + hsh * 0.30;
           var gl = SET[(pick * SET.length) | 0];
-          var a = (0.11 + m * 0.38);
+          var a = (0.16 + m * 0.52);
           if (m < 0.20) a *= 0.35 + 0.65 * (n * 0.5 + 0.5);
           a *= global;
-          x.fillStyle = 'rgba(16,25,23,' + a.toFixed(3) + ')';
+          x.fillStyle = 'rgba(58,110,88,' + a.toFixed(3) + ')';
           x.fillText(gl, gx, gy);
         }
       }
