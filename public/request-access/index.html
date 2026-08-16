@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Request access — Fundir</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="/landing/support.js"></script>
+</head>
+<body>
+<x-dc>
+<!-- @template name="Request access page" description="Fundir access request form — glyph-field panel, paper surface, matching wordmark footer." -->
+<helmet>
+<script src="/landing/ds-base.js"></script>
+<script src="/request-access/field.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Inter:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#F7F8F7;color:#101917}
+:focus-visible{outline:2px solid #0C6B5A;outline-offset:3px;border-radius:2px}
+input,select,textarea{font:inherit;color:inherit}
+input::placeholder,textarea::placeholder{color:#A3AFAA}
+input:focus,select:focus,textarea:focus{outline:none;border-color:#0C6B5A;box-shadow:0 0 0 3px rgba(12,107,90,.09)}
+@keyframes fd-pulse{0%,100%{opacity:1}50%{opacity:.25}}
+@media (max-width:940px){[data-ra-grid]{grid-template-columns:1fr!important;gap:0!important}[data-ra-aside]{display:none!important}[data-ra-pad]{padding-left:24px!important;padding-right:24px!important}}
+@media (max-width:620px){[data-ra-two]{grid-template-columns:1fr!important}}
+</style>
+</helmet>
+<div style="font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:#F7F8F7;color:#101917;-webkit-font-smoothing:antialiased;overflow-x:clip">
+
+<div style="position:relative;z-index:11;background:#101917;color:#E6EBE8;display:flex;align-items:center;justify-content:center;gap:14px;padding:8px 24px;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;letter-spacing:.13em;text-transform:uppercase;flex-wrap:wrap">
+<span style="display:flex;align-items:center;gap:7px"><i style="width:5px;height:5px;border-radius:50%;background:#659A80;display:inline-block;animation:fd-pulse 2.6s ease-in-out infinite"></i>In beta testing with <a href="https://chicagoyouthcenters.org" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline;text-underline-offset:3px;text-decoration-color:rgba(230,235,232,.4);transition:color .15s" style-hover="color:#659A80">Chicago Youth Centers (CYC)</a></span>
+<span style="color:rgba(230,235,232,.45)">Chicago, IL</span>
+</div>
+
+<header data-ra-pad style="display:flex;align-items:center;justify-content:space-between;padding:20px 40px">
+<a href="/" style="display:flex;align-items:center;gap:10px;text-decoration:none;color:inherit">
+<img src="/landing/assets/fundir-mark.png" alt="Fundir" style="height:26px;width:auto;display:block">
+<span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12px;font-weight:500;letter-spacing:.22em;text-transform:uppercase">Fundir</span>
+</a>
+<a href="/" style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#5E6D67;text-decoration:none;transition:color .15s" style-hover="color:#101917">&larr; Back</a>
+</header>
+
+<main data-ra-grid data-ra-pad style="max-width:1180px;margin:0 auto;padding:40px;display:grid;grid-template-columns:1.02fr .98fr;gap:72px;align-items:start">
+
+<div>
+<p style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;letter-spacing:.17em;text-transform:uppercase;color:#9AA7A1;margin:0 0 22px">Request access</p>
+<h1 style="font-family:'Instrument Serif',Palatino,Georgia,serif;font-weight:400;font-size:clamp(2.4rem,4.6vw,4rem);line-height:1.02;letter-spacing:-.02em;margin:0 0 18px;max-width:15ch">Tell us about your organization.</h1>
+<p style="margin:0 0 32px;font-size:15px;line-height:1.7;color:#5E6D67;max-width:46ch">Fundir is onboarding a small number of development teams during the beta. Expect a response within 24 hours.</p>
+
+<form data-ra-form novalidate style="display:block">
+<div data-ra-two style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+<label style="display:block"><span style="display:block;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;color:#9AA7A1;margin-bottom:7px">First name</span><input name="first" required autocomplete="given-name" style="width:100%;padding:12px 13px;font-size:14px;background:#fff;border:1px solid #DFE5E2;border-radius:5px;transition:border-color .15s,box-shadow .15s"></label>
+<label style="display:block"><span style="display:block;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;color:#9AA7A1;margin-bottom:7px">Last name</span><input name="last" required autocomplete="family-name" style="width:100%;padding:12px 13px;font-size:14px;background:#fff;border:1px solid #DFE5E2;border-radius:5px;transition:border-color .15s,box-shadow .15s"></label>
+</div>
+<label style="display:block;margin-bottom:16px"><span style="display:block;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;color:#9AA7A1;margin-bottom:7px">Work email</span><input name="email" type="email" required autocomplete="email" placeholder="you@organization.org" style="width:100%;padding:12px 13px;font-size:14px;background:#fff;border:1px solid #DFE5E2;border-radius:5px;transition:border-color .15s,box-shadow .15s"></label>
+<label style="display:block;margin-bottom:16px"><span style="display:block;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;color:#9AA7A1;margin-bottom:7px">Organization</span><input name="org" required autocomplete="organization" style="width:100%;padding:12px 13px;font-size:14px;background:#fff;border:1px solid #DFE5E2;border-radius:5px;transition:border-color .15s,box-shadow .15s"></label>
+<div data-ra-two style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+<label style="display:block"><span style="display:block;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;color:#9AA7A1;margin-bottom:7px">Role</span><input name="role" autocomplete="organization-title" placeholder="Director of Development" style="width:100%;padding:12px 13px;font-size:14px;background:#fff;border:1px solid #DFE5E2;border-radius:5px;transition:border-color .15s,box-shadow .15s"></label>
+<label style="display:block"><span style="display:block;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;color:#9AA7A1;margin-bottom:7px">Development team size</span><select name="size" style="width:100%;padding:12px 13px;font-size:14px;background:#fff;border:1px solid #DFE5E2;border-radius:5px;appearance:none;transition:border-color .15s,box-shadow .15s"><option value="">Select</option><option>Just me</option><option>2 to 4</option><option>5 to 10</option><option>More than 10</option></select></label>
+</div>
+<label style="display:block;margin-bottom:22px"><span style="display:block;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;color:#9AA7A1;margin-bottom:7px">What are you hoping Fundir helps with? <i style="font-style:normal;text-transform:none;letter-spacing:0;color:#C2CCC7">Optional</i></span><textarea name="notes" rows="3" style="width:100%;padding:12px 13px;font-size:14px;line-height:1.6;background:#fff;border:1px solid #DFE5E2;border-radius:5px;resize:vertical;transition:border-color .15s,box-shadow .15s"></textarea></label>
+<div style="display:flex;align-items:center;gap:18px;flex-wrap:wrap">
+<button type="submit" data-ra-submit style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;letter-spacing:.13em;text-transform:uppercase;padding:15px 28px;border-radius:999px;border:none;background:#101917;color:#F7F8F7;cursor:pointer;transition:background .15s" style-hover="background:#000">Submit request</button>
+<span data-ra-note style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:9.5px;letter-spacing:.11em;text-transform:uppercase;color:#9AA7A1">Response within 24 hours</span>
+</div>
+</form>
+
+<div data-ra-done style="display:none;border:1px solid #DFE5E2;border-radius:6px;background:#fff;padding:28px 30px">
+<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px"><i style="width:7px;height:7px;border-radius:50%;background:#0C6B5A;display:block"></i><span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;color:#0C6B5A">Request received</span></div>
+<h2 style="font-family:'Instrument Serif',Palatino,Georgia,serif;font-weight:400;font-size:1.9rem;line-height:1.14;letter-spacing:-.015em;margin:0 0 10px">Thank you, <span data-ra-name>there</span>.</h2>
+<p style="margin:0;font-size:14.5px;line-height:1.7;color:#5E6D67;max-width:44ch">We will review your request and get back to you within 24 hours at the address you provided.</p>
+</div>
+</div>
+
+<div data-ra-aside style="position:relative;min-height:520px;align-self:stretch">
+<canvas data-ra-field aria-hidden="true" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none"></canvas>
+</div>
+</main>
+
+<div aria-hidden="true" style="position:relative;z-index:2;height:320px;margin-top:80px;background:linear-gradient(to bottom,#F7F8F7 0%,#EDF2EF 12%,#DCE8E1 24%,#B9D2C4 38%,#8FB7A2 50%,#679880 60%,#47765F 69%,#2F5847 78%,#1E3B30 86%,#152720 93%,#101917 100%)"></div>
+<footer style="position:relative;z-index:2;background:#101917;color:#F7F8F7;padding:88px 0 0;overflow:hidden">
+<div style="width:100%;padding:0 clamp(8px,1.4vw,20px)">
+<h2 style="font-family:'Instrument Serif',Palatino,Georgia,serif;font-weight:400;font-size:clamp(3rem,20.4vw,20rem);line-height:.82;letter-spacing:-.045em;margin:0;text-align:center;white-space:nowrap">Fundir.ai</h2>
+</div>
+<p style="text-align:center;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:rgba(247,248,247,.45);margin:36px 0 0;padding:0 40px 40px">&copy; 2026 Fundir</p>
+</footer>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;adminEmail&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;nickderbis@gmail.com&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Delivery&quot;}}">
+class Component extends DCLogic {
+  componentDidMount() {
+    const cv = document.querySelector('[data-ra-field]');
+    if (cv && window.FundirField) window.FundirField.init(cv);
+
+    const form = document.querySelector('[data-ra-form]');
+    const done = document.querySelector('[data-ra-done]');
+    if (!form) return;
+
+    const invalid = (el, bad) => {
+      el.style.borderColor = bad ? '#B4453A' : '#DFE5E2';
+      el.style.boxShadow = bad ? '0 0 0 3px rgba(180,69,58,.08)' : 'none';
+    };
+    form.addEventListener('input', e => { if (e.target.name) invalid(e.target, false); });
+
+    form.addEventListener('submit', e => {
+      e.preventDefault();
+      const req = [...form.querySelectorAll('[required]')];
+      let bad = false;
+      req.forEach(el => {
+        const empty = !el.value.trim();
+        const badEmail = el.type === 'email' && el.value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(el.value);
+        if (empty || badEmail) { invalid(el, true); bad = true; }
+      });
+      if (bad) { req.find(el => el.style.borderColor === 'rgb(180, 69, 58)')?.focus(); return; }
+
+      const d = Object.fromEntries(new FormData(form).entries());
+      const to = this.props.adminEmail || 'nickderbis@gmail.com';
+      const body = [
+        `Name: ${d.first || ''} ${d.last || ''}`.trim(),
+        `Email: ${d.email || ''}`,
+        `Organization: ${d.org || ''}`,
+        `Role: ${d.role || '—'}`,
+        `Team size: ${d.size || '—'}`,
+        '',
+        'Notes:',
+        d.notes || '—'
+      ].join('\n');
+      fetch('/api/request-access', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(d) }).catch(function () {});
+
+      const nameSlot = document.querySelector('[data-ra-name]');
+      if (nameSlot && d.first) nameSlot.textContent = d.first.trim();
+      form.style.display = 'none';
+      if (done) done.style.display = 'block';
+    });
+  }
+}
+
+</script>
+</body>
+</html>
