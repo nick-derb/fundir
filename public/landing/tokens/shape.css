@@ -1,0 +1,14 @@
+/* One radius system. Elevation is a surface tint, not a shadow —
+   the single shadow token is for floating overlays only. */
+:root{
+  --radius:8px;
+  --radius-sm:6px;
+  --radius-console:14px;   /* dashboard console cards */
+  --radius-kpi:12px;
+  --radius-pill:9999px;    /* avatars + status dots ONLY */
+  --border-width:1px; /* @kind other */
+  --border-semantic:3px; /* @kind other */   /* semantic left border on flag rows */
+  --border-nav-active:2px; /* @kind other */ /* active sidebar bar */
+  --shadow-overlay:0 1px 2px rgba(11,18,32,0.06),0 4px 12px rgba(11,18,32,0.05);
+  --shadow-none:none;
+}

@@ -1,0 +1,19 @@
+/* 4px base. Only these steps ship. */
+:root{
+  --space-1:4px;
+  --space-2:8px;
+  --space-3:12px;
+  --space-4:16px;
+  --space-5:20px;
+  --space-6:24px;
+  --space-8:32px;
+  --space-12:48px;
+
+  --card-pad:20px;      /* 20–24 */
+  --card-pad-lg:24px;
+  --section-gap:24px;   /* 24–32 */
+  --section-gap-lg:32px;
+  --max-content:1280px;
+  --sidebar-w:224px;    /* w-56 */
+  --topbar-h:48px;      /* h-12 */
+}

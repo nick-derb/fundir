@@ -1,0 +1,30 @@
+/* Base element defaults, shared by every Fundir surface. */
+*{box-sizing:border-box}
+html{color-scheme:light}
+html[data-theme="dark"]{color-scheme:dark}
+
+body{
+  margin:0;
+  background-color:var(--bg-page);
+  color:var(--text-primary);
+  font-family:var(--font-sans);
+  font-size:var(--text-body);
+  line-height:var(--lh-body);
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+}
+
+[data-numeric],.tabular-nums,.font-mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+
+a{color:var(--accent);text-decoration:none;transition:color var(--motion-fast)}
+a:hover{color:var(--accent-hover);text-decoration:underline}
+
+::selection{background:var(--selection-bg);color:var(--selection-fg)}
+
+:focus-visible{outline:2px solid var(--focus-ring);outline-offset:2px;border-radius:var(--radius-sm)}
+
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--ink-300);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--ink-400)}
+[data-theme="dark"] ::-webkit-scrollbar-thumb{background:var(--ink-700)}

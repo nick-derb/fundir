@@ -6,6 +6,16 @@ const nextConfig: NextConfig = {
       allowedOrigins: ['*'],
     },
   },
+  // Homepage is the Claude Design landing, served as a self-contained static
+  // export (public/landing/index.html, built by scripts/build-landing.mjs).
+  // beforeFiles wins over the app router, so "/" renders the design directly.
+  async rewrites() {
+    return {
+      beforeFiles: [{ source: '/', destination: '/landing/index.html' }],
+      afterFiles: [],
+      fallback: [],
+    };
+  },
 };
 
 export default nextConfig;

@@ -1,0 +1,27 @@
+/* Operations-console type scale. Sans for prose, mono for every numeral.
+   Values are lifted verbatim from tailwind.config.ts. */
+
+:root{
+  --text-display:30px;   --lh-display:34px;   --ls-display:-0.02em; /* @kind other */ --fw-display:600; /* @kind other */
+  --text-h1:22px;        --lh-h1:28px;        --ls-h1:-0.01em;      --fw-h1:600; /* @kind other */
+  --text-h2:17px;        --lh-h2:24px;                              --fw-h2:600; /* @kind other */
+  --text-h3:15px;        --lh-h3:22px;                              --fw-h3:600; /* @kind other */
+  --text-body:14px;      --lh-body:22px;                            --fw-body:400; /* @kind other */
+  --text-body-strong:14px; --lh-body-strong:22px;                   --fw-body-strong:500; /* @kind other */
+  --text-data:14px;      --lh-data:20px;                            --fw-data:500; /* @kind other */
+  --text-kpi:28px;       --lh-kpi:32px;       --ls-kpi:-0.01em; /* @kind other */     --fw-kpi:600; /* @kind other */
+  --text-caption:12px;   --lh-caption:18px;                         --fw-caption:400; /* @kind other */
+  --text-eyebrow:11px;   --lh-eyebrow:14px;   --ls-eyebrow:0.08em; /* @kind other */  --fw-eyebrow:600; /* @kind other */
+}
+
+.fd-display{font-size:var(--text-display);line-height:var(--lh-display);letter-spacing:var(--ls-display);font-weight:var(--fw-display)}
+.fd-h1{font-size:var(--text-h1);line-height:var(--lh-h1);letter-spacing:var(--ls-h1);font-weight:var(--fw-h1)}
+.fd-h2{font-size:var(--text-h2);line-height:var(--lh-h2);font-weight:var(--fw-h2)}
+.fd-h3{font-size:var(--text-h3);line-height:var(--lh-h3);font-weight:var(--fw-h3)}
+.fd-body{font-size:var(--text-body);line-height:var(--lh-body)}
+.fd-body-strong{font-size:var(--text-body-strong);line-height:var(--lh-body-strong);font-weight:var(--fw-body-strong)}
+.fd-data{font-family:var(--font-mono);font-size:var(--text-data);line-height:var(--lh-data);font-weight:var(--fw-data);font-variant-numeric:tabular-nums}
+.fd-kpi{font-family:var(--font-mono);font-size:var(--text-kpi);line-height:var(--lh-kpi);letter-spacing:var(--ls-kpi);font-weight:var(--fw-kpi);font-variant-numeric:tabular-nums}
+.fd-caption{font-size:var(--text-caption);line-height:var(--lh-caption)}
+.fd-eyebrow{font-size:var(--text-eyebrow);line-height:var(--lh-eyebrow);letter-spacing:var(--ls-eyebrow);font-weight:var(--fw-eyebrow);text-transform:uppercase}
+.fd-mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums}

@@ -1,0 +1,93 @@
+/* Ink scale, role tokens, brand accent, semantics. Light is the default
+   theme; dark is produced from the same token set via [data-theme="dark"]. */
+
+:root,[data-theme="light"]{
+  /* Ink — cool graphite neutrals. Never pure gray/black/white. */
+  --ink-900:#0B1220;
+  --ink-800:#131C2E;
+  --ink-700:#1E2A40;
+  --ink-600:#33425C;
+  --ink-500:#5A6B86;
+  --ink-400:#8696AE;
+  --ink-300:#B6C2D4;
+  --ink-200:#DCE3ED;
+  --ink-100:#EEF2F7;
+  --ink-50:#F6F8FB;
+  --surface:#FFFFFF;
+
+  /* Surfaces + borders */
+  --bg-page:var(--ink-50);
+  --bg-surface:var(--surface);
+  --bg-elevated:var(--ink-100);
+  --bg-subtle:var(--ink-100);
+  --border-hairline:var(--ink-200);
+  --border-strong:var(--ink-300);
+
+  /* Text roles */
+  --text-primary:var(--ink-900);
+  --text-secondary:var(--ink-500);
+  --text-tertiary:var(--ink-400);
+  --text-muted:var(--ink-600);
+  --text-inverse:var(--surface);
+
+  /* Brand accent — deepened green from the Fundir mark. Never default emerald. */
+  --accent:#0C6B5A;
+  --accent-hover:#0A5648;
+  --accent-bright:#15917A;
+  --accent-tint:rgba(12,107,90,0.10);
+  --accent-on:var(--surface);
+
+  /* Semantic — desaturated, signal-only */
+  --success:#2F9E6E;
+  --success-tint:rgba(47,158,110,0.08);
+  --warning:#C0852B;
+  --warning-tint:rgba(192,133,43,0.08);
+  --critical:#C24E3E;
+  --critical-tint:rgba(194,78,62,0.08);
+  --info:#3E6CA8;
+  --info-tint:rgba(62,108,168,0.08);
+
+  /* Focus + selection */
+  --focus-ring:var(--accent);
+  --selection-bg:var(--accent-tint);
+  --selection-fg:var(--ink-900);
+
+  /* Marketing surface — the landing site runs on near-black, not ink-900 */
+  --marketing-bg:#0A0A0A;
+  --marketing-panel:#0F172A;
+  --marketing-chrome:#1E293B;
+}
+
+[data-theme="dark"]{
+  --bg-page:var(--ink-900);
+  --bg-surface:var(--ink-800);
+  --bg-elevated:var(--ink-700);
+  --bg-subtle:var(--ink-700);
+  --border-hairline:rgba(255,255,255,0.08);
+  --border-strong:rgba(255,255,255,0.14);
+
+  --text-primary:var(--ink-100);
+  --text-secondary:var(--ink-400);
+  --text-tertiary:var(--ink-500);
+  --text-muted:var(--ink-300);
+  --text-inverse:var(--ink-900);
+
+  --accent:#1A8B77;
+  --accent-hover:#15917A;
+  --accent-bright:#2BAB95;
+  --accent-tint:rgba(26,139,119,0.18);
+  --accent-on:var(--ink-900);
+
+  --success:#3FB07F;
+  --success-tint:rgba(63,176,127,0.14);
+  --warning:#D4A152;
+  --warning-tint:rgba(212,161,82,0.14);
+  --critical:#D86B5C;
+  --critical-tint:rgba(216,107,92,0.14);
+  --info:#5F8DC9;
+  --info-tint:rgba(95,141,201,0.14);
+
+  --selection-bg:var(--accent-tint);
+  --selection-fg:var(--ink-100);
+  --shadow-overlay:0 1px 2px rgba(0,0,0,0.40),0 8px 24px rgba(0,0,0,0.32);
+}
