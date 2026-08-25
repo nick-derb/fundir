@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import type { CookieOptions } from '@supabase/ssr';
 
-const PROTECTED   = ['/dashboard', '/discover', '/pipeline', '/settings', '/grant', '/financials', '/calendar', '/reports', '/org', '/foundations'];
+const PROTECTED   = ['/dashboard', '/discover', '/pipeline', '/settings', '/grant', '/financials', '/calendar', '/reports', '/org', '/foundations', '/welcome'];
 const ADMIN_ONLY  = ['/admin'];
 const AUTH_ROUTES = ['/login', '/signup'];
 const PUBLIC_AUTH = ['/access-denied', '/auth/callback']; // authenticated-OK but not membership-gated
@@ -102,5 +102,6 @@ export const config = {
     '/access-denied',
     '/login',
     '/signup',
+    '/welcome',
   ],
 };

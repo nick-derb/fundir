@@ -3,6 +3,7 @@ import { createServerClient } from '@supabase/ssr';
 import type { CookieOptions } from '@supabase/ssr';
 import { provisionMembership, safeNextPath } from '@/lib/access-control';
 import { getIntegration } from '@/lib/oauth-tokens';
+import { createServerClient as createAdminClient } from '@/lib/supabase';
 
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
@@ -83,31 +84,49 @@ export async function GET(request: NextRequest) {
       denyUrl.searchParams.set('email', email);
       if (provider) denyUrl.searchParams.set('provider', provider);
       redirectTarget = denyUrl.toString();
-    } else if (
-      provider === 'azure' &&
-      result.orgCode &&
-      // If a previous bounce didn't end in a connection (declined consent,
-      // tenant admin-consent block, personal account), don't wall the user
-      // off at every sign-in — try again after the marker expires.
-      !request.cookies.get('ms_storage_prompted')
-    ) {
-      // Microsoft-first: signing in with Microsoft should also connect the
-      // org's Microsoft 365 storage. If the org has no integration yet,
-      // bounce once through the Graph OAuth flow (login_hint skips the
-      // account picker; after first consent this redirect is silent).
-      // Integrations are org-scoped, so this fires at most once per org.
+    } else {
+      // First-run onboarding: a user with no completed profile is routed
+      // through /welcome (after any Microsoft storage-connect bounce below).
+      let dest = next;
       try {
-        const existing = await getIntegration(result.orgCode, 'microsoft');
-        if (!existing) {
-          const connectUrl = new URL(`${baseUrl}/api/auth/microsoft`);
-          connectUrl.searchParams.set('org', result.orgCode);
-          connectUrl.searchParams.set('return', next);
-          connectUrl.searchParams.set('login_hint', email);
-          redirectTarget = connectUrl.toString();
-          bounceToConnect = true;
-        }
+        const { data: prof } = await createAdminClient()
+          .from('profiles')
+          .select('onboarded_at')
+          .eq('user_id', user.id)
+          .single();
+        if (!prof?.onboarded_at) dest = '/welcome';
       } catch {
-        // Storage auto-connect is best-effort — never block sign-in on it.
+        // profiles table missing / unreachable — don't block sign-in.
+      }
+      redirectTarget = `${baseUrl}${dest}`;
+
+      if (
+        provider === 'azure' &&
+        result.orgCode &&
+        // If a previous bounce didn't end in a connection (declined consent,
+        // tenant admin-consent block, personal account), don't wall the user
+        // off at every sign-in — try again after the marker expires.
+        !request.cookies.get('ms_storage_prompted')
+      ) {
+        // Microsoft-first: signing in with Microsoft should also connect the
+        // org's Microsoft 365 storage. If the org has no integration yet,
+        // bounce once through the Graph OAuth flow (login_hint skips the
+        // account picker; after first consent this redirect is silent), then
+        // land on `dest`. Integrations are org-scoped, so this fires at most
+        // once per org.
+        try {
+          const existing = await getIntegration(result.orgCode, 'microsoft');
+          if (!existing) {
+            const connectUrl = new URL(`${baseUrl}/api/auth/microsoft`);
+            connectUrl.searchParams.set('org', result.orgCode);
+            connectUrl.searchParams.set('return', dest);
+            connectUrl.searchParams.set('login_hint', email);
+            redirectTarget = connectUrl.toString();
+            bounceToConnect = true;
+          }
+        } catch {
+          // Storage auto-connect is best-effort — never block sign-in on it.
+        }
       }
     }
   }

@@ -44,7 +44,7 @@ export default function SignupPage() {
 
     if (signupData.user) {
       await supabase.from('user_organizations').insert({ user_id: signupData.user.id, org_id: org.id, role: 'member' });
-      if (signupData.session) { router.push('/dashboard'); router.refresh(); return; }
+      if (signupData.session) { router.push('/welcome'); router.refresh(); return; }
     }
 
     setSuccess(true);
