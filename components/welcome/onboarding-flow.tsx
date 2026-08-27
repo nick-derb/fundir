@@ -6,7 +6,6 @@
 // so step 1 confirms their name rather than creating an account.
 
 import { useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
 
 declare global {
   interface Window { FundirField?: { init: (c: HTMLCanvasElement) => void } }
@@ -69,7 +68,6 @@ export function OnboardingFlow({
   initialProfile: InitialProfile | null;
   initialStep: number;
 }) {
-  const router = useRouter();
   const p = initialProfile ?? {};
   const [i, setI] = useState(Math.min(Math.max(0, initialStep), STEPS.length - 1));
   const [first, setFirst] = useState(p.first ?? '');
@@ -129,14 +127,21 @@ export function OnboardingFlow({
 
   async function finish() {
     setSaving(true);
+    // Save the completed profile, but never let a slow/failed save trap the
+    // user on this step: time the request out, then navigate regardless.
     try {
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), 8000);
       await fetch('/api/profile', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(profileBody(true)),
+        body: JSON.stringify(profileBody(true)), signal: ctrl.signal,
       });
+      clearTimeout(t);
     } catch { /* proceed regardless — profile is best-effort */ }
-    router.push('/dashboard');
-    router.refresh();
+    // Hard navigation: leave /welcome immediately so the browser shows the
+    // dashboard loading normally, instead of client-nav keeping this page (and
+    // its "Finishing…" button) visible while the data-heavy dashboard renders.
+    window.location.assign('/dashboard');
   }
 
   function onPhoto(e: React.ChangeEvent<HTMLInputElement>) {
