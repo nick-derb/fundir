@@ -60,10 +60,9 @@ interface InitialProfile {
 }
 
 export function OnboardingFlow({
-  email, orgCode, calendarConnected, initialProfile, initialStep,
+  email, calendarConnected, initialProfile, initialStep,
 }: {
   email: string;
-  orgCode: string;
   calendarConnected: boolean;
   initialProfile: InitialProfile | null;
   initialStep: number;
@@ -122,7 +121,7 @@ export function OnboardingFlow({
   async function connectCalendar() {
     await savePartial();
     const ret = encodeURIComponent('/welcome?step=calendar');
-    window.location.href = `/api/auth/microsoft?org=${encodeURIComponent(orgCode)}&return=${ret}`;
+    window.location.href = `/api/auth/microsoft?mode=user&return=${ret}`;
   }
 
   async function finish() {

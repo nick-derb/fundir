@@ -17,10 +17,10 @@ export interface GoalVM { id?: string; label: string; current: number; target: n
 const SERIF = "'Instrument Serif',Palatino,Georgia,serif";
 
 export function DashboardView({
-  orgName, greeting, today, isCyc, orgCode,
+  orgName, greeting, today, isCyc,
   kpis, monthly, months, deadlines, goals, calendarConnected, events,
 }: {
-  orgName: string; greeting: string; today: string; isCyc: boolean; orgCode: string;
+  orgName: string; greeting: string; today: string; isCyc: boolean;
   kpis: DashKpi[]; monthly: number[]; months: string[];
   deadlines: DeadlineRow[]; goals: GoalVM[];
   calendarConnected: boolean; events: CalendarEvent[];
@@ -64,7 +64,7 @@ export function DashboardView({
 
         {/* Right rail */}
         <div className="flex flex-col gap-5 min-w-0">
-          <CalendarCard connected={calendarConnected} events={events} orgCode={orgCode} />
+          <CalendarCard connected={calendarConnected} events={events} />
           <TimelineCard connected={calendarConnected} events={events} />
           <AskFundirCard />
         </div>
@@ -295,7 +295,7 @@ function DeadlinesCard({ rows }: { rows: DeadlineRow[] }) {
 
 /* ────────────────────────── Calendar ────────────────────────── */
 
-function CalendarCard({ connected, events, orgCode }: { connected: boolean; events: CalendarEvent[]; orgCode: string }) {
+function CalendarCard({ connected, events }: { connected: boolean; events: CalendarEvent[] }) {
   const eventDays = useMemo(() => {
     const s = new Set<number>();
     const now = new Date();
@@ -328,7 +328,7 @@ function CalendarCard({ connected, events, orgCode }: { connected: boolean; even
         <div>
           <p className="text-body-strong text-primary mb-1.5">Connect your calendar</p>
           <p className="text-caption text-tertiary mb-4 leading-relaxed">Your week sits next to your deadlines. Connecting takes one click and stays connected.</p>
-          <a href={`/api/auth/microsoft?org=${encodeURIComponent(orgCode)}&return=/dashboard`}
+          <a href="/api/auth/microsoft?mode=user&return=/dashboard"
             className="inline-flex items-center px-4 py-2 rounded-md text-body-strong bg-accent text-accent-on hover:bg-accent-hover transition-colors">Connect</a>
         </div>
       ) : (

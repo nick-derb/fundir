@@ -5,7 +5,7 @@ import { getAuthContext } from '@/lib/auth-context';
 import { AppShell } from '@/components/app-shell';
 import { MatchResult } from '@/types';
 import { redirect } from 'next/navigation';
-import { getValidToken } from '@/lib/oauth-tokens';
+import { getValidUserToken } from '@/lib/oauth-tokens';
 import { getUpcomingEvents, type CalendarEvent } from '@/lib/microsoft-graph';
 import { DashboardView, type DashKpi, type DeadlineRow, type GoalVM } from '@/components/dashboard/dashboard-view';
 
@@ -93,10 +93,10 @@ export default async function DashboardPage() {
     return { id: g.id, label: g.label, current: cur, target: tgt, unit: g.unit, pct, readout };
   });
 
-  // ── Microsoft calendar (org integration token) ───────────────────────────
+  // ── Microsoft calendar (the signed-in user's own connection) ─────────────
   let calendarConnected = false;
   let events: CalendarEvent[] = [];
-  const msToken = await getValidToken(ctx.orgCode, 'microsoft');
+  const msToken = await getValidUserToken(ctx.userId, 'microsoft');
   if (msToken) {
     calendarConnected = true;
     try { events = await getUpcomingEvents(msToken, 8); } catch { /* show empty schedule */ }
@@ -122,7 +122,6 @@ export default async function DashboardPage() {
         greeting={greeting}
         today={today}
         isCyc={isCyc}
-        orgCode={ctx.orgCode}
         kpis={kpis}
         monthly={monthly}
         months={FY_MONTHS}
