@@ -7,6 +7,7 @@ import { MatchResult } from '@/types';
 import { redirect } from 'next/navigation';
 import { getValidUserToken } from '@/lib/oauth-tokens';
 import { getUpcomingEvents, type CalendarEvent } from '@/lib/microsoft-graph';
+import { getGoogleUpcomingEvents } from '@/lib/google-calendar';
 import { DashboardView, type DashKpi, type DeadlineRow, type GoalVM } from '@/components/dashboard/dashboard-view';
 
 const FY_MONTHS = ['Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
@@ -93,14 +94,20 @@ export default async function DashboardPage() {
     return { id: g.id, label: g.label, current: cur, target: tgt, unit: g.unit, pct, readout };
   });
 
-  // ── Microsoft calendar (the signed-in user's own connection) ─────────────
+  // ── Calendar — the signed-in user's own Microsoft and/or Google calendar ──
   let calendarConnected = false;
-  let events: CalendarEvent[] = [];
+  const events: CalendarEvent[] = [];
   const msToken = await getValidUserToken(ctx.userId, 'microsoft');
   if (msToken) {
     calendarConnected = true;
-    try { events = await getUpcomingEvents(msToken, 8); } catch { /* show empty schedule */ }
+    try { events.push(...await getUpcomingEvents(msToken, 8)); } catch { /* skip */ }
   }
+  const gToken = await getValidUserToken(ctx.userId, 'google');
+  if (gToken) {
+    calendarConnected = true;
+    try { events.push(...await getGoogleUpcomingEvents(gToken, 8)); } catch { /* skip */ }
+  }
+  events.sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
 
   const nowD = new Date();
   const hour = nowD.getHours();

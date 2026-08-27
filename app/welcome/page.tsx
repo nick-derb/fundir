@@ -28,7 +28,10 @@ export default async function WelcomePage({
   // Already onboarded → straight to the dashboard.
   if (profile?.onboarded_at) redirect('/dashboard');
 
-  const integration = await getUserIntegration(ctx.userId, 'microsoft');
+  const [msIntegration, googleIntegration] = await Promise.all([
+    getUserIntegration(ctx.userId, 'microsoft'),
+    getUserIntegration(ctx.userId, 'google'),
+  ]);
   const sp = await searchParams;
   const initialStep = STEP_INDEX[sp?.step ?? ''] ?? 0;
 
@@ -46,7 +49,7 @@ export default async function WelcomePage({
   return (
     <OnboardingFlow
       email={ctx.email}
-      calendarConnected={!!integration}
+      calendarConnected={!!(msIntegration || googleIntegration)}
       initialProfile={initialProfile}
       initialStep={initialStep}
     />

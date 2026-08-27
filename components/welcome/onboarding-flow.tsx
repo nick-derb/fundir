@@ -27,13 +27,6 @@ const FOCUS = [
   { id: 'know',      label: 'Finding what we already documented',  note: 'Past narratives, outcomes, board records' },
 ];
 
-const CALENDARS = [
-  { id: 'own',    name: 'Calendar',         kind: 'Personal' },
-  { id: 'dev',    name: 'Development Team',  kind: 'Shared' },
-  { id: 'board',  name: 'CYC Board',        kind: 'Shared' },
-  { id: 'events', name: 'Events & Gala',    kind: 'Shared' },
-];
-
 const SERIF = "'Instrument Serif',Palatino,Georgia,serif";
 const MONO = "'JetBrains Mono',ui-monospace,monospace";
 const SANS = "'Inter',-apple-system,BlinkMacSystemFont,sans-serif";
@@ -75,7 +68,6 @@ export function OnboardingFlow({
   const [role, setRole] = useState(p.role ?? '');
   const [photo, setPhoto] = useState(p.avatar ?? '');
   const [focus, setFocus] = useState<string[]>(p.focus ?? ['prospect']);
-  const [cals, setCals] = useState(() => CALENDARS.map((c, idx) => ({ ...c, on: idx < 2 })));
   const [saving, setSaving] = useState(false);
   const fieldRef = useRef<HTMLCanvasElement>(null);
 
@@ -118,10 +110,10 @@ export function OnboardingFlow({
   }
   const back = () => setI(prev => Math.max(0, prev - 1));
 
-  async function connectCalendar() {
+  async function connectProvider(provider: 'microsoft' | 'google') {
     await savePartial();
     const ret = encodeURIComponent('/welcome?step=calendar');
-    window.location.href = `/api/auth/microsoft?mode=user&return=${ret}`;
+    window.location.href = `/api/auth/${provider}?mode=user&return=${ret}`;
   }
 
   async function finish() {
@@ -165,7 +157,6 @@ export function OnboardingFlow({
   }
 
   const initials = ((first[0] || '') + (last[0] || '')).toUpperCase() || 'CY';
-  const calOn = cals.filter(c => c.on).length;
   const canBack = i > 0 && step !== 'done';
   const canSkip = step === 'profile' || step === 'calendar' || step === 'focus';
   const cta = step === 'done' ? 'Go to dashboard'
@@ -256,29 +247,28 @@ export function OnboardingFlow({
           {step === 'calendar' && (
             <div>
               <h1 style={h1}>Connect your calendar</h1>
-              <p style={sub}>Fundir puts your week next to your deadlines. Connect once and it stays connected.</p>
-              <div style={{ border: `1px solid ${RULE}`, borderRadius: 7, background: '#fff', overflow: 'hidden', marginBottom: 16 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '14px 15px', borderBottom: '1px solid #EDF0EE' }}>
-                  <MsSquares />
+              <p style={sub}>Fundir puts your week next to your deadlines. Connect the calendar you use for work — it stays connected.</p>
+              {calendarConnected ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '15px 16px', border: `1px solid ${RULE}`, borderRadius: 7, background: '#fff', marginBottom: 16 }}>
+                  <i style={{ width: 5, height: 5, borderRadius: '50%', background: ACCENT, flex: 'none' }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <b style={{ display: 'block', fontSize: 13, fontWeight: 500 }}>Microsoft 365</b>
-                    <span style={{ fontSize: 11.5, color: '#8B968F' }}>{email}</span>
+                    <b style={{ display: 'block', fontSize: 13, fontWeight: 500 }}>Calendar connected</b>
+                    <span style={{ fontSize: 11.5, color: '#8B968F' }}>Your schedule will appear on the dashboard.</span>
                   </div>
-                  {calendarConnected
-                    ? <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: MONO, fontSize: 9, letterSpacing: '.12em', textTransform: 'uppercase', color: ACCENT }}><i style={{ width: 4, height: 4, borderRadius: '50%', background: SAGE }} />Connected</span>
-                    : <button type="button" onClick={connectCalendar} style={{ fontFamily: MONO, fontSize: 9.5, letterSpacing: '.12em', textTransform: 'uppercase', padding: '8px 13px', borderRadius: 999, border: 'none', background: INK, color: '#F7F8F7', cursor: 'pointer' }}>Connect</button>}
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: MONO, fontSize: 9, letterSpacing: '.12em', textTransform: 'uppercase', color: ACCENT }}><i style={{ width: 4, height: 4, borderRadius: '50%', background: SAGE }} />Connected</span>
                 </div>
-                {calendarConnected && cals.map(c => (
-                  <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 15px', borderBottom: '1px solid #F1F4F2' }}>
-                    <button type="button" onClick={() => setCals(cs => cs.map(x => x.id === c.id ? { ...x, on: !x.on } : x))} aria-pressed={c.on}
-                      style={{ width: 32, height: 18, flex: 'none', borderRadius: 999, border: 'none', cursor: 'pointer', padding: 2, display: 'flex', background: c.on ? ACCENT : '#D8DFDB', transition: 'background .2s' }}>
-                      <i style={{ width: 14, height: 14, borderRadius: '50%', background: '#fff', display: 'block', transform: `translateX(${c.on ? 14 : 0}px)`, transition: 'transform .2s' }} />
-                    </button>
-                    <span style={{ flex: 1, minWidth: 0, fontSize: 13 }}>{c.name}</span>
-                    <span style={{ fontFamily: MONO, fontSize: 8.5, letterSpacing: '.11em', textTransform: 'uppercase', color: FAINT, whiteSpace: 'nowrap' }}>{c.kind}</span>
-                  </div>
-                ))}
-              </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
+                  <button type="button" onClick={() => connectProvider('microsoft')}
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: '13px', borderRadius: 8, border: `1px solid ${RULE}`, background: '#fff', cursor: 'pointer', fontSize: 13.5, fontWeight: 500, color: INK }}>
+                    <MsSquares /> Connect Microsoft
+                  </button>
+                  <button type="button" onClick={() => connectProvider('google')}
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: '13px', borderRadius: 8, border: `1px solid ${RULE}`, background: '#fff', cursor: 'pointer', fontSize: 13.5, fontWeight: 500, color: INK }}>
+                    <GoogleG /> Connect Google
+                  </button>
+                </div>
+              )}
               <p style={{ margin: '0 0 26px', fontSize: 12, lineHeight: 1.6, color: '#8B968F' }}>Fundir reads events to show your schedule. It never writes to your calendar without asking, and mail is only ever opened in Outlook.</p>
             </div>
           )}
@@ -320,7 +310,7 @@ export function OnboardingFlow({
                 {[
                   ['Profile', display || `${first} ${last}`.trim() || 'Not set'],
                   ['Role', role || 'Not set'],
-                  ['Calendars', calendarConnected ? `${calOn} connected` : 'Not connected'],
+                  ['Calendar', calendarConnected ? 'Connected' : 'Not connected'],
                 ].map(([k, v], idx) => (
                   <div key={k} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '12px 0', borderBottom: idx < 2 ? '1px solid #F1F4F2' : 'none' }}>
                     <span style={{ fontSize: 13, color: '#5E6D67' }}>{k}</span>
@@ -360,6 +350,17 @@ function MsSquares() {
       <rect x="7.5" y="0.6" width="5.9" height="5.9" fill="#7FBA00" />
       <rect x="0.6" y="7.5" width="5.9" height="5.9" fill="#00A4EF" />
       <rect x="7.5" y="7.5" width="5.9" height="5.9" fill="#FFB900" />
+    </svg>
+  );
+}
+
+function GoogleG() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" style={{ flex: 'none' }}>
+      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+      <path fill="#FBBC05" d="M5.84 14.09A6.6 6.6 0 0 1 5.49 12c0-.73.13-1.43.35-2.09V7.07H2.18A11 11 0 0 0 1 12c0 1.78.43 3.45 1.18 4.93l3.66-2.84z" />
+      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84C6.71 7.31 9.14 5.38 12 5.38z" />
     </svg>
   );
 }

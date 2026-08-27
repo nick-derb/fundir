@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { upsertIntegration } from '@/lib/oauth-tokens';
+import { upsertIntegration, upsertUserIntegration } from '@/lib/oauth-tokens';
 
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
@@ -9,25 +9,27 @@ export async function GET(req: NextRequest) {
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
 
-  if (error || !code) {
-    return NextResponse.redirect(`${appUrl}/settings?error=google_denied`);
-  }
-
+  let kind: 'org' | 'user' = 'org';
   let orgCode: string | null = null;
+  let userId: string | null = null;
   let returnTo = '/settings';
   try {
-    const parsed = JSON.parse(
-      Buffer.from(state ?? '', 'base64url').toString('utf8'),
-    );
-    orgCode  = parsed.orgCode  ?? null;
+    const parsed = JSON.parse(Buffer.from(state ?? '', 'base64url').toString('utf8'));
+    kind     = parsed.kind === 'user' ? 'user' : 'org';
+    orgCode  = parsed.orgCode ?? null;
+    userId   = parsed.userId ?? null;
     returnTo = parsed.returnTo ?? returnTo;
-  } catch { /* state could not be parsed */ }
+  } catch { /* unparseable state */ }
+  if (!returnTo.startsWith('/') || returnTo.startsWith('//')) returnTo = '/dashboard';
 
-  if (!orgCode) {
-    return NextResponse.redirect(`${appUrl}/settings?error=google_state_missing_org`);
-  }
+  const fail = (reason: string) => {
+    const u = new URL(kind === 'user' ? returnTo : '/settings', appUrl);
+    u.searchParams.set('error', reason);
+    return NextResponse.redirect(u.toString());
+  };
 
-  // Exchange authorization code for tokens
+  if (error || !code) return fail('google_denied');
+
   const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -39,24 +41,32 @@ export async function GET(req: NextRequest) {
       grant_type:    'authorization_code',
     }),
   });
-
   const tokens = await tokenRes.json();
+  if (!tokens.access_token) return fail('google_token_failed');
 
-  if (!tokens.access_token) {
-    return NextResponse.redirect(`${appUrl}/settings?error=google_token_failed`);
-  }
-
-  // Fetch user email
   let email: string | undefined;
   try {
-    const infoRes = await fetch(
-      'https://www.googleapis.com/oauth2/v3/userinfo',
-      { headers: { Authorization: `Bearer ${tokens.access_token}` } },
-    );
-    const info = await infoRes.json();
-    email = info.email;
+    const infoRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+      headers: { Authorization: `Bearer ${tokens.access_token}` },
+    });
+    email = (await infoRes.json()).email;
   } catch { /* not critical */ }
 
+  if (kind === 'user') {
+    if (!userId) return fail('google_state_missing_user');
+    await upsertUserIntegration(userId, 'google', {
+      access_token:  tokens.access_token,
+      refresh_token: tokens.refresh_token,
+      expires_in:    tokens.expires_in,
+      scope:         tokens.scope,
+      email,
+    });
+    const dest = new URL(returnTo, appUrl);
+    dest.searchParams.set('connected', 'calendar');
+    return NextResponse.redirect(dest.toString());
+  }
+
+  if (!orgCode) return NextResponse.redirect(`${appUrl}/settings?error=google_state_missing_org`);
   await upsertIntegration(orgCode, 'google', {
     access_token:  tokens.access_token,
     refresh_token: tokens.refresh_token,
@@ -64,8 +74,7 @@ export async function GET(req: NextRequest) {
     scope:         tokens.scope,
     email,
   });
-
-  return NextResponse.redirect(
-    `${appUrl}${returnTo}?connected=google`,
-  );
+  const dest = new URL(returnTo, appUrl);
+  dest.searchParams.set('connected', 'google');
+  return NextResponse.redirect(dest.toString());
 }
