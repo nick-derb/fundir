@@ -5,147 +5,108 @@ import { getAuthContext } from '@/lib/auth-context';
 import { AppShell } from '@/components/app-shell';
 import { MatchResult } from '@/types';
 import { redirect } from 'next/navigation';
-import Link from 'next/link';
-import { Sparkles } from 'lucide-react';
-import { loadCraIntelligence } from '@/lib/cra/intelligence';
-import { loadOrgCraSnapshot } from '@/lib/cra/repo';
-import { loadFunderIntelligence } from '@/lib/funder-intel/repo';
-import { bundledLogoFor } from '@/lib/org-logo';
-import {
-  DashboardConsole,
-  type CraRowVM, type DeadlineVM, type FunderVM,
-} from '@/components/dashboard-console';
-import { CycHeroTransform } from '@/components/cyc-hero-transform';
+import { getValidToken } from '@/lib/oauth-tokens';
+import { getUpcomingEvents, type CalendarEvent } from '@/lib/microsoft-graph';
+import { DashboardView, type DashKpi, type DeadlineRow, type GoalVM } from '@/components/dashboard/dashboard-view';
 
-// ── Logo auto-fetch via ProPublica EIN → website → Clearbit ──────────────────
-async function getOrgLogoUrl(ein?: string | null): Promise<string | null> {
-  if (!ein) return null;
-  try {
-    const einClean = ein.replace(/[-\s]/g, '');
-    const res = await fetch(
-      `https://projects.propublica.org/nonprofits/api/v2/organizations/${einClean}.json`,
-      { next: { revalidate: 604800 }, signal: AbortSignal.timeout(2500) },
-    );
-    if (!res.ok) return null;
-    const json = await res.json();
-    const website: string | undefined = json.organization?.website;
-    if (!website) return null;
-    const href = website.startsWith('http') ? website : `https://${website}`;
-    const domain = new URL(href).hostname.replace(/^www\./, '');
-    return `https://logo.clearbit.com/${domain}`;
-  } catch {
-    return null;
-  }
-}
+const FY_MONTHS = ['Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+// Calendar month index (0=Jan) → fiscal-year position (0=Jul).
+const fyIndex = (m: number) => (m - 6 + 12) % 12;
 
 function fmtMoney(n: number): string {
-  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(n % 1_000_000 ? 1 : 0)}M`;
   if (n >= 1_000)     return `$${Math.round(n / 1_000)}K`;
   return `$${n.toLocaleString()}`;
-}
-
-// ── Data fetching ─────────────────────────────────────────────────────────────
-async function getDashboardData(orgId: string, orgCode: string) {
-  const supabase = createServerClient();
-  const [matchesRes, orgRes] = await Promise.all([
-    supabase
-      .from('match_results')
-      .select('*, grant:grant_opportunities(*)')
-      .eq('org_id', orgId)
-      .order('composite_score', { ascending: false }),
-    supabase
-      .from('organizations')
-      .select('name, ein, financial_data, financial_year, financial_fetched_at')
-      .eq('org_code', orgCode)
-      .single(),
-  ]);
-
-  const matches = (matchesRes.data || []) as MatchResult[];
-  const org     = orgRes.data;
-  const now     = new Date();
-
-  const urgent = matches
-    .filter(m => {
-      if (!m.grant?.close_date) return false;
-      const d = Math.ceil((new Date(m.grant.close_date).getTime() - now.getTime()) / 86400000);
-      return d >= 0 && d <= 14 && !['rejected', 'awarded'].includes(m.pipeline_stage);
-    })
-    .sort((a, b) => {
-      const da = new Date(a.grant?.close_date || '9999').getTime();
-      const db = new Date(b.grant?.close_date || '9999').getTime();
-      return da - db;
-    });
-
-  const totalAwardPotential = matches
-    .filter(m => m.composite_score >= 60)
-    .reduce((s, m) => s + (m.grant?.extracted_fields?.award_ceiling || m.grant?.extracted_fields?.award_floor || 0), 0);
-
-  const logoUrl = bundledLogoFor(orgCode) ?? await getOrgLogoUrl(org?.ein);
-
-  const [craRows, craSnapshot, funderIntelRows] = await Promise.all([
-    loadCraIntelligence(orgId),
-    loadOrgCraSnapshot(orgId),
-    loadFunderIntelligence(orgId, 30),
-  ]);
-
-  const pursue = matches.filter(m => m.composite_score >= 70);
-
-  return {
-    matches,
-    totalTracked:      matches.length,
-    highMatches:       pursue.length,
-    urgentGrants:      urgent,
-    totalAwardPotential,
-    org,
-    logoUrl,
-    craRows,
-    craCommunity: craSnapshot?.community ?? null,
-    funderIntelRows,
-  };
 }
 
 export default async function DashboardPage() {
   const ctx = await getAuthContext();
   if (!ctx) redirect('/login');
 
-  const data = await getDashboardData(ctx.orgId, ctx.orgCode);
-  const now  = Date.now();
+  const db = createServerClient();
+  const [matchesRes, orgRes, goalsRes] = await Promise.all([
+    db.from('match_results')
+      .select('*, grant:grant_opportunities(*)')
+      .eq('org_id', ctx.orgId)
+      .order('composite_score', { ascending: false }),
+    db.from('organizations').select('name, ein').eq('org_code', ctx.orgCode).single(),
+    db.from('org_goals').select('id, label, current, target, unit').eq('org_id', ctx.orgId).order('sort'),
+  ]);
 
-  // CYC tenant gets the branded post-login skyline hero (org_code CYC*).
+  const matches = (matchesRes.data || []) as MatchResult[];
+  const org = orgRes.data;
+  const now = Date.now();
+
+  // ── Activity — from pipeline stages + created_at ─────────────────────────
+  const stageOf = (m: MatchResult) => (m.pipeline_stage || '').toLowerCase();
+  const awarded  = matches.filter(m => stageOf(m) === 'awarded').length;
+  const awaiting = matches.filter(m => stageOf(m) === 'submitted').length;
+  const rejected = matches.filter(m => stageOf(m) === 'rejected').length;
+  const submitted = awarded + awaiting + rejected;
+
+  const monthly = new Array(12).fill(0) as number[];
+  for (const m of matches) {
+    const created = (m as unknown as { created_at?: string }).created_at;
+    if (!created) continue;
+    const d = new Date(created);
+    if (!Number.isNaN(d.getTime())) monthly[fyIndex(d.getMonth())] += 1;
+  }
+
+  const kpis: DashKpi[] = [
+    { label: 'Submitted', value: submitted, delta: null },
+    { label: 'Awarded', value: awarded, delta: awarded > 0 ? `+${awarded}` : null, accent: true },
+    { label: 'Awaiting decision', value: awaiting, delta: null },
+  ];
+
+  // ── Next deadlines — upcoming grant close-dates ──────────────────────────
+  const deadlines: DeadlineRow[] = matches
+    .filter(m => {
+      if (!m.grant?.close_date) return false;
+      const days = Math.ceil((new Date(m.grant.close_date).getTime() - now) / 86400000);
+      return days >= 0 && !['rejected', 'awarded'].includes(stageOf(m));
+    })
+    .sort((a, b) => new Date(a.grant!.close_date!).getTime() - new Date(b.grant!.close_date!).getTime())
+    .slice(0, 6)
+    .map(m => {
+      const days = Math.max(0, Math.ceil((new Date(m.grant!.close_date!).getTime() - now) / 86400000));
+      const st = stageOf(m);
+      return {
+        funder: m.grant?.agency_name || m.grant?.title || '—',
+        title:  m.grant?.title || '',
+        due:    new Date(m.grant!.close_date!).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        days,
+        stage:  st === 'submitted' ? 'Submitted'
+              : st === 'reviewing' || st === 'review' ? 'Drafting'
+              : st === 'interested' ? 'Queued'
+              : 'Tracking',
+        href:   `/grant/${m.grant_id}`,
+      };
+    });
+
+  // ── Goals ────────────────────────────────────────────────────────────────
+  const goals: GoalVM[] = (goalsRes.data || []).map(g => {
+    const cur = Number(g.current) || 0, tgt = Number(g.target) || 0;
+    const pct = Math.max(0, Math.min(100, tgt ? (cur / tgt) * 100 : 0));
+    const readout = g.unit === 'percent' ? `${Math.round(cur)}%`
+      : g.unit === 'currency' ? `${fmtMoney(cur)} of ${fmtMoney(tgt)}`
+      : `${cur} of ${tgt}`;
+    return { id: g.id, label: g.label, current: cur, target: tgt, unit: g.unit, pct, readout };
+  });
+
+  // ── Microsoft calendar (org integration token) ───────────────────────────
+  let calendarConnected = false;
+  let events: CalendarEvent[] = [];
+  const msToken = await getValidToken(ctx.orgCode, 'microsoft');
+  if (msToken) {
+    calendarConnected = true;
+    try { events = await getUpcomingEvents(msToken, 8); } catch { /* show empty schedule */ }
+  }
+
+  const nowD = new Date();
+  const hour = nowD.getHours();
+  const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+  const today = nowD.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
   const isCyc = ctx.orgCode?.toUpperCase().startsWith('CYC') ?? false;
-
-  // ── FIG-section view models (real data) ──────────────────────────────────
-  const totalPeerFunding = data.craRows.reduce((s, r) => s + r.peer_total_amount, 0);
-  const craMeta = [
-    `${data.craRows.length} bank${data.craRows.length === 1 ? '' : 's'}`,
-    data.craCommunity ? `your ${data.craCommunity}` : null,
-    totalPeerFunding > 0 ? `${fmtMoney(totalPeerFunding)} peer funding scanned` : null,
-  ].filter(Boolean).join(' · ');
-
-  const craRowsVM: CraRowVM[] = data.craRows.map(r => ({
-    name:         r.bank_name,
-    relationship: r.relationship,
-    action:       r.action,
-    einPending:   !r.ein_verified,
-    rationale:    r.rationale,
-    confidence:   Math.round(r.confidence * 100),
-    chips:        r.peer_signal.slice(0, 3).map(p => ({ name: p.name, amount: fmtMoney(p.total_amount) })),
-    more:         Math.max(0, r.peer_signal_count - 3),
-  }));
-
-  const deadlinesVM: DeadlineVM[] = data.urgentGrants.map(m => ({
-    title:  m.grant?.title ?? '—',
-    agency: m.grant?.agency_name ?? '',
-    days:   Math.max(0, Math.ceil((new Date(m.grant!.close_date!).getTime() - now) / 86400000)),
-    href:   `/grant/${m.grant_id}`,
-  }));
-
-  const fundersVM: FunderVM[] = data.funderIntelRows.slice(0, 8).map(f => ({
-    score:  Math.round(f.prospect_score),
-    name:   f.funder_name,
-    peers:  f.peer_overlap_count,
-    amount: fmtMoney(f.total_peer_amount),
-  }));
 
   return (
     <AppShell
@@ -156,50 +117,20 @@ export default async function DashboardPage() {
       availableOrgs={ctx.availableOrgs}
       currentOrgCode={ctx.orgCode}
     >
-      <div className="px-4 sm:px-6 md:px-8 py-6 max-w-7xl mx-auto space-y-2">
-
-        {/* ── CYC branded post-login hero (plays once per session) ── */}
-        {isCyc && (
-          <div className="mb-3">
-            <CycHeroTransform />
-          </div>
-        )}
-
-        {/* ── Brand-new org: empty-state hero ─────────────────── */}
-        {data.totalTracked === 0 ? (
-          <div className="bg-surface border border-hairline rounded-sm px-6 md:px-10 py-10 md:py-12 max-w-3xl">
-            <p className="text-eyebrow uppercase text-accent mb-3">Welcome to Fundir</p>
-            <h2 className="text-display text-primary leading-tight mb-3">
-              Let&apos;s find your first matching grants
-            </h2>
-            <p className="text-body text-muted leading-relaxed mb-6 max-w-xl">
-              Run discovery once and Fundir will surface federal and foundation grants
-              matched to {data.org?.name ?? ctx.orgName}&apos;s mission, programs, and
-              financial profile — scored, ranked, and reverse-screened against your 990.
-            </p>
-            <div className="flex flex-wrap items-center gap-2.5">
-              <Link href="/discover"
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-sm text-body-strong bg-accent text-accent-on hover:bg-accent-hover transition-colors">
-                <Sparkles className="w-3.5 h-3.5" />
-                Run your first discovery
-              </Link>
-              <Link href="/settings"
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-sm text-body-strong text-primary border border-hairline bg-surface hover:bg-elevated transition-colors">
-                Sync 990 financials
-              </Link>
-            </div>
-          </div>
-        ) : (
-          <>
-            {/* FIG.01 CRA · FIG.02 Deadlines · FIG.03 Funder prospects */}
-            <DashboardConsole
-              cra={{ rows: craRowsVM, meta: craMeta }}
-              deadlines={deadlinesVM}
-              funders={fundersVM}
-            />
-          </>
-        )}
-      </div>
+      <DashboardView
+        orgName={org?.name ?? ctx.orgName}
+        greeting={greeting}
+        today={today}
+        isCyc={isCyc}
+        orgCode={ctx.orgCode}
+        kpis={kpis}
+        monthly={monthly}
+        months={FY_MONTHS}
+        deadlines={deadlines}
+        goals={goals}
+        calendarConnected={calendarConnected}
+        events={events}
+      />
     </AppShell>
   );
 }

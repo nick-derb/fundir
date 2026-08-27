@@ -33,6 +33,47 @@ export async function graphFetch(
   return res;
 }
 
+export interface CalendarEvent {
+  id:       string;
+  subject:  string;
+  start:    string;   // ISO (UTC)
+  end:      string;
+  isAllDay: boolean;
+  location: string | null;
+  online:   boolean;
+}
+
+/**
+ * Upcoming events from the connected account's calendar over the next `days`.
+ * Uses the org's Microsoft integration token, so this reflects the account that
+ * connected Microsoft 365 for the org (not per-user until we add per-user auth).
+ */
+export async function getUpcomingEvents(token: string, days = 7): Promise<CalendarEvent[]> {
+  const start = new Date();
+  const end = new Date(Date.now() + days * 86_400_000);
+  const path =
+    `/me/calendarView?startDateTime=${encodeURIComponent(start.toISOString())}` +
+    `&endDateTime=${encodeURIComponent(end.toISOString())}` +
+    `&$select=subject,start,end,isAllDay,location,isOnlineMeeting` +
+    `&$orderby=start/dateTime&$top=50`;
+  const res = await graphFetch(token, path, { headers: { Prefer: 'outlook.timezone="UTC"' } });
+  const data = await res.json();
+  return ((data.value ?? []) as Array<{
+    id: string; subject?: string; isAllDay?: boolean; isOnlineMeeting?: boolean;
+    start?: { dateTime?: string; date?: string };
+    end?:   { dateTime?: string; date?: string };
+    location?: { displayName?: string };
+  }>).map(e => ({
+    id:       e.id,
+    subject:  e.subject || '(no title)',
+    start:    e.start?.dateTime ? e.start.dateTime + 'Z' : (e.start?.date ?? ''),
+    end:      e.end?.dateTime ? e.end.dateTime + 'Z' : (e.end?.date ?? ''),
+    isAllDay: !!e.isAllDay,
+    location: e.location?.displayName || null,
+    online:   !!e.isOnlineMeeting,
+  }));
+}
+
 const FINANCIAL_EXTENSIONS = [
   '.xlsx', '.xls', '.csv', '.docx', '.doc', '.pdf', '.pptx',
 ];
