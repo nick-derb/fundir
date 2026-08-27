@@ -4,9 +4,9 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect, useRef } from 'react';
 import {
-  LayoutDashboard, Search, KanbanSquare, Settings, LogOut,
-  BarChart3, CalendarDays, TrendingUp, Building2,
-  Landmark, Shield, ChevronDown, Check, Sun, Moon,
+  LayoutDashboard, Radar, Table2, Share2, FileText, Settings, LogOut,
+  TrendingUp, Building2, Shield,
+  ChevronDown, Check, Sun, Moon,
   Menu, X, Database,
 } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/supabase';
@@ -16,15 +16,16 @@ import { AiAdvisor } from '@/components/ai-advisor';
 import { switchAdminOrg } from '@/actions/admin-org';
 import { bundledLogoFor } from '@/lib/org-logo';
 
+// New dashboard IA (Claude Design). Prospecting / Cultivation List /
+// Connections / Applications are placeholder routes until designed.
 const NAV_ITEMS = [
-  { href: '/dashboard',   label: 'Dashboard',   icon: LayoutDashboard },
-  { href: '/data',        label: 'Data Hub',    icon: Database        },
-  { href: '/discover',    label: 'Matches',     icon: Search          },
-  { href: '/pipeline',    label: 'Tracker',     icon: KanbanSquare    },
-  { href: '/calendar',    label: 'Calendar',    icon: CalendarDays    },
-  { href: '/reports',     label: 'Reports',     icon: TrendingUp      },
-  { href: '/financials',  label: 'Financials',  icon: BarChart3       },
-  { href: '/foundations', label: 'Foundations', icon: Landmark        },
+  { href: '/dashboard',    label: 'Dashboard',        icon: LayoutDashboard },
+  { href: '/prospecting',  label: 'Prospecting',      icon: Radar           },
+  { href: '/cultivation',  label: 'Cultivation List', icon: Table2          },
+  { href: '/connections',  label: 'Connections',      icon: Share2          },
+  { href: '/data',         label: 'Data Hub',         icon: Database        },
+  { href: '/applications', label: 'Applications',     icon: FileText        },
+  { href: '/reports',      label: 'Reports',          icon: TrendingUp      },
 ];
 
 const SETTINGS_ITEMS = [
@@ -34,11 +35,9 @@ const SETTINGS_ITEMS = [
 
 const SHORTCUT_MAP: Record<string, string> = {
   d: '/dashboard',
-  m: '/discover',
-  t: '/pipeline',
-  c: '/calendar',
+  p: '/prospecting',
+  c: '/connections',
   r: '/reports',
-  f: '/financials',
   s: '/settings',
 };
 
