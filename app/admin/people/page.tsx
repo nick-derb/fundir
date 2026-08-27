@@ -1,4 +1,6 @@
 import { createServerClient } from '@/lib/supabase';
+import { getAuthContext } from '@/lib/auth-context';
+import { ViewAsButton } from '@/components/admin/view-as-button';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,6 +22,9 @@ function ago(iso: string | null | undefined): string {
 }
 
 export default async function AdminPeoplePage() {
+  const ctx = await getAuthContext();
+  // The real admin, even if they happen to be mid-impersonation.
+  const meId = ctx?.realAdmin?.id ?? ctx?.userId;
   const db = createServerClient();
   const [authRes, profilesRes, membersRes, integRes] = await Promise.all([
     db.auth.admin.listUsers({ perPage: 200 }),
@@ -78,11 +83,12 @@ export default async function AdminPeoplePage() {
               <th style={th}>Onboarded</th>
               <th style={th}>Calendar</th>
               <th style={th}>Last login</th>
+              <th style={{ ...th, textAlign: 'right' }}></th>
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 ? (
-              <tr><td style={{ ...td, color: '#64748b' }} colSpan={6}>No accounts found.</td></tr>
+              <tr><td style={{ ...td, color: '#64748b' }} colSpan={7}>No accounts found.</td></tr>
             ) : rows.map(r => (
               <tr key={r.id}>
                 <td style={td}>
@@ -102,6 +108,11 @@ export default async function AdminPeoplePage() {
                 <td style={td}><span style={pill(r.onboarded, '', '')}>{r.onboarded ? '● Complete' : '○ Pending'}</span></td>
                 <td style={td}><span style={pill(r.calendar, '', '')}>{r.calendar ? '● Connected' : '○ Not connected'}</span></td>
                 <td style={{ ...td, color: '#94a3b8', fontFamily: 'ui-monospace, monospace', fontSize: 12 }}>{ago(r.lastSignIn)}</td>
+                <td style={{ ...td, textAlign: 'right' }}>
+                  {r.id === meId
+                    ? <span style={{ fontSize: 11, color: '#475569' }}>You</span>
+                    : <ViewAsButton userId={r.id} />}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -109,7 +120,8 @@ export default async function AdminPeoplePage() {
       </div>
 
       <p style={{ color: '#475569', fontSize: 11.5, marginTop: 14 }}>
-        Read-only roster. &ldquo;View as&rdquo; (seeing the app as a specific person) is the planned follow-up.
+        &ldquo;View as&rdquo; opens the app exactly as that person sees it. A banner stays pinned while
+        you&rsquo;re viewing, and every session is recorded in the impersonation audit log.
       </p>
     </div>
   );

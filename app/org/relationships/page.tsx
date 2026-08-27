@@ -14,7 +14,7 @@ export default async function FunderRelationshipsPage() {
   const { rows } = await listRelationships();
 
   return (
-    <AppShell orgName={ctx.orgName} orgId={ctx.orgId} userEmail={ctx.email} isAdmin={ctx.isAdmin} availableOrgs={ctx.availableOrgs} currentOrgCode={ctx.orgCode}>
+    <AppShell orgName={ctx.orgName} orgId={ctx.orgId} userEmail={ctx.email} userName={ctx.displayName} userAvatar={ctx.avatarUrl} isAdmin={ctx.isAdmin} availableOrgs={ctx.availableOrgs} currentOrgCode={ctx.orgCode}>
       <div className="bg-canvas-0 border-b border-canvas-3">
         <div className="px-4 sm:px-6 md:px-8 py-5 max-w-4xl mx-auto">
           <Link href="/org" className="inline-flex items-center gap-1.5 text-caption text-ink-2 hover:text-ink-0 mb-4 transition-colors">

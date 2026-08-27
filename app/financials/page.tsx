@@ -54,7 +54,7 @@ export default async function FinancialsPage() {
   if (ctx.orgCode === 'CYC2026') {
     const { CYCFinancialsShell } = await import('@/components/cyc-financials-shell');
     return (
-      <AppShell orgName={ctx.orgName} orgId={ctx.orgId} userEmail={ctx.email} isAdmin={ctx.isAdmin} availableOrgs={ctx.availableOrgs} currentOrgCode={ctx.orgCode}>
+      <AppShell orgName={ctx.orgName} orgId={ctx.orgId} userEmail={ctx.email} userName={ctx.displayName} userAvatar={ctx.avatarUrl} isAdmin={ctx.isAdmin} availableOrgs={ctx.availableOrgs} currentOrgCode={ctx.orgCode}>
         <CYCFinancialsShell key={ctx.orgCode} {...shellProps} />
       </AppShell>
     );
@@ -64,14 +64,14 @@ export default async function FinancialsPage() {
   if (ctx.orgCode === 'YOM2026') {
     const { YMCAFinancialsShell } = await import('@/components/ymca-financials-shell');
     return (
-      <AppShell orgName={ctx.orgName} orgId={ctx.orgId} userEmail={ctx.email} isAdmin={ctx.isAdmin} availableOrgs={ctx.availableOrgs} currentOrgCode={ctx.orgCode}>
+      <AppShell orgName={ctx.orgName} orgId={ctx.orgId} userEmail={ctx.email} userName={ctx.displayName} userAvatar={ctx.avatarUrl} isAdmin={ctx.isAdmin} availableOrgs={ctx.availableOrgs} currentOrgCode={ctx.orgCode}>
         <YMCAFinancialsShell key={ctx.orgCode} {...shellProps} />
       </AppShell>
     );
   }
 
   return (
-    <AppShell orgName={ctx.orgName} orgId={ctx.orgId} userEmail={ctx.email} isAdmin={ctx.isAdmin} availableOrgs={ctx.availableOrgs} currentOrgCode={ctx.orgCode}>
+    <AppShell orgName={ctx.orgName} orgId={ctx.orgId} userEmail={ctx.email} userName={ctx.displayName} userAvatar={ctx.avatarUrl} isAdmin={ctx.isAdmin} availableOrgs={ctx.availableOrgs} currentOrgCode={ctx.orgCode}>
       <FinancialsShell key={ctx.orgCode} {...shellProps} />
     </AppShell>
   );

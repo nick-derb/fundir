@@ -3,13 +3,16 @@ import { GeistSans } from 'geist/font/sans';
 import { GeistMono } from 'geist/font/mono';
 import './globals.css';
 import { RecoveryDetector } from '@/components/recovery-detector';
+import { ImpersonationBanner } from '@/components/impersonation-banner';
+import { getImpersonation } from '@/lib/impersonation';
 
 export const metadata: Metadata = {
   title: 'Fundir — AI Grant Intelligence',
   description: 'AI-powered grant intelligence for nonprofits. Discover, score, and track federal grant opportunities.',
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const impersonation = await getImpersonation();
   return (
     // Phase 2 redesign: LIGHT default theme (operations-console brief).
     // Geist (sans + mono) loaded via next/font, exposed as CSS variables
@@ -23,6 +26,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="antialiased">
         <RecoveryDetector />
+        {impersonation && <ImpersonationBanner name={impersonation.name} email={impersonation.email} />}
         {children}
       </body>
     </html>

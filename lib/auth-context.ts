@@ -12,6 +12,14 @@ export interface AuthContext {
   role: string;
   isAdmin: boolean;
   availableOrgs: Array<{ id: string; name: string; org_code: string }>;
+  /** The effective person's own profile, for greetings + the corner avatar. */
+  firstName: string;
+  displayName: string;
+  avatarUrl: string | null;
+  /** True when a real admin is viewing the app as someone else. */
+  impersonating: boolean;
+  /** The real signed-in admin behind an impersonation session, else null. */
+  realAdmin: { id: string; email: string } | null;
 }
 
 export async function getAuthContext(): Promise<AuthContext | null> {
@@ -29,11 +37,44 @@ export async function getAuthContext(): Promise<AuthContext | null> {
     },
   );
 
-  const { data: { user } } = await sessionClient.auth.getUser();
-  if (!user) return null;
+  const { data: { user: sessionUser } } = await sessionClient.auth.getUser();
+  if (!sessionUser) return null;
 
-  const isAdmin = isAdminEmail(user.email);
   const db = createServerClient(); // service role — bypasses RLS for lookups
+  const realIsAdmin = isAdminEmail(sessionUser.email);
+
+  // ── View-as impersonation (admin-only) ──────────────────────────────────
+  // A real admin can adopt another user's identity so the entire app renders
+  // exactly as that person would see it. The cookie is only ever honored for
+  // a real admin; a non-admin can never impersonate.
+  let user = sessionUser;
+  let impersonating = false;
+  let realAdmin: { id: string; email: string } | null = null;
+  const imp = cookieStore.get('impersonate_user')?.value;
+  if (realIsAdmin && imp && imp !== sessionUser.id) {
+    const { data: target } = await db.auth.admin.getUserById(imp);
+    if (target?.user) {
+      user = target.user;
+      impersonating = true;
+      realAdmin = { id: sessionUser.id, email: sessionUser.email! };
+    }
+  }
+  // While impersonating, the admin sees the target's (non-admin) view.
+  const isAdmin = impersonating ? false : realIsAdmin;
+
+  // The effective person's profile (from onboarding), OAuth metadata as fallback.
+  const { data: profile } = await db
+    .from('profiles')
+    .select('first_name, display_name, avatar_url')
+    .eq('user_id', user.id)
+    .maybeSingle();
+  const meta = (user.user_metadata ?? {}) as {
+    name?: string; full_name?: string; avatar_url?: string; picture?: string;
+  };
+  const metaName = meta.full_name || meta.name || '';
+  const firstName = profile?.first_name || metaName.split(' ')[0] || '';
+  const displayName = profile?.display_name || metaName || (user.email?.split('@')[0] ?? '');
+  const avatarUrl = profile?.avatar_url || meta.avatar_url || meta.picture || null;
 
   if (isAdmin) {
     const { data: allOrgs } = await db
@@ -68,10 +109,13 @@ export async function getAuthContext(): Promise<AuthContext | null> {
       role: 'admin',
       isAdmin: true,
       availableOrgs: orgs,
+      firstName, displayName, avatarUrl,
+      impersonating: false,
+      realAdmin: null,
     };
   }
 
-  // Regular user: look up their org from user_organizations
+  // Regular user (or an impersonated target): look up their single org.
   const { data: membership } = await db
     .from('user_organizations')
     .select('org_id, role, organizations(id, name, org_code)')
@@ -91,5 +135,8 @@ export async function getAuthContext(): Promise<AuthContext | null> {
     role: membership.role as string,
     isAdmin: false,
     availableOrgs: [],
+    firstName, displayName, avatarUrl,
+    impersonating,
+    realAdmin,
   };
 }

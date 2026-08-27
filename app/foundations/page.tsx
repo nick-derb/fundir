@@ -30,7 +30,7 @@ export default async function FoundationsPage() {
       orgName={ctx.orgName}
       orgId={ctx.orgId}
       userEmail={ctx.email}
-      isAdmin={ctx.isAdmin}
+      userName={ctx.displayName} userAvatar={ctx.avatarUrl} isAdmin={ctx.isAdmin}
       availableOrgs={ctx.availableOrgs}
       currentOrgCode={ctx.orgCode}
     >

@@ -120,12 +120,15 @@ export default async function DashboardPage() {
       orgName={ctx.orgName}
       orgId={ctx.orgId}
       userEmail={ctx.email}
+      userName={ctx.displayName}
+      userAvatar={ctx.avatarUrl}
       isAdmin={ctx.isAdmin}
       availableOrgs={ctx.availableOrgs}
       currentOrgCode={ctx.orgCode}
     >
       <DashboardView
         orgName={org?.name ?? ctx.orgName}
+        userName={ctx.firstName}
         greeting={greeting}
         today={today}
         isCyc={isCyc}

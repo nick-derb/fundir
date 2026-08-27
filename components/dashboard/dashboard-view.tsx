@@ -17,10 +17,10 @@ export interface GoalVM { id?: string; label: string; current: number; target: n
 const SERIF = "'Instrument Serif',Palatino,Georgia,serif";
 
 export function DashboardView({
-  orgName, greeting, today, isCyc,
+  orgName, userName, greeting, today, isCyc,
   kpis, monthly, months, deadlines, goals, calendarConnected, events,
 }: {
-  orgName: string; greeting: string; today: string; isCyc: boolean;
+  orgName: string; userName?: string; greeting: string; today: string; isCyc: boolean;
   kpis: DashKpi[]; monthly: number[]; months: string[];
   deadlines: DeadlineRow[]; goals: GoalVM[];
   calendarConnected: boolean; events: CalendarEvent[];
@@ -40,7 +40,7 @@ export function DashboardView({
         <div>
           <p className="text-eyebrow uppercase text-tertiary mb-2">{today}</p>
           <h1 className="text-primary leading-tight" style={{ fontFamily: SERIF, fontWeight: 400, fontSize: 'clamp(1.8rem,3vw,2.4rem)', letterSpacing: '-0.018em' }}>
-            {greeting}, {orgName}
+            {greeting}, {userName || orgName}
           </h1>
         </div>
         <a href="https://outlook.office.com/mail/" target="_blank" rel="noreferrer"

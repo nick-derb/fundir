@@ -30,7 +30,7 @@ export default async function OrgProfilePage() {
 
   if (!profileData) {
     return (
-      <AppShell orgName={ctx.orgName} orgId={ctx.orgId} userEmail={ctx.email} isAdmin={ctx.isAdmin} availableOrgs={ctx.availableOrgs} currentOrgCode={ctx.orgCode}>
+      <AppShell orgName={ctx.orgName} orgId={ctx.orgId} userEmail={ctx.email} userName={ctx.displayName} userAvatar={ctx.avatarUrl} isAdmin={ctx.isAdmin} availableOrgs={ctx.availableOrgs} currentOrgCode={ctx.orgCode}>
         <div className="px-8 py-6">
           <p className="text-[13px] text-red-600">Organization not found. Contact your administrator.</p>
         </div>
@@ -39,7 +39,7 @@ export default async function OrgProfilePage() {
   }
 
   return (
-    <AppShell orgName={ctx.orgName} orgId={ctx.orgId} userEmail={ctx.email} isAdmin={ctx.isAdmin} availableOrgs={ctx.availableOrgs} currentOrgCode={ctx.orgCode}>
+    <AppShell orgName={ctx.orgName} orgId={ctx.orgId} userEmail={ctx.email} userName={ctx.displayName} userAvatar={ctx.avatarUrl} isAdmin={ctx.isAdmin} availableOrgs={ctx.availableOrgs} currentOrgCode={ctx.orgCode}>
       <div className="bg-page min-h-screen">
 
         {/* ── Header — light, operations-console eyebrow ──────────────── */}

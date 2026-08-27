@@ -343,7 +343,7 @@ export default async function GrantDetailPage({
   const hasDraft  = draftRow ? 1 : 0;
 
   return (
-    <AppShell orgName={ctx.orgName} orgId={ctx.orgId} userEmail={ctx.email} isAdmin={ctx.isAdmin} availableOrgs={ctx.availableOrgs} currentOrgCode={ctx.orgCode}>
+    <AppShell orgName={ctx.orgName} orgId={ctx.orgId} userEmail={ctx.email} userName={ctx.displayName} userAvatar={ctx.avatarUrl} isAdmin={ctx.isAdmin} availableOrgs={ctx.availableOrgs} currentOrgCode={ctx.orgCode}>
       {/* ── Light hero on canvas ─────────────────────────────────── */}
       <div className="bg-canvas-0 border-b border-canvas-3">
         <div className="px-4 sm:px-6 md:px-8 py-5 max-w-7xl mx-auto">

@@ -50,7 +50,7 @@ export default async function DiscoverPage() {
     <AppShell
       orgName={ctx.orgName}
       userEmail={ctx.email}
-      isAdmin={ctx.isAdmin}
+      userName={ctx.displayName} userAvatar={ctx.avatarUrl} isAdmin={ctx.isAdmin}
       availableOrgs={ctx.availableOrgs}
       currentOrgCode={ctx.orgCode}
     >

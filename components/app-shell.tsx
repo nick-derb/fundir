@@ -46,6 +46,8 @@ interface AppShellProps {
   orgName?: string;
   orgId?: string;
   userEmail?: string;
+  userName?: string;
+  userAvatar?: string | null;
   isAdmin?: boolean;
   availableOrgs?: Array<{ id: string; name: string; org_code: string }>;
   currentOrgCode?: string;
@@ -56,6 +58,8 @@ export function AppShell({
   orgName = 'My Organization',
   orgId,
   userEmail,
+  userName,
+  userAvatar,
   isAdmin = false,
   availableOrgs = [],
   currentOrgCode,
@@ -319,12 +323,22 @@ export function AppShell({
               userEmail={userEmail}
             />
           )}
-          <div
-            className="w-7 h-7 rounded-full flex items-center justify-center text-accent-on bg-accent text-[11px] font-semibold flex-shrink-0 cursor-default"
-            title={userEmail}
-          >
-            {userEmail ? userEmail[0].toUpperCase() : 'U'}
-          </div>
+          {userAvatar ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={userAvatar}
+              alt={userName || userEmail || 'You'}
+              title={userName || userEmail}
+              className="w-7 h-7 rounded-full object-cover flex-shrink-0 border border-hairline cursor-default"
+            />
+          ) : (
+            <div
+              className="w-7 h-7 rounded-full flex items-center justify-center text-accent-on bg-accent text-[11px] font-semibold flex-shrink-0 cursor-default"
+              title={userName || userEmail}
+            >
+              {(userName || userEmail || 'U')[0].toUpperCase()}
+            </div>
+          )}
         </header>
 
         <main className="flex-1 bg-page">
