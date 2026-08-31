@@ -11,6 +11,25 @@ const PUBLIC_AUTH = ['/access-denied', '/auth/callback']; // authenticated-OK bu
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // ── View-as read-only guard ──────────────────────────────────────────────
+  // While an admin is viewing the app as someone else, block any mutating API
+  // call so they can't accidentally change the target's data. The impersonate
+  // cookie is only ever set for a real admin, so its presence means view-as is
+  // active. /api/impersonate itself (start/stop) is always allowed so they can
+  // switch targets or exit. Non-API and read requests fall through untouched.
+  if (pathname.startsWith('/api/')) {
+    const impersonating = !!request.cookies.get('impersonate_user')?.value;
+    const isMutation = !['GET', 'HEAD', 'OPTIONS'].includes(request.method);
+    const isImpersonateRoute = pathname === '/api/impersonate';
+    if (impersonating && isMutation && !isImpersonateRoute) {
+      return NextResponse.json(
+        { error: 'read_only_impersonation', message: 'You are viewing as another user. Exit view-as to make changes.' },
+        { status: 403 },
+      );
+    }
+    return NextResponse.next({ request });
+  }
+
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(
@@ -103,6 +122,7 @@ export const config = {
     '/applications/:path*',
     '/admin/:path*',
     '/admin',
+    '/api/:path*',
     '/access-denied',
     '/login',
     '/signup',

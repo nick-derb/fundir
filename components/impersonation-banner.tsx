@@ -39,6 +39,7 @@ export function ImpersonationBanner({ name, email }: { name: string; email: stri
         <span style={{ minWidth: 0 }}>
           Viewing as <strong style={{ fontWeight: 600 }}>{name}</strong>
           {email ? <span style={{ opacity: 0.8 }}> · {email}</span> : null}
+          <span style={{ opacity: 0.75 }}> · read-only</span>
         </span>
       </span>
       <button

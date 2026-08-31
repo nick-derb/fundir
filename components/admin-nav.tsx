@@ -4,12 +4,13 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard, Building2, Key, Users, UserCheck, Activity,
-  ArrowLeft, Zap, Shield, ShieldCheck,
+  ArrowLeft, Zap, Shield, ShieldCheck, History,
 } from 'lucide-react';
 
 const NAV = [
   { href: '/admin',               label: 'Overview',        icon: LayoutDashboard, exact: true  },
   { href: '/admin/people',        label: 'People',          icon: UserCheck,       exact: false },
+  { href: '/admin/impersonation', label: 'View-as Log',     icon: History,         exact: false },
   { href: '/admin/organizations', label: 'Organizations',   icon: Building2,       exact: false },
   { href: '/admin/access',        label: 'Access Control',  icon: ShieldCheck,     exact: false },
   { href: '/admin/invites',       label: 'Invite Codes',    icon: Key,             exact: false },
