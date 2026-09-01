@@ -16,6 +16,7 @@ import {
   type GraphFile,
 } from '@/lib/microsoft-graph';
 import { getOrgFinancialProfile } from '@/lib/org-financials';
+import { retrieveCycContext } from '@/lib/cyc-context/retrieve';
 
 export interface AgentTool {
   name:        string;
@@ -28,6 +29,39 @@ export interface AgentTool {
   requires:    Provider | null;
   execute(ctx: AgentContext, input: Record<string, unknown>): Promise<string>;
 }
+
+// ── CYC proprietary knowledge (RAG) ──────────────────────────────────────────
+const retrieveKnowledge: AgentTool = {
+  name: 'retrieve_cyc_context',
+  description:
+    "Search the organization's OWN proprietary knowledge base — its real grant win/loss " +
+    'history by funder, board-member connections (who at the org knows whom), cultivation ' +
+    'notes, financial profile, and peer organizations. ALWAYS use this first when the user ' +
+    "asks anything specific to the organization: its track record with a funder, whether it " +
+    'has applied somewhere before, who it knows on a board, which funders to cultivate, or ' +
+    'why a grant does/does not fit. Returns the most relevant facts from real data.',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      query: { type: 'string', description: 'What to look up in the org\'s knowledge base.' },
+    },
+    required: ['query'],
+    additionalProperties: false,
+  },
+  readOnly: true,
+  requires: null,
+  async execute(ctx, input) {
+    const query = String(input.query ?? '').trim();
+    if (!query) return 'Provide a query describing what to look up.';
+    const hits = await retrieveCycContext(ctx.orgId, query, 6);
+    if (!hits.length) {
+      return 'No proprietary context is indexed yet for this organization. It is built from the grant history, board, cultivation, financial, and peer data once loaded.';
+    }
+    return hits
+      .map(h => `[${h.kind}] ${h.title ? h.title + ' — ' : ''}${h.text}`)
+      .join('\n\n');
+  },
+};
 
 // ── grant pipeline ──────────────────────────────────────────────────────────
 const searchGrantPipeline: AgentTool = {
@@ -187,6 +221,7 @@ const saveDraftToOneDrive: AgentTool = {
 
 // ── registry + selectors ────────────────────────────────────────────────────
 export const AGENT_TOOLS: AgentTool[] = [
+  retrieveKnowledge,
   searchGrantPipeline,
   getFinancialSnapshot,
   searchDocuments,
