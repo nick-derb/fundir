@@ -14,6 +14,10 @@ export interface DashKpi { label: string; value: number; delta: string | null; a
 export interface DeadlineRow { funder: string; title: string; due: string; days: number; stage: string; href: string }
 export interface GoalVM { id?: string; label: string; current: number; target: number; unit: 'percent' | 'count' | 'currency'; pct: number; readout: string }
 
+declare global {
+  interface Window { FundirCharts?: { init: (root: Document | HTMLElement) => void } }
+}
+
 const SERIF = "'Instrument Serif',Palatino,Georgia,serif";
 
 export function DashboardView({
@@ -26,11 +30,29 @@ export function DashboardView({
   calendarConnected: boolean; events: CalendarEvent[];
 }) {
   useEffect(() => {
-    if (document.getElementById('dash-serif')) return;
-    const l = document.createElement('link');
-    l.id = 'dash-serif'; l.rel = 'stylesheet';
-    l.href = 'https://fonts.googleapis.com/css2?family=Instrument+Serif&display=swap';
-    document.head.appendChild(l);
+    if (!document.getElementById('dash-serif')) {
+      const l = document.createElement('link');
+      l.id = 'dash-serif'; l.rel = 'stylesheet';
+      l.href = 'https://fonts.googleapis.com/css2?family=Instrument+Serif&family=JetBrains+Mono:wght@400;500&display=swap';
+      document.head.appendChild(l);
+    }
+    // Design's animated canvas charts + glyph field (vanilla modules).
+    const ensure = (id: string, src: string) => {
+      if (document.getElementById(id)) return;
+      const scr = document.createElement('script');
+      scr.id = id; scr.src = src;
+      document.body.appendChild(scr);
+    };
+    ensure('dash-charts', '/dashboard/charts.js');
+    ensure('dash-field', '/dashboard/field.js');
+    let n = 0;
+    const tick = () => {
+      const cv = document.querySelector<HTMLCanvasElement>('[data-dash-field]');
+      if (cv && window.FundirField) window.FundirField.init(cv);
+      if (window.FundirCharts) window.FundirCharts.init(document);
+    };
+    const iv = setInterval(() => { tick(); if (++n > 30) clearInterval(iv); }, 150);
+    return () => clearInterval(iv);
   }, []);
 
   return (
@@ -211,7 +233,8 @@ function GoalsModal({ goals, onClose }: { goals: GoalVM[]; onClose: () => void }
 /* ────────────────────────── Activity ────────────────────────── */
 
 function ActivityCard({ kpis, monthly, months }: { kpis: DashKpi[]; monthly: number[]; months: string[] }) {
-  const max = Math.max(1, ...monthly);
+  // Pale the bars for months that haven't happened yet in the fiscal year.
+  const liveIdx = ((new Date().getMonth() - 6 + 12) % 12) + 1;
   return (
     <section className="bg-surface border border-hairline rounded-lg p-5">
       <div className="flex items-start justify-between gap-3 mb-4">
@@ -220,13 +243,13 @@ function ActivityCard({ kpis, monthly, months }: { kpis: DashKpi[]; monthly: num
           <p className="text-caption text-tertiary mt-1">Matches tracked by month, fiscal year to date</p>
         </div>
       </div>
-      <div className="flex items-end gap-1.5 h-[104px]">
-        {monthly.map((v, i) => (
-          <div key={i} className="flex-1 flex flex-col justify-end" title={`${months[i]}: ${v}`}>
-            <div className="rounded-t-sm bg-accent/80" style={{ height: `${(v / max) * 100}%`, minHeight: v > 0 ? 3 : 0 }} />
-          </div>
-        ))}
-      </div>
+      <canvas
+        data-chart="bars"
+        data-values={monthly.join(',')}
+        data-live={liveIdx}
+        className="block w-full h-[104px]"
+        aria-label={`Monthly activity: ${months.map((m, i) => `${m} ${monthly[i]}`).join(', ')}`}
+      />
       <div className="flex justify-between mt-2 font-mono text-[8.5px] uppercase tracking-wide text-tertiary">
         {months.map(m => <span key={m}>{m}</span>)}
       </div>
@@ -409,16 +432,19 @@ function TimelineCard({ connected, events }: { connected: boolean; events: Calen
 
 function AskFundirCard() {
   return (
-    <section className="bg-surface border border-hairline rounded-lg p-5">
-      <p className="text-eyebrow uppercase text-tertiary mb-2">Ask Fundir</p>
-      <p className="text-body text-secondary leading-relaxed mb-4">
-        Search your filings, documents and funder record in plain language.
-      </p>
-      <button
-        onClick={() => window.dispatchEvent(new CustomEvent('fundir:open-advisor'))}
-        className="w-full px-4 py-2 rounded-md text-body-strong text-primary border border-hairline bg-surface hover:bg-elevated transition-colors">
-        Open assistant
-      </button>
+    <section className="bg-surface border border-hairline rounded-lg overflow-hidden">
+      <canvas data-dash-field aria-hidden="true" className="block w-full h-[172px] pointer-events-none" />
+      <div className="px-5 pb-5 -mt-2">
+        <p className="text-eyebrow uppercase text-tertiary mb-2">Ask Fundir</p>
+        <p className="text-body text-secondary leading-relaxed mb-4">
+          Search your filings, documents and funder record in plain language.
+        </p>
+        <button
+          onClick={() => window.dispatchEvent(new CustomEvent('fundir:open-advisor'))}
+          className="w-full px-4 py-2 rounded-md text-body-strong text-primary border border-hairline bg-surface hover:bg-elevated transition-colors">
+          Open assistant
+        </button>
+      </div>
     </section>
   );
 }
