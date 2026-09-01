@@ -1,6 +1,7 @@
 import { getAuthContext } from '@/lib/auth-context';
 import { createServerClient } from '@/lib/supabase';
 import { FEATURE_SPEC_VERSION } from '@/lib/training/feature-export';
+import { fetchFunderWinRateSummary } from '@/lib/funder-win-rates';
 import { TrainingActions } from '@/components/admin/training-actions';
 import { redirect } from 'next/navigation';
 
@@ -28,6 +29,8 @@ export default async function TrainingPage() {
       .eq('org_id', ctx.orgId)
       .eq('feature_spec_version', FEATURE_SPEC_VERSION),
   ]);
+
+  const track = await fetchFunderWinRateSummary(ctx.orgId);
 
   const ex = examplesRes.data ?? [];
   const awarded = ex.filter(e => e.label === 'awarded').length;
@@ -90,6 +93,33 @@ export default async function TrainingPage() {
           )}
         </div>
       </div>
+
+      {/* real grant track record (lever #2) */}
+      {track.total > 0 && (
+        <div style={{ ...card, marginBottom: 20 }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, marginBottom: 4, flexWrap: 'wrap' }}>
+            <div style={{ fontSize: 13, fontWeight: 600 }}>Real grant track record</div>
+            <div style={{ fontSize: 12, color: '#94a3b8' }}>
+              {track.overall.wins} of {track.total} decided applications won
+              ({Math.round(track.overall.rawRate * 100)}%) · scoring uses a smoothed {Math.round(track.foundationRate * 100)}% foundation win-rate
+            </div>
+          </div>
+          <p style={{ fontSize: 12, color: '#64748b', margin: '0 0 14px', lineHeight: 1.6 }}>
+            From CYC&rsquo;s real submission history. This replaces the old 0.35 default in the historical
+            factor for foundation matches (takes effect on the next discovery / rescore).
+          </p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {track.byFunder.slice(0, 10).map(f => (
+              <div key={f.funder} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, padding: '6px 11px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.02)' }}>
+                <span style={{ color: '#cbd5e1', maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.funder}</span>
+                <span style={{ color: f.wins > f.losses ? '#34d399' : f.losses > f.wins ? '#f87171' : '#94a3b8', fontWeight: 600 }}>
+                  {f.wins}W/{f.losses}L
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* actions */}
       <div style={{ ...card, marginBottom: 18 }}>

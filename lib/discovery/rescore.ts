@@ -23,6 +23,7 @@ import { getOrgConfig } from '@/lib/config/loader';
 import { getOrgFinancialProfile } from '@/lib/org-financials';
 import { generateEmbedding } from '@/lib/embeddings';
 import { fetchOrgOutcomeCounts, buildHistoricalWinRates } from '@/lib/win-rate-bayes';
+import { fetchFunderWinRateSummary, buildFoundationHistoricalRates } from '@/lib/funder-win-rates';
 import { loadOrgCraSnapshot } from '@/lib/cra/repo';
 import {
   loadFunderAffinitySnapshot, computeFunderAffinity,
@@ -157,9 +158,12 @@ export async function rescoreOrgCorpus(orgIdInput: string, orgCode: string): Pro
   );
 
   const observedRates = observedOutcomes ? buildHistoricalWinRates(observedOutcomes) : {};
+  // Lever #2: real overall foundation win-rate from CYC's Instrumentl history,
+  // replacing the 0.35 default on the shared 'FOUNDATION' historical key.
+  const foundationRates = buildFoundationHistoricalRates(await fetchFunderWinRateSummary(orgIdInput));
   const orgProfile: OrgMatchProfile = {
     ...baseProfile,
-    historicalWinRates: { ...baseProfile.historicalWinRates, ...observedRates },
+    historicalWinRates: { ...baseProfile.historicalWinRates, ...observedRates, ...foundationRates },
   };
 
   // Pull every grant in the corpus + this org's existing match_results

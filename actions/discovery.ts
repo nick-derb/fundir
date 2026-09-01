@@ -14,6 +14,7 @@ import { CYC_PROFILE } from '@/lib/cyc-profile';
 import { YMCA_MATCH_PROFILE } from '@/lib/ymca-live-data';
 import { getAuthContext } from '@/lib/auth-context';
 import { fetchOrgOutcomeCounts, buildHistoricalWinRates } from '@/lib/win-rate-bayes';
+import { fetchFunderWinRateSummary, buildFoundationHistoricalRates } from '@/lib/funder-win-rates';
 import { getOrgFinancialProfile } from '@/lib/org-financials';
 import { getOrgConfig } from '@/lib/config/loader';
 import { loadOrgCraSnapshot } from '@/lib/cra/repo';
@@ -276,9 +277,14 @@ export async function runDiscovery(params: SearchParams, orgId?: string, orgCode
     const observedRates = observedOutcomes
       ? buildHistoricalWinRates(observedOutcomes)
       : {};
+    // Lever #2: CYC's real overall foundation win-rate replaces the 0.35
+    // default on the shared 'FOUNDATION' historical key.
+    const foundationRates = orgId
+      ? buildFoundationHistoricalRates(await fetchFunderWinRateSummary(orgId))
+      : {};
     const orgProfile = {
       ...baseOrgProfile,
-      historicalWinRates: { ...baseOrgProfile.historicalWinRates, ...observedRates },
+      historicalWinRates: { ...baseOrgProfile.historicalWinRates, ...observedRates, ...foundationRates },
     };
 
     for (const search of searches) {
