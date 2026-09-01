@@ -39,6 +39,14 @@ if (/<title>[\s\S]*?<\/title>/i.test(html)) {
   html = html.replace(/<head>/i, '<head>\n<title>Fundir — AI Grant Intelligence</title>');
 }
 
+// 2b. Google Search Console site-verification tag (proves domain ownership for
+//     Google OAuth branding verification). Injected here so it survives re-pulls
+//     of the design template.
+const GSC_META = '<meta name="google-site-verification" content="-SIIxl204u88xB92Zmu8jc2Mwnbjpkq-tODsBnonOPE">';
+if (!html.includes('google-site-verification')) {
+  html = html.replace(/<head>/i, `<head>\n${GSC_META}`);
+}
+
 // 3. CTA wiring. Capture-phase delegation on the document so it wins over the
 //    design's own handlers and survives React re-renders. Exact (trimmed,
 //    lowercased) text match avoids catching the same words in body copy.
