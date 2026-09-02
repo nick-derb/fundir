@@ -75,7 +75,7 @@ function LoginPageContent() {
       onSubmit={handleSubmit}
       onForgot={handleForgot}
       onBack={() => router.push('/')}
-      onSwitchMode={() => router.push('/signup')}
+      onSwitchMode={() => router.push('/onboarding')}
     />
   );
 }

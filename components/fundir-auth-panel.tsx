@@ -283,7 +283,7 @@ export function FundirAuthPanel({
             <p className="fa-alt">
               {register ? 'Already have an account? ' : "Don't have an account? "}
               <button className="fa-link" type="button" onClick={onSwitchMode}>
-                {register ? 'Sign in' : 'Sign up'}
+                {register ? 'Sign in' : 'Request access'}
               </button>
             </p>
           </div>
