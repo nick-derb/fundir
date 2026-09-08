@@ -67,16 +67,19 @@ async function main() {
 
   const db = getSupabase();
   const orgId = await getOrgId(db);
-  // Dedupe on (opportunity_name, funder_name) to satisfy the unique index.
-  const seen = new Set();
-  const deduped = [];
+  // Collapse duplicate (opportunity_name, funder_name) rows to satisfy the
+  // unique index, KEEPING the most complete one — a terminal outcome and/or a
+  // real awarded/requested amount wins over a blank prospecting duplicate, so
+  // awards are never lost to dedup ordering.
+  const rank = r => (r.outcome ? 4 : 0) + ((Number(r.amount_awarded) || 0) > 0 ? 2 : 0) + ((Number(r.amount_requested) || 0) > 0 ? 1 : 0);
+  const byKey = new Map();
   for (const r of rows) {
     const k = `${r.opportunity_name}|||${r.funder_name}`;
-    if (seen.has(k)) continue;
-    seen.add(k);
-    deduped.push({ ...r, org_id: orgId });
+    const prev = byKey.get(k);
+    if (!prev || rank(r) > rank(prev)) byKey.set(k, r);
   }
-  if (deduped.length !== rows.length) console.log(`Deduped ${rows.length - deduped.length} duplicate (opportunity, funder) rows.`);
+  const deduped = [...byKey.values()].map(r => ({ ...r, org_id: orgId }));
+  if (deduped.length !== rows.length) console.log(`Collapsed ${rows.length - deduped.length} duplicate (opportunity, funder) rows, keeping the most complete.`);
 
   const written = await upsertAll(db, 'cyc_grant_submissions', deduped, 'org_id,opportunity_name,funder_name');
   console.log(`Done — ${written} submissions written. Labels: ${awarded} awarded / ${rejected} rejected.`);

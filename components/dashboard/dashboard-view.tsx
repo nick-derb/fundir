@@ -1,474 +1,430 @@
 'use client';
 
-// Tenant dashboard — native React rebuild of the Claude Design "Console
-// dashboard" template, wired to real data. Uses the app's design tokens
-// (identical to the DS token set) + Instrument Serif for the greeting.
+// Tenant dashboard — native React port of the updated Claude Design "Console
+// dashboard" (condensing header, parallax hero, KPI strip, this-week calendar,
+// goals, activity, next deadlines, today, needs-a-decision). Wired to real data:
+// Instrumentl pipeline (cyc_grant_submissions) for KPIs / deadlines / activity /
+// needs, org_goals for goals, and the user's Microsoft/Google calendar.
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import {
+  CalendarDays, Mail, Send, CheckCircle2, Hourglass, Radar, ArrowRight,
+  FileEdit, MessageSquare,
+} from 'lucide-react';
 import { CycHeroTransform } from '@/components/cyc-hero-transform';
-import type { CalendarEvent } from '@/lib/microsoft-graph';
-
-export interface DashKpi { label: string; value: number; delta: string | null; accent?: boolean }
-export interface DeadlineRow { funder: string; title: string; due: string; days: number; stage: string; href: string }
-export interface GoalVM { id?: string; label: string; current: number; target: number; unit: 'percent' | 'count' | 'currency'; pct: number; readout: string }
 
 declare global {
-  interface Window { FundirCharts?: { init: (root: Document | HTMLElement) => void } }
+  interface Window {
+    FundirField?: { init: (c: HTMLCanvasElement) => void };
+    FundirCharts?: { init: (root: Document | HTMLElement) => void };
+  }
 }
 
 const SERIF = "'Instrument Serif',Palatino,Georgia,serif";
 
-export function DashboardView({
-  orgName, userName, greeting, today, isCyc,
-  kpis, monthly, months, deadlines, goals, calendarConnected, events,
-}: {
-  orgName: string; userName?: string; greeting: string; today: string; isCyc: boolean;
-  kpis: DashKpi[]; monthly: number[]; months: string[];
-  deadlines: DeadlineRow[]; goals: GoalVM[];
-  calendarConnected: boolean; events: CalendarEvent[];
-}) {
+export interface DashGoal { id: string; label: string; current: number; target: number; unit: 'percent' | 'count' | 'currency'; pct: number; readout: string }
+export interface DashData {
+  greeting: string; firstName: string; today: string; isCyc: boolean;
+  kpis: { label: string; value: string; sub: string; icon: string; accent?: boolean }[];
+  monthly: number[]; months: string[]; liveIdx: number;
+  deadlines: { funder: string; type: string; due: string; days: number; stage: string; tone: Tone }[];
+  goals: DashGoal[];
+  week: { n: number; dow: string; isToday: boolean; events: { title: string; time: string; kind: string }[] }[];
+  todayEvents: { time: string; title: string; meta: string; dot: string }[];
+  needs: { icon: string; text: string }[];
+  calendarConnected: boolean;
+}
+type Tone = 'accent' | 'neutral' | 'info' | 'warning';
+
+const KPI_ICON: Record<string, React.ComponentType<{ style?: React.CSSProperties }>> = {
+  send: Send, 'check-circle-2': CheckCircle2, hourglass: Hourglass, radar: Radar,
+};
+
+const CSS = `
+.dv-root{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;color:var(--text-primary)}
+.dv-root{--radius-kpi:12px;--radius-console:14px}
+.dv-root .fd-eyebrow{font-size:11px;line-height:1.2;letter-spacing:.08em;font-weight:600;text-transform:uppercase}
+.dv-root .fd-kpi{font-family:'JetBrains Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums;font-weight:600;letter-spacing:-.01em}
+.dv-root .fd-mono{font-family:'JetBrains Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+.dv-root .fd-caption{font-size:12px;line-height:1.5}
+.dv-root .fd-h2{font-size:17px;line-height:1.4;font-weight:600}
+.dv-root [data-hero] .cyc-hero{background:transparent!important;border:none!important;border-radius:0!important}
+.dv-root [data-hero] .cyc-replay{background:rgba(247,248,247,.9)!important}
+.dv-root [data-kind="grant"]{border-left-color:#0C6B5A!important;background:#EDF4F0}
+.dv-root [data-kind="funder"]{border-left-color:#9C7A2A!important;background:#F7F2E6}
+.dv-root [data-kind="internal"]{border-left-color:#5B7383!important;background:#EEF2F4}
+.dv-root [data-kind="site"]{border-left-color:#A25A44!important;background:#F7EFEC}
+@keyframes fd-pulse{0%,100%{opacity:1}50%{opacity:.3}}
+@keyframes fd-fade{from{opacity:0}to{opacity:1}}
+@keyframes fd-rise{from{opacity:0;transform:translateY(10px) scale(.99)}to{opacity:1;transform:none}}
+.dv-root [data-reveal]{opacity:0;transform:translateY(14px);transition:opacity .5s cubic-bezier(.2,.7,.2,1),transform .5s cubic-bezier(.2,.7,.2,1)}
+.dv-root [data-reveal].fd-in{opacity:1;transform:none}
+.dv-root [data-lift]{transition:transform .18s cubic-bezier(.2,.8,.3,1),box-shadow .18s ease,border-color .18s ease}
+.dv-root [data-lift]:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(16,25,23,.07);border-color:#CBD5D0}
+.dv-root [data-kpi]{transition:border-color .18s ease,background-color .18s ease}
+.dv-root [data-kpi]:hover{border-color:#CBD5D0;background:var(--bg-surface)}
+.dv-root [data-calrow]{transition:background-color .15s ease}
+.dv-root [data-calrow]:hover{background:var(--bg-page)}
+.dv-root [data-hdr]{transition:padding .28s cubic-bezier(.2,.8,.3,1),border-color .28s ease,background-color .28s ease}
+.dv-root [data-hdr-title]{transition:font-size .28s cubic-bezier(.2,.8,.3,1),opacity .2s ease}
+.dv-root [data-hdr-sub]{transition:opacity .2s ease,max-height .28s cubic-bezier(.2,.8,.3,1),margin .28s ease}
+.dv-root [data-hdr].is-stuck{padding-top:11px;padding-bottom:11px;border-color:var(--border-hairline);background:rgba(255,255,255,.86);backdrop-filter:saturate(1.4) blur(10px);-webkit-backdrop-filter:saturate(1.4) blur(10px)}
+.dv-root [data-hdr].is-stuck [data-hdr-title]{font-size:1.06rem!important}
+.dv-root [data-hdr].is-stuck [data-hdr-sub]{opacity:0!important;max-height:0!important;margin:0!important;overflow:hidden}
+@media (prefers-reduced-motion:reduce){.dv-root [data-reveal]{opacity:1;transform:none;transition:none}}
+@media (max-width:1240px){.dv-root [data-dash-cols]{grid-template-columns:minmax(0,1fr)!important}.dv-root [data-dash-rail]{position:static!important}}
+@media (max-width:1080px){.dv-root [data-kpis]{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+@media (max-width:640px){.dv-root [data-kpis]{grid-template-columns:minmax(0,1fr)!important}.dv-root [data-goal-row]{grid-template-columns:minmax(0,1fr) 64px 64px!important}}
+`;
+
+function StatusTag({ tone, children }: { tone: Tone; children: React.ReactNode }) {
+  const m = {
+    accent: { c: 'var(--accent)', bg: 'rgba(12,107,90,.10)', b: 'rgba(12,107,90,.26)' },
+    neutral: { c: 'var(--text-secondary)', bg: 'var(--bg-elevated)', b: 'var(--border-hairline)' },
+    info: { c: '#3E6CA8', bg: 'rgba(62,108,168,.10)', b: 'rgba(62,108,168,.25)' },
+    warning: { c: '#9C7A2A', bg: 'rgba(156,122,42,.10)', b: 'rgba(156,122,42,.3)' },
+  }[tone];
+  return <span className="fd-eyebrow" style={{ display: 'inline-flex', alignItems: 'center', color: m.c, background: m.bg, border: `1px solid ${m.b}`, borderRadius: 999, padding: '3px 9px', whiteSpace: 'nowrap' }}>{children}</span>;
+}
+
+export function DashboardView({ data }: { data: DashData }) {
+  const [goals, setGoals] = useState(data.goals);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState<DashGoal[]>([]);
+  const [saving, setSaving] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  // Fonts + charts + field, then scroll behavior (condense header, hero
+  // parallax, reveal-on-scroll).
   useEffect(() => {
-    if (!document.getElementById('dash-serif')) {
+    if (!document.getElementById('dash-fonts')) {
       const l = document.createElement('link');
-      l.id = 'dash-serif'; l.rel = 'stylesheet';
-      l.href = 'https://fonts.googleapis.com/css2?family=Instrument+Serif&family=JetBrains+Mono:wght@400;500&display=swap';
+      l.id = 'dash-fonts'; l.rel = 'stylesheet';
+      l.href = 'https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap';
       document.head.appendChild(l);
     }
-    // Design's animated canvas charts + glyph field (vanilla modules).
-    const ensure = (id: string, src: string) => {
-      if (document.getElementById(id)) return;
-      const scr = document.createElement('script');
-      scr.id = id; scr.src = src;
-      document.body.appendChild(scr);
-    };
+    const ensure = (id: string, src: string) => { if (!document.getElementById(id)) { const s = document.createElement('script'); s.id = id; s.src = src; document.body.appendChild(s); } };
     ensure('dash-charts', '/dashboard/charts.js');
     ensure('dash-field', '/dashboard/field.js');
     let n = 0;
-    const tick = () => {
-      const cv = document.querySelector<HTMLCanvasElement>('[data-dash-field]');
+    const boot = setInterval(() => {
+      const cv = rootRef.current?.querySelector<HTMLCanvasElement>('[data-dash-field]');
       if (cv && window.FundirField) window.FundirField.init(cv);
       if (window.FundirCharts) window.FundirCharts.init(document);
+      if (++n > 30) clearInterval(boot);
+    }, 150);
+
+    const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const root = rootRef.current;
+    const hdr = root?.querySelector('[data-hdr]');
+    const inner = root?.querySelector<HTMLElement>('[data-hero-inner]');
+    const band = root?.querySelector<HTMLElement>('[data-hero-band]');
+    let raf = 0;
+    const onScroll = () => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        const y = window.scrollY || document.documentElement.scrollTop || 0;
+        if (hdr) hdr.classList.toggle('is-stuck', y > 26);
+        if (reduced) return;
+        if (inner) { const k = Math.min(1, y / 420); inner.style.transform = `translate3d(0,${(-y * 0.32).toFixed(1)}px,0)`; inner.style.opacity = String(1 - k * 0.72); }
+        if (band) band.style.opacity = String(Math.max(0, 1 - y / 460));
+      });
     };
-    const iv = setInterval(() => { tick(); if (++n > 30) clearInterval(iv); }, 150);
-    return () => clearInterval(iv);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+
+    const targets = root?.querySelectorAll('[data-reveal]') ?? [];
+    let io: IntersectionObserver | null = null;
+    if (reduced) { targets.forEach(el => el.classList.add('fd-in')); }
+    else {
+      io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('fd-in'); io!.unobserve(e.target); } }), { rootMargin: '0px 0px -8% 0px', threshold: 0.05 });
+      targets.forEach(el => io!.observe(el));
+    }
+    return () => { clearInterval(boot); window.removeEventListener('scroll', onScroll); io?.disconnect(); };
   }, []);
 
-  return (
-    <div className="px-4 sm:px-6 md:px-8 py-6 max-w-7xl mx-auto">
-      {/* ── Header ── */}
-      <div className="flex items-end justify-between gap-6 flex-wrap mb-5">
-        <div>
-          <p className="text-eyebrow uppercase text-tertiary mb-2">{today}</p>
-          <h1 className="text-primary leading-tight" style={{ fontFamily: SERIF, fontWeight: 400, fontSize: 'clamp(1.8rem,3vw,2.4rem)', letterSpacing: '-0.018em' }}>
-            {greeting}, {userName || orgName}
-          </h1>
-        </div>
-        <a href="https://outlook.office.com/mail/" target="_blank" rel="noreferrer"
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-md text-body-strong text-primary border border-hairline bg-surface hover:bg-elevated transition-colors">
-          <MsSquares /> Open Outlook
-        </a>
-      </div>
-
-      {/* ── Hero ── */}
-      {isCyc && <div className="mb-5"><CycHeroTransform /></div>}
-
-      {/* ── Two-column grid ── */}
-      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_348px] gap-5 items-start">
-
-        {/* Left column */}
-        <div className="flex flex-col gap-5 min-w-0">
-          <GoalsCard goals={goals} />
-          <ActivityCard kpis={kpis} monthly={monthly} months={months} />
-          <DeadlinesCard rows={deadlines} />
-        </div>
-
-        {/* Right rail */}
-        <div className="flex flex-col gap-5 min-w-0">
-          <CalendarCard connected={calendarConnected} events={events} />
-          <TimelineCard connected={calendarConnected} events={events} />
-          <AskFundirCard />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ────────────────────────── Goals ────────────────────────── */
-
-function GoalsCard({ goals }: { goals: GoalVM[] }) {
-  const [editing, setEditing] = useState(false);
-  const avg = goals.length ? goals.reduce((s, g) => s + g.pct, 0) / goals.length : 0;
-  const onPace = avg >= 60;
-
-  return (
-    <section className="bg-surface border border-hairline rounded-lg p-5">
-      <div className="flex items-start justify-between gap-3 mb-4">
-        <div>
-          <h2 className="text-h2 text-primary">Organization goals</h2>
-          <p className="text-caption text-tertiary mt-1">Fiscal year to date</p>
-        </div>
-        <div className="flex items-center gap-3">
-          {goals.length > 0 && (
-            <span className={`text-eyebrow uppercase ${onPace ? 'text-accent' : 'text-warning'}`}>
-              {onPace ? 'On pace' : 'Behind'}
-            </span>
-          )}
-          <button onClick={() => setEditing(true)}
-            className="text-eyebrow uppercase text-tertiary hover:text-accent transition-colors inline-flex items-center gap-1.5">
-            Edit
-          </button>
-        </div>
-      </div>
-
-      {goals.length === 0 ? (
-        <div className="py-6 text-center">
-          <p className="text-body text-muted mb-3">No goals set yet.</p>
-          <button onClick={() => setEditing(true)}
-            className="text-body-strong text-accent hover:underline">Add your first goal →</button>
-        </div>
-      ) : (
-        <div className="flex flex-col gap-4">
-          {goals.map((g, i) => (
-            <div key={g.id ?? i}>
-              <div className="flex items-baseline justify-between gap-3 mb-1.5">
-                <span className="text-body text-primary">{g.label}</span>
-                <span className="font-mono text-caption text-secondary tabular-nums">{g.readout}</span>
-              </div>
-              <div className="h-1 rounded-full bg-elevated overflow-hidden">
-                <div className="h-full rounded-full bg-accent transition-all" style={{ width: `${g.pct}%` }} />
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {editing && <GoalsModal goals={goals} onClose={() => setEditing(false)} />}
-    </section>
-  );
-}
-
-type DraftGoal = { id: string; label: string; current: string; target: string; unit: GoalVM['unit'] };
-
-function GoalsModal({ goals, onClose }: { goals: GoalVM[]; onClose: () => void }) {
-  const router = useRouter();
-  const [rows, setRows] = useState<DraftGoal[]>(() =>
-    goals.length
-      ? goals.map(g => ({ id: g.id ?? crypto.randomUUID(), label: g.label, current: String(g.current), target: String(g.target), unit: g.unit }))
-      : [{ id: crypto.randomUUID(), label: '', current: '0', target: '100', unit: 'count' }]);
-  const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-    document.addEventListener('keydown', onKey);
-    document.body.style.overflow = 'hidden';
-    return () => { document.removeEventListener('keydown', onKey); document.body.style.overflow = ''; };
-  }, [onClose]);
-
-  const patch = (id: string, k: keyof DraftGoal, v: string) => setRows(rs => rs.map(r => r.id === id ? { ...r, [k]: v } : r));
-  const remove = (id: string) => setRows(rs => rs.filter(r => r.id !== id));
-  const add = () => setRows(rs => [...rs, { id: crypto.randomUUID(), label: '', current: '0', target: '100', unit: 'count' }]);
-
-  async function save() {
+  const openGoals = () => { setDraft(goals.map(g => ({ ...g }))); setEditing(true); };
+  const closeGoals = () => { setEditing(false); setDraft([]); };
+  const money = (n: number) => n >= 1e6 ? '$' + (n / 1e6).toFixed(n % 1e6 ? 2 : 1).replace(/\.0$/, '') + 'M' : n >= 1e3 ? '$' + Math.round(n / 1e3) + 'K' : '$' + n;
+  const readout = (g: DashGoal) => g.unit === 'percent' ? `${Math.round(g.current)}%` : g.unit === 'currency' ? `${money(g.current)} of ${money(g.target)}` : `${g.current} of ${g.target}`;
+  const pctOf = (g: DashGoal) => Math.max(0, Math.min(100, g.target ? (g.current / g.target) * 100 : 0));
+  const patch = (id: string, k: keyof DashGoal, v: string) => setDraft(d => d.map(g => g.id === id ? { ...g, [k]: k === 'label' || k === 'unit' ? v : Number(v.replace(/[^\d.]/g, '')) || 0 } : g));
+  async function saveGoals() {
     setSaving(true);
-    const payload = rows
-      .filter(r => r.label.trim())
-      .map(r => ({ label: r.label.trim(), current: Number(r.current) || 0, target: Number(r.target) || 0, unit: r.unit }));
+    const kept = draft.filter(g => String(g.label).trim());
     try {
-      await fetch('/api/goals', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ goals: payload }) });
-    } catch { /* ignore */ }
-    onClose();
-    router.refresh();
+      await fetch('/api/goals', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ goals: kept.map(g => ({ label: g.label, current: g.current, target: g.target, unit: g.unit })) }) });
+      setGoals(kept.map(g => ({ ...g, pct: pctOf(g), readout: readout(g) })));
+    } catch { /* keep local */ }
+    setSaving(false); setEditing(false); setDraft([]);
   }
 
-  const inputCls = 'w-full text-[13px] text-primary bg-transparent border border-transparent rounded-sm px-2 py-1.5 hover:bg-elevated focus:outline-none focus:bg-surface focus:border-accent transition-colors';
+  const card: React.CSSProperties = { background: 'var(--bg-surface)', border: '1px solid var(--border-hairline)', borderRadius: 'var(--radius-console)' };
 
   return (
-    <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center p-7">
-      <div onClick={onClose} className="absolute inset-0 bg-black/30 backdrop-blur-sm" />
-      <div className="relative w-full max-w-[620px] max-h-full flex flex-col bg-surface border border-hairline rounded-xl shadow-xl overflow-hidden">
-        <div className="flex items-start justify-between gap-4 px-6 py-4 border-b border-hairline">
-          <div>
-            <h2 className="text-h2 text-primary">Organization goals</h2>
-            <p className="text-caption text-tertiary mt-1">Visible to everyone at your organization</p>
+    <div className="dv-root" ref={rootRef} style={{ position: 'relative', background: 'var(--bg-page)' }}>
+      <style dangerouslySetInnerHTML={{ __html: CSS }} />
+
+      {/* hero band */}
+      <div data-hero-band style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 520, pointerEvents: 'none', zIndex: 0, background: 'radial-gradient(120% 78% at 62% 6%,rgba(101,154,128,.16),rgba(101,154,128,0) 62%),linear-gradient(180deg,#FFFFFF 0%,#FBFCFB 38%,var(--bg-page) 100%)' }} />
+
+      {/* condensing header */}
+      <div data-hdr style={{ position: 'sticky', top: 48, zIndex: 15, padding: '22px 26px 16px', borderBottom: '1px solid transparent' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 24, flexWrap: 'wrap' }}>
+          <div style={{ minWidth: 0 }}>
+            <p data-hdr-sub className="fd-eyebrow" style={{ color: 'var(--text-tertiary)', margin: '0 0 8px' }}>{data.today}</p>
+            <h1 data-hdr-title style={{ fontFamily: SERIF, fontWeight: 400, fontSize: 'clamp(1.9rem,3vw,2.5rem)', lineHeight: 1.04, letterSpacing: '-.018em', margin: 0 }}>{data.greeting}, {data.firstName}</h1>
           </div>
-          <button onClick={onClose} aria-label="Close" className="w-7 h-7 rounded-sm border border-hairline text-secondary hover:text-primary flex items-center justify-center">✕</button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+            <Link href="/calendar" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, height: 38, padding: '0 14px', borderRadius: 'var(--radius-kpi)', border: '1px solid var(--border-hairline)', background: 'var(--bg-surface)', color: 'var(--text-primary)', fontSize: 12.5, textDecoration: 'none', whiteSpace: 'nowrap' }}><CalendarDays style={{ width: 13, height: 13 }} />Calendar</Link>
+            <a href="https://outlook.office.com/mail/" target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, height: 38, padding: '0 16px', borderRadius: 'var(--radius-kpi)', border: 'none', background: 'var(--text-primary)', color: '#fff', fontSize: 12.5, fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap', textDecoration: 'none' }}><Mail style={{ width: 13, height: 13 }} />Open Outlook</a>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ position: 'relative', zIndex: 1, padding: '0 26px 44px' }}>
+
+        {/* hero */}
+        <div data-hero style={{ position: 'relative', margin: '0 -8px 4px', overflow: 'hidden', WebkitMaskImage: 'linear-gradient(180deg,#000 0%,#000 76%,transparent 100%)', maskImage: 'linear-gradient(180deg,#000 0%,#000 76%,transparent 100%)' }}>
+          <div data-hero-inner style={{ willChange: 'transform' }}>
+            <CycHeroTransform />
+          </div>
         </div>
 
-        <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4">
-          <div className="grid grid-cols-[minmax(0,1fr)_70px_70px_90px_28px] gap-x-2.5 items-center pb-2">
-            {['Goal', 'Current', 'Target', 'Unit', ''].map((h, i) => (
-              <span key={i} className={`text-eyebrow uppercase text-tertiary ${i === 1 || i === 2 ? 'text-right' : ''}`}>{h}</span>
-            ))}
-          </div>
-          {rows.map(r => (
-            <div key={r.id} className="grid grid-cols-[minmax(0,1fr)_70px_70px_90px_28px] gap-x-2.5 items-center py-1.5 border-t border-hairline">
-              <input value={r.label} onChange={e => patch(r.id, 'label', e.target.value)} placeholder="Name this goal" className={inputCls} />
-              <input value={r.current} onChange={e => patch(r.id, 'current', e.target.value.replace(/[^\d.]/g, ''))} inputMode="decimal" className={`${inputCls} font-mono text-right`} />
-              <input value={r.target} onChange={e => patch(r.id, 'target', e.target.value.replace(/[^\d.]/g, ''))} inputMode="decimal" className={`${inputCls} font-mono text-right`} />
-              <select value={r.unit} onChange={e => patch(r.id, 'unit', e.target.value as GoalVM['unit'])}
-                className="w-full text-[10px] uppercase tracking-wide text-secondary bg-surface border border-hairline rounded-sm px-1.5 py-1.5 cursor-pointer focus:outline-none focus:border-accent">
-                <option value="percent">Percent</option>
-                <option value="count">Count</option>
-                <option value="currency">Dollars</option>
-              </select>
-              <button onClick={() => remove(r.id)} aria-label="Remove" className="w-6 h-6 text-tertiary hover:text-critical flex items-center justify-center">✕</button>
+        {/* KPI strip */}
+        <div data-reveal data-kpis style={{ display: 'grid', gridTemplateColumns: 'repeat(4,minmax(0,1fr))', gap: 14, marginBottom: 22 }}>
+          {data.kpis.map(k => {
+            const Icon = KPI_ICON[k.icon] ?? Radar;
+            return (
+              <div key={k.label} data-kpi style={{ border: '1px solid var(--border-hairline)', borderRadius: 'var(--radius-console)', padding: '15px 16px', background: 'rgba(255,255,255,.72)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 11 }}><Icon style={{ width: 12, height: 12, color: 'var(--text-tertiary)' }} /><span className="fd-eyebrow" style={{ color: 'var(--text-tertiary)' }}>{k.label}</span></div>
+                <b className="fd-kpi" style={{ fontSize: 26, display: 'block', lineHeight: 1, color: k.accent ? 'var(--accent)' : undefined }}>{k.value}</b>
+                <span className="fd-mono" style={{ fontSize: 9.5, color: k.accent ? 'var(--accent)' : 'var(--text-tertiary)', display: 'block', marginTop: 6 }}>{k.sub}</span>
+              </div>
+            );
+          })}
+        </div>
+
+        <div data-dash-cols style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 340px', gap: 20, alignItems: 'start' }}>
+
+          {/* LEFT */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20, minWidth: 0 }}>
+
+            {/* This week */}
+            <Link data-reveal data-lift href="/calendar" style={{ display: 'block', textDecoration: 'none', color: 'inherit', ...card, overflow: 'hidden' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '16px 18px 14px' }}>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                    <div className="fd-h2" style={{ color: 'var(--text-primary)' }}>This week</div>
+                    <span className="fd-eyebrow" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: 'var(--text-tertiary)' }}><i style={{ width: 4, height: 4, borderRadius: '50%', background: data.calendarConnected ? 'var(--accent)' : 'var(--border-hairline)', animation: data.calendarConnected ? 'fd-pulse 2.6s ease-in-out infinite' : undefined }} />{data.calendarConnected ? 'Microsoft 365' : 'Not connected'}</span>
+                  </div>
+                  <p className="fd-caption" style={{ color: 'var(--text-tertiary)', margin: '4px 0 0' }}>{data.calendarConnected ? 'Your week, next to your deadlines' : 'Connect a calendar in onboarding to see your week'}</p>
+                </div>
+                <span style={{ flex: 1 }} />
+                <span className="fd-eyebrow" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--accent)', whiteSpace: 'nowrap' }}>Open calendar <ArrowRight style={{ width: 12, height: 12 }} /></span>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,minmax(0,1fr))', borderTop: '1px solid var(--border-hairline)' }}>
+                {data.week.map((d, i) => (
+                  <div key={i} style={{ borderRight: i < 6 ? '1px solid var(--border-hairline)' : 'none', padding: '10px 9px 12px', minHeight: 104 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                      {d.isToday
+                        ? <span className="fd-mono" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 18, height: 18, padding: '0 4px', borderRadius: 4, background: 'var(--text-primary)', color: 'var(--bg-surface)', fontSize: 10, fontWeight: 500 }}>{d.n}</span>
+                        : <span className="fd-mono" style={{ fontSize: 10, color: 'var(--text-secondary)' }}>{d.n}</span>}
+                      <span className="fd-eyebrow" style={{ color: 'var(--text-tertiary)', fontSize: 8 }}>{d.dow}</span>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                      {d.events.map((e, j) => (
+                        <div key={j} data-kind={e.kind} style={{ borderLeft: '2px solid #5B7383', borderRadius: '0 3px 3px 0', padding: '4px 6px' }}>
+                          <div style={{ fontSize: 10.5, fontWeight: 500, lineHeight: 1.28, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.title}</div>
+                          <div className="fd-mono" style={{ fontSize: 8.5, color: 'var(--text-tertiary)', marginTop: 2 }}>{e.time}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Link>
+
+            {/* FY27 goals */}
+            <div data-reveal style={{ ...card, padding: '18px 20px' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 18 }}>
+                <div>
+                  <div className="fd-h2" style={{ color: 'var(--text-primary)' }}>FY27 goals</div>
+                  <p className="fd-caption" style={{ color: 'var(--text-tertiary)', margin: '4px 0 0' }}>Organization-wide, July 2026 to June 2027</p>
+                </div>
+                <button type="button" onClick={openGoals} className="fd-eyebrow" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', padding: '2px 0', cursor: 'pointer', color: 'var(--text-tertiary)', fontFamily: "'JetBrains Mono',monospace" }}>
+                  <svg width="11" height="11" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.4"><path d="M9.6 1.9 L12.1 4.4 L4.6 11.9 L1.6 12.4 L2.1 9.4 Z" /></svg>Edit
+                </button>
+              </div>
+              {goals.length === 0 ? (
+                <button type="button" onClick={openGoals} className="text-body-strong" style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', padding: 0, fontSize: 13 }}>Add your first goal →</button>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
+                  {goals.map(g => (
+                    <div key={g.id}>
+                      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, marginBottom: 7 }}><span style={{ fontSize: 13 }}>{g.label}</span><span className="fd-mono" style={{ fontSize: 11.5, color: 'var(--text-secondary)' }}>{g.readout}</span></div>
+                      <div style={{ height: 4, borderRadius: 3, background: 'var(--bg-elevated)', overflow: 'hidden' }}><i style={{ display: 'block', height: '100%', width: `${g.pct}%`, borderRadius: 3, background: 'var(--accent)', transition: 'width .5s cubic-bezier(.2,.8,.3,1)' }} /></div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-          ))}
-          <button onClick={add} className="inline-flex items-center gap-2 mt-3 text-eyebrow uppercase text-secondary border border-dashed border-hairline rounded-sm px-3 py-2 hover:border-accent hover:text-accent transition-colors">＋ Add goal</button>
-        </div>
 
-        <div className="flex items-center justify-end gap-2 px-6 py-3.5 border-t border-hairline bg-page">
-          <button onClick={onClose} className="px-3.5 py-2 rounded-md text-body-strong text-primary border border-hairline bg-surface hover:bg-elevated transition-colors">Cancel</button>
-          <button onClick={save} disabled={saving} className="px-4 py-2 rounded-md text-body-strong bg-accent text-accent-on hover:bg-accent-hover disabled:opacity-60 transition-colors">
-            {saving ? 'Saving…' : 'Save goals'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ────────────────────────── Activity ────────────────────────── */
-
-function ActivityCard({ kpis, monthly, months }: { kpis: DashKpi[]; monthly: number[]; months: string[] }) {
-  // Pale the bars for months that haven't happened yet in the fiscal year.
-  const liveIdx = ((new Date().getMonth() - 6 + 12) % 12) + 1;
-  return (
-    <section className="bg-surface border border-hairline rounded-lg p-5">
-      <div className="flex items-start justify-between gap-3 mb-4">
-        <div>
-          <h2 className="text-h2 text-primary">Activity</h2>
-          <p className="text-caption text-tertiary mt-1">Matches tracked by month, fiscal year to date</p>
-        </div>
-      </div>
-      <canvas
-        data-chart="bars"
-        data-values={monthly.join(',')}
-        data-live={liveIdx}
-        className="block w-full h-[104px]"
-        aria-label={`Monthly activity: ${months.map((m, i) => `${m} ${monthly[i]}`).join(', ')}`}
-      />
-      <div className="flex justify-between mt-2 font-mono text-[8.5px] uppercase tracking-wide text-tertiary">
-        {months.map(m => <span key={m}>{m}</span>)}
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-5">
-        {kpis.map(k => (
-          <div key={k.label} className="border border-hairline rounded-lg p-3.5">
-            <p className="text-eyebrow uppercase text-tertiary mb-2">{k.label}</p>
-            <div className="flex items-baseline gap-2">
-              <b className="font-mono text-[22px] text-primary tabular-nums">{k.value}</b>
-              {k.delta && <span className={`font-mono text-caption ${k.accent ? 'text-accent' : 'text-tertiary'}`}>{k.delta}</span>}
-            </div>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-/* ────────────────────────── Deadlines ────────────────────────── */
-
-const STAGE_TONE: Record<string, string> = {
-  Drafting: 'text-accent', Submitted: 'text-accent', Queued: 'text-secondary', Tracking: 'text-tertiary', 'Board path': 'text-info',
-};
-
-function DeadlinesCard({ rows }: { rows: DeadlineRow[] }) {
-  return (
-    <section className="bg-surface border border-hairline rounded-lg overflow-hidden">
-      <div className="flex items-start justify-between gap-3 px-5 py-4">
-        <div>
-          <h2 className="text-h2 text-primary">Next deadlines</h2>
-          <p className="text-caption text-tertiary mt-1">Across every open opportunity</p>
-        </div>
-      </div>
-      {rows.length === 0 ? (
-        <p className="px-5 pb-5 text-body text-muted">No upcoming deadlines. Run discovery to start tracking grants.</p>
-      ) : (
-        <table className="w-full">
-          <thead>
-            <tr className="border-y border-hairline bg-elevated/40">
-              {['Funder', 'Due', 'Stage'].map((h, i) => (
-                <th key={h} className={`text-eyebrow uppercase text-tertiary font-medium px-5 py-2 ${i === 2 ? 'text-right' : 'text-left'}`}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r, i) => (
-              <tr key={i} className="border-b border-hairline last:border-0 hover:bg-elevated/30 transition-colors">
-                <td className="px-5 py-2.5">
-                  <Link href={r.href} className="text-body text-primary hover:text-accent transition-colors">{r.funder}</Link>
-                  {r.title && r.title !== r.funder && <p className="text-caption text-tertiary truncate max-w-[280px]">{r.title}</p>}
-                </td>
-                <td className="px-5 py-2.5 font-mono text-caption text-secondary tabular-nums whitespace-nowrap">
-                  {r.due} <span className="text-tertiary">· {r.days}d</span>
-                </td>
-                <td className="px-5 py-2.5 text-right">
-                  <span className={`text-eyebrow uppercase ${STAGE_TONE[r.stage] ?? 'text-tertiary'}`}>{r.stage}</span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-    </section>
-  );
-}
-
-/* ────────────────────────── Calendar ────────────────────────── */
-
-function CalendarCard({ connected, events }: { connected: boolean; events: CalendarEvent[] }) {
-  const eventDays = useMemo(() => {
-    const s = new Set<number>();
-    const now = new Date();
-    for (const e of events) {
-      const d = new Date(e.start);
-      if (!Number.isNaN(d.getTime()) && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()) s.add(d.getDate());
-    }
-    return s;
-  }, [events]);
-
-  const now = new Date();
-  const monthLabel = now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-  const first = new Date(now.getFullYear(), now.getMonth(), 1);
-  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-  const lead = (first.getDay() + 6) % 7; // Monday-first offset
-  const cells: (number | null)[] = [...Array(lead).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)];
-  const todayD = now.getDate();
-
-  return (
-    <section className="bg-surface border border-hairline rounded-lg p-5">
-      <div className="flex items-center gap-2 mb-4">
-        <MsSquares />
-        <span className="text-eyebrow uppercase text-secondary">Microsoft 365</span>
-        <span className="ml-auto text-eyebrow uppercase text-tertiary flex items-center gap-1.5">
-          {connected ? <><i className="w-1 h-1 rounded-full bg-accent" /> Synced</> : 'Not connected'}
-        </span>
-      </div>
-
-      {!connected ? (
-        <div>
-          <p className="text-body-strong text-primary mb-1.5">Connect your calendar</p>
-          <p className="text-caption text-tertiary mb-4 leading-relaxed">Your week sits next to your deadlines. Connect the calendar you use for work.</p>
-          <div className="flex flex-col gap-2">
-            <a href="/api/auth/microsoft?mode=user&return=/dashboard"
-              className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-md text-body-strong text-primary border border-hairline bg-surface hover:bg-elevated transition-colors">
-              <MsSquares /> Connect Microsoft
-            </a>
-            <a href="/api/auth/google?mode=user&return=/dashboard"
-              className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-md text-body-strong text-primary border border-hairline bg-surface hover:bg-elevated transition-colors">
-              <GoogleG /> Connect Google
-            </a>
-          </div>
-        </div>
-      ) : (
-        <>
-          <p className="text-center text-body-strong text-primary mb-2.5">{monthLabel}</p>
-          <div className="grid grid-cols-7 gap-0.5 text-center font-mono text-[8.5px] uppercase text-tertiary mb-1">
-            {['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'].map(d => <span key={d}>{d}</span>)}
-          </div>
-          <div className="grid grid-cols-7 gap-0.5 text-center font-mono text-[11px]">
-            {cells.map((n, i) => {
-              if (n === null) return <span key={i} />;
-              const isToday = n === todayD;
-              const hasEvent = eventDays.has(n);
-              return (
-                <span key={i} className={`relative h-7 flex items-center justify-center rounded-sm ${isToday ? 'bg-primary text-inverse font-medium' : 'text-secondary'}`}>
-                  {n}
-                  {hasEvent && !isToday && <i className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-[3px] h-[3px] rounded-full bg-accent" />}
-                </span>
-              );
-            })}
-          </div>
-        </>
-      )}
-    </section>
-  );
-}
-
-/* ────────────────────────── Timeline ────────────────────────── */
-
-function TimelineCard({ connected, events }: { connected: boolean; events: CalendarEvent[] }) {
-  const upcoming = useMemo(() => events
-    .filter(e => new Date(e.end || e.start).getTime() >= Date.now() - 3_600_000)
-    .slice(0, 6), [events]);
-
-  const dayLabel = upcoming.length
-    ? new Date(upcoming[0].start).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
-    : new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
-
-  return (
-    <section className="bg-surface border border-hairline rounded-lg p-5">
-      <div className="mb-4">
-        <h3 className="text-h3 text-primary">{dayLabel}</h3>
-        <p className="text-caption text-tertiary mt-0.5">{connected ? `${upcoming.length} upcoming` : 'No calendar connected'}</p>
-      </div>
-      {!connected ? (
-        <p className="text-caption text-tertiary leading-relaxed">Connect Microsoft 365 to see your schedule here.</p>
-      ) : upcoming.length === 0 ? (
-        <p className="text-caption text-tertiary leading-relaxed">Nothing on the calendar in the next few days.</p>
-      ) : (
-        <div className="flex flex-col">
-          {upcoming.map((e, i) => (
-            <div key={e.id} className="flex gap-3">
-              <span className="font-mono text-[9.5px] text-tertiary pt-[11px] w-10 flex-none">
-                {e.isAllDay ? 'All day' : new Date(e.start).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}
-              </span>
-              <div className={`flex-1 min-w-0 pl-3 py-2.5 ${i < upcoming.length - 1 ? 'border-l border-hairline' : ''} relative`}>
-                <i className="absolute -left-[3px] top-3.5 w-[5px] h-[5px] rounded-full bg-hairline" />
-                <b className="block text-[12.5px] font-medium text-primary mb-0.5 truncate">{e.subject}</b>
-                <span className="text-caption text-tertiary">{e.online ? 'Online' : e.location || '—'}</span>
+            {/* Activity */}
+            <div data-reveal style={{ ...card, padding: '18px 20px' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 16 }}>
+                <div>
+                  <div className="fd-h2" style={{ color: 'var(--text-primary)' }}>Deadline load</div>
+                  <p className="fd-caption" style={{ color: 'var(--text-tertiary)', margin: '4px 0 0' }}>Upcoming application deadlines by month, FY27</p>
+                </div>
+                <StatusTag tone="neutral">FY27</StatusTag>
+              </div>
+              <canvas data-chart="bars" data-values={data.monthly.join(',')} data-live={data.liveIdx} style={{ display: 'block', width: '100%', height: 128 }} />
+              <div className="fd-mono" style={{ display: 'flex', justifyContent: 'space-between', marginTop: 9, fontSize: 8.5, letterSpacing: '.09em', textTransform: 'uppercase', color: 'var(--text-tertiary)' }}>
+                {data.months.map(m => <span key={m}>{m}</span>)}
               </div>
             </div>
-          ))}
+
+            {/* Next deadlines */}
+            <div data-reveal style={{ ...card, padding: '18px 0 4px' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, padding: '0 20px 14px' }}>
+                <div>
+                  <div className="fd-h2" style={{ color: 'var(--text-primary)' }}>Next deadlines</div>
+                  <p className="fd-caption" style={{ color: 'var(--text-tertiary)', margin: '4px 0 0' }}>Across every open opportunity</p>
+                </div>
+                <Link href="/prospecting" className="fd-eyebrow" style={{ color: 'var(--accent)', textDecoration: 'none', whiteSpace: 'nowrap' }}>View all</Link>
+              </div>
+              {data.deadlines.length === 0 ? (
+                <p className="fd-caption" style={{ color: 'var(--text-tertiary)', padding: '4px 20px 16px' }}>No upcoming deadlines on open opportunities.</p>
+              ) : (
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead><tr>
+                    {['Funder', 'Type', 'Due', 'Stage'].map((h, i) => (
+                      <th key={h} className="fd-eyebrow" style={{ color: 'var(--text-tertiary)', textAlign: i === 3 ? 'right' : 'left', fontWeight: 500, padding: i === 0 || i === 3 ? '8px 20px' : '8px 12px', borderTop: '1px solid var(--border-hairline)', borderBottom: '1px solid var(--border-hairline)' }}>{h}</th>
+                    ))}
+                  </tr></thead>
+                  <tbody>
+                    {data.deadlines.map((d, i) => {
+                      const last = i === data.deadlines.length - 1;
+                      const bb = last ? 'none' : '1px solid var(--border-hairline)';
+                      return (
+                        <tr key={i} data-calrow>
+                          <td style={{ padding: '11px 20px', borderBottom: bb, fontSize: 13 }}>{d.funder}</td>
+                          <td style={{ padding: '11px 12px', borderBottom: bb, fontSize: 12.5, color: 'var(--text-secondary)' }}>{d.type}</td>
+                          <td className="fd-mono" style={{ padding: '11px 12px', borderBottom: bb, fontSize: 11.5 }} title={`${d.days} days`}>{d.due}</td>
+                          <td style={{ padding: '11px 20px', borderBottom: bb, textAlign: 'right' }}><StatusTag tone={d.tone}>{d.stage}</StatusTag></td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
+
+          {/* RIGHT RAIL */}
+          <div data-dash-rail style={{ position: 'sticky', top: 88, display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
+
+            {/* Today */}
+            <div data-reveal style={{ ...card, padding: '16px 17px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 14 }}>
+                <span className="fd-eyebrow" style={{ color: 'var(--text-secondary)', flex: 1 }}>Today</span>
+                <Link href="/calendar" className="fd-eyebrow" style={{ color: 'var(--accent)', textDecoration: 'none' }}>Full day</Link>
+              </div>
+              {data.todayEvents.length === 0 ? (
+                <p className="fd-caption" style={{ color: 'var(--text-tertiary)', margin: 0 }}>{data.calendarConnected ? 'Nothing scheduled today.' : 'Connect your calendar to see today.'}</p>
+              ) : data.todayEvents.map((t, i) => (
+                <div key={i} style={{ display: 'flex', gap: 10 }}>
+                  <span className="fd-mono" style={{ fontSize: 9.5, color: 'var(--text-tertiary)', paddingTop: 1, width: 38, flex: 'none' }}>{t.time}</span>
+                  <div style={{ flex: 1, minWidth: 0, borderLeft: '1px solid var(--border-hairline)', padding: '0 0 14px 12px', position: 'relative' }}>
+                    <i style={{ position: 'absolute', left: -3.5, top: 4, width: 6, height: 6, borderRadius: '50%', background: t.dot === 'on' ? 'var(--accent)' : '#CFD8D3', border: '1.5px solid var(--bg-surface)' }} />
+                    <b style={{ display: 'block', fontSize: 12.5, fontWeight: 500, marginBottom: 2 }}>{t.title}</b>
+                    {t.meta && <span className="fd-caption" style={{ color: 'var(--text-tertiary)' }}>{t.meta}</span>}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Needs a decision */}
+            {data.needs.length > 0 && (
+              <div data-reveal style={{ ...card, padding: '16px 17px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 13 }}>
+                  <span className="fd-eyebrow" style={{ color: 'var(--text-secondary)', flex: 1 }}>Needs attention</span>
+                  <span className="fd-mono" style={{ fontSize: 9.5, color: 'var(--text-tertiary)' }}>{data.needs.length}</span>
+                </div>
+                {data.needs.map((it, i) => (
+                  <div key={i} style={{ display: 'flex', gap: 10, padding: '9px 0', borderTop: '1px solid var(--border-hairline)' }}>
+                    <FileEdit style={{ width: 13, height: 13, color: 'var(--accent)', flex: 'none', marginTop: 1 }} />
+                    <span style={{ flex: 1, fontSize: 12.5, lineHeight: 1.5 }}>{it.text}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Ask Fundir */}
+            <div data-reveal style={{ ...card, overflow: 'hidden' }}>
+              <canvas data-dash-field aria-hidden="true" style={{ display: 'block', width: '100%', height: 172, pointerEvents: 'none' }} />
+              <div style={{ padding: '0 18px 17px', marginTop: -8 }}>
+                <p className="fd-eyebrow" style={{ color: 'var(--text-tertiary)', margin: '0 0 8px' }}>Ask Fundir</p>
+                <p style={{ margin: '0 0 14px', fontSize: 12.5, lineHeight: 1.55, color: 'var(--text-secondary)' }}>Search your filings, documents and funder record in plain language.</p>
+                <button onClick={() => window.dispatchEvent(new CustomEvent('fundir:open-advisor'))} style={{ width: '100%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, height: 32, borderRadius: 'var(--radius-kpi)', border: '1px solid var(--border-hairline)', background: 'var(--bg-surface)', color: 'var(--text-primary)', fontSize: 12.5, fontWeight: 500, cursor: 'pointer' }}><MessageSquare style={{ width: 13, height: 13 }} />Open assistant</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <p className="fd-eyebrow" style={{ color: 'var(--text-tertiary)', margin: '22px 0 0' }}>Live workspace · your Instrumentl pipeline &amp; calendar</p>
+      </div>
+
+      {/* goals modal */}
+      {editing && (
+        <div role="dialog" aria-modal="true" aria-label="Edit FY27 goals" style={{ position: 'fixed', inset: 0, zIndex: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 28 }}>
+          <div onClick={closeGoals} style={{ position: 'absolute', inset: 0, background: 'rgba(16,25,23,.34)', backdropFilter: 'blur(3px)', animation: 'fd-fade .22s ease both' }} />
+          <div style={{ position: 'relative', width: 'min(620px,100%)', maxHeight: '100%', display: 'flex', flexDirection: 'column', ...card, boxShadow: '0 24px 60px rgba(16,25,23,.16)', animation: 'fd-rise .26s cubic-bezier(.2,.8,.3,1) both', overflow: 'hidden' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, padding: '20px 22px 16px', borderBottom: '1px solid var(--border-hairline)' }}>
+              <div>
+                <div className="fd-h2" style={{ color: 'var(--text-primary)' }}>FY27 goals</div>
+                <p className="fd-caption" style={{ color: 'var(--text-tertiary)', margin: '4px 0 0' }}>Organization-wide targets for July 2026 to June 2027</p>
+              </div>
+              <button type="button" onClick={closeGoals} aria-label="Close" style={{ width: 28, height: 28, flex: 'none', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-hairline)', background: 'var(--bg-surface)', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M2.4 2.4 L9.6 9.6 M9.6 2.4 L2.4 9.6" /></svg>
+              </button>
+            </div>
+            <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '6px 22px 18px' }}>
+              <div data-goal-row style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 74px 74px 92px 28px', gap: '0 10px', alignItems: 'center', padding: '12px 0 8px' }}>
+                <span className="fd-eyebrow" style={{ color: 'var(--text-tertiary)' }}>Goal</span>
+                <span className="fd-eyebrow" style={{ color: 'var(--text-tertiary)', textAlign: 'right' }}>Current</span>
+                <span className="fd-eyebrow" style={{ color: 'var(--text-tertiary)', textAlign: 'right' }}>Target</span>
+                <span className="fd-eyebrow" style={{ color: 'var(--text-tertiary)' }}>Unit</span>
+                <span />
+              </div>
+              {draft.map(g => (
+                <div key={g.id} data-goal-row style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 74px 74px 92px 28px', gap: '0 10px', alignItems: 'center', padding: '6px 0', borderTop: '1px solid var(--border-hairline)' }}>
+                  <input value={g.label} onChange={e => patch(g.id, 'label', e.target.value)} placeholder="Name this goal" style={{ width: '100%', fontFamily: "'Inter',sans-serif", fontSize: 13, color: 'var(--text-primary)', background: 'transparent', border: '1px solid transparent', borderRadius: 'var(--radius-sm)', padding: '7px 8px' }} />
+                  <input value={String(g.current)} onChange={e => patch(g.id, 'current', e.target.value)} inputMode="decimal" style={{ width: '100%', fontFamily: "'JetBrains Mono',monospace", fontSize: 12, textAlign: 'right', color: 'var(--text-primary)', background: 'transparent', border: '1px solid transparent', borderRadius: 'var(--radius-sm)', padding: '7px 8px' }} />
+                  <input value={String(g.target)} onChange={e => patch(g.id, 'target', e.target.value)} inputMode="decimal" style={{ width: '100%', fontFamily: "'JetBrains Mono',monospace", fontSize: 12, textAlign: 'right', color: 'var(--text-primary)', background: 'transparent', border: '1px solid transparent', borderRadius: 'var(--radius-sm)', padding: '7px 8px' }} />
+                  <select value={g.unit} onChange={e => patch(g.id, 'unit', e.target.value)} style={{ width: '100%', fontFamily: "'JetBrains Mono',monospace", fontSize: 10, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--text-secondary)', background: 'var(--bg-surface)', border: '1px solid var(--border-hairline)', borderRadius: 'var(--radius-sm)', padding: '6px 7px', cursor: 'pointer' }}><option value="percent">Percent</option><option value="count">Count</option><option value="currency">Dollars</option></select>
+                  <button type="button" onClick={() => setDraft(d => d.filter(x => x.id !== g.id))} aria-label="Remove goal" style={{ width: 24, height: 24, borderRadius: 'var(--radius-sm)', border: 'none', background: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.4"><path d="M2 3.2 H10 M4.8 3.2 V2 H7.2 V3.2 M3.1 3.2 L3.6 10 H8.4 L8.9 3.2" /></svg>
+                  </button>
+                </div>
+              ))}
+              <button type="button" onClick={() => setDraft(d => [...d, { id: 'new-' + Date.now(), label: '', current: 0, target: 100, unit: 'count', pct: 0, readout: '' }])} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginTop: 14, fontFamily: "'JetBrains Mono',monospace", fontSize: 10, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--text-secondary)', background: 'none', border: '1px dashed var(--border-hairline)', borderRadius: 'var(--radius-sm)', padding: '9px 13px', cursor: 'pointer' }}>
+                <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M6 2 V10 M2 6 H10" /></svg>Add goal
+              </button>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, padding: '14px 22px', borderTop: '1px solid var(--border-hairline)', background: 'var(--bg-page)' }}>
+              <span className="fd-caption" style={{ color: 'var(--text-tertiary)' }}>Visible to everyone at Chicago Youth Centers</span>
+              <div style={{ display: 'flex', gap: 9 }}>
+                <button type="button" onClick={closeGoals} style={{ height: 32, padding: '0 14px', borderRadius: 'var(--radius-kpi)', border: '1px solid var(--border-hairline)', background: 'var(--bg-surface)', color: 'var(--text-primary)', fontSize: 12.5, cursor: 'pointer' }}>Cancel</button>
+                <button type="button" onClick={saveGoals} disabled={saving} style={{ height: 32, padding: '0 16px', borderRadius: 'var(--radius-kpi)', border: 'none', background: 'var(--accent)', color: '#fff', fontSize: 12.5, fontWeight: 500, cursor: 'pointer', opacity: saving ? 0.7 : 1 }}>{saving ? 'Saving…' : 'Save goals'}</button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
-    </section>
-  );
-}
-
-/* ────────────────────────── Ask Fundir ────────────────────────── */
-
-function AskFundirCard() {
-  return (
-    <section className="bg-surface border border-hairline rounded-lg overflow-hidden">
-      <canvas data-dash-field aria-hidden="true" className="block w-full h-[172px] pointer-events-none" />
-      <div className="px-5 pb-5 -mt-2">
-        <p className="text-eyebrow uppercase text-tertiary mb-2">Ask Fundir</p>
-        <p className="text-body text-secondary leading-relaxed mb-4">
-          Search your filings, documents and funder record in plain language.
-        </p>
-        <button
-          onClick={() => window.dispatchEvent(new CustomEvent('fundir:open-advisor'))}
-          className="w-full px-4 py-2 rounded-md text-body-strong text-primary border border-hairline bg-surface hover:bg-elevated transition-colors">
-          Open assistant
-        </button>
-      </div>
-    </section>
-  );
-}
-
-/* ────────────────────────── bits ────────────────────────── */
-
-function MsSquares() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true" className="flex-none">
-      <rect x="0.6" y="0.6" width="5.9" height="5.9" fill="#F25022" />
-      <rect x="7.5" y="0.6" width="5.9" height="5.9" fill="#7FBA00" />
-      <rect x="0.6" y="7.5" width="5.9" height="5.9" fill="#00A4EF" />
-      <rect x="7.5" y="7.5" width="5.9" height="5.9" fill="#FFB900" />
-    </svg>
-  );
-}
-
-function GoogleG() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true" className="flex-none">
-      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-      <path fill="#FBBC05" d="M5.84 14.09A6.6 6.6 0 0 1 5.49 12c0-.73.13-1.43.35-2.09V7.07H2.18A11 11 0 0 0 1 12c0 1.78.43 3.45 1.18 4.93l3.66-2.84z" />
-      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84C6.71 7.31 9.14 5.38 12 5.38z" />
-    </svg>
+    </div>
   );
 }
