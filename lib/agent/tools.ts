@@ -17,6 +17,7 @@ import {
 } from '@/lib/microsoft-graph';
 import { getOrgFinancialProfile } from '@/lib/org-financials';
 import { retrieveCycContext } from '@/lib/cyc-context/retrieve';
+import { getMatchConfig } from '@/lib/match-config';
 
 export interface AgentTool {
   name:        string;
@@ -84,10 +85,12 @@ const searchGrantPipeline: AgentTool = {
   requires: null,
   async execute(ctx, input) {
     const limit = Math.min(Math.max(Number(input.limit) || 15, 1), 40);
+    const { minScore } = await getMatchConfig(ctx.orgId);
     const { data } = await ctx.db
       .from('match_results')
       .select('composite_score, pipeline_stage, recommendation, grant:grant_opportunities(title, agency_name, close_date)')
       .eq('org_id', ctx.orgId)
+      .gte('composite_score', minScore) // Settings → minimum-score floor
       .order('composite_score', { ascending: false })
       .limit(limit);
 

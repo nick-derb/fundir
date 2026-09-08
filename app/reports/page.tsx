@@ -4,6 +4,7 @@ import { getAuthContext } from '@/lib/auth-context';
 import { createServerClient } from '@/lib/supabase';
 import { AppShell } from '@/components/app-shell';
 import { ReportsCharts, type ReportsData } from '@/components/reports-charts';
+import { getMatchConfig } from '@/lib/match-config';
 import { redirect } from 'next/navigation';
 
 const STAGE_LABELS: Record<string, string> = {
@@ -18,6 +19,7 @@ const STAGE_LABELS: Record<string, string> = {
 
 async function buildReportsData(orgId: string, orgName: string): Promise<ReportsData> {
   const supabase = createServerClient();
+  const { minScore } = await getMatchConfig(orgId);
 
   const { data: raw } = await supabase
     .from('match_results')
@@ -26,6 +28,7 @@ async function buildReportsData(orgId: string, orgName: string): Promise<Reports
       grant:grant_opportunities(extracted_fields)
     `)
     .eq('org_id', orgId)
+    .gte('composite_score', minScore) // Settings → minimum-score floor
     .order('matched_at', { ascending: false });
 
   const matches = (raw || []) as unknown as Array<{

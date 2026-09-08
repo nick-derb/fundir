@@ -7,16 +7,18 @@ import { DiscoveryControls } from '@/components/discovery-controls';
 import { GrantTable } from '@/components/grant-table';
 import { NLSearch } from '@/components/nl-search';
 import { MatchResult } from '@/types';
+import { getMatchConfig } from '@/lib/match-config';
 import { redirect } from 'next/navigation';
 import { Search, Target, Landmark, ChevronRight, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 
-async function getRecentGrants(orgId: string) {
+async function getRecentGrants(orgId: string, minScore: number) {
   const supabase = createServerClient();
   const { data } = await supabase
     .from('match_results')
     .select('*, grant:grant_opportunities(*)')
     .eq('org_id', orgId)
+    .gte('composite_score', minScore) // Settings → minimum-score floor
     .order('matched_at', { ascending: false })
     .limit(50);
   return (data || []) as MatchResult[];
@@ -38,8 +40,9 @@ export default async function DiscoverPage() {
   const ctx = await getAuthContext();
   if (!ctx) redirect('/login');
 
+  const { minScore } = await getMatchConfig(ctx.orgId);
   const [recentMatches, lastRun] = await Promise.all([
-    getRecentGrants(ctx.orgId),
+    getRecentGrants(ctx.orgId, minScore),
     getPipelineStats(ctx.orgId),
   ]);
 

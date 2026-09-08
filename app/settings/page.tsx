@@ -23,6 +23,8 @@ import { Org990Search } from '@/components/org-990-search';
 import { IntegrationConnector } from '@/components/integration-connector';
 import { RefreshExtractionButton } from '@/components/refresh-extraction-button';
 import { getAllIntegrations } from '@/lib/oauth-tokens';
+import { MatchConfigEditor } from '@/components/settings/match-config-editor';
+import { getMatchConfig } from '@/lib/match-config';
 
 // ── Data loaders (unchanged) ──────────────────────────────────────────────────
 
@@ -87,11 +89,12 @@ export default async function SettingsPage() {
   const ctx = await getAuthContext();
   if (!ctx) redirect('/login');
 
-  const [lastRun, connections, orgFinancial, integrations] = await Promise.all([
+  const [lastRun, connections, orgFinancial, integrations, matchConfig] = await Promise.all([
     getLastRun(),
     checkConnections(),
     getOrgFinancialStatus(ctx.orgCode),
     getAllIntegrations(ctx.orgCode),
+    getMatchConfig(ctx.orgId),
   ]);
 
   const googleConnected     = integrations.some(i => i.provider === 'google');
@@ -435,34 +438,14 @@ export default async function SettingsPage() {
           {/* ── AI Matching Configuration ── */}
           <SectionCard
             eyebrow="AI Matching Configuration"
-            sub="Score weights and exclusion rules"
+            sub="Score weights and exclusion rules · editable"
             icon={Cpu}
           >
-            <ul className="divide-y divide-hairline">
-              {[
-                { label: 'Minimum store score', value: '32 / 100',     desc: 'Grants below this are discarded' },
-                { label: 'Semantic weight',     value: '40%',          desc: 'Embedding similarity' },
-                { label: 'Eligibility weight',  value: '22%',          desc: 'Org-type and geographic fit' },
-                { label: 'Financial weight',    value: '20%',          desc: '990 health signals' },
-                { label: 'Strategic weight',    value: '12%',          desc: 'Mission keyword alignment' },
-                { label: 'Historical weight',   value: '6%',           desc: 'Award track record' },
-                { label: 'Hard exclusions',     value: 'Active',       desc: 'International, defense, foreign-aid' },
-                { label: 'Discovery searches',  value: '11 targeted',  desc: 'Youth, STEM, afterschool, violence prevention…' },
-              ].map(({ label, value, desc }) => (
-                <li
-                  key={label}
-                  className="flex items-center justify-between gap-4 px-5 py-3 hover:bg-elevated transition-colors"
-                >
-                  <div className="min-w-0">
-                    <p className="text-[12.5px] font-medium text-primary">{label}</p>
-                    <p className="text-[11px] text-tertiary mt-0.5">{desc}</p>
-                  </div>
-                  <span className="font-mono text-[13px] font-semibold text-accent tabular-nums whitespace-nowrap">
-                    {value}
-                  </span>
-                </li>
-              ))}
-            </ul>
+            <MatchConfigEditor
+              initial={matchConfig}
+              exclusionsActive
+              discoverySearches={11}
+            />
           </SectionCard>
 
         </div>

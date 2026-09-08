@@ -3,6 +3,7 @@ import { agentContextFromSession, type AgentContext } from '@/lib/agent/context'
 import { AGENT_TOOLS } from '@/lib/agent/tools';
 import { runAgentStream } from '@/lib/agent/loop';
 import { getOrgFinancialProfile } from '@/lib/org-financials';
+import { getMatchConfig } from '@/lib/match-config';
 
 export const maxDuration = 60;
 
@@ -12,10 +13,12 @@ interface ChatMessage { role: 'user' | 'assistant'; content: string; }
 // questions answer instantly without a tool round-trip; the tools cover the rest
 // (searching OneDrive, reading a specific doc, saving a draft, deeper pipeline pulls).
 async function buildMatchContext(db: AgentContext['db'], orgId: string): Promise<string> {
+  const { minScore } = await getMatchConfig(orgId);
   const { data } = await db
     .from('match_results')
     .select('composite_score, pipeline_stage, grant:grant_opportunities(title, agency_name, close_date)')
     .eq('org_id', orgId)
+    .gte('composite_score', minScore) // Settings → minimum-score floor
     .order('composite_score', { ascending: false })
     .limit(12);
 

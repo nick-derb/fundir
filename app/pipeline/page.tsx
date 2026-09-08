@@ -5,16 +5,18 @@ import { getAuthContext } from '@/lib/auth-context';
 import { AppShell } from '@/components/app-shell';
 import { KanbanBoard } from '@/components/kanban-board';
 import { MatchResult } from '@/types';
+import { getMatchConfig } from '@/lib/match-config';
 import { redirect } from 'next/navigation';
 import { Sparkles, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 
-async function getPipelineMatches(orgId: string) {
+async function getPipelineMatches(orgId: string, minScore: number) {
   const supabase = createServerClient();
   const { data } = await supabase
     .from('match_results')
     .select('*, grant:grant_opportunities(*)')
     .eq('org_id', orgId)
+    .gte('composite_score', minScore) // Settings → minimum-score floor
     .order('composite_score', { ascending: false });
   return (data || []) as MatchResult[];
 }
@@ -23,7 +25,8 @@ export default async function PipelinePage() {
   const ctx = await getAuthContext();
   if (!ctx) redirect('/login');
 
-  const matches = await getPipelineMatches(ctx.orgId);
+  const { minScore } = await getMatchConfig(ctx.orgId);
+  const matches = await getPipelineMatches(ctx.orgId, minScore);
 
   const totalPotential = matches
     .filter(m => ['reviewing', 'preparing', 'drafting', 'submitted'].includes(m.pipeline_stage))

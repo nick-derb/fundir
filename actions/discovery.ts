@@ -16,6 +16,7 @@ import { getAuthContext } from '@/lib/auth-context';
 import { fetchOrgOutcomeCounts, buildHistoricalWinRates } from '@/lib/win-rate-bayes';
 import { fetchFunderWinRateSummary, buildFoundationHistoricalRates } from '@/lib/funder-win-rates';
 import { getOrgFinancialProfile } from '@/lib/org-financials';
+import { getMatchConfig, recomputeComposites } from '@/lib/match-config';
 import { getOrgConfig } from '@/lib/config/loader';
 import { loadOrgCraSnapshot } from '@/lib/cra/repo';
 import {
@@ -465,6 +466,9 @@ export async function runDiscovery(params: SearchParams, orgId?: string, orgCode
             financial_score:     financialResult.score,
             historical_score:    scoreBreakdown.historical,
             strategic_score:     scoreBreakdown.strategic,
+            // Persisted so a Settings weight change can recompute this row's
+            // composite exactly (lib/match-config.ts recomputeComposites).
+            funder_affinity_score: scoreBreakdown.funder_affinity ?? 35,
             pipeline_stage:      'discovered',
             eligibility_flags:   eligibilityFlags,
             financial_signals:   financialResult.signals,
@@ -477,6 +481,18 @@ export async function runDiscovery(params: SearchParams, orgId?: string, orgCode
         } catch (err) {
           errors.push(`Error processing ${hit.id}: ${String(err)}`);
         }
+      }
+    }
+
+    // The scorer applies the engine's built-in weights; re-score the org under
+    // its configured weights so newly discovered grants rank consistently with
+    // everything else (no-op when the org has never edited Settings).
+    if (orgId) {
+      try {
+        const { weights } = await getMatchConfig(orgId);
+        await recomputeComposites(orgId, weights);
+      } catch (e) {
+        errors.push(`Re-score after discovery failed: ${String(e)}`);
       }
     }
 
