@@ -169,9 +169,12 @@ export function AppShell({
         {/* Brand + org */}
         <div className="px-4 pt-4 pb-3 border-b border-hairline">
           <div className="flex items-center gap-2 mb-3">
-            <div className="w-7 h-7 rounded-sm flex items-center justify-center bg-accent text-accent-on text-[12px] font-semibold flex-shrink-0">
-              F
-            </div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/fundir-mark.png"
+              alt="Fundir"
+              className="w-7 h-7 object-contain flex-shrink-0"
+            />
             <span className="text-h3 font-semibold tracking-tight text-primary">Fundir</span>
           </div>
 
