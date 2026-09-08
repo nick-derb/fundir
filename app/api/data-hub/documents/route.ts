@@ -35,16 +35,26 @@ export async function POST(req: NextRequest) {
 
     // Feed the advisor's knowledge base: extract → chunk → embed → index this
     // document so the agent can retrieve from it immediately. Best-effort — a
-    // failed/unsupported index must never fail the upload itself.
+    // failed/unsupported index must never fail the upload itself. The uploader
+    // can opt out (Data Hub consent checkbox), in which case the file is stored
+    // in OneDrive but never read into the corpus.
+    const wantsIndex = String(formData.get('index') ?? 'true') !== 'false';
     let indexed = 0;
-    try {
-      const r = await indexDocument(ctx.orgId, token, { id: doc.id, name: doc.name });
-      indexed = r.chunks;
-    } catch (e) {
-      console.error('doc index failed', doc.name, e instanceof Error ? e.message : e);
+    let skipped: string | undefined;
+    if (wantsIndex) {
+      try {
+        const r = await indexDocument(ctx.orgId, token, { id: doc.id, name: doc.name });
+        indexed = r.chunks;
+        skipped = r.skipped;
+      } catch (e) {
+        console.error('doc index failed', doc.name, e instanceof Error ? e.message : e);
+        skipped = 'indexing failed';
+      }
+    } else {
+      skipped = 'not indexed by request';
     }
 
-    return NextResponse.json({ ok: true, document: doc, indexed });
+    return NextResponse.json({ ok: true, document: doc, indexed, skipped });
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Upload failed';
     return NextResponse.json({ error: msg }, { status: 500 });

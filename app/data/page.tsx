@@ -1,14 +1,14 @@
 export const dynamic = 'force-dynamic';
 
-// CYC Data Hub — the org's data-collection surface. Site directors and staff
-// submit metrics and documents; everything lives in a shared OneDrive
-// workbook + folder, so one person's entry is everyone's entry (here, in
-// Excel, and in Teams). See lib/data-hub.ts for the architecture note.
+// CYC Data Hub — the org's data surface, ported to the Claude Design "Data hub"
+// template. Documents and metrics live in a shared OneDrive folder + workbook,
+// so one person's entry is everyone's entry (here, in Excel, and in Teams).
+// Uploaded documents are read into the advisor's knowledge base on arrival —
+// see lib/cyc-context/documents.ts.
 
 import { getAuthContext } from '@/lib/auth-context';
 import { AppShell } from '@/components/app-shell';
-import { DataHubHero } from '@/components/data-hub-hero';
-import { DataHub } from '@/components/data-hub';
+import { DataHubView } from '@/components/data-hub-view';
 import { redirect } from 'next/navigation';
 
 export default async function DataPage() {
@@ -24,13 +24,7 @@ export default async function DataPage() {
       availableOrgs={ctx.availableOrgs}
       currentOrgCode={ctx.orgCode}
     >
-      {/* Animated header — CYC's data flowing into Fundir */}
-      <DataHubHero orgName={ctx.orgName} />
-
-      {/* The living workbook + submission form + shared documents */}
-      <div className="px-6 md:px-8 py-8 max-w-7xl mx-auto">
-        <DataHub userEmail={ctx.email} />
-      </div>
+      <DataHubView orgName={ctx.orgName} userEmail={ctx.email} />
     </AppShell>
   );
 }

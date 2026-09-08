@@ -15,6 +15,7 @@ import { TeamPanel, TeamButton } from '@/components/team-panel';
 import { AiAdvisor } from '@/components/ai-advisor';
 import { switchAdminOrg } from '@/actions/admin-org';
 import { bundledLogoFor } from '@/lib/org-logo';
+import { UserMenu } from '@/components/user-menu';
 
 // New dashboard IA (Claude Design). Prospecting / Cultivation List /
 // Connections / Applications are placeholder routes until designed.
@@ -48,6 +49,7 @@ interface AppShellProps {
   userEmail?: string;
   userName?: string;
   userAvatar?: string | null;
+  userRole?: string | null;
   isAdmin?: boolean;
   availableOrgs?: Array<{ id: string; name: string; org_code: string }>;
   currentOrgCode?: string;
@@ -60,6 +62,7 @@ export function AppShell({
   userEmail,
   userName,
   userAvatar,
+  userRole,
   isAdmin = false,
   availableOrgs = [],
   currentOrgCode,
@@ -326,22 +329,14 @@ export function AppShell({
               userEmail={userEmail}
             />
           )}
-          {userAvatar ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={userAvatar}
-              alt={userName || userEmail || 'You'}
-              title={userName || userEmail}
-              className="w-7 h-7 rounded-full object-cover flex-shrink-0 border border-hairline cursor-default"
-            />
-          ) : (
-            <div
-              className="w-7 h-7 rounded-full flex items-center justify-center text-accent-on bg-accent text-[11px] font-semibold flex-shrink-0 cursor-default"
-              title={userName || userEmail}
-            >
-              {(userName || userEmail || 'U')[0].toUpperCase()}
-            </div>
-          )}
+          <UserMenu
+            userEmail={userEmail}
+            userName={userName}
+            userAvatar={userAvatar}
+            userRole={userRole}
+            orgName={orgName}
+            onSignOut={handleSignOut}
+          />
         </header>
 
         <main className="flex-1 bg-page">
