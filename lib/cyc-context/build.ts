@@ -81,11 +81,13 @@ export async function buildCycContextChunks(orgId: string, orgCode: string): Pro
   return chunks.filter(c => c.text.trim().length > 0);
 }
 
-/** Rebuild the whole CYC context index (clear + re-embed). Returns chunk count. */
+/** Rebuild the STRUCTURED CYC context index (clear + re-embed). Returns chunk
+ * count. Uploaded-document chunks (kind='document') are managed incrementally by
+ * lib/cyc-context/documents.ts and are intentionally left untouched here. */
 export async function indexCycContext(orgId: string, orgCode: string): Promise<{ chunks: number }> {
   const chunks = await buildCycContextChunks(orgId, orgCode);
   const db = createServerClient();
-  await db.from('cyc_context_chunks').delete().eq('org_id', orgId);
+  await db.from('cyc_context_chunks').delete().eq('org_id', orgId).neq('kind', 'document');
 
   let n = 0;
   for (const c of chunks) {

@@ -36,10 +36,12 @@ const retrieveKnowledge: AgentTool = {
   description:
     "Search the organization's OWN proprietary knowledge base — its real grant win/loss " +
     'history by funder, board-member connections (who at the org knows whom), cultivation ' +
-    'notes, financial profile, and peer organizations. ALWAYS use this first when the user ' +
-    "asks anything specific to the organization: its track record with a funder, whether it " +
-    'has applied somewhere before, who it knows on a board, which funders to cultivate, or ' +
-    'why a grant does/does not fit. Returns the most relevant facts from real data.',
+    'notes, financial profile, peer organizations, AND the full text of documents the org has ' +
+    'uploaded to its Data Hub (board minutes, strategic plans, program reports, budgets, PDFs). ' +
+    'ALWAYS use this first when the user asks anything specific to the organization: its track ' +
+    'record with a funder, whether it has applied somewhere before, who it knows on a board, ' +
+    'which funders to cultivate, what a recent report or plan says, or why a grant does/does ' +
+    'not fit. Returns the most relevant facts from real data.',
   inputSchema: {
     type: 'object',
     properties: {
