@@ -11,7 +11,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import {
-  Radar, RefreshCw, UserPlus, ExternalLink, Check, X, Loader2, Link2, Briefcase,
+  Radar, RefreshCw, UserPlus, ExternalLink, Check, X, Loader2, Link2, Briefcase, Download,
 } from 'lucide-react';
 
 const SERIF = "'Instrument Serif',Palatino,Georgia,serif";
@@ -105,7 +105,16 @@ export function NetworkView({ initial }: { initial: NwState }) {
       if (body.enriched?.length) bits.push(`read ${body.enriched.length} profile${body.enriched.length === 1 ? '' : 's'}`);
       if (body.scanned?.length) bits.push(`scanned ${body.scanned.map((s: { company: string }) => s.company).join(', ')}`);
       if (body.leadsFound) bits.push(`${body.leadsFound} new warm path${body.leadsFound === 1 ? '' : 's'}`);
-      setRefreshMsg(`${bits.length ? bits.join(' · ') : 'Nothing pending'} · ${body.apiCalls} API call${body.apiCalls === 1 ? '' : 's'}`);
+      let msg = `${bits.length ? bits.join(' · ') : 'Nothing pending'} · ${body.apiCalls} API call${body.apiCalls === 1 ? '' : 's'}`;
+      // A completed refresh writes a dated .xlsx snapshot into the Data Hub —
+      // CYC always keeps the network as a file, not just database rows.
+      if (body.done && (body.enriched?.length || body.leadsFound)) {
+        try {
+          const snap = await fetch('/api/network/export', { method: 'POST' }).then(r => r.json());
+          if (snap?.ok) msg += ` · snapshot saved to the Data Hub (${snap.document.name})`;
+        } catch { /* download button still works */ }
+      }
+      setRefreshMsg(msg);
       setRefreshDone(!!body.done);
       await reload();
     } catch (e) {
@@ -146,6 +155,9 @@ export function NetworkView({ initial }: { initial: NwState }) {
           </p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <a href="/api/network/export" download style={{ ...btnGhost, textDecoration: 'none' }} title="Download the full network as a dated Excel workbook">
+            <Download style={{ width: 13, height: 13 }} />Export .xlsx
+          </a>
           <button onClick={() => setAddOpen(true)} style={btnGhost}><UserPlus style={{ width: 13, height: 13 }} />Add person</button>
           <button onClick={runRefreshStep} disabled={refreshing || !state.configured} style={{ ...btnAccent, opacity: refreshing || !state.configured ? 0.6 : 1 }}>
             {refreshing ? <Loader2 style={{ width: 13, height: 13 }} className="animate-spin" /> : <RefreshCw style={{ width: 13, height: 13 }} />}

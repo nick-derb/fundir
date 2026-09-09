@@ -103,19 +103,37 @@ const pick = (o: Record<string, unknown>, ...keys: string[]): unknown => {
   return null;
 };
 
+const MONTH_ABBR = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+/** "Sep 2014" from Fresh's start_year/start_month numeric pair. */
+function ym(year: unknown, month: unknown): string | null {
+  const y = Number(year);
+  if (!Number.isFinite(y) || y < 1900) return null;
+  const m = Number(month);
+  return m >= 1 && m <= 12 ? `${MONTH_ABBR[m]} ${y}` : String(y);
+}
+
 function normalizeExperiences(raw: unknown): LinkedInExperience[] {
   if (!Array.isArray(raw)) return [];
   const out: LinkedInExperience[] = [];
   for (const e of raw as Array<Record<string, unknown>>) {
     const org = str(pick(e, 'company', 'company_name', 'companyName', 'org'));
     if (!org) continue;
-    const ended = str(pick(e, 'end_date', 'ends_at', 'endDate', 'date_range_end'));
+    // Live shape (smoke-verified 2026-09-09): start_year/start_month,
+    // end_year/end_month numerics + a boolean is_current + a date_range string.
+    // String-date aliases kept as fallbacks for shape drift.
+    const started = ym(e.start_year, e.start_month)
+      ?? str(pick(e, 'start_date', 'starts_at', 'startDate', 'date_range'));
+    const ended = ym(e.end_year, e.end_month)
+      ?? str(pick(e, 'end_date', 'ends_at', 'endDate'));
+    const isCurrent = typeof e.is_current === 'boolean'
+      ? e.is_current
+      : !ended || /present/i.test(ended);
     out.push({
       org,
       title: str(pick(e, 'title', 'position', 'job_title')),
-      started: str(pick(e, 'start_date', 'starts_at', 'startDate', 'date_range_start')),
+      started,
       ended,
-      isCurrent: !ended || /present/i.test(ended) || e.is_current === true,
+      isCurrent,
     });
   }
   return out.slice(0, 20);
