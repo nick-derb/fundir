@@ -193,7 +193,7 @@ export async function bridgeStackA(db: Db): Promise<{ funders: number; recipient
   });
 
   const funders = await pageAll<{ id: string; ein: string | null; name: string; funder_type: string | null; metadata: Record<string, unknown> | null }>(
-    (a, b) => db.from('funders').select('id, ein, name, funder_type, metadata').not('ein', 'is', null).range(a, b));
+    (a, b) => db.from('funders').select('id, ein, name, funder_type, metadata').not('ein', 'is', null).order('id').range(a, b));
   const fRows: BulkOrg[] = funders.flatMap(f => {
     const ein = normalizeEin(f.ein); if (!ein) return [];
     const m = f.metadata ?? {};
@@ -206,7 +206,7 @@ export async function bridgeStackA(db: Db): Promise<{ funders: number; recipient
   const fNew = await insertMissingByEin(db, fRows, srcA, 0.8);
 
   const recipients = await pageAll<{ id: string; ein: string | null; name: string; ntee_code: string | null; metadata: Record<string, unknown> | null }>(
-    (a, b) => db.from('recipients').select('id, ein, name, ntee_code, metadata').not('ein', 'is', null).range(a, b));
+    (a, b) => db.from('recipients').select('id, ein, name, ntee_code, metadata').not('ein', 'is', null).order('id').range(a, b));
   const rRows: BulkOrg[] = recipients.flatMap(r => {
     const ein = normalizeEin(r.ein); if (!ein) return [];
     const m = r.metadata ?? {};
@@ -285,7 +285,7 @@ export async function bridgeStackB(db: Db, orgId: string): Promise<{ cultivation
 
   // Prospect universe (13k) — EIN-bearing, bulk.
   const prospects = await pageAll<{ ein: string | null; name: string; funder_type: string | null; city: string | null; ntee_code: string | null }>(
-    (a, b) => db.from('cyc_funder_prospects').select('ein, name, funder_type, city, ntee_code').eq('org_id', orgId).range(a, b));
+    (a, b) => db.from('cyc_funder_prospects').select('ein, name, funder_type, city, ntee_code').eq('org_id', orgId).order('id').range(a, b));
   const pRows: BulkOrg[] = prospects.flatMap(p => {
     const ein = normalizeEin(p.ein); if (!ein || !p.name) return [];
     return [{ name: p.name, ein, type: bType(p.name, p.funder_type, p.ntee_code), city: p.city, state: 'IL', ntee: p.ntee_code }];
@@ -295,7 +295,7 @@ export async function bridgeStackB(db: Db, orgId: string): Promise<{ cultivation
   // Peers (1,598) — bulk orgs + a network_peer_orgs row each, flagged as workbook-seeded
   // (Phase 3 replaces the placeholder similarity with the real model).
   const peers = await pageAll<{ ein: string | null; name: string; ntee_code: string | null; city: string | null; peer_category: string | null; same_ntee_as_cyc: string | null; revenue: number | null; total_assets: number | null }>(
-    (a, b) => db.from('cyc_peer_orgs').select('ein, name, ntee_code, city, peer_category, same_ntee_as_cyc, revenue, total_assets').eq('org_id', orgId).range(a, b));
+    (a, b) => db.from('cyc_peer_orgs').select('ein, name, ntee_code, city, peer_category, same_ntee_as_cyc, revenue, total_assets').eq('org_id', orgId).order('id').range(a, b));
   const peerRows: BulkOrg[] = peers.flatMap(p => {
     const ein = normalizeEin(p.ein); if (!ein || !p.name) return [];
     return [{ name: p.name, ein, type: 'nonprofit', city: p.city, state: 'IL', ntee: p.ntee_code }];

@@ -74,6 +74,7 @@ const parser = new XMLParser({
 const GRANT_GROUP_ARRAY_TAGS = new Set([
   'GrantOrContributionPdDuringYearGrp',
   'GrantOrContributionPdDuringYrGrp',         // some 990-PF years use this casing
+  'GrantOrContributionPdDurYrGrp',            // current IRS schema (verified on 2023–2024 990-PF e-files)
   'RecipientTable',                             // 990 Schedule I
 ]);
 
@@ -220,7 +221,7 @@ export function parse990Xml(xml: string): ParsedReturn {
   if (irs990pf) {
     form_type = '990PF';
     const supp = getFirst<Record<string, unknown>>(irs990pf, 'SupplementaryInformationGrp', 'SupplementaryInformation');
-    const grp = (supp?.GrantOrContributionPdDuringYearGrp ?? supp?.GrantOrContributionPdDuringYrGrp) as unknown[] | undefined;
+    const grp = (supp?.GrantOrContributionPdDuringYearGrp ?? supp?.GrantOrContributionPdDuringYrGrp ?? supp?.GrantOrContributionPdDurYrGrp) as unknown[] | undefined;
     rawGrants = Array.isArray(grp) ? grp : [];
   } else if (irs990si) {
     form_type = '990';

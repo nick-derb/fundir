@@ -206,7 +206,7 @@ async function pageAll<T>(q: (from: number, to: number) => PromiseLike<{ data: T
 }
 
 async function loadGraphInput(db: Db, orgId: string): Promise<GraphInput> {
-  const people = await pageAll<EdgePerson>((a, b) => db.from('network_people').select('id, kind, name, organization_id, source_id').eq('org_id', orgId).range(a, b));
+  const people = await pageAll<EdgePerson>((a, b) => db.from('network_people').select('id, kind, name, organization_id, source_id').eq('org_id', orgId).order('id').range(a, b));
   const ids = people.map(p => p.id);
   const inChunks = async <T>(sel: (chunk: string[]) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>): Promise<T[]> => {
     const out: T[] = [];
@@ -286,7 +286,8 @@ async function crossTableEdges(db: Db, orgId: string, cycOrgId: string | null): 
   const peerIds = new Set((peers ?? []).map(p => p.organization_id as string));
   if (peerIds.size) {
     const grants = await pageAll<{ funder_org_id: string; recipient_org_id: string; fiscal_year: number; amount: number | null; confidence: number; source_url: string | null; source_id: string | null }>(
-      (a, b) => db.from('grants_made').select('funder_org_id, recipient_org_id, fiscal_year, amount, confidence, source_url, source_id').not('funder_org_id', 'is', null).not('recipient_org_id', 'is', null).range(a, b));
+      // Ordered pagination — the ingester may be appending while we read.
+      (a, b) => db.from('grants_made').select('funder_org_id, recipient_org_id, fiscal_year, amount, confidence, source_url, source_id').not('funder_org_id', 'is', null).not('recipient_org_id', 'is', null).order('id').range(a, b));
     const agg = new Map<string, { funder: string; peer: string; events: number; amount: number; last: number; conf: number; cited: boolean; source_id: string | null }>();
     for (const g of grants) {
       if (!peerIds.has(g.recipient_org_id)) continue;

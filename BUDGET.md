@@ -54,7 +54,18 @@ explicit confirmation from the user. All confirmed defaults documented inline.
 | 2026-06-17 | live-D | First refresh pass — 18/20 funders refreshed, 1 funder auto-corrected, 9 recipients auto-corrected from synthetic to real EINs | $0.00 | $0.00 | **$0.22** |
 | 2026-06-17 | live-E | Brief regen with corrected EINs (top 17 force) | ~$0.22 plan | **~$0.32 actual** | **~$0.54** |
 
-**Remaining budget:** ~$49.46
+| 2026-09-09 | RG-1 | Relationship graph Phase 1 — model, provenance, org bridge (local joins only) | $0.00 | $0.00 | **~$0.54** |
+| 2026-09-09 | RG-2 | Public-bio extraction — 8 McCormick trustee/leader pages (Sonnet, run twice after a provenance fix) | $0.30 plan | **~$0.35** | **~$0.89** |
+| 2026-09-09 | RG-3 | IRS bulk 990 ingest, smoke commit — 5 filings, 2,185 cited events, 5 Claude adjudications | $2.00 plan | **$0.001** | **~$0.89** |
+| 2026-09-09 | RG-3 | IRS bulk 990 ingest, full scope (165 funders × FY2023–24), cap $20 — **in progress; actual to be recorded at completion** | $15 plan / $26 worst | TBD | **~$0.89 + TBD** |
+
+**Remaining budget:** ~$49.11 (against the $50 self-imposed cap; the Anthropic balance is $90).
+
+**Pricing note (2026-09-09):** the 990 adjudication projection was far too conservative. On real
+filings the identity layer resolved 162 grantees by EIN and 922 by fuzzy match for every 5 that
+reached Claude, so a full-scope pass is tracking to well under $1. RapidAPI (Fresh LinkedIn
+Profile Data, Pro $45/mo) is a separate ledger: ~20 calls used so far (smoke, shape probes, one
+measured 11-call employer scan); credit cost per call to be calibrated against the RapidAPI dashboard.
 
 ### Data-source pivot note (2026-06-17)
 
