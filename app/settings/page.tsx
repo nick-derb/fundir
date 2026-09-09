@@ -55,6 +55,7 @@ async function checkConnections() {
     anthropic:  !!process.env.ANTHROPIC_API_KEY,
     openai:     !!process.env.OPENAI_API_KEY,
     grantsGov:  false,
+    rapidapi:   !!process.env.RAPIDAPI_KEY,
   };
   try {
     // The production hostname is api.grants.gov; apply07.grants.gov is a
@@ -102,11 +103,12 @@ export default async function SettingsPage() {
   const googleEmail         = integrations.find(i => i.provider === 'google')?.user_email;
   const microsoftEmail      = integrations.find(i => i.provider === 'microsoft')?.user_email;
 
-  const totalServices    = 5; // Supabase, Anthropic, OpenAI, Grants.gov, ProPublica (always-on)
+  const totalServices    = 6; // Supabase, Anthropic, OpenAI, Grants.gov, ProPublica (always-on), RapidAPI LinkedIn
   const connectedCount   = (connections.supabase ? 1 : 0)
                          + (connections.anthropic ? 1 : 0)
                          + (connections.openai ? 1 : 0)
                          + (connections.grantsGov ? 1 : 0)
+                         + (connections.rapidapi ? 1 : 0)
                          + 1; // ProPublica is keyless / always-on
   const allConnected     = connectedCount === totalServices;
   const storageConnected = (googleConnected ? 1 : 0) + (microsoftConnected ? 1 : 0);
@@ -123,6 +125,7 @@ export default async function SettingsPage() {
     { name: 'OpenAI Embeddings', desc: 'Semantic matching · cosine similarity scoring',                 ok: connections.openai,     env: 'OPENAI_API_KEY' },
     { name: 'Grants.gov',        desc: 'Federal grant discovery · live opportunity feed · no key',      ok: connections.grantsGov,  env: 'No key required' },
     { name: 'ProPublica 990 API', desc: 'IRS Form 990 financial data · free · no key required',         ok: true,                    env: 'No key required' },
+    { name: 'RapidAPI LinkedIn',  desc: 'Board network mapping · on-demand refresh (quarterly is plenty)', ok: connections.rapidapi, env: 'RAPIDAPI_KEY' },
   ];
 
   return (
