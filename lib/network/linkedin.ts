@@ -18,6 +18,10 @@
 const HOST = process.env.RAPIDAPI_LINKEDIN_HOST || 'fresh-linkedin-profile-data.p.rapidapi.com';
 const BASE = `https://${HOST}`;
 
+// Shared text/identity helpers — one implementation for the whole graph.
+import { fixMojibake, canonicalLinkedInUrl } from '@/lib/network/normalize';
+export { canonicalLinkedInUrl } from '@/lib/network/normalize';
+
 export function isLinkedInConfigured(): boolean {
   return !!process.env.RAPIDAPI_KEY;
 }
@@ -29,27 +33,7 @@ function headers(): Record<string, string> {
   };
 }
 
-/** Canonical https://www.linkedin.com/in/<slug> — the upsert identity (guide §4). */
-export function canonicalLinkedInUrl(raw: string): string | null {
-  const m = String(raw || '').match(/linkedin\.com\/in\/([^/?#\s]+)/i);
-  if (!m) return null;
-  const slug = decodeURIComponent(m[1]).replace(/\/+$/, '');
-  if (!slug) return null;
-  return `https://www.linkedin.com/in/${slug}`;
-}
 
-/** Repair double-encoded UTF-8 (â€™ → ’); keep the fix only if it round-trips. */
-function fixMojibake(s: string | null | undefined): string | null {
-  if (!s) return s ?? null;
-  if (!/[ÃÂâ][-¿€™“”˜]/.test(s)) return s;
-  try {
-    const bytes = Uint8Array.from([...s].map(c => c.charCodeAt(0) & 0xff));
-    const fixed = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
-    return fixed.length > 0 ? fixed : s;
-  } catch {
-    return s;
-  }
-}
 
 const str = (v: unknown): string | null => {
   const s = typeof v === 'string' ? v.trim() : '';
