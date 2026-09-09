@@ -48,6 +48,14 @@ export interface LinkedInExperience {
   isCurrent: boolean;
 }
 
+export interface LinkedInEducation {
+  school: string;
+  degree: string | null;
+  field: string | null;
+  startYear: number | null;
+  endYear: number | null;
+}
+
 export interface LinkedInProfile {
   url: string;
   name: string | null;
@@ -57,6 +65,27 @@ export interface LinkedInProfile {
   currentTitle: string | null;
   currentOrg: string | null;
   experiences: LinkedInExperience[];
+  /** Schools — the shared_university signal. Present in the base enrich response (no extra credits). */
+  educations: LinkedInEducation[];
+}
+
+const yr = (v: unknown): number | null => { const n = Number(v); return Number.isFinite(n) && n > 1900 && n < 2100 ? n : null; };
+
+function normalizeEducations(raw: unknown): LinkedInEducation[] {
+  if (!Array.isArray(raw)) return [];
+  const out: LinkedInEducation[] = [];
+  for (const e of raw as Array<Record<string, unknown>>) {
+    const school = str(pick(e, 'school', 'school_name', 'name', 'institution'));
+    if (!school) continue;
+    out.push({
+      school,
+      degree: str(pick(e, 'degree', 'degree_name')),
+      field: str(pick(e, 'field_of_study', 'field', 'major')),
+      startYear: yr(pick(e, 'start_year', 'starts_at_year')),
+      endYear: yr(pick(e, 'end_year', 'ends_at_year')),
+    });
+  }
+  return out.slice(0, 10);
 }
 
 /** Call budget shared across one refresh step. `spend()` throws past the cap. */
@@ -142,7 +171,14 @@ export async function enrichProfile(linkedinUrl: string, budget: CallBudget): Pr
     currentTitle: str(pick(d, 'job_title', 'current_title')) ?? current?.title ?? null,
     currentOrg: str(pick(d, 'company', 'company_name', 'current_company')) ?? current?.org ?? null,
     experiences,
+    educations: normalizeEducations(pick(d, 'educations', 'education', 'schools')),
   };
+}
+
+/** Numeric years from a normalized experience ("Sep 2014" → 2014). */
+export function experienceYears(e: LinkedInExperience): { startYear: number | null; endYear: number | null } {
+  const y = (s: string | null) => { const m = (s ?? '').match(/(19|20)\d{2}/); return m ? Number(m[0]) : null; };
+  return { startYear: y(e.started), endYear: e.isCurrent ? null : y(e.ended) };
 }
 
 export interface EmployeeHit {
@@ -153,42 +189,96 @@ export interface EmployeeHit {
   location: string | null;
 }
 
+export interface CompanyMatch {
+  companyId: string;
+  name: string;
+  linkedinUrl: string | null;
+  domain: string | null;
+  hqCity: string | null;
+  employeeCount: number | null;
+}
+
+/** Poll an async search until done (bounded). Returns the final status string. */
+async function pollSearch(statusPath: string, budget: CallBudget, maxPolls = 14): Promise<string> {
+  let status = '';
+  for (let i = 0; i < maxPolls; i++) {
+    await new Promise(r => setTimeout(r, i < 4 ? 6000 : 12000));
+    const s = await api(statusPath, budget);
+    status = String(pick(s, 'status') ?? '');
+    if (/done|complete/i.test(status)) return status;
+    if (/fail|error/i.test(status)) throw new Error(`search failed: ${status}`);
+  }
+  throw new Error(`search timed out (last status: ${status || 'unknown'})`);
+}
+
 /**
- * Current employees at a company — the async search flow (guide §3.2):
- * POST /search-employees → poll /check-search-status → page /get-search-results.
- * `maxResults` caps how many people we keep; `budget` caps total calls, and the
- * poll loop has its own ceiling so a stuck search can't spin forever.
+ * Resolve an employer name to its LinkedIn company id via the async
+ * /search-companies flow (verified live 2026-09-09: results carry company_id,
+ * company_name, linkedin_url, domain, hq_city, employee_count). Picks the
+ * result whose normalized name matches the query; returns null rather than
+ * guessing when nothing matches. ~3 calls. Callers memoize the answer.
+ */
+export async function resolveCompany(name: string, budget: CallBudget): Promise<CompanyMatch | null> {
+  const norm = (s: string) => s.toLowerCase().replace(/[.,'’"()]/g, '').replace(/\b(inc|llc|llp|lp|ltd|corp|corporation|company|co)\b/g, '').replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+  const want = norm(name);
+  const started = await api('/search-companies', budget, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ keywords: name, limit: 5 }),
+  });
+  const requestId = String(pick(started, 'request_id') ?? '');
+  if (!requestId) throw new Error(`search-companies returned no request_id: ${JSON.stringify(started).slice(0, 200)}`);
+  await pollSearch(`/check-search-companies-status?request_id=${encodeURIComponent(requestId)}`, budget, 8);
+  const res = await api(`/get-search-companies-results?request_id=${encodeURIComponent(requestId)}&page=1`, budget);
+  const rows = (res.data ?? []) as Array<Record<string, unknown>>;
+  const scored = rows.map(r => {
+    const cname = str(pick(r, 'company_name', 'name')) ?? '';
+    const n = norm(cname);
+    const exact = n === want, starts = n.startsWith(want) || want.startsWith(n), contains = n.includes(want) || want.includes(n);
+    return { r, cname, score: exact ? 3 : starts ? 2 : contains ? 1 : 0 };
+  }).filter(x => x.score > 0).sort((a, b) => b.score - a.score || (Number(b.r.employee_count) || 0) - (Number(a.r.employee_count) || 0));
+  const best = scored[0];
+  if (!best) return null;
+  const id = str(pick(best.r, 'company_id', 'id'));
+  if (!id) return null;
+  return {
+    companyId: id, name: best.cname,
+    linkedinUrl: str(pick(best.r, 'linkedin_url')),
+    domain: str(pick(best.r, 'domain', 'website')),
+    hqCity: str(pick(best.r, 'hq_city')),
+    employeeCount: Number(best.r.employee_count) || null,
+  };
+}
+
+/**
+ * Current employees of ONE resolved company — the async search flow, verified
+ * live 2026-09-09: POST /search-employees {current_company_ids:[id], limit}
+ * → request_id → poll /check-search-status → page /get-search-results.
+ * Title/geo filtering is done locally (scoring), not in the API, so a wrong
+ * filter code can never silently empty a scan. maxResults caps what we keep;
+ * budget caps calls; the poll loop has its own ceiling.
  */
 export async function searchEmployees(
-  company: string,
-  opts: { geo?: string; maxResults?: number; budget: CallBudget },
+  company: CompanyMatch,
+  opts: { maxResults?: number; budget: CallBudget },
 ): Promise<EmployeeHit[]> {
   const { budget, maxResults = 10 } = opts;
   const started = await api('/search-employees', budget, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      company_name: company,
-      ...(opts.geo ? { geo_codes_include: undefined, location: opts.geo } : {}),
-      limit: Math.min(50, maxResults * 3), // over-fetch a little; we filter by title locally
+      geo_codes: [], geo_codes_exclude: [],
+      title_keywords: [], title_keywords_exclude: [],
+      current_company_ids: [Number(company.companyId)], past_company_ids: [],
+      functions: [], keywords: '', sort_by: 'Recommended',
+      limit: Math.min(50, Math.max(10, maxResults * 2)),
     }),
   });
   const requestId = String(pick(started, 'request_id', 'requestId') ?? '');
   if (!requestId) throw new Error(`search-employees returned no request_id: ${JSON.stringify(started).slice(0, 300)}`);
-
-  // Poll — bounded. A quarterly on-demand run can afford patience but not forever.
-  let status = '';
-  for (let i = 0; i < 14; i++) {
-    await new Promise(r => setTimeout(r, i < 4 ? 6000 : 12000));
-    const s = await api(`/check-search-status?request_id=${encodeURIComponent(requestId)}`, budget);
-    status = String(pick(s, 'status') ?? '');
-    if (/done|complete/i.test(status)) break;
-    if (/fail|error/i.test(status)) throw new Error(`search failed for "${company}": ${status}`);
-  }
-  if (!/done|complete/i.test(status)) throw new Error(`search for "${company}" timed out (last status: ${status || 'unknown'})`);
+  await pollSearch(`/check-search-status?request_id=${encodeURIComponent(requestId)}`, budget);
 
   const hits: EmployeeHit[] = [];
-  for (let page = 1; page <= 3 && hits.length < maxResults * 3; page++) {
+  for (let page = 1; page <= 3 && hits.length < maxResults * 2; page++) {
     const res = await api(`/get-search-results?request_id=${encodeURIComponent(requestId)}&page=${page}`, budget);
     const batch = (res.data ?? res.results ?? []) as Array<Record<string, unknown>>;
     if (!Array.isArray(batch) || batch.length === 0) break;

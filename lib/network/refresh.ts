@@ -16,9 +16,35 @@
 
 import { createServerClient } from '@/lib/supabase';
 import {
-  enrichProfile, searchEmployees, canonicalLinkedInUrl, isLinkedInConfigured,
-  CallBudget, type EmployeeHit,
+  enrichProfile, searchEmployees, resolveCompany, canonicalLinkedInUrl, isLinkedInConfigured, experienceYears,
+  CallBudget, type EmployeeHit, type CompanyMatch,
 } from '@/lib/network/linkedin';
+import { normalizeOrgName } from '@/lib/network/normalize';
+
+/**
+ * Employer name → LinkedIn company, memoized in network_organizations.metadata
+ * (linkedin_company_id / linkedin_company_url / domain). A miss is memoized too
+ * so an unresolvable name never re-spends credits.
+ */
+async function resolveCompanyMemo(db: ReturnType<typeof createServerClient>, name: string, budget: CallBudget): Promise<CompanyMatch | null> {
+  const key = normalizeOrgName(name);
+  const { data: org } = await db.from('network_organizations').select('id, name, metadata').eq('normalized_name', key).limit(1).maybeSingle();
+  const meta = (org?.metadata ?? {}) as Record<string, unknown>;
+  if (meta.linkedin_company_id === null) return null;                     // memoized miss
+  if (typeof meta.linkedin_company_id === 'string' && meta.linkedin_company_id) {
+    return { companyId: meta.linkedin_company_id, name: org?.name ?? name, linkedinUrl: (meta.linkedin_company_url as string) ?? null, domain: (meta.domain as string) ?? null, hqCity: null, employeeCount: null };
+  }
+  const match = await resolveCompany(name, budget);
+  if (org) {
+    await db.from('network_organizations').update({
+      metadata: { ...meta, linkedin_company_id: match?.companyId ?? null, linkedin_company_url: match?.linkedinUrl ?? null, domain: match?.domain ?? meta.domain ?? null, linkedin_resolved_at: new Date().toISOString() },
+      ...(match?.domain && !org.name ? {} : {}),
+    }).eq('id', org.id);
+  }
+  return match;
+}
+import { ensureSource, resolveEmployers } from '@/lib/network/bridge';
+import { deriveRelationships } from '@/lib/network/edges';
 
 const ENRICH_PER_STEP    = 6;    // profile enrichments per click (~2 credits each)
 const SCANS_PER_STEP     = 2;    // employer searches per click (search polling is slow)
@@ -160,20 +186,35 @@ export async function runRefreshStep(orgId: string): Promise<RefreshStepResult> 
   const toEnrich = pendingEnrichAll.slice(0, ENRICH_PER_STEP);
 
   const enriched: string[] = [];
+  const linkedinSource = toEnrich.length
+    ? await ensureSource(db, { source_type: 'linkedin_api', source_name: 'LinkedIn profile via RapidAPI (Fresh LinkedIn Profile Data)', raw_reference: 'linkedin_api:fresh', confidence: 0.85 })
+    : null;
   for (const p of toEnrich) {
     try {
       const prof = await enrichProfile(p.linkedin_url as string, budget);
       await db.from('network_people').update({
         headline: prof.headline, current_title: prof.currentTitle, current_org: prof.currentOrg,
         location: prof.location, summary: prof.summary,
-        enriched_at: new Date().toISOString(),
+        enriched_at: new Date().toISOString(), verification: 'verified',
       }).eq('id', p.id);
-      // Replace their career history wholesale — it's provider-owned data.
-      await db.from('network_employments').delete().eq('person_id', p.id);
+      // Replace THIS SOURCE's career history wholesale — provider-owned data.
+      // Public-bio rows (other source_id) are left in place.
+      await db.from('network_employments').delete().eq('person_id', p.id).or(`source_id.eq.${linkedinSource},source_id.is.null`);
       if (prof.experiences.length) {
-        await db.from('network_employments').insert(prof.experiences.map(e => ({
-          person_id: p.id, org_name: e.org, title: e.title,
-          started: e.started, ended: e.ended, is_current: e.isCurrent,
+        await db.from('network_employments').insert(prof.experiences.map(e => {
+          const y = experienceYears(e);
+          return {
+            person_id: p.id, org_name: e.org, title: e.title,
+            started: e.started, ended: e.ended, is_current: e.isCurrent,
+            start_year: y.startYear, end_year: y.endYear, source_id: linkedinSource,
+          };
+        }));
+      }
+      await db.from('network_educations').delete().eq('person_id', p.id).eq('source_id', linkedinSource);
+      if (prof.educations.length) {
+        await db.from('network_educations').insert(prof.educations.map(s => ({
+          person_id: p.id, school_name: s.school, degree: s.degree, field: s.field,
+          start_year: s.startYear, end_year: s.endYear, source_id: linkedinSource,
         })));
       }
       enriched.push(p.name as string);
@@ -193,7 +234,17 @@ export async function runRefreshStep(orgId: string): Promise<RefreshStepResult> 
     const { companiesPending } = await pendingCompanies(orgId);
     for (const c of companiesPending.slice(0, SCANS_PER_STEP)) {
       try {
-        const hits = await searchEmployees(c.display, { budget, maxResults: LEADS_PER_COMPANY * 2 });
+        // Resolve the employer to its LinkedIn company id once; memoize on the
+        // org node so a re-run never spends the ~3 resolution calls again.
+        const match = await resolveCompanyMemo(db, c.display, budget);
+        if (!match) {
+          await db.from('network_org_scans').upsert(
+            { org_id: orgId, company: c.display, scanned_at: new Date().toISOString(), results: 0 },
+            { onConflict: 'org_id,company' });
+          errors.push(`${c.display}: no matching LinkedIn company found`);
+          continue;
+        }
+        const hits = await searchEmployees(match, { budget, maxResults: LEADS_PER_COMPANY * 2 });
         const kept = await storeLeads(orgId, c, hits);
         leadsFound += kept;
         scanned.push({ company: c.display, leads: kept });
@@ -211,13 +262,30 @@ export async function runRefreshStep(orgId: string): Promise<RefreshStepResult> 
   const pendingEnrich = Math.max(0, pendingEnrichAll.length - enriched.length);
   const pendingScans = after.companiesPending.length;
 
+  // ── 3. Fold new facts into the graph: resolve employers → re-derive edges ─
+  let relationshipsFound = 0;
+  if (enriched.length || scanned.length) {
+    try {
+      await resolveEmployers(db, orgId);
+      const d = await deriveRelationships(orgId);
+      relationshipsFound = d.written;
+    } catch (e) {
+      errors.push(`graph derivation: ${e instanceof Error ? e.message : 'failed'}`);
+    }
+  }
+
   if (runId) {
     await db.from('network_refresh_runs').update({
       completed_at: new Date().toISOString(),
       api_calls: budget.used,
+      // Enrich is a known 2 credits/call; scan calls are counted 1:1 until the plan's
+      // per-endpoint pricing is confirmed against the RapidAPI dashboard.
+      rapidapi_credits: enriched.length * 2 + Math.max(0, budget.used - enriched.length),
+      categories: ['people', ...(scanned.length ? ['employers'] : [])],
       profiles_enriched: enriched.length,
       companies_scanned: scanned.length,
       leads_found: leadsFound,
+      relationships_found: relationshipsFound,
       status: errors.length && !enriched.length && !scanned.length ? 'error' : 'done',
       notes: errors.slice(0, 5).join(' | ') || null,
     }).eq('id', runId);

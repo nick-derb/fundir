@@ -134,7 +134,11 @@ normalizeOrgName.aliasKey = (canonical: string) => canonical.toLowerCase().repla
 
 /** Display name + comparison key for an employer string as it appears in the wild. */
 export function canonicalEmployer(name: string | null | undefined): { display: string; key: string } | null {
-  const raw = clean(name).replace(/^retired,?\s*/i, '');
+  // "Retired, Chicago Tribune" / "Chicago Tribune (retired)" / "BMO, retired" → the employer.
+  const raw = clean(name)
+    .replace(/^retired,?\s*(from\s+)?/i, '')
+    .replace(/\s*[(\[]\s*retired\s*[)\]]\s*$/i, '')
+    .replace(/,?\s+retired\s*$/i, '');
   if (!raw) return null;
   const key = normalizeOrgName(raw);
   if (!key) return null;

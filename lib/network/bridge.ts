@@ -77,21 +77,32 @@ export async function ensureOrganization(db: Db, input: EnsureOrgInput): Promise
     }
   }
 
-  // 2. Exact normalized name on an EIN-less node, no state conflict.
+  // 2. Exact normalized name, no state conflict.
+  //    - With an EIN in hand: only an EIN-less node may absorb it (an EIN-bearing
+  //      node with the same name but a different EIN is a different entity).
+  //    - Without an EIN (trustee lists, bios, employer strings): a UNIQUE exact
+  //      name match on any node is the org — preferring one already backed by
+  //      the 990 graph. Ambiguous names (chapters, churches) insert fresh.
   const { data: byName } = await db.from('network_organizations')
     .select('id, ein, state, funder_id, recipient_id')
-    .eq('normalized_name', normalized).is('ein', null).limit(2);
-  if (byName && byName.length === 1) {
-    const hit = byName[0];
-    const stateOk = !hit.state || !input.state || hit.state === input.state;
-    if (stateOk) {
-      const patch: Record<string, unknown> = {};
-      if (ein) patch.ein = ein;
-      if (!hit.funder_id && input.funderId) patch.funder_id = input.funderId;
-      if (!hit.recipient_id && input.recipientId) patch.recipient_id = input.recipientId;
-      if (Object.keys(patch).length) await db.from('network_organizations').update(patch).eq('id', hit.id);
-      return { id: hit.id as string, created: false };
-    }
+    .eq('normalized_name', normalized).limit(3);
+  const candidates = (byName ?? []).filter(h => {
+    const stateOk = !h.state || !input.state || h.state === input.state;
+    return stateOk && (ein ? !h.ein : true);
+  });
+  const hit = candidates.length === 1
+    ? candidates[0]
+    : candidates.length > 1 && !ein
+      ? (candidates.filter(c => c.funder_id || c.recipient_id).length === 1
+          ? candidates.find(c => c.funder_id || c.recipient_id)! : null)
+      : null;
+  if (hit) {
+    const patch: Record<string, unknown> = {};
+    if (ein && !hit.ein) patch.ein = ein;
+    if (!hit.funder_id && input.funderId) patch.funder_id = input.funderId;
+    if (!hit.recipient_id && input.recipientId) patch.recipient_id = input.recipientId;
+    if (Object.keys(patch).length) await db.from('network_organizations').update(patch).eq('id', hit.id);
+    return { id: hit.id as string, created: false };
   }
 
   // 3. Insert.
@@ -208,6 +219,25 @@ export async function bridgeStackA(db: Db): Promise<{ funders: number; recipient
   const rNew = await insertMissingByEin(db, rRows, srcA, 0.8);
   const backrefs = await attachBackrefs(db, [...fRows, ...rRows]);
   return { funders: fNew, recipients: rNew, backrefs };
+}
+
+/** The 990 graph's curated peer set (peer_orgs → recipients) joins the tenant's
+ *  peer table, so funders of those peers derive philanthropic_overlap edges. */
+export async function bridgeStackAPeers(db: Db, orgId: string): Promise<number> {
+  const srcA = await ensureSource(db, { source_type: 'seed', source_name: 'CYC peer seed v1 (lib/graph/seed-cyc-graph.ts)', raw_reference: 'stack_a:peer_orgs', confidence: 0.8 });
+  const { data: peers } = await db.from('peer_orgs').select('peer_recipient_id, similarity, basis').eq('organization_id', orgId);
+  if (!peers?.length) return 0;
+  const { data: nodes } = await db.from('network_organizations').select('id, recipient_id').in('recipient_id', peers.map(p => p.peer_recipient_id));
+  const byRecipient = new Map((nodes ?? []).map(n => [n.recipient_id as string, n.id as string]));
+  const rows = peers.flatMap(p => {
+    const id = byRecipient.get(p.peer_recipient_id as string); if (!id) return [];
+    return [{ org_id: orgId, organization_id: id, similarity: Number(p.similarity) || 0.5,
+      components: { seed: 'peer_orgs', basis: p.basis ?? null, program: null, geography: 1, size: null, population: null, mission: null }, source_id: srcA }];
+  });
+  if (!rows.length) return 0;
+  const { error } = await db.from('network_peer_orgs').upsert(rows, { onConflict: 'org_id,organization_id' });
+  if (error) throw new Error(`peer (stack A) upsert failed: ${error.message}`);
+  return rows.length;
 }
 
 // ── Stack B: CYC workbook tables ────────────────────────────────────────────
@@ -373,6 +403,7 @@ export async function runBridge(orgId: string): Promise<BridgeReport> {
   const db = createServerClient();
   const stackA = await bridgeStackA(db);
   const stackB = await bridgeStackB(db, orgId);
+  stackB.peers += await bridgeStackAPeers(db, orgId);
   const grantsLinked = await linkGrantsMade(db);
   const employers = await resolveEmployers(db, orgId);
   const { count } = await db.from('network_organizations').select('id', { count: 'exact', head: true });

@@ -41,6 +41,8 @@ describe('organization names', () => {
   it('canonicalEmployer strips "Retired," and returns a display name', () => {
     expect(canonicalEmployer('Retired, Chicago Tribune')).toEqual({ display: 'Chicago Tribune', key: 'chicago tribune' });
     expect(canonicalEmployer('Northern Trust Corporation')?.display).toBe('Northern Trust');
+    expect(canonicalEmployer('Chicago Tribune (retired)')).toEqual({ display: 'Chicago Tribune', key: 'chicago tribune' });
+    expect(canonicalEmployer('BMO Harris Bank, retired')?.display).toBe('BMO');
     expect(canonicalEmployer('')).toBeNull();
   });
   it('tokenizes without stopwords and computes jaccard', () => {
