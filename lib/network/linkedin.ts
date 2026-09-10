@@ -235,7 +235,13 @@ export async function resolveCompany(name: string, budget: CallBudget): Promise<
     const n = norm(cname);
     const exact = n === want, starts = n.startsWith(want) || want.startsWith(n), contains = n.includes(want) || want.includes(n);
     return { r, cname, score: exact ? 3 : starts ? 2 : contains ? 1 : 0 };
-  }).filter(x => x.score > 0).sort((a, b) => b.score - a.score || (Number(b.r.employee_count) || 0) - (Number(a.r.employee_count) || 0));
+  }).filter(x => x.score > 0).sort((a, b) => {
+    // Same name quality → prefer the Illinois/Chicago-headquartered entity
+    // (a Chicago board's employers are local; "Rivers Casino" is not Pittsburgh's),
+    // then the larger company.
+    const il = (r: Record<string, unknown>) => /chicago|illinois|\bil\b/i.test(`${r.hq_city ?? ''} ${r.hq_region ?? ''} ${r.hq_full_address ?? ''}`) ? 1 : 0;
+    return b.score - a.score || il(b.r) - il(a.r) || (Number(b.r.employee_count) || 0) - (Number(a.r.employee_count) || 0);
+  });
   const best = scored[0];
   if (!best) return null;
   const id = str(pick(best.r, 'company_id', 'id'));
@@ -259,17 +265,19 @@ export async function resolveCompany(name: string, budget: CallBudget): Promise<
  */
 export async function searchEmployees(
   company: CompanyMatch,
-  opts: { maxResults?: number; budget: CallBudget },
+  opts: { maxResults?: number; budget: CallBudget; keywords?: string; pastCompany?: boolean },
 ): Promise<EmployeeHit[]> {
   const { budget, maxResults = 10 } = opts;
+  const ids = [Number(company.companyId)];
   const started = await api('/search-employees', budget, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       geo_codes: [], geo_codes_exclude: [],
       title_keywords: [], title_keywords_exclude: [],
-      current_company_ids: [Number(company.companyId)], past_company_ids: [],
-      functions: [], keywords: '', sort_by: 'Recommended',
+      // `pastCompany` finds people who USED to work there (retired board members).
+      current_company_ids: opts.pastCompany ? [] : ids, past_company_ids: opts.pastCompany ? ids : [],
+      functions: [], keywords: opts.keywords ?? '', sort_by: 'Recommended',
       limit: Math.min(50, Math.max(10, maxResults * 2)),
     }),
   });
@@ -278,13 +286,16 @@ export async function searchEmployees(
   await pollSearch(`/check-search-status?request_id=${encodeURIComponent(requestId)}`, budget);
 
   const hits: EmployeeHit[] = [];
+  const seen = new Set<string>();
   for (let page = 1; page <= 3 && hits.length < maxResults * 2; page++) {
     const res = await api(`/get-search-results?request_id=${encodeURIComponent(requestId)}&page=${page}`, budget);
     const batch = (res.data ?? res.results ?? []) as Array<Record<string, unknown>>;
     if (!Array.isArray(batch) || batch.length === 0) break;
+    let fresh = 0;
     for (const p of batch) {
       const url = canonicalLinkedInUrl(String(pick(p, 'linkedin_url', 'profile_url', 'url') ?? ''));
-      if (!url) continue;
+      if (!url || seen.has(url)) continue;   // pages can repeat profiles — never double-count
+      seen.add(url); fresh++;
       hits.push({
         url,
         name: str(pick(p, 'full_name', 'name', 'fullName')),
@@ -293,6 +304,7 @@ export async function searchEmployees(
         location: str(pick(p, 'location', 'city', 'location_name')),
       });
     }
+    if (fresh === 0) break;   // the provider is repeating pages
   }
   return hits;
 }

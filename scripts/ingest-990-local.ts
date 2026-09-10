@@ -79,7 +79,12 @@ async function main() {
   const eins = new Set<string>();
   const add = (v: unknown) => { const e = normalizeEin(v); if (e) eins.add(e); };
   if (SMOKE) SMOKE_EINS.forEach(add);
-  else {
+  else if (arg('--scope') === 'corporate') {
+    // Phase 5: every typed corporate foundation with an EIN (their 990-PFs name
+    // the nonprofits they fund and the executives who sit on them).
+    const { data } = await db.from('network_organizations').select('ein').eq('organization_type', 'corporate_foundation').not('ein', 'is', null);
+    (data ?? []).forEach(r => add(r.ein));
+  } else {
     const [q, c, m, cf] = await Promise.all([
       db.from('cyc_research_queue').select('ein').eq('org_id', orgId).not('ein', 'is', null),
       db.from('cyc_cultivation').select('bmf_ein').eq('org_id', orgId).not('bmf_ein', 'is', null),

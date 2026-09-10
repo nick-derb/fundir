@@ -58,8 +58,15 @@ explicit confirmation from the user. All confirmed defaults documented inline.
 | 2026-09-09 | RG-2 | Public-bio extraction — 8 McCormick trustee/leader pages (Sonnet, run twice after a provenance fix) | $0.30 plan | **~$0.35** | **~$0.89** |
 | 2026-09-09 | RG-3 | IRS bulk 990 ingest, smoke commit — 5 filings, 2,185 cited events, 5 Claude adjudications | $2.00 plan | **$0.001** | **~$0.89** |
 | 2026-09-09 | RG-3 | IRS bulk 990 ingest, full scope (165 funders × FY2023–24), cap $20 — **in progress; actual to be recorded at completion** | $15 plan / $26 worst | TBD | **~$0.89 + TBD** |
+| 2026-09-09 | RG-4 | Foundation board cross-reference — 18 trustee bio pages harvested from foundation rosters (Sonnet) | $0.45 plan | **~$0.36** | **~$1.25** |
+| 2026-09-09 | RG-5 | Corporate giving-page extraction — 14 pages attempted, 3 fetched + extracted (Bank of America, Exelon, Motorola Solutions); 11 blocked (403/404/TLS) cost nothing | $0.45 plan | **~$0.09** | **~$1.34** |
 
-**Remaining budget:** ~$49.11 (against the $50 self-imposed cap; the Anthropic balance is $90).
+**Remaining budget:** ~$48.66 (against the $50 self-imposed cap; the Anthropic balance is $90).
+
+**RapidAPI ledger (separate — Pro plan, $45/mo, 4,500 credits):** ~20 calls before Phase 5; Phase 5
+URL discovery pilot (provider search, 0 stored) ≈ 30 calls; URL verification of the 4 officers
+(5 enrich calls) = 10 credits; one refresh step (4 profile reads + employer scans) = 25 calls.
+Running estimate ≈ 85 calls / ≤ 100 credits of 4,500. Calibrate against the RapidAPI dashboard.
 
 **Pricing note (2026-09-09):** the 990 adjudication projection was far too conservative. On real
 filings the identity layer resolved 162 grantees by EIN and 922 by fuzzy match for every 5 that

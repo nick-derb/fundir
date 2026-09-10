@@ -26,7 +26,7 @@ import { normalizeOrgName } from '@/lib/network/normalize';
  * (linkedin_company_id / linkedin_company_url / domain). A miss is memoized too
  * so an unresolvable name never re-spends credits.
  */
-async function resolveCompanyMemo(db: ReturnType<typeof createServerClient>, name: string, budget: CallBudget): Promise<CompanyMatch | null> {
+export async function resolveCompanyMemo(db: ReturnType<typeof createServerClient>, name: string, budget: CallBudget): Promise<CompanyMatch | null> {
   const key = normalizeOrgName(name);
   const { data: org } = await db.from('network_organizations').select('id, name, metadata').eq('normalized_name', key).limit(1).maybeSingle();
   const meta = (org?.metadata ?? {}) as Record<string, unknown>;
