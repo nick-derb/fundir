@@ -44,6 +44,12 @@ export const dismissalLabel = (id: string | null | undefined) => DISMISSAL_REASO
 
 export const OUTCOME_STATES: PipelineState[] = ['WON', 'LOST'];
 
+/** Plain labels for exports (no React). */
+export const STATUS_LABEL_PLAIN: Record<string, string> = {
+  NEW: 'New', RESEARCHING: 'Researching', INTRODUCTION_NEEDED: 'Intro needed', INTRO_REQUESTED: 'Intro requested', CONTACTED: 'Contacted',
+  MEETING: 'Meeting', PROPOSAL: 'Proposal', AWAITING_DECISION: 'Awaiting decision', WON: 'Won', LOST: 'Lost', DEFERRED: 'Deferred', NOT_A_FIT: 'Not a fit',
+};
+
 /** What the team has closed, in the shape the feedback rules need. */
 export interface ClosedLead { id: string; pipeline_status: PipelineState; dismissal_reason: string | null; target_org_id: string | null; via_person_id: string | null; insight_type: string | null }
 

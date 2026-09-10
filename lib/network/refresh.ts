@@ -159,19 +159,64 @@ export interface RefreshStepResult {
   apiCalls: number;
   pendingEnrich: number;
   pendingScans: number;
+  relationshipsFound: number;
   done: boolean;
   errors: string[];
 }
 
-export async function runRefreshStep(orgId: string): Promise<RefreshStepResult> {
+export type RefreshCategory = 'people' | 'employers';
+
+// ── Pre-flight: what a full refresh would do and cost, before a single call ──
+export interface RefreshEstimate {
+  configured: boolean;
+  plan: { name: string; monthlyUsd: number; credits: number };
+  categories: Array<{ key: RefreshCategory; label: string; pending: number; callsEach: number; creditsEach: number; calls: number; credits: number; note: string }>;
+  totalCalls: number; totalCredits: number; steps: number;
+  creditShare: number;                 // share of the monthly allowance this run would use
+  marginalUsd: number;                 // 0 while inside the plan; overage otherwise
+  claudeUsd: number;                   // refresh steps make no model calls
+  lastRun: { started_at: string; api_calls: number; status: string } | null;
+  lastSnapshot: string | null;
+  peopleWithoutUrl: number;
+}
+const PLAN = { name: 'Fresh LinkedIn Profile Data — Pro', monthlyUsd: 45, credits: 4500 };
+const ENRICH_CREDITS = 2, SCAN_CALLS = 11;
+
+export async function estimateRefresh(orgId: string): Promise<RefreshEstimate> {
+  const db = createServerClient();
+  const staleCut = Date.now() - ENRICH_STALE_DAYS * 86400000;
+  const [{ data: own }, { companiesPending }, { data: run }, { data: snap }] = await Promise.all([
+    db.from('network_people').select('id, linkedin_url, enriched_at').eq('org_id', orgId).in('kind', ['board', 'staff']),
+    pendingCompanies(orgId),
+    db.from('network_refresh_runs').select('started_at, api_calls, status').eq('org_id', orgId).order('started_at', { ascending: false }).limit(1).maybeSingle(),
+    db.from('network_refresh_runs').select('notes').eq('org_id', orgId).ilike('notes', '%snapshot%').order('started_at', { ascending: false }).limit(1).maybeSingle(),
+  ]);
+  const withUrl = (own ?? []).filter(p => p.linkedin_url);
+  const pendingEnrich = withUrl.filter(p => !p.enriched_at || new Date(p.enriched_at as string).getTime() < staleCut).length;
+  const cats: RefreshEstimate['categories'] = [
+    { key: 'people', label: 'CYC profiles', pending: pendingEnrich, callsEach: 1, creditsEach: ENRICH_CREDITS, calls: pendingEnrich, credits: pendingEnrich * ENRICH_CREDITS, note: `${withUrl.length} people have a LinkedIn URL; ${pendingEnrich} unread or older than ${ENRICH_STALE_DAYS} days` },
+    { key: 'employers', label: 'Employer scans', pending: companiesPending.length, callsEach: SCAN_CALLS, creditsEach: SCAN_CALLS, calls: companiesPending.length * SCAN_CALLS, credits: companiesPending.length * SCAN_CALLS, note: `${companiesPending.length} employers from career histories not scanned in ${SCAN_STALE_DAYS} days` },
+  ];
+  const totalCalls = cats.reduce((n, c) => n + c.calls, 0), totalCredits = cats.reduce((n, c) => n + c.credits, 0);
+  const steps = Math.max(Math.ceil(pendingEnrich / ENRICH_PER_STEP), Math.ceil(companiesPending.length / SCANS_PER_STEP));
+  return {
+    configured: isLinkedInConfigured(), plan: PLAN, categories: cats, totalCalls, totalCredits, steps,
+    creditShare: totalCredits / PLAN.credits, marginalUsd: Math.max(0, totalCredits - PLAN.credits) * (PLAN.monthlyUsd / PLAN.credits), claudeUsd: 0,
+    lastRun: run ?? null, lastSnapshot: (snap?.notes as string | null)?.match(/snapshot: ([^;]+)/)?.[1] ?? null,
+    peopleWithoutUrl: (own ?? []).length - withUrl.length,
+  };
+}
+
+export async function runRefreshStep(orgId: string, opts: { categories?: RefreshCategory[] } = {}): Promise<RefreshStepResult> {
   if (!isLinkedInConfigured()) throw new Error('RAPIDAPI_KEY is not configured');
   const db = createServerClient();
   const budget = new CallBudget(CALLS_PER_STEP);
   const errors: string[] = [];
   const now = Date.now();
+  const cats = new Set<RefreshCategory>(opts.categories?.length ? opts.categories : ['people', 'employers']);
 
   const { data: runRow } = await db.from('network_refresh_runs')
-    .insert({ org_id: orgId }).select('id').single();
+    .insert({ org_id: orgId, categories: [...cats] }).select('id').single();
   const runId = runRow?.id as string | undefined;
 
   // ── 1. Enrich CYC people whose profile is missing or stale ───────────────
@@ -181,8 +226,8 @@ export async function runRefreshStep(orgId: string): Promise<RefreshStepResult> 
     .not('linkedin_url', 'is', null);
 
   const staleCut = now - ENRICH_STALE_DAYS * 86400000;
-  const pendingEnrichAll = (own ?? []).filter(p =>
-    !p.enriched_at || new Date(p.enriched_at as string).getTime() < staleCut);
+  const pendingEnrichAll = cats.has('people') ? (own ?? []).filter(p =>
+    !p.enriched_at || new Date(p.enriched_at as string).getTime() < staleCut) : [];
   const toEnrich = pendingEnrichAll.slice(0, ENRICH_PER_STEP);
 
   const enriched: string[] = [];
@@ -230,7 +275,7 @@ export async function runRefreshStep(orgId: string): Promise<RefreshStepResult> 
 
   // Only spend search credits after the enrich queue is drained — profiles
   // first, paths second, one bounded step at a time.
-  if (pendingEnrichAll.length <= toEnrich.length) {
+  if (cats.has('employers') && pendingEnrichAll.length <= toEnrich.length) {
     const { companiesPending } = await pendingCompanies(orgId);
     for (const c of companiesPending.slice(0, SCANS_PER_STEP)) {
       try {
@@ -258,7 +303,7 @@ export async function runRefreshStep(orgId: string): Promise<RefreshStepResult> 
     }
   }
 
-  const after = await pendingCompanies(orgId);
+  const after = cats.has('employers') ? await pendingCompanies(orgId) : { companiesPending: [] as { display: string; viaPersonIds: string[] }[] };
   const pendingEnrich = Math.max(0, pendingEnrichAll.length - enriched.length);
   const pendingScans = after.companiesPending.length;
 
@@ -296,7 +341,7 @@ export async function runRefreshStep(orgId: string): Promise<RefreshStepResult> 
 
   return {
     enriched, scanned, leadsFound, apiCalls: budget.used,
-    pendingEnrich, pendingScans,
+    pendingEnrich, pendingScans, relationshipsFound,
     done: pendingEnrich === 0 && pendingScans === 0,
     errors,
   };
