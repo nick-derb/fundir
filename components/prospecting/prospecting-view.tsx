@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Table2, RefreshCw, Download, Lock, Pencil, X, ShieldCheck } from 'lucide-react';
+import { Table2, RefreshCw, Download, Lock, Pencil } from 'lucide-react';
+import { IrsReplaceModal } from '@/components/prospecting/irs-replace-modal';
 
 // Faithful port of templates/prospecting/Prospecting.dc.html, wired to CYC's
 // REAL loaded data (cyc_cultivation / funder_board_members / cyc_research_queue
@@ -27,12 +28,13 @@ const CSS = `
 .pr-root .fd-caption{font-size:12px;line-height:1.5}
 @keyframes pr-fade{from{opacity:0}to{opacity:1}}
 @keyframes pr-rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes pr-spin{to{transform:rotate(360deg)}}
 @media (max-width:1240px){.pr-root [data-pr-cols]{grid-template-columns:minmax(0,1fr)!important}}
 @media (max-width:820px){.pr-root [data-pr-meta]{display:none!important}}
 `;
 
-export function ProspectingView({ sheets, instrumentl, bmfTotal, rowLimit }: {
-  sheets: Sheet[]; instrumentl: InstrumentlSummary; bmfTotal: string; rowLimit: number;
+export function ProspectingView({ sheets, instrumentl, bmfTotal, rowLimit, canReplace }: {
+  sheets: Sheet[]; instrumentl: InstrumentlSummary; bmfTotal: string; rowLimit: number; canReplace: boolean;
 }) {
   const [active, setActive] = useState(sheets[0]?.key ?? 'cultivation');
   const [replaceOpen, setReplaceOpen] = useState(false);
@@ -44,12 +46,6 @@ export function ProspectingView({ sheets, instrumentl, bmfTotal, rowLimit }: {
     l.href = 'https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap';
     document.head.appendChild(l);
   }, []);
-  useEffect(() => {
-    if (!replaceOpen) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setReplaceOpen(false); };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [replaceOpen]);
 
   const sheet = sheets.find(s => s.key === active) ?? sheets[0];
   const lockAll = sheet.lock === 'all';
@@ -230,47 +226,7 @@ export function ProspectingView({ sheets, instrumentl, bmfTotal, rowLimit }: {
 
       <p className="fd-eyebrow" style={{ color: 'var(--text-tertiary)', margin: '22px 0 0' }}>Live workspace · your loaded data</p>
 
-      {/* replace modal */}
-      {replaceOpen && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 80, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-          <div onClick={() => setReplaceOpen(false)} style={{ position: 'absolute', inset: 0, background: 'rgba(16,25,23,.42)', backdropFilter: 'blur(3px)', animation: 'pr-fade .22s ease' }} />
-          <div role="dialog" aria-modal="true" aria-label="Replace IRS data" style={{ position: 'relative', width: 'min(560px,100%)', ...card, boxShadow: '0 24px 60px rgba(16,25,23,.20)', animation: 'pr-rise .26s cubic-bezier(.2,.8,.3,1)', maxHeight: 'calc(100vh - 48px)', overflowY: 'auto' }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, padding: '20px 22px 0' }}>
-              <div>
-                <h2 style={{ fontFamily: SERIF, fontWeight: 400, fontSize: '1.6rem', lineHeight: 1.1, letterSpacing: '-.015em', margin: '0 0 6px' }}>Replace the IRS sheets</h2>
-                <p style={{ margin: 0, fontSize: 13, lineHeight: 1.6, color: 'var(--text-secondary)' }}>Your own columns are untouched. Only the locked source sheets are swapped.</p>
-              </div>
-              <button onClick={() => setReplaceOpen(false)} aria-label="Close" style={{ width: 30, height: 30, flex: 'none', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-hairline)', background: 'var(--bg-surface)', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X style={{ width: 14, height: 14 }} /></button>
-            </div>
-            <div style={{ padding: '18px 22px 22px' }}>
-              <div style={{ border: '1px dashed var(--border-hairline)', borderRadius: 'var(--radius-kpi)', padding: '26px 20px', textAlign: 'center', background: 'var(--bg-page)' }}>
-                <RefreshCw style={{ width: 20, height: 20, color: 'var(--text-tertiary)' }} />
-                <b style={{ display: 'block', fontSize: 13.5, fontWeight: 500, margin: '10px 0 4px' }}>Drop the new BMF or 990 extract</b>
-                <span className="fd-caption" style={{ color: 'var(--text-tertiary)' }}>Raw IRS format is fine · Fundir cleans and maps the columns</span>
-              </div>
-              <div style={{ marginTop: 18, border: '1px solid var(--border-hairline)', borderRadius: 'var(--radius-kpi)', overflow: 'hidden' }}>
-                <div style={{ padding: '10px 13px', borderBottom: '1px solid var(--border-hairline)', background: 'var(--bg-page)' }}><span className="fd-eyebrow" style={{ color: 'var(--text-secondary)' }}>Sheets that will be replaced</span></div>
-                {lockedSheets.map((s, i) => (
-                  <div key={s.key} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '9px 13px', borderBottom: i < lockedSheets.length - 1 ? '1px solid var(--border-hairline)' : 'none' }}>
-                    <Lock style={{ width: 12, height: 12, color: '#5B7383', flex: 'none' }} />
-                    <span style={{ flex: 1, fontSize: 12.5 }}>{s.label}</span>
-                    <span className="fd-mono" style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>{s.total} rows</span>
-                  </div>
-                ))}
-              </div>
-              <div style={{ marginTop: 14, border: '1px solid rgba(12,107,90,.24)', borderRadius: 'var(--radius-kpi)', padding: '12px 13px', background: 'rgba(12,107,90,.04)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}><ShieldCheck style={{ width: 13, height: 13, color: 'var(--accent)', flex: 'none' }} /><span className="fd-eyebrow" style={{ color: 'var(--accent)' }}>Kept intact</span></div>
-                <p style={{ margin: 0, fontSize: 12, lineHeight: 1.55, color: 'var(--text-secondary)' }}>Cultivation List, Board Members and Research Queue keep every value you have entered. They rejoin the new source on EIN.</p>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 20 }}>
-                <span style={{ flex: 1 }} />
-                <button onClick={() => setReplaceOpen(false)} style={{ height: 38, padding: '0 16px', borderRadius: 'var(--radius-kpi)', border: '1px solid var(--border-hairline)', background: 'var(--bg-surface)', color: 'var(--text-primary)', font: 'inherit', fontSize: 12.5, cursor: 'pointer' }}>Cancel</button>
-                <button onClick={() => setReplaceOpen(false)} style={{ height: 38, padding: '0 18px', borderRadius: 'var(--radius-kpi)', border: 'none', background: 'var(--accent)', color: '#fff', font: 'inherit', fontSize: 12.5, fontWeight: 500, cursor: 'pointer' }}>Preview the diff</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <IrsReplaceModal open={replaceOpen} onClose={() => setReplaceOpen(false)} lockedSheets={lockedSheets} canReplace={canReplace} />
     </div>
   );
 }
