@@ -22,7 +22,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     // because the script mutates <html data-theme> before React hydrates.
     <html lang="en" suppressHydrationWarning className={`${GeistSans.variable} ${GeistMono.variable}`}>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: `(function(){try{var t=localStorage.getItem('fundir-theme')||'light';document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','light');}})();` }} />
+        {/* Beta: light only. The saved-theme read is kept in the comment so dark mode can return by
+            restoring it alongside SHOW_THEME_TOGGLE in app-shell:
+            var t=localStorage.getItem('fundir-theme')||'light' */}
+        <script dangerouslySetInnerHTML={{ __html: `(function(){document.documentElement.setAttribute('data-theme','light');})();` }} />
+        {/* Console type: Instrument Serif for titles, Inter for UI, JetBrains Mono for figures — every page. */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link id="cn-fonts" rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" />
       </head>
       <body className="antialiased">
         <RecoveryDetector />

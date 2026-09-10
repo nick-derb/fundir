@@ -139,51 +139,36 @@ export default async function SettingsPage() {
     >
       <div className="bg-page min-h-screen">
 
-        {/* ── Hero ─ dark command band, accent-bright eyebrow ──────────── */}
-        <div
-          className="text-white rounded-b-2xl"
-          style={{ background: 'linear-gradient(135deg, #0C1626 0%, #0B1220 100%)' }}
-        >
-          <div className="px-8 pt-[30px] pb-[26px] max-w-7xl mx-auto">
-            <div className="flex items-start justify-between gap-6 flex-wrap">
+        {/* ── Header — the console treatment used across the app (light, serif title, hairline) ── */}
+        <div className="border-b" style={{ background: 'var(--bg-surface)', borderColor: 'var(--border-hairline)' }}>
+          <div className="px-8 pt-6 pb-5 max-w-7xl mx-auto">
+            <div className="flex items-end justify-between gap-6 flex-wrap">
               <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <SettingsIcon className="w-3.5 h-3.5" style={{ color: 'var(--accent-bright)' }} />
-                  <span
-                    className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.16em]"
-                    style={{ color: 'var(--accent-bright)' }}
-                  >
+                <div className="flex items-center gap-2 mb-2">
+                  <SettingsIcon className="w-3.5 h-3.5" style={{ color: 'var(--accent)' }} />
+                  <span className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.12em]" style={{ color: 'var(--text-tertiary)' }}>
                     System Configuration
                   </span>
                 </div>
-                <h1 className="text-[30px] font-semibold -tracking-[0.02em] mt-3 leading-tight">
+                <h1 style={{ fontFamily: "'Instrument Serif',Palatino,Georgia,serif", fontWeight: 400, fontSize: 'clamp(1.9rem,3vw,2.5rem)', lineHeight: 1.04, letterSpacing: '-.018em', margin: 0, color: 'var(--text-primary)' }}>
                   Settings
                 </h1>
-                <p className="text-[13px] mt-2" style={{ color: '#9FB0C8' }}>
-                  Fundir · <span className="font-mono" style={{ color: '#C6D3E6' }}>{ctx.orgName}</span> ·{' '}
-                  <span className="font-mono tabular-nums" style={{ color: '#C6D3E6' }}>v2.0</span>
+                <p className="text-[13px] mt-2" style={{ color: 'var(--text-secondary)' }}>
+                  Fundir · <span className="font-mono" style={{ color: 'var(--text-primary)' }}>{ctx.orgName}</span> ·{' '}
+                  <span className="font-mono tabular-nums" style={{ color: 'var(--text-primary)' }}>v2.0</span>
                 </p>
               </div>
-              <div className="flex flex-col items-end gap-2.5 flex-shrink-0">
-                <span
-                  className={`font-mono text-[10.5px] font-semibold uppercase tracking-[0.08em] inline-flex items-center gap-2`}
-                  style={{ color: '#9FB0C8' }}
-                >
+              <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                <span className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.08em] inline-flex items-center gap-2" style={{ color: 'var(--text-secondary)' }}>
                   <span className={`w-[7px] h-[7px] rounded-full ${allConnected ? 'bg-success' : 'bg-warning'}`} />
                   <span className="tabular-nums">{connectedCount} / {totalServices}</span> services online
                 </span>
-                <span
-                  className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.08em] inline-flex items-center gap-2"
-                  style={{ color: '#9FB0C8' }}
-                >
+                <span className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.08em] inline-flex items-center gap-2" style={{ color: 'var(--text-secondary)' }}>
                   <span className={`w-[7px] h-[7px] rounded-full ${storageConnected > 0 ? 'bg-accent' : 'bg-ink-300'}`} />
                   <span className="tabular-nums">{storageConnected} / 2</span> storage connected
                 </span>
                 {lastSyncLabel && (
-                  <span
-                    className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.08em] inline-flex items-center gap-2"
-                    style={{ color: '#9FB0C8' }}
-                  >
+                  <span className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.08em] inline-flex items-center gap-2" style={{ color: 'var(--text-secondary)' }}>
                     <span className="w-[7px] h-[7px] rounded-full bg-info" />
                     Last sync · <span className="tabular-nums">{lastSyncLabel}</span>
                   </span>

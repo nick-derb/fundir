@@ -758,55 +758,41 @@ export function CYCFinancialsShell({
   return (
     <div className="bg-page min-h-screen">
 
-      {/* ── Hero — dark command band w/ inline tab bar (per brief) ────────── */}
-      <div
-        className="text-white rounded-b-2xl"
-        style={{
-          background: 'linear-gradient(135deg, #0C1626 0%, #0B1220 100%)',
-        }}
-      >
-        <div className="px-8 pt-[30px] pb-[26px] max-w-7xl mx-auto">
-          <div className="flex items-start justify-between gap-6 flex-wrap">
+      {/* ── Header — light console treatment with the tab strip beneath it ── */}
+      <div className="border-b" style={{ background: 'var(--bg-surface)', borderColor: 'var(--border-hairline)' }}>
+        <div className="px-8 pt-6 max-w-7xl mx-auto">
+          <div className="flex items-end justify-between gap-6 flex-wrap pb-5">
             <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <BarChart3 className="w-3.5 h-3.5" style={{ color: 'var(--accent-bright)' }} />
-                <span
-                  className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.16em]"
-                  style={{ color: 'var(--accent-bright)' }}
-                >
+              <div className="flex items-center gap-2 mb-2">
+                <BarChart3 className="w-3.5 h-3.5" style={{ color: 'var(--accent)' }} />
+                <span className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.12em]" style={{ color: 'var(--text-tertiary)' }}>
                   Org Intelligence · Financials
                 </span>
               </div>
-              <h1 className="text-[30px] font-semibold -tracking-[0.02em] mt-3 leading-tight">
+              <h1 style={{ fontFamily: "'Instrument Serif',Palatino,Georgia,serif", fontWeight: 400, fontSize: 'clamp(1.9rem,3vw,2.5rem)', lineHeight: 1.04, letterSpacing: '-.018em', margin: 0, color: 'var(--text-primary)' }}>
                 Chicago Youth Centers
               </h1>
-              <p className="text-[13px] mt-2" style={{ color: '#9FB0C8' }}>
-                Founded <span className="font-mono tabular-nums" style={{ color: '#C6D3E6' }}>1956</span> ·{' '}
-                <span className="font-mono tabular-nums" style={{ color: '#C6D3E6' }}>{CYC_IMPACT.yearsInOperation}</span> years ·{' '}
-                <span className="font-mono tabular-nums" style={{ color: '#C6D3E6' }}>{CYC_SITES.length}</span> centers across Chicago · EIN{' '}
-                <span className="font-mono tabular-nums" style={{ color: '#C6D3E6' }}>36-2196050</span>
+              <p className="text-[13px] mt-2" style={{ color: 'var(--text-secondary)' }}>
+                Founded <span className="font-mono tabular-nums" style={{ color: 'var(--text-primary)' }}>1956</span> ·{' '}
+                <span className="font-mono tabular-nums" style={{ color: 'var(--text-primary)' }}>{CYC_IMPACT.yearsInOperation}</span> years ·{' '}
+                <span className="font-mono tabular-nums" style={{ color: 'var(--text-primary)' }}>{CYC_SITES.length}</span> centers across Chicago · EIN{' '}
+                <span className="font-mono tabular-nums" style={{ color: 'var(--text-primary)' }}>36-2196050</span>
               </p>
             </div>
-            <div className="flex flex-col items-end gap-2.5 flex-shrink-0">
-              <span
-                className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.08em] inline-flex items-center gap-2"
-                style={{ color: '#9FB0C8' }}
-              >
+            <div className="flex flex-col items-end gap-2 flex-shrink-0">
+              <span className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.08em] inline-flex items-center gap-2" style={{ color: 'var(--text-secondary)' }}>
                 <span className="w-[7px] h-[7px] rounded-full bg-success" />
                 ★★★★ Charity Navigator
               </span>
-              <span
-                className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.08em] inline-flex items-center gap-2"
-                style={{ color: '#9FB0C8' }}
-              >
+              <span className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.08em] inline-flex items-center gap-2" style={{ color: 'var(--text-secondary)' }}>
                 <span className="w-[7px] h-[7px] rounded-full bg-critical" />
                 FY2025 Audited · Operating Deficit
               </span>
             </div>
           </div>
 
-          {/* Tab bar — inside the hero, dark, pill-style active */}
-          <div className="flex gap-0.5 mt-[22px] flex-wrap" role="tablist">
+          {/* Tab strip — bottom accent bar, same treatment as Connections */}
+          <div className="flex gap-0 flex-wrap overflow-x-auto" role="tablist">
             {ALL_TABS.map(({ id, label, icon: Icon }) => {
               const active = tab === id;
               return (
@@ -816,11 +802,15 @@ export function CYCFinancialsShell({
                   role="tab"
                   aria-selected={active}
                   onClick={() => setTab(id as AnyTab)}
-                  className="text-[12.5px] py-[9px] px-[13px] rounded-[7px] inline-flex items-center gap-[7px] transition-colors"
+                  className="text-[12.5px] py-[11px] px-[14px] inline-flex items-center gap-[7px] transition-colors whitespace-nowrap"
                   style={{
-                    color: active ? '#fff' : '#7E90AB',
-                    background: active ? 'rgba(255,255,255,0.07)' : 'transparent',
+                    color: active ? 'var(--text-primary)' : 'var(--text-tertiary)',
+                    background: 'transparent',
+                    border: 'none',
+                    borderBottom: `2px solid ${active ? 'var(--accent)' : 'transparent'}`,
+                    marginBottom: -1,
                     fontWeight: active ? 500 : 400,
+                    cursor: 'pointer',
                   }}
                 >
                   <Icon className="w-3.5 h-3.5" />

@@ -398,65 +398,33 @@ export function ReportsCharts({ data }: { data: ReportsData }) {
   return (
     <div style={{ background: 'var(--fin-page-bg)', minHeight: '100vh' }}>
 
-      {/* Hero — dark command band, matches Financials */}
-      <div
-        className="relative overflow-hidden border-b text-white"
-        style={{
-          background: 'linear-gradient(135deg, #0C1626 0%, #0B1220 100%)',
-          borderColor: 'var(--border-hairline)',
-        }}
-      >
-        <div
-          className="absolute inset-0 opacity-[0.025] pointer-events-none"
-          style={{
-            backgroundImage: 'linear-gradient(#fff 1px,transparent 1px),linear-gradient(90deg,#fff 1px,transparent 1px)',
-            backgroundSize: '48px 48px',
-          }}
-        />
-        <div className="relative px-8 py-7 max-w-7xl mx-auto flex items-start justify-between gap-6 flex-wrap">
+      {/* Header — the console treatment used across the app (light, serif title, hairline). */}
+      <div className="border-b" style={{ background: 'var(--bg-surface)', borderColor: 'var(--border-hairline)' }}>
+        <div className="px-8 pt-6 pb-5 max-w-7xl mx-auto flex items-end justify-between gap-6 flex-wrap">
           <div className="min-w-0">
-            <div className="flex items-center gap-2 mb-1.5">
-              <BarChart3 className="w-3.5 h-3.5" style={{ color: 'var(--accent-bright)' }} />
-              <span
-                className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.16em]"
-                style={{ color: 'var(--accent-bright)' }}
-              >
+            <div className="flex items-center gap-2 mb-2">
+              <BarChart3 className="w-3.5 h-3.5" style={{ color: 'var(--accent)' }} />
+              <span className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.12em]" style={{ color: 'var(--text-tertiary)' }}>
                 Grant Intelligence · Reports
               </span>
             </div>
-            <h1 className="text-[30px] font-semibold -tracking-[0.02em] leading-tight" style={{ color: '#fff' }}>
-              Performance Dashboard
+            <h1 style={{ fontFamily: "'Instrument Serif',Palatino,Georgia,serif", fontWeight: 400, fontSize: 'clamp(1.9rem,3vw,2.5rem)', lineHeight: 1.04, letterSpacing: '-.018em', margin: 0, color: 'var(--text-primary)' }}>
+              Performance
             </h1>
-            <p className="text-[13px] mt-2" style={{ color: '#9FB0C8' }}>
-              <span className="font-mono" style={{ color: '#C6D3E6' }}>{data.orgName}</span>{' '}
-              · <span className="font-mono tabular-nums" style={{ color: '#C6D3E6' }}>{data.kpis.submitted}</span>{' '}
-              applications tracked · Live data
+            <p className="text-[13px] mt-2" style={{ color: 'var(--text-secondary)' }}>
+              <span className="font-mono" style={{ color: 'var(--text-primary)' }}>{data.orgName}</span>{' '}
+              · <span className="font-mono tabular-nums" style={{ color: 'var(--text-primary)' }}>{data.kpis.submitted}</span>{' '}
+              applications tracked · live data
             </p>
           </div>
-          <div className="flex items-center gap-3 flex-shrink-0">
-            <Link
-              href="/pipeline"
-              className="flex items-center gap-2 px-4 py-2 rounded-[8px] text-[12px] font-semibold border transition-colors"
-              style={{
-                background: 'rgba(21,145,122,0.12)',
-                borderColor: 'rgba(21,145,122,0.30)',
-                color: 'var(--accent-bright)',
-              }}
-            >
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <Link href="/pipeline" className="flex items-center gap-2 px-3.5 h-9 rounded-[10px] text-[12.5px] font-medium transition-colors" style={{ background: 'var(--accent)', color: 'var(--accent-on)' }}>
               <TrendingUp className="w-3.5 h-3.5" />
-              Open Pipeline
+              Open pipeline
             </Link>
-            <Link
-              href="/discover"
-              className="flex items-center gap-2 px-4 py-2 rounded-[8px] text-[12px] font-semibold border transition-colors"
-              style={{
-                background: 'rgba(255,255,255,0.06)',
-                borderColor: 'rgba(255,255,255,0.12)',
-                color: '#fff',
-              }}
-            >
+            <Link href="/discover" className="flex items-center gap-2 px-3.5 h-9 rounded-[10px] text-[12.5px] border transition-colors hover:bg-elevated" style={{ background: 'var(--bg-surface)', borderColor: 'var(--border-hairline)', color: 'var(--text-primary)' }}>
               <Zap className="w-3.5 h-3.5" style={{ color: 'var(--warning)' }} />
-              Find Grants
+              Find grants
             </Link>
           </div>
         </div>

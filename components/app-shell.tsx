@@ -4,6 +4,9 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect, useRef, useSyncExternalStore } from 'react';
 
+/** Dark mode is built but hidden during the beta; flip to true to show the toggle again. */
+const SHOW_THEME_TOGGLE = false;
+
 const readSidebarCollapsed = () => { try { return localStorage.getItem('fundir-sidebar') === 'collapsed'; } catch { return false; } };
 const subscribeSidebar = (cb: () => void) => { window.addEventListener('fundir-sidebar', cb); window.addEventListener('storage', cb); return () => { window.removeEventListener('fundir-sidebar', cb); window.removeEventListener('storage', cb); }; };
 import {
@@ -125,7 +128,9 @@ export function AppShell({
   }, [gPressed, router]);
 
   useEffect(() => {
-    const saved = (localStorage.getItem('fundir-theme') as 'dark' | 'light') || 'light';
+    // Beta: light only. A saved dark preference is not applied while the toggle is hidden,
+    // so nobody is stranded in a theme they cannot switch out of.
+    const saved = SHOW_THEME_TOGGLE ? ((localStorage.getItem('fundir-theme') as 'dark' | 'light') || 'light') : 'light';
     setTheme(saved);
     document.documentElement.setAttribute('data-theme', saved);
   }, []);
@@ -337,13 +342,18 @@ export function AppShell({
           {userEmail && !collapsed && (
             <p className="px-3 py-1 text-eyebrow text-tertiary truncate uppercase">{userEmail}</p>
           )}
-          <button onClick={toggleTheme} title={collapsed ? (theme === 'dark' ? 'Light mode' : 'Dark mode') : undefined}
-            className={`shell-nav-item w-full flex items-center gap-2.5 py-[7px] text-[13px] mb-0.5 ${collapsed ? 'pl-3 pr-2 md:justify-center md:px-0' : 'pl-3 pr-2'}`}>
-            {theme === 'dark'
-              ? <><Sun className="shell-nav-icon w-4 h-4 flex-shrink-0" /><span className={collapsed ? 'md:hidden' : ''}>Light mode</span></>
-              : <><Moon className="shell-nav-icon w-4 h-4 flex-shrink-0" /><span className={collapsed ? 'md:hidden' : ''}>Dark mode</span></>
-            }
-          </button>
+          {/* Theme toggle removed from the UI during the beta (light only). The theme
+              tokens, toggleTheme() and the data-theme plumbing stay in place; set
+              SHOW_THEME_TOGGLE to bring the button back. */}
+          {SHOW_THEME_TOGGLE && (
+            <button onClick={toggleTheme} title={collapsed ? (theme === 'dark' ? 'Light mode' : 'Dark mode') : undefined}
+              className={`shell-nav-item w-full flex items-center gap-2.5 py-[7px] text-[13px] mb-0.5 ${collapsed ? 'pl-3 pr-2 md:justify-center md:px-0' : 'pl-3 pr-2'}`}>
+              {theme === 'dark'
+                ? <><Sun className="shell-nav-icon w-4 h-4 flex-shrink-0" /><span className={collapsed ? 'md:hidden' : ''}>Light mode</span></>
+                : <><Moon className="shell-nav-icon w-4 h-4 flex-shrink-0" /><span className={collapsed ? 'md:hidden' : ''}>Dark mode</span></>
+              }
+            </button>
+          )}
           <button onClick={handleSignOut} title={collapsed ? 'Sign out' : undefined}
             className={`shell-nav-item w-full flex items-center gap-2.5 py-[7px] text-[13px] ${collapsed ? 'pl-3 pr-2 md:justify-center md:px-0' : 'pl-3 pr-2'}`}>
             <LogOut className="shell-nav-icon w-4 h-4 flex-shrink-0" />
