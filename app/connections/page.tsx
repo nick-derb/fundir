@@ -3,8 +3,9 @@ import { getAuthContext } from '@/lib/auth-context';
 import { createServerClient } from '@/lib/supabase';
 import { AppShell } from '@/components/app-shell';
 import { type CnPerson, type CnKpis } from '@/components/connections/connections-view';
-import { ConnectionsTabs } from '@/components/connections/connections-tabs';
+import { IntelTabs } from '@/components/connections/intel/intel-tabs';
 import { getNetworkState } from '@/lib/network/refresh';
+import { listLeads, listInsights } from '@/lib/network/queries';
 
 export const dynamic = 'force-dynamic';
 
@@ -38,11 +39,13 @@ export default async function ConnectionsPage() {
   const db = createServerClient();
   const org = ctx.orgId;
 
-  const [boardRes, cultRes, subRes, network] = await Promise.all([
+  const [boardRes, cultRes, subRes, network, leads, insights] = await Promise.all([
     db.from('funder_board_members').select('foundation_name, member_name, title, connection_to_cyc, connection_type, who_knows_them, outreach_status').eq('org_id', org).order('foundation_name'),
     db.from('cyc_cultivation').select('foundation_name, funder_type, total_assets, funding_focus, notes').eq('org_id', org),
     db.from('cyc_grant_submissions').select('funder_name, outcome, amount_awarded, status').eq('org_id', org),
     getNetworkState(org),
+    listLeads(db, org).catch(() => []),
+    listInsights(db, org).catch(() => []),
   ]);
 
   // Foundation facts keyed by normalized name.
@@ -98,7 +101,7 @@ export default async function ConnectionsPage() {
 
   return (
     <AppShell orgName={ctx.orgName} orgId={ctx.orgId} userEmail={ctx.email} userName={ctx.displayName} userAvatar={ctx.avatarUrl} isAdmin={ctx.isAdmin} availableOrgs={ctx.availableOrgs} currentOrgCode={ctx.orgCode}>
-      <ConnectionsTabs people={people} kpis={kpis} network={network} />
+      <IntelTabs people={people} kpis={kpis} network={network} leads={leads} insights={insights} readOnly={ctx.impersonating} />
     </AppShell>
   );
 }
