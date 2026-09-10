@@ -10,7 +10,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { User, Image as ImageIcon, Calendar, Bell, LogOut, Loader2, Trash2 } from 'lucide-react';
+import { User, Image as ImageIcon, Calendar, Bell, LogOut, Loader2, Trash2, MessageSquare } from 'lucide-react';
 
 export interface UserMenuProps {
   userEmail?: string;
@@ -140,6 +140,8 @@ export function UserMenu({
     { id: 'photo',    label: 'Change photo',        icon: ImageIcon, run: () => openEditor(true) },
     { id: 'calendars',label: 'Connected calendars', icon: Calendar,  run: () => { setOpen(false); router.push('/settings'); } },
     { id: 'notifs',   label: 'Notifications',       icon: Bell,      run: () => { setOpen(false); router.push('/settings'); } },
+    // Beta: file a bug or a data correction with the current page attached.
+    { id: 'feedback', label: 'Report a problem with this page', icon: MessageSquare, run: () => { setOpen(false); router.push(`/feedback?page=${encodeURIComponent(window.location.pathname + window.location.search)}`); } },
   ];
 
   const avatarInner = (src: string | null, px: number, textSize: string) =>

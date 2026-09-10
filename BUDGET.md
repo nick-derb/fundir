@@ -69,6 +69,8 @@ explicit confirmation from the user. All confirmed defaults documented inline.
 
 | 2026-09-10 | RG-10 | Archival + refresh UX: 13-sheet Excel + JSON snapshot (first local snapshot 8.8 MB / 16.4 MB, 14,129 funding events), pre-flight estimate, live counters, snapshot-on-completion — no model calls | $0.00 | **$0.00** | **~$2.52** |
 
+| 2026-09-10 | Beta | Feedback page (bugs / data corrections / ideas, attachments in a private storage bucket, admin queue with copy-as-prompt) + Reports rebuilt around Fundir-only measures — no model calls | $0.00 | **$0.00** | **~$2.52** |
+
 **BLOCKER (2026-09-09):** the Anthropic API key's console balance ran out during RG-7 (HTTP 400 "credit balance is too low"). The $90 the user mentioned is Claude.ai usage credit, which the API does not draw on. Every remaining model call — explanations for new leads, bio/giving-page extraction, 990 adjudication — waits on a top-up at console.anthropic.com → Plans & Billing. Deterministic paths (scoring, insights, evidence packs, fallback explanations) are unaffected.
 
 **Remaining budget:** ~$48.66 (against the $50 self-imposed cap; the Anthropic balance is $90).

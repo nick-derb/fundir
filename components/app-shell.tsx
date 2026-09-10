@@ -13,7 +13,7 @@ import {
   LayoutDashboard, Radar, Table2, Share2, FileText, Settings, LogOut,
   TrendingUp, Building2, Shield,
   ChevronDown, Check, Sun, Moon,
-  Menu, X, Database, PanelLeftClose, PanelLeftOpen,
+  Menu, X, Database, PanelLeftClose, PanelLeftOpen, MessageSquare,
 } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/supabase';
 import { CommandPalette, CommandPaletteTrigger } from '@/components/command-palette';
@@ -33,6 +33,7 @@ const NAV_ITEMS = [
   { href: '/data',         label: 'Data Hub',         icon: Database        },
   { href: '/applications', label: 'Applications',     icon: FileText        },
   { href: '/reports',      label: 'Reports',          icon: TrendingUp      },
+  { href: '/feedback',     label: 'Feedback',         icon: MessageSquare   },
 ];
 
 const SETTINGS_ITEMS = [
