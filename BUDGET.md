@@ -60,6 +60,7 @@ explicit confirmation from the user. All confirmed defaults documented inline.
 | 2026-09-09 | RG-3 | IRS bulk 990 ingest, full scope (165 funders × FY2023–24), cap $20 — **in progress; actual to be recorded at completion** | $15 plan / $26 worst | TBD | **~$0.89 + TBD** |
 | 2026-09-09 | RG-4 | Foundation board cross-reference — 18 trustee bio pages harvested from foundation rosters (Sonnet) | $0.45 plan | **~$0.36** | **~$1.25** |
 | 2026-09-09 | RG-5 | Corporate giving-page extraction — 14 pages attempted, 3 fetched + extracted (Bank of America, Exelon, Motorola Solutions); 11 blocked (403/404/TLS) cost nothing | $0.45 plan | **~$0.09** | **~$1.34** |
+| 2026-09-09 | RG-6 | Deterministic scoring + Untapped Funder white-space (57 leads re-scored, 24 white-space leads) — pure DB compute, no model calls | $0.00 | **$0.00** | **~$1.34** |
 
 **Remaining budget:** ~$48.66 (against the $50 self-imposed cap; the Anthropic balance is $90).
 

@@ -269,6 +269,9 @@ export async function runRefreshStep(orgId: string): Promise<RefreshStepResult> 
       await resolveEmployers(db, orgId);
       const d = await deriveRelationships(orgId);
       relationshipsFound = d.written;
+      // New facts change scores — every lead is re-scored with the one rubric.
+      const { rescoreLeads } = await import('@/lib/network/opportunity');
+      await rescoreLeads(db, orgId);
     } catch (e) {
       errors.push(`graph derivation: ${e instanceof Error ? e.message : 'failed'}`);
     }
@@ -379,10 +382,14 @@ async function storeLeads(
     const reason = via
       ? `${tier} at ${company.display} — ${via.name} ${viaCount > 1 ? `and ${viaCount - 1} other CYC people` : ''} worked there`.replace(/\s+—\s+/, ' — ').trim()
       : `${tier} at ${company.display}, an org in CYC's board network`;
-    const { error: leadErr } = await db.from('network_leads').upsert({
-      org_id: orgId, person_id: personId, via_person_id: via?.id ?? null,
-      via_org: company.display, reason, score,
-    }, { onConflict: 'person_id,via_org' });
+    // Find-or-insert: the lead identity is a partial unique index (Phase 1),
+    // which PostgREST upsert cannot target — the old onConflict silently
+    // failed and no person lead was ever stored.
+    const leadRow = { org_id: orgId, lead_type: 'person', person_id: personId, via_person_id: via?.id ?? null, via_org: company.display, reason, score, insight_type: 'Warm Introduction', updated_at: new Date().toISOString() };
+    const { data: existingLead } = await db.from('network_leads').select('id').eq('org_id', orgId).eq('person_id', personId).eq('via_org', company.display).is('target_org_id', null).maybeSingle();
+    const { error: leadErr } = existingLead
+      ? await db.from('network_leads').update(leadRow).eq('id', existingLead.id as string)
+      : await db.from('network_leads').insert(leadRow);
     if (!leadErr) kept++;
   }
   return kept;
