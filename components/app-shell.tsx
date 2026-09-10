@@ -2,12 +2,15 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useSyncExternalStore } from 'react';
+
+const readSidebarCollapsed = () => { try { return localStorage.getItem('fundir-sidebar') === 'collapsed'; } catch { return false; } };
+const subscribeSidebar = (cb: () => void) => { window.addEventListener('fundir-sidebar', cb); window.addEventListener('storage', cb); return () => { window.removeEventListener('fundir-sidebar', cb); window.removeEventListener('storage', cb); }; };
 import {
   LayoutDashboard, Radar, Table2, Share2, FileText, Settings, LogOut,
   TrendingUp, Building2, Shield,
   ChevronDown, Check, Sun, Moon,
-  Menu, X, Database,
+  Menu, X, Database, PanelLeftClose, PanelLeftOpen,
 } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/supabase';
 import { CommandPalette, CommandPaletteTrigger } from '@/components/command-palette';
@@ -76,10 +79,29 @@ export function AppShell({
   const [theme, setTheme]               = useState<'dark' | 'light'>('light');
   const [teamOpen, setTeamOpen]         = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  // Desktop sidebar collapses to a 56px icon rail; the choice is remembered per
+  // browser and read through an external-store subscription (SSR renders it open).
+  const collapsed = useSyncExternalStore(subscribeSidebar, readSidebarCollapsed, () => false);
   const orgMenuRef = useRef<HTMLDivElement>(null);
 
   // Close the mobile drawer whenever the user navigates to a new page.
   useEffect(() => { setMobileNavOpen(false); }, [pathname]);
+
+  function toggleCollapsed() {
+    const next = !readSidebarCollapsed();
+    try { localStorage.setItem('fundir-sidebar', next ? 'collapsed' : 'open'); } catch { /* ignore */ }
+    window.dispatchEvent(new Event('fundir-sidebar'));
+  }
+  // "[" toggles the sidebar from anywhere except text fields.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      const tag = (e.target as HTMLElement).tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (e.target as HTMLElement).isContentEditable) return;
+      if (e.key === '[' && !e.metaKey && !e.ctrlKey && !e.altKey) { e.preventDefault(); toggleCollapsed(); }
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout>;
@@ -164,22 +186,44 @@ export function AppShell({
 
       {/* ── Sidebar — desktop: always visible; mobile: slide-in drawer ── */}
       <aside
-        className={`w-56 flex flex-col fixed inset-y-0 left-0 z-50 border-r border-hairline bg-surface transform transition-transform duration-200 ease-out md:translate-x-0 ${
+        data-collapsed={collapsed || undefined}
+        className={`flex flex-col fixed inset-y-0 left-0 z-50 border-r border-hairline bg-surface transform transition-[transform,width] duration-200 ease-out md:translate-x-0 ${
           mobileNavOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
+        } ${collapsed ? 'w-56 md:w-14' : 'w-56'}`}
       >
 
         {/* Brand + org */}
-        <div className="px-4 pt-4 pb-3 border-b border-hairline">
-          <div className="flex items-center gap-2 mb-3">
+        <div className={`${collapsed ? 'px-2 md:px-0' : 'px-4'} pt-4 pb-3 border-b border-hairline`}>
+          <div className={`flex items-center gap-2 mb-3 ${collapsed ? 'md:justify-center md:px-0' : ''}`}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/fundir-mark.png"
               alt="Fundir"
               className="w-7 h-7 object-contain flex-shrink-0"
             />
-            <span className="text-h3 font-semibold tracking-tight text-primary">Fundir</span>
+            <span className={`text-h3 font-semibold tracking-tight text-primary ${collapsed ? 'md:hidden' : ''}`}>Fundir</span>
+            <button
+              type="button"
+              onClick={toggleCollapsed}
+              title={collapsed ? 'Expand sidebar  ( [ )' : 'Collapse sidebar  ( [ )'}
+              aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              aria-expanded={!collapsed}
+              className={`hidden md:flex ml-auto w-7 h-7 rounded-sm items-center justify-center text-tertiary hover:text-primary hover:bg-elevated transition-colors ${collapsed ? 'md:hidden' : ''}`}
+            >
+              <PanelLeftClose className="w-4 h-4" />
+            </button>
           </div>
+          {collapsed && (
+            <button
+              type="button"
+              onClick={toggleCollapsed}
+              title="Expand sidebar  ( [ )"
+              aria-label="Expand sidebar"
+              className="hidden md:flex mx-auto mb-2 w-9 h-8 rounded-sm items-center justify-center text-tertiary hover:text-primary hover:bg-elevated transition-colors"
+            >
+              <PanelLeftOpen className="w-4 h-4" />
+            </button>
+          )}
 
           {/* Org switcher — two-line treatment, full org name with tooltip,
               dropdown only for admins with multiple orgs. */}
@@ -187,7 +231,7 @@ export function AppShell({
             <button
               onClick={() => isAdmin && availableOrgs.length > 1 && setOrgMenuOpen(o => !o)}
               title={orgName}
-              className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-sm transition-colors text-left ${
+              className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-sm transition-colors text-left ${collapsed ? 'md:justify-center md:px-0' : ''} ${
                 isAdmin && availableOrgs.length > 1 ? 'cursor-pointer hover:bg-elevated' : 'cursor-default'
               }`}
             >
@@ -203,17 +247,17 @@ export function AppShell({
                   {initials}
                 </div>
               )}
-              <span className="text-[12px] font-medium text-secondary leading-tight flex-1 line-clamp-2 break-words">
+              <span className={`text-[12px] font-medium text-secondary leading-tight flex-1 line-clamp-2 break-words ${collapsed ? 'md:hidden' : ''}`}>
                 {orgName}
               </span>
               {isAdmin && availableOrgs.length > 1 && (
-                <ChevronDown className={`w-3 h-3 flex-shrink-0 text-tertiary transition-transform ${orgMenuOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown className={`w-3 h-3 flex-shrink-0 text-tertiary transition-transform ${orgMenuOpen ? 'rotate-180' : ''} ${collapsed ? 'md:hidden' : ''}`} />
               )}
             </button>
 
             {/* Admin org dropdown */}
             {orgMenuOpen && availableOrgs.length > 1 && (
-              <div className="absolute top-full left-0 right-0 mt-1 rounded-sm overflow-hidden border border-hairline bg-surface z-50"
+              <div className={`absolute top-full left-0 mt-1 rounded-sm overflow-hidden border border-hairline bg-surface z-50 ${collapsed ? 'md:left-full md:ml-2 md:w-60' : 'right-0'}`}
                 style={{ boxShadow: 'var(--shadow-overlay)' }}>
                 <p className="px-3 pt-2 pb-1 text-eyebrow text-tertiary uppercase">Switch organization</p>
                 {availableOrgs.map(org => (
@@ -248,20 +292,20 @@ export function AppShell({
             )}
           </div>
 
-          {isAdmin && (
+          {isAdmin && !collapsed && (
             <p className="mt-1 px-2 text-eyebrow uppercase text-tertiary">Admin view</p>
           )}
         </div>
 
-        {/* Main nav */}
-        <nav className="flex-1 px-3 py-3 overflow-y-auto">
+        {/* Main nav — labels hide in the rail; the title attribute keeps them a hover away. */}
+        <nav className={`flex-1 py-3 overflow-y-auto ${collapsed ? 'px-3 md:px-2' : 'px-3'}`}>
           {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
             const active = isActive(href);
             return (
-              <Link key={href} href={href} prefetch={false}
-                className={`shell-nav-item flex items-center gap-2.5 pl-3 pr-2 py-[7px] text-[13px] mb-0.5 ${active ? 'shell-nav-active' : ''}`}>
+              <Link key={href} href={href} prefetch={false} title={collapsed ? label : undefined}
+                className={`shell-nav-item flex items-center gap-2.5 py-[7px] text-[13px] mb-0.5 ${collapsed ? 'pl-3 pr-2 md:justify-center md:px-0' : 'pl-3 pr-2'} ${active ? 'shell-nav-active' : ''}`}>
                 <Icon className="shell-nav-icon w-4 h-4 flex-shrink-0" />
-                {label}
+                <span className={collapsed ? 'md:hidden' : ''}>{label}</span>
               </Link>
             );
           })}
@@ -271,10 +315,10 @@ export function AppShell({
             {SETTINGS_ITEMS.map(({ href, label, icon: Icon }) => {
               const active = isActive(href);
               return (
-                <Link key={href} href={href} prefetch={false}
-                  className={`shell-nav-item flex items-center gap-2.5 pl-3 pr-2 py-[7px] text-[13px] mb-0.5 ${active ? 'shell-nav-active' : ''}`}>
+                <Link key={href} href={href} prefetch={false} title={collapsed ? label : undefined}
+                  className={`shell-nav-item flex items-center gap-2.5 py-[7px] text-[13px] mb-0.5 ${collapsed ? 'pl-3 pr-2 md:justify-center md:px-0' : 'pl-3 pr-2'} ${active ? 'shell-nav-active' : ''}`}>
                   <Icon className="shell-nav-icon w-4 h-4 flex-shrink-0" />
-                  {label}
+                  <span className={collapsed ? 'md:hidden' : ''}>{label}</span>
                 </Link>
               );
             })}
@@ -282,34 +326,34 @@ export function AppShell({
         </nav>
 
         {/* Footer */}
-        <div className="px-3 py-3 border-t border-hairline">
+        <div className={`py-3 border-t border-hairline ${collapsed ? 'px-3 md:px-2' : 'px-3'}`}>
           {isAdmin && (
-            <Link href="/admin" prefetch={false}
-              className="shell-nav-item flex items-center gap-2.5 pl-3 pr-2 py-[7px] text-caption mb-0.5">
+            <Link href="/admin" prefetch={false} title={collapsed ? 'Admin Console' : undefined}
+              className={`shell-nav-item flex items-center gap-2.5 py-[7px] text-caption mb-0.5 ${collapsed ? 'pl-3 pr-2 md:justify-center md:px-0' : 'pl-3 pr-2'}`}>
               <Shield className="shell-nav-icon w-4 h-4 flex-shrink-0" />
-              Admin Console
+              <span className={collapsed ? 'md:hidden' : ''}>Admin Console</span>
             </Link>
           )}
-          {userEmail && (
+          {userEmail && !collapsed && (
             <p className="px-3 py-1 text-eyebrow text-tertiary truncate uppercase">{userEmail}</p>
           )}
-          <button onClick={toggleTheme}
-            className="shell-nav-item w-full flex items-center gap-2.5 pl-3 pr-2 py-[7px] text-[13px] mb-0.5">
+          <button onClick={toggleTheme} title={collapsed ? (theme === 'dark' ? 'Light mode' : 'Dark mode') : undefined}
+            className={`shell-nav-item w-full flex items-center gap-2.5 py-[7px] text-[13px] mb-0.5 ${collapsed ? 'pl-3 pr-2 md:justify-center md:px-0' : 'pl-3 pr-2'}`}>
             {theme === 'dark'
-              ? <><Sun className="shell-nav-icon w-4 h-4 flex-shrink-0" /><span>Light mode</span></>
-              : <><Moon className="shell-nav-icon w-4 h-4 flex-shrink-0" /><span>Dark mode</span></>
+              ? <><Sun className="shell-nav-icon w-4 h-4 flex-shrink-0" /><span className={collapsed ? 'md:hidden' : ''}>Light mode</span></>
+              : <><Moon className="shell-nav-icon w-4 h-4 flex-shrink-0" /><span className={collapsed ? 'md:hidden' : ''}>Dark mode</span></>
             }
           </button>
-          <button onClick={handleSignOut}
-            className="shell-nav-item w-full flex items-center gap-2.5 pl-3 pr-2 py-[7px] text-[13px]">
+          <button onClick={handleSignOut} title={collapsed ? 'Sign out' : undefined}
+            className={`shell-nav-item w-full flex items-center gap-2.5 py-[7px] text-[13px] ${collapsed ? 'pl-3 pr-2 md:justify-center md:px-0' : 'pl-3 pr-2'}`}>
             <LogOut className="shell-nav-icon w-4 h-4 flex-shrink-0" />
-            Sign out
+            <span className={collapsed ? 'md:hidden' : ''}>Sign out</span>
           </button>
         </div>
       </aside>
 
-      {/* ── Content area — ml-56 on desktop; full width on mobile ── */}
-      <div className="flex-1 md:ml-56 flex flex-col min-h-screen w-full">
+      {/* ── Content area — offset by the sidebar width on desktop; full width on mobile ── */}
+      <div className={`flex-1 flex flex-col min-h-screen w-full transition-[margin] duration-200 ease-out ${collapsed ? 'md:ml-14' : 'md:ml-56'}`}>
         {/* Top bar — quiet, hairline-bottom, grid-aligned. */}
         <header className="sticky top-0 z-40 h-12 flex items-center px-4 md:px-6 gap-3 md:gap-4 bg-surface border-b border-hairline">
           {/* Mobile hamburger — opens the sidebar drawer */}

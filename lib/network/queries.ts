@@ -307,6 +307,104 @@ export async function graphNeighborhood(db: Db, orgId: string, focus: { kind: 'p
   return { mode: 'focus', focus: { kind: focus.kind, id: focus.id, label: f.label }, nodes: [...nodes.values()], links: [...links.values()] };
 }
 
+// ── People ──────────────────────────────────────────────────────────────────
+export interface PersonRow {
+  id: string; kind: string; name: string; board_role: string | null; title: string | null; org: string | null; org_id: string | null; location: string | null; headline: string | null;
+  linkedin_url: string | null; enriched_at: string | null; verification: string | null; source_type: string | null;
+  own: boolean; employers: number; boards: Array<{ id: string; name: string; title: string | null }>; paths: number; best_lead: { id: string; score: number; target: string } | null;
+}
+export async function listPeople(db: Db, orgId: string): Promise<PersonRow[]> {
+  const people = await pageAllRows<{ id: string; kind: string; name: string; board_role: string | null; current_title: string | null; current_org: string | null; organization_id: string | null; location: string | null; headline: string | null; linkedin_url: string | null; enriched_at: string | null; verification: string | null; source_id: string | null }>(db, 'network_people', 'id, kind, name, board_role, current_title, current_org, organization_id, location, headline, linkedin_url, enriched_at, verification, source_id', orgId);
+  const ids = people.map(p => p.id);
+  const empCount = new Map<string, number>(), seats = new Map<string, Array<{ id: string; name: string; title: string | null }>>(), paths = new Map<string, number>(), best = new Map<string, { id: string; score: number; target: string }>();
+  for (const c of chunks(ids, 150)) {
+    const [{ data: emps }, { data: brd }] = await Promise.all([
+      db.from('network_employments').select('person_id').in('person_id', c),
+      db.from('network_boards').select('person_id, title, organization_id, org:network_organizations(id, name)').in('person_id', c),
+    ]);
+    for (const e of emps ?? []) empCount.set(e.person_id as string, (empCount.get(e.person_id as string) ?? 0) + 1);
+    for (const s of (brd ?? []) as unknown as Array<{ person_id: string; title: string | null; org: { id: string; name: string } | null }>) { if (!s.org) continue; const a = seats.get(s.person_id) ?? []; if (!a.some(x => x.id === s.org!.id)) a.push({ id: s.org.id, name: s.org.name, title: s.title }); seats.set(s.person_id, a); }
+  }
+  const { data: leads } = await db.from('network_leads').select('id, via_person_id, person_id, opportunity_score, pipeline_status, target:network_organizations!network_leads_target_org_id_fkey(name)').eq('org_id', orgId).not('pipeline_status', 'in', '("NOT_A_FIT","LOST")');
+  for (const l of (leads ?? []) as unknown as Array<{ id: string; via_person_id: string | null; person_id: string | null; opportunity_score: number | null; target: { name: string } | null }>) {
+    for (const pid of [l.via_person_id, l.person_id]) {
+      if (!pid) continue;
+      paths.set(pid, (paths.get(pid) ?? 0) + 1);
+      const s = Math.round(Number(l.opportunity_score ?? 0));
+      if (!best.has(pid) || best.get(pid)!.score < s) best.set(pid, { id: l.id, score: s, target: l.target?.name ?? '' });
+    }
+  }
+  const srcIds = [...new Set(people.map(p => p.source_id).filter(Boolean))] as string[];
+  const srcType = new Map<string, string>();
+  for (const c of chunks(srcIds, 200)) { const { data } = await db.from('network_sources').select('id, source_type').in('id', c); for (const s of data ?? []) srcType.set(s.id as string, s.source_type as string); }
+  return people.map(p => ({
+    id: p.id, kind: p.kind, name: p.name, board_role: p.board_role, title: p.current_title, org: p.current_org, org_id: p.organization_id, location: p.location, headline: p.headline,
+    linkedin_url: p.linkedin_url, enriched_at: p.enriched_at, verification: p.verification, source_type: p.source_id ? srcType.get(p.source_id) ?? null : null,
+    own: OWN_KINDS.has(p.kind), employers: empCount.get(p.id) ?? 0, boards: seats.get(p.id) ?? [], paths: paths.get(p.id) ?? 0, best_lead: best.get(p.id) ?? null,
+  })).sort((a, b) => Number(b.own) - Number(a.own) || b.paths - a.paths || a.name.localeCompare(b.name));
+}
+
+async function pageAllRows<T>(db: Db, table: string, select: string, orgId: string): Promise<T[]> {
+  const out: T[] = [];
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await db.from(table).select(select).eq('org_id', orgId).order('id').range(from, from + 999);
+    if (error) throw new Error(`${table}: ${error.message}`);
+    out.push(...((data ?? []) as unknown as T[]));
+    if (!data || data.length < 1000) break;
+  }
+  return out;
+}
+
+export interface PersonDetail extends PersonRow {
+  summary: string | null; note: string | null; status: string | null;
+  employments: Array<{ org_name: string; org_id: string | null; title: string | null; start_year: number | null; end_year: number | null; is_current: boolean; source_type: string | null; source_url: string | null }>;
+  educations: Array<{ school: string; degree: string | null; field: string | null; start_year: number | null; end_year: number | null }>;
+  seats: Array<{ org_id: string; org: string; title: string | null; is_current: boolean; source_type: string | null; source_url: string | null }>;
+  leads: Array<{ id: string; role: 'via' | 'target'; target: string; score: number; confidence: string | null; insight_type: string | null; pipeline_status: string }>;
+  links: Array<{ id: string; type: string; verification: string; other: { kind: 'person' | 'org'; id: string; name: string }; summary: string | null }>;
+  sources: Array<{ source_type: string; source_url: string | null; name: string | null }>;
+}
+export async function getPersonDetail(db: Db, orgId: string, id: string): Promise<PersonDetail | null> {
+  const rows = (await listPeople(db, orgId)).filter(p => p.id === id);
+  const base = rows[0]; if (!base) return null;
+  const { data: p } = await db.from('network_people').select('summary, note, status').eq('id', id).maybeSingle();
+  const [{ data: emps }, { data: edus }, { data: seats }, { data: l1 }, { data: l2 }, { data: e1 }, { data: e2 }] = await Promise.all([
+    db.from('network_employments').select('org_name, organization_id, title, start_year, end_year, is_current, src:network_sources(source_type, source_url)').eq('person_id', id).order('is_current', { ascending: false }).order('start_year', { ascending: false, nullsFirst: false }),
+    db.from('network_educations').select('school_name, degree, field, start_year, end_year').eq('person_id', id),
+    db.from('network_boards').select('organization_id, title, is_current, org:network_organizations(name), src:network_sources(source_type, source_url)').eq('person_id', id),
+    db.from('network_leads').select('id, opportunity_score, evidence_confidence, insight_type, pipeline_status, target:network_organizations!network_leads_target_org_id_fkey(name)').eq('org_id', orgId).eq('via_person_id', id),
+    db.from('network_leads').select('id, opportunity_score, evidence_confidence, insight_type, pipeline_status, target:network_organizations!network_leads_target_org_id_fkey(name)').eq('org_id', orgId).eq('person_id', id),
+    db.from('network_relationships').select('id, relationship_type, verification, relationship_strength, evidence, source_person_id, target_person_id, source_organization_id, target_organization_id').eq('org_id', orgId).eq('source_person_id', id).order('relationship_strength', { ascending: false }).limit(40),
+    db.from('network_relationships').select('id, relationship_type, verification, relationship_strength, evidence, source_person_id, target_person_id, source_organization_id, target_organization_id').eq('org_id', orgId).eq('target_person_id', id).order('relationship_strength', { ascending: false }).limit(40),
+  ]);
+  type Src = { source_type: string; source_url: string | null } | null;
+  const edges = [...(e1 ?? []), ...(e2 ?? [])] as unknown as Array<{ id: string; relationship_type: string; verification: string; relationship_strength: number; evidence: { summary?: string } | null; source_person_id: string | null; target_person_id: string | null; source_organization_id: string | null; target_organization_id: string | null }>;
+  const otherP = new Set<string>(), otherO = new Set<string>();
+  for (const e of edges) { const pid = e.source_person_id === id ? e.target_person_id : e.source_person_id; if (pid) otherP.add(pid); else { const oid = e.source_person_id === id ? e.target_organization_id : e.source_organization_id; if (oid) otherO.add(oid); } }
+  const pn = new Map<string, string>(), on = new Map<string, string>();
+  for (const c of chunks([...otherP], 200)) { const { data } = await db.from('network_people').select('id, name').in('id', c); for (const x of data ?? []) pn.set(x.id as string, x.name as string); }
+  for (const c of chunks([...otherO], 200)) { const { data } = await db.from('network_organizations').select('id, name').in('id', c); for (const x of data ?? []) on.set(x.id as string, x.name as string); }
+  const links = edges.sort((a, b) => Number(b.relationship_strength) - Number(a.relationship_strength)).flatMap(e => {
+    const pid = e.source_person_id === id ? e.target_person_id : e.source_person_id;
+    const oid = e.source_person_id === id ? e.target_organization_id : e.source_organization_id;
+    const other = pid && pn.has(pid) ? { kind: 'person' as const, id: pid, name: pn.get(pid)! } : oid && on.has(oid) ? { kind: 'org' as const, id: oid, name: on.get(oid)! } : null;
+    return other ? [{ id: e.id, type: e.relationship_type, verification: e.verification, other, summary: e.evidence?.summary ?? null }] : [];
+  }).slice(0, 40);
+  const sources = new Map<string, { source_type: string; source_url: string | null; name: string | null }>();
+  const addSrc = (s: Src, name: string | null = null) => { if (s?.source_type) sources.set(`${s.source_type}|${s.source_url ?? ''}`, { source_type: s.source_type, source_url: s.source_url, name }); };
+  const leadRow = (role: 'via' | 'target') => (l: { id: string; opportunity_score: number | null; evidence_confidence: string | null; insight_type: string | null; pipeline_status: string; target: { name: string } | null }) => ({ id: l.id, role, target: l.target?.name ?? '', score: Math.round(Number(l.opportunity_score ?? 0)), confidence: l.evidence_confidence, insight_type: l.insight_type, pipeline_status: l.pipeline_status });
+  const employments = ((emps ?? []) as unknown as Array<{ org_name: string; organization_id: string | null; title: string | null; start_year: number | null; end_year: number | null; is_current: boolean; src: Src }>).map(e => { addSrc(e.src, e.org_name); return { org_name: e.org_name, org_id: e.organization_id, title: e.title, start_year: e.start_year, end_year: e.end_year, is_current: !!e.is_current, source_type: e.src?.source_type ?? null, source_url: e.src?.source_url ?? null }; });
+  const seatRows = ((seats ?? []) as unknown as Array<{ organization_id: string; title: string | null; is_current: boolean | null; org: { name: string } | null; src: Src }>).map(s => { addSrc(s.src, s.org?.name ?? null); return { org_id: s.organization_id, org: s.org?.name ?? 'Organization', title: s.title, is_current: s.is_current !== false, source_type: s.src?.source_type ?? null, source_url: s.src?.source_url ?? null }; });
+  if (base.source_type) sources.set(`${base.source_type}|`, { source_type: base.source_type, source_url: null, name: 'profile' });
+  return {
+    ...base, summary: (p?.summary as string | null) ?? null, note: (p?.note as string | null) ?? null, status: (p?.status as string | null) ?? null,
+    employments, educations: (edus ?? []).map(e => ({ school: e.school_name as string, degree: e.degree as string | null, field: e.field as string | null, start_year: e.start_year as number | null, end_year: e.end_year as number | null })),
+    seats: seatRows,
+    leads: [...((l1 ?? []) as unknown as Parameters<ReturnType<typeof leadRow>>[0][]).map(leadRow('via')), ...((l2 ?? []) as unknown as Parameters<ReturnType<typeof leadRow>>[0][]).map(leadRow('target'))].sort((a, b) => b.score - a.score),
+    links, sources: [...sources.values()],
+  };
+}
+
 /** Resolve a free-text name to a node the map can focus on. */
 export async function findNode(db: Db, orgId: string, q: string): Promise<{ kind: 'person' | 'org'; id: string; label: string } | null> {
   const t = q.trim().replace(/[%_,]/g, ' ').trim(); if (!t) return null;

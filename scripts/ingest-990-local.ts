@@ -126,7 +126,10 @@ async function main() {
         if (!entry) { console.log(`    ! ${r.ein} ${r.objectId}: member not in ${batchId}`); continue; }
 
         const xml = await readZipMember(url, entry);
-        const parsed = parse990Xml(xml);
+        // One malformed filing must not end a multi-hour run: log it and move on (it stays un-ingested and resumable).
+        let parsed: ReturnType<typeof parse990Xml>;
+        try { parsed = parse990Xml(xml); }
+        catch (e) { console.log(`    ! ${r.ein} ${r.objectId}: ${e instanceof Error ? e.message : 'parse failed'} — skipped`); continue; }
         const officers = parseOfficers(xml).officers.filter(o => !o.isOrganization && o.role !== 'employee');
         filings++;
         console.log(`  ${r.taxpayerName.slice(0, 44).padEnd(44)} FY${parsed.fiscal_year} ${parsed.form_type.padEnd(5)} grants ${String(parsed.grants.length).padStart(4)} · board ${officers.length}${parsed.warnings.length ? ` · ${parsed.warnings.length} warn` : ''}`);

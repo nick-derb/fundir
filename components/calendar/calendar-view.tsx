@@ -68,7 +68,8 @@ interface Cell {
 
 export function CalendarView({ data }: { data: CalData }) {
   const [ty, tm, td] = data.todayISO.split('-').map(Number);
-  const [cursor, setCursor] = useState(() => new Date(ty, (tm || 1) - 1, 1));
+  // The cursor is a day; Month reads its month, Week its Monday-first week, Day the day itself.
+  const [cursor, setCursor] = useState(() => new Date(ty, (tm || 1) - 1, td || 1));
   const [view, setView] = useState<'Month' | 'Week' | 'Day'>('Month');
 
   // Load the design's font stack once (shared id with the dashboard port).
@@ -108,9 +109,15 @@ export function CalendarView({ data }: { data: CalData }) {
   }, [y, mo, byDay, data.todayISO]);
 
   const dim = new Date(y, mo + 1, 0).getDate();
-  const monthLabel = `${MONTHS[mo]} ${y}`;
-  const rangeLabel = `${MON_ABBR[mo]} 1 – ${MON_ABBR[mo]} ${dim}, ${y}`;
-  const stepMonth = (delta: number) => setCursor(new Date(y, mo + delta, 1));
+  const keyOf = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const monday = new Date(cursor); monday.setDate(cursor.getDate() - ((cursor.getDay() + 6) % 7));
+  const weekDays = Array.from({ length: 7 }, (_, i) => { const d = new Date(monday); d.setDate(monday.getDate() + i); return d; });
+  const fmtShort = (d: Date) => `${MON_ABBR[d.getMonth()]} ${d.getDate()}`;
+  const monthLabel = view === 'Month' ? `${MONTHS[mo]} ${y}` : view === 'Week' ? `Week of ${fmtShort(monday)}` : cursor.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  const rangeLabel = view === 'Month' ? `${MON_ABBR[mo]} 1 – ${MON_ABBR[mo]} ${dim}, ${y}` : view === 'Week' ? `${fmtShort(weekDays[0])} – ${fmtShort(weekDays[6])}, ${weekDays[6].getFullYear()}` : `${data.events.filter(e => e.date === keyOf(cursor)).length} event${data.events.filter(e => e.date === keyOf(cursor)).length === 1 ? '' : 's'} · ${y}`;
+  // Previous / next moves by the unit the view shows.
+  const stepMonth = (delta: number) => setCursor(view === 'Month' ? new Date(y, mo + delta, 1) : view === 'Week' ? new Date(cursor.getFullYear(), cursor.getMonth(), cursor.getDate() + 7 * delta) : new Date(cursor.getFullYear(), cursor.getMonth(), cursor.getDate() + delta));
+  const unit = view === 'Month' ? 'month' : view === 'Week' ? 'week' : 'day';
 
   const btn: React.CSSProperties = {
     display: 'inline-flex', alignItems: 'center', gap: 8, height: 38, padding: '0 14px',
@@ -173,10 +180,10 @@ export function CalendarView({ data }: { data: CalData }) {
               <span style={{ flex: 1 }} />
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <div style={{ display: 'flex', border: '1px solid var(--border-hairline)', borderRadius: 'var(--radius-kpi)', overflow: 'hidden' }}>
-                  <button data-navbtn type="button" aria-label="Previous month" onClick={() => stepMonth(-1)} style={navBtn(true)}><ArrowLeft style={{ width: 14, height: 14 }} /></button>
-                  <button data-navbtn type="button" aria-label="Next month" onClick={() => stepMonth(1)} style={navBtn(false)}><ArrowRight style={{ width: 14, height: 14 }} /></button>
+                  <button data-navbtn type="button" aria-label={`Previous ${unit}`} onClick={() => stepMonth(-1)} style={navBtn(true)}><ArrowLeft style={{ width: 14, height: 14 }} /></button>
+                  <button data-navbtn type="button" aria-label={`Next ${unit}`} onClick={() => stepMonth(1)} style={navBtn(false)}><ArrowRight style={{ width: 14, height: 14 }} /></button>
                 </div>
-                <button type="button" onClick={() => setCursor(new Date(ty, (tm || 1) - 1, 1))} style={{ ...btn, height: 34, padding: '0 12px' }}>Today</button>
+                <button type="button" onClick={() => setCursor(new Date(ty, (tm || 1) - 1, td || 1))} style={{ ...btn, height: 34, padding: '0 12px' }}>Today</button>
                 <div style={{ display: 'flex', border: '1px solid var(--border-hairline)', borderRadius: 'var(--radius-kpi)', overflow: 'hidden', background: 'var(--bg-page)' }}>
                   {(['Month', 'Week', 'Day'] as const).map(v => (
                     <button key={v} type="button" onClick={() => setView(v)} style={{ border: 'none', background: 'none', font: 'inherit', padding: 0, cursor: 'pointer' }}>
@@ -189,8 +196,62 @@ export function CalendarView({ data }: { data: CalData }) {
               </div>
             </div>
 
-            {/* Grid */}
-            <div data-cal-scroll>
+            {/* Week — seven tall columns, every event shown */}
+            {view === 'Week' && (
+              <div data-cal-scroll>
+                <div data-cal-grid style={{ display: 'grid', gridTemplateColumns: 'repeat(7,minmax(0,1fr))' }}>
+                  {weekDays.map((d, i) => {
+                    const key = keyOf(d), isToday = key === data.todayISO, evs = byDay.get(key) ?? [];
+                    return (
+                      <div key={key} data-cal-day style={{ minHeight: 420, padding: '10px 10px 12px', borderRight: i < 6 ? '1px solid var(--border-hairline)' : 'none', background: isToday ? 'rgba(12,107,90,.035)' : undefined }}>
+                        <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 10 }}>
+                          <span className="fd-eyebrow" style={{ color: isToday ? 'var(--accent)' : 'var(--text-tertiary)' }}>{DOWS[i]}</span>
+                          <span className="fd-mono" style={{ fontSize: 13, fontWeight: 600, letterSpacing: '-.01em', color: isToday ? 'var(--accent)' : 'var(--text-primary)' }}>{d.getDate()}</span>
+                          <span style={{ flex: 1 }} />
+                          <span className="fd-mono" style={{ fontSize: 9.5, color: 'var(--text-tertiary)' }}>{evs.length || ''}</span>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                          {evs.length === 0 && <span className="fd-caption" style={{ color: 'var(--text-tertiary)', fontSize: 11 }}>—</span>}
+                          {evs.map((e, j) => (
+                            <div key={j} data-cal-ev data-kind={e.kind} style={{ borderLeft: '2px solid #5B7383', background: '#EEF2F4', borderRadius: '0 4px 4px 0', padding: '6px 8px' }}>
+                              <div style={{ fontSize: 11.5, fontWeight: 500, lineHeight: 1.35, color: 'var(--text-primary)' }}>{e.title}</div>
+                              <span className="fd-mono" style={{ display: 'block', marginTop: 3, fontSize: 9.5, color: 'var(--text-tertiary)' }}>{e.time}{e.kind === 'grant' ? ' · deadline' : ''}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Day — one agenda, chronological */}
+            {view === 'Day' && (() => {
+              const key = keyOf(cursor), evs = [...(byDay.get(key) ?? [])].sort((a, b) => a.time.localeCompare(b.time));
+              return (
+                <div style={{ padding: '18px 20px 22px', minHeight: 320 }}>
+                  {evs.length === 0 && (
+                    <div style={{ textAlign: 'center', padding: '48px 0' }}>
+                      <p style={{ fontFamily: SERIF, fontSize: '1.3rem', margin: '0 0 6px' }}>Nothing on {cursor.toLocaleDateString('en-US', { weekday: 'long' })}.</p>
+                      <p className="fd-caption" style={{ color: 'var(--text-tertiary)', margin: 0 }}>{data.calendarConnected ? 'No events or deadlines fall on this day.' : 'Connect your calendar to see events here; deadlines still show.'}</p>
+                    </div>
+                  )}
+                  {evs.map((e, i) => (
+                    <div key={i} style={{ display: 'grid', gridTemplateColumns: '64px 1fr', gap: 14, alignItems: 'start' }}>
+                      <span className="fd-mono" style={{ fontSize: 11, color: 'var(--text-tertiary)', paddingTop: 9 }}>{e.time}</span>
+                      <div data-cal-ev data-kind={e.kind} style={{ borderLeft: '3px solid #5B7383', background: '#EEF2F4', borderRadius: '0 8px 8px 0', padding: '10px 14px', marginBottom: 8 }}>
+                        <b style={{ display: 'block', fontSize: 13.5, fontWeight: 500 }}>{e.title}</b>
+                        <span className="fd-mono" style={{ display: 'block', marginTop: 4, fontSize: 9.5, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--text-tertiary)' }}>{e.kind === 'grant' ? 'grant deadline' : e.kind === 'funder' ? 'funder meeting' : e.kind === 'site' ? 'site visit' : 'internal'}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
+
+            {/* Month grid */}
+            {view === 'Month' && <div data-cal-scroll>
               <div data-cal-grid>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,minmax(0,1fr))', background: 'var(--bg-page)', borderBottom: '1px solid var(--border-hairline)' }}>
                   {DOWS.map(d => <div key={d} className="fd-eyebrow" style={{ padding: '9px 11px', color: 'var(--text-tertiary)', textAlign: 'left' }}>{d}</div>)}
@@ -222,7 +283,7 @@ export function CalendarView({ data }: { data: CalData }) {
                             </div>
                           ))}
                           {more > 0 && (
-                            <span className="fd-mono" style={{ padding: '2px 0', fontSize: 9.5, color: 'var(--text-tertiary)' }}>{more} more…</span>
+                            <button type="button" onClick={() => { if (!c.out) { setCursor(new Date(y, mo, c.n)); setView('Day'); } }} className="fd-mono" style={{ border: 'none', background: 'none', padding: '2px 0', fontSize: 9.5, color: 'var(--accent)', cursor: 'pointer', textAlign: 'left', font: 'inherit' }}>{more} more…</button>
                           )}
                         </div>
                       </div>
@@ -230,7 +291,7 @@ export function CalendarView({ data }: { data: CalData }) {
                   })}
                 </div>
               </div>
-            </div>
+            </div>}
           </div>
 
           {/* Right rail */}

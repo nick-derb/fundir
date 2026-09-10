@@ -17,10 +17,12 @@ import { RelationshipsView } from './relationships-view';
 import { MapView, type MapFocus } from './map-view';
 import { LeadDrawer } from './lead-drawer';
 import { PipelineView, type TeamMember } from './pipeline-view';
+import { PeopleView } from './people-view';
+import { PersonPeek } from './person-peek';
 
-type TabKey = 'discover' | 'pipeline' | 'paths' | 'map' | 'organizations' | 'relationships' | 'network' | 'funders';
+type TabKey = 'discover' | 'pipeline' | 'paths' | 'people' | 'map' | 'organizations' | 'relationships' | 'network' | 'funders';
 const TABS: Array<{ key: TabKey; label: string }> = [
-  { key: 'discover', label: 'Discover' }, { key: 'pipeline', label: 'Pipeline' }, { key: 'paths', label: 'Warm paths' }, { key: 'map', label: 'Map' },
+  { key: 'discover', label: 'Discover' }, { key: 'pipeline', label: 'Pipeline' }, { key: 'paths', label: 'Warm paths' }, { key: 'people', label: 'People' }, { key: 'map', label: 'Map' },
   { key: 'organizations', label: 'Organizations' }, { key: 'relationships', label: 'Relationships' },
   { key: 'network', label: 'CYC network' }, { key: 'funders', label: 'Funder boards' },
 ];
@@ -36,6 +38,7 @@ function IntelInner({ people, kpis, network, leads: initialLeads, insights: init
   const router = useRouter(), pathname = usePathname(), sp = useSearchParams();
   const tab = (TABS.find(t => t.key === sp.get('tab'))?.key ?? 'discover') as TabKey;
   const leadId = sp.get('lead');
+  const personId = sp.get('person');
   const focusParam = sp.get('focus');
   const focus: MapFocus | null = useMemo(() => { const m = focusParam?.match(/^(person|org):(.+)$/); return m ? { kind: m[1] as 'person' | 'org', id: m[2] } : null; }, [focusParam]);
 
@@ -57,8 +60,14 @@ function IntelInner({ people, kpis, network, leads: initialLeads, insights: init
   const ordered = useMemo(() => (tab === 'discover' ? applyFilters(leads, filters) : tab === 'paths' ? leads.filter(l => l.via) : tab === 'pipeline' ? [...leads].sort((a, b) => a.pipeline_status.localeCompare(b.pipeline_status) || b.score - a.score) : leads), [tab, leads, filters]);
   const position = useMemo(() => { const i = ordered.findIndex(l => l.id === leadId); return i >= 0 ? { index: i, total: ordered.length } : null; }, [ordered, leadId]);
   const step = useCallback((dir: -1 | 1) => { if (!position) return; const n = ordered[position.index + dir]; if (n) setParams({ lead: n.id }); }, [ordered, position, setParams]);
-  const openLead = useCallback((id: string) => setParams({ lead: id }), [setParams]);
-  const openMap = useCallback((f: MapFocus) => setParams({ tab: 'map', focus: `${f.kind}:${f.id}`, lead: null }), [setParams]);
+  const openLead = useCallback((id: string) => setParams({ lead: id, person: null }), [setParams]);
+  const openPerson = useCallback((id: string) => setParams({ person: id, lead: null }), [setParams]);
+  const openMap = useCallback((f: MapFocus) => setParams({ tab: 'map', focus: `${f.kind}:${f.id}`, lead: null, person: null }), [setParams]);
+  const saveUrl = useCallback(async (id: string, url: string): Promise<string | null> => {
+    const res = await fetch('/api/network', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, linkedinUrl: url }) });
+    const b = await res.json().catch(() => ({}));
+    return res.ok ? null : (b?.error ?? 'Could not save');
+  }, []);
 
   // Sliding indicator: measured after layout and positioned directly on the element (no render round-trip).
   const stripRef = useRef<HTMLDivElement>(null);
@@ -77,7 +86,7 @@ function IntelInner({ people, kpis, network, leads: initialLeads, insights: init
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
       <div ref={stripRef} role="tablist" aria-label="Connections views" style={{ position: 'relative', display: 'flex', alignItems: 'stretch', borderBottom: '1px solid var(--border-hairline)', background: 'var(--bg-surface)', padding: '0 26px', overflowX: 'auto' }}>
         {TABS.map(t => (
-          <button key={t.key} type="button" role="tab" data-tab={t.key} aria-selected={t.key === tab} className="ni-tab" onClick={() => setParams({ tab: t.key, lead: t.key === 'discover' || t.key === 'paths' || t.key === 'pipeline' ? leadId : null })}>
+          <button key={t.key} type="button" role="tab" data-tab={t.key} aria-selected={t.key === tab} className="ni-tab" onClick={() => setParams({ tab: t.key, lead: t.key === 'discover' || t.key === 'paths' || t.key === 'pipeline' ? leadId : null, person: t.key === 'people' ? personId : null })}>
             <span style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '11px 14px', whiteSpace: 'nowrap', fontSize: 12.5, fontFamily: "'Inter',-apple-system,BlinkMacSystemFont,sans-serif" }}>
               {t.label}
               {counts[t.key] !== undefined && <i style={{ fontStyle: 'normal', fontFamily: MONO, fontSize: 9, color: 'var(--text-tertiary)', opacity: t.key === tab ? 1 : 0.7 }}>{counts[t.key]}</i>}
@@ -90,6 +99,7 @@ function IntelInner({ people, kpis, network, leads: initialLeads, insights: init
       {tab === 'discover' && <DiscoverView leads={leads} insights={insights} filters={filters} onFilters={setFilters} selectedId={leadId} onOpen={openLead} onInsight={i => (i.lead_id ? openLead(i.lead_id) : i.path.find(p => p.id && p.kind === 'org') ? openMap({ kind: 'org', id: i.path.find(p => p.id && p.kind === 'org')!.id! }) : undefined)} />}
       {tab === 'pipeline' && <PipelineView leads={leads} team={team} selectedId={leadId} onOpen={openLead} onChanged={reload} readOnly={readOnly} />}
       {tab === 'paths' && <WarmPathsView leads={leads} selectedId={leadId} onOpen={openLead} onPerson={id => openMap({ kind: 'person', id })} />}
+      {tab === 'people' && <PeopleView selectedId={personId} onOpen={openPerson} onOpenLead={openLead} onFocus={openMap} />}
       {tab === 'map' && <MapView focus={focus} onFocus={f => setParams({ focus: f ? `${f.kind}:${f.id}` : null })} onOpenLead={openLead} />}
       {tab === 'organizations' && <OrganizationsView onOpenLead={openLead} onFocus={openMap} />}
       {tab === 'relationships' && <RelationshipsView onFocus={openMap} />}
@@ -97,6 +107,7 @@ function IntelInner({ people, kpis, network, leads: initialLeads, insights: init
       {tab === 'funders' && <ConnectionsView people={people} kpis={kpis} />}
 
       <LeadDrawer leadId={leadId} onClose={() => setParams({ lead: null })} onStep={step} onOpenMap={openMap} onChanged={reload} readOnly={readOnly} position={position} />
+      <PersonPeek personId={personId} onClose={() => setParams({ person: null })} onOpenLead={openLead} onOpenMap={openMap} onSaveUrl={saveUrl} readOnly={readOnly} />
     </div>
   );
 }
