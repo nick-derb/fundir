@@ -192,6 +192,3 @@ export function SectionRule({ label, right }: { label: ReactNode; right?: ReactN
 
 export const fmtDate = (s: string | null | undefined) => (s ? new Date(s).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '');
 export const money = (n: number) => (n >= 1e6 ? `$${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `$${Math.round(n / 1e3)}k` : `$${Math.round(n)}`);
-
-/** Small hook: previous value (for tab-indicator direction etc.). */
-export function usePrevious<T>(v: T): T | undefined { const r = useRef<T | undefined>(undefined); useEffect(() => { r.current = v; }); return r.current; }

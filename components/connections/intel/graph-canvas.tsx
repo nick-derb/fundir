@@ -47,8 +47,9 @@ export function GraphCanvas({ data, height = 520, selectedId, onSelect, onActiva
   // Size to the container.
   useEffect(() => {
     const el = wrapRef.current; if (!el) return;
+    // ResizeObserver delivers an initial measurement on observe(), so no synchronous setState here.
     const ro = new ResizeObserver(() => setSize({ w: el.clientWidth, h: el.clientHeight }));
-    ro.observe(el); setSize({ w: el.clientWidth, h: el.clientHeight });
+    ro.observe(el);
     return () => ro.disconnect();
   }, []);
 

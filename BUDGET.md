@@ -65,6 +65,8 @@ explicit confirmation from the user. All confirmed defaults documented inline.
 
 | 2026-09-09 | RG-8 | Connections console UI (Discover ledger, side-peek drawer, canvas relationship map, Warm paths / Organizations / Relationships explorers, 6 read-model routes) — no model calls | $0.00 | **$0.00** | **~$2.52** |
 
+| 2026-09-09 | RG-9 | Pipeline board + workflow (13 states, owners, next actions, outcomes, dismissal reasons feeding the score) — no model calls | $0.00 | **$0.00** | **~$2.52** |
+
 **BLOCKER (2026-09-09):** the Anthropic API key's console balance ran out during RG-7 (HTTP 400 "credit balance is too low"). The $90 the user mentioned is Claude.ai usage credit, which the API does not draw on. Every remaining model call — explanations for new leads, bio/giving-page extraction, 990 adjudication — waits on a top-up at console.anthropic.com → Plans & Billing. Deterministic paths (scoring, insights, evidence packs, fallback explanations) are unaffected.
 
 **Remaining budget:** ~$48.66 (against the $50 self-imposed cap; the Anthropic balance is $90).

@@ -9,14 +9,15 @@
 // up below — then the action, the pipeline control, the activity, sources.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { X, ChevronUp, ChevronDown, ExternalLink, Map as MapIcon, Sparkles, ShieldCheck, ArrowRight } from 'lucide-react';
+import { X, ChevronUp, ChevronDown, ExternalLink, Map as MapIcon, Sparkles, ShieldCheck, Check } from 'lucide-react';
 import type { LeadDetail, PipelineState } from '@/lib/network/queries';
-import { PIPELINE_STATES } from '@/lib/network/queries';
 import type { Explanation } from '@/lib/network/explain';
 import { PathRail } from './path-rail';
 import { GraphCanvas } from './graph-canvas';
 import type { GraphPayload } from '@/lib/network/queries';
-import { SERIF, MONO, ScoreRing, ConfChip, TypeChip, StatusChip, Eyebrow, SectionRule, Skeleton, STATUS_LABEL, fmtDate, hueFor, typeLabel } from './shared';
+import { SERIF, MONO, ScoreRing, ConfChip, TypeChip, StatusChip, Eyebrow, SectionRule, Skeleton, STATUS_LABEL, fmtDate, hueFor, typeLabel, initialsOf, AMBER } from './shared';
+import { ReasonDialog, type TeamMember } from './pipeline-view';
+import { BOARD_COLUMNS, OPEN_STATES, daysUntil, dismissalLabel } from '@/lib/network/pipeline';
 
 interface Props {
   leadId: string | null;
@@ -38,13 +39,16 @@ export function LeadDrawer({ leadId, onClose, onStep, onOpenMap, onChanged, read
   const [graph, setGraph] = useState<GraphPayload | null>(null);
   const [saving, setSaving] = useState(false);
   const [note, setNote] = useState('');
+  const [askReason, setAskReason] = useState<PipelineState | null>(null);
+  const [team, setTeam] = useState<TeamMember[]>([]);
   const bodyRef = useRef<HTMLDivElement>(null);
+  useEffect(() => { fetch('/api/network/team').then(r => r.json()).then(b => setTeam(b.team ?? [])).catch(() => {}); }, []);
 
   useEffect(() => {
     if (!leadId) { setLead(null); setGraph(null); return; }
     let alive = true;
     setLoading(true); setError(''); setHi(null); setGraph(null);
-    fetch(`/api/network/leads/${leadId}`).then(r => r.json()).then(b => { if (!alive) return; if (b.error) setError(b.error); else setLead(b as LeadDetail); }).catch(() => alive && setError('Could not load this lead')).finally(() => alive && setLoading(false));
+    fetch(`/api/network/leads/${leadId}`).then(r => r.json()).then(b => { if (!alive) return; if (b.error) setError(b.error); else setLead(b as LeadDetail); }).catch(() => { if (alive) setError('Could not load this lead'); }).finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
   }, [leadId]);
 
@@ -79,7 +83,9 @@ export function LeadDrawer({ leadId, onClose, onStep, onOpenMap, onChanged, read
     setSaving(true);
     try {
       const res = await fetch(`/api/network/leads/${lead.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-      if (res.ok) { const fresh = await fetch(`/api/network/leads/${lead.id}`).then(r => r.json()); if (!fresh.error) setLead(fresh); onChanged?.(); setNote(''); }
+      const b = await res.json().catch(() => ({}));
+      if (!res.ok) { if (b?.needsReason) setAskReason('NOT_A_FIT'); else setError(b?.error ?? 'Could not save'); return; }
+      const fresh = await fetch(`/api/network/leads/${lead.id}`).then(r => r.json()); if (!fresh.error) setLead(fresh); onChanged?.(); setNote('');
     } finally { setSaving(false); }
   }
 
@@ -162,26 +168,10 @@ export function LeadDrawer({ leadId, onClose, onStep, onOpenMap, onChanged, read
               <p className="fd-caption" style={{ color: 'var(--text-tertiary)' }}>{lead.thesis || 'No explanation generated yet.'}</p>
             )}
 
-            {/* pipeline */}
-            <SectionRule label="Pipeline" right={lead.owner ? <span className="fd-caption" style={{ color: 'var(--text-tertiary)', fontSize: 11 }}>owner {lead.owner}</span> : null} />
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-              <select className="ni-select" value={lead.pipeline_status} disabled={readOnly || saving} onChange={e => patch({ pipeline_status: e.target.value as PipelineState })} aria-label="Pipeline status">
-                {PIPELINE_STATES.map(s => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
-              </select>
-              <input className="ni-input" style={{ paddingLeft: 10, height: 28, flex: '1 1 200px', fontSize: 12 }} placeholder="Add a note…" value={note} onChange={e => setNote(e.target.value)} disabled={readOnly || saving} onKeyDown={e => { if (e.key === 'Enter' && note.trim()) patch({ notes: note.trim() }); }} aria-label="Note" />
-              <button type="button" className="ni-ghost" style={{ height: 28 }} disabled={readOnly || saving || !note.trim()} onClick={() => patch({ notes: note.trim() })}>Save note</button>
-            </div>
-            {lead.next_action && <p className="fd-caption" style={{ margin: '8px 0 0', color: 'var(--text-secondary)' }}><ArrowRight style={{ width: 11, height: 11, display: 'inline', verticalAlign: '-1px', marginRight: 5 }} />Next: {lead.next_action}{lead.next_action_date ? ` · ${fmtDate(lead.next_action_date)}` : ''}</p>}
-            {lead.actions.length > 0 && (
-              <ul style={{ margin: '10px 0 0', padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 4 }}>
-                {lead.actions.slice(0, 6).map(a => (
-                  <li key={a.id} className="fd-caption" style={{ display: 'flex', gap: 8, color: 'var(--text-tertiary)', fontSize: 11.5 }}>
-                    <span className="fd-mono" style={{ fontSize: 10, flex: 'none' }}>{fmtDate(a.created_at)}</span>
-                    <span style={{ color: 'var(--text-secondary)' }}>{a.action === 'status_change' || a.action === 'dismiss' ? `→ ${STATUS_LABEL[a.status as PipelineState] ?? a.status}` : a.action === 'note' ? a.notes : a.action}{a.actor ? ` · ${a.actor.split('@')[0]}` : ''}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
+            {/* workflow */}
+            <SectionRule label="Workflow" right={<StatusChip status={lead.pipeline_status} />} />
+            <Workflow lead={lead} team={team} readOnly={readOnly} saving={saving} note={note} setNote={setNote} onPatch={patch} onAskReason={to => setAskReason(to)} />
+            {askReason && <ReasonDialog lead={lead} onCancel={() => setAskReason(null)} onPick={r => { const to = askReason; setAskReason(null); patch({ pipeline_status: to, dismissal_reason: r }); }} />}
 
             {/* map */}
             {graph && graph.nodes.length > 1 && (
@@ -232,6 +222,104 @@ export function LeadDrawer({ leadId, onClose, onStep, onOpenMap, onChanged, read
         )}
       </div>
     </aside>
+  );
+}
+
+/** Stage stepper, owner, next action with a date, outcome, notes, and the full history. */
+function Workflow({ lead, team, readOnly, saving, note, setNote, onPatch, onAskReason }: { lead: LeadDetail; team: TeamMember[]; readOnly?: boolean; saving: boolean; note: string; setNote: (s: string) => void; onPatch: (b: Record<string, unknown>) => Promise<void>; onAskReason: (to: PipelineState) => void }) {
+  const [na, setNa] = useState(lead.next_action ?? '');
+  const [naDate, setNaDate] = useState(lead.next_action_date ?? '');
+  const [outcome, setOutcome] = useState(lead.outcome ?? '');
+  // Re-seed the inputs when the lead (or its saved values) change — derived state, set during render.
+  const key = `${lead.id}|${lead.next_action ?? ''}|${lead.next_action_date ?? ''}|${lead.outcome ?? ''}`;
+  const [seenKey, setSeenKey] = useState(key);
+  if (key !== seenKey) { setSeenKey(key); setNa(lead.next_action ?? ''); setNaDate(lead.next_action_date ?? ''); setOutcome(lead.outcome ?? ''); }
+  const stageIdx = BOARD_COLUMNS.findIndex(c => c.id === lead.pipeline_status);
+  const closed = !OPEN_STATES.includes(lead.pipeline_status);
+  const days = daysUntil(lead.next_action_date);
+  const dueTone = days === null ? 'var(--text-tertiary)' : days < 0 ? 'var(--critical)' : days <= 7 ? AMBER : 'var(--text-secondary)';
+  const go = (to: PipelineState) => { if (to === 'NOT_A_FIT') onAskReason(to); else onPatch({ pipeline_status: to, ...(to === 'WON' || to === 'LOST' ? { outcome } : {}) }); };
+  const ownerName = lead.owner ? team.find(t => t.email === lead.owner)?.name ?? lead.owner.split('@')[0] : null;
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      {/* stepper */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 0, overflowX: 'auto', paddingBottom: 2 }} role="group" aria-label="Stage">
+        {BOARD_COLUMNS.map((c, i) => {
+          const done = i < stageIdx, on = i === stageIdx;
+          return (
+            <button key={c.id} type="button" disabled={readOnly || saving} onClick={() => go(c.id)} title={c.hint} style={{ flex: '1 0 auto', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, border: 'none', background: 'none', padding: '2px 2px', font: 'inherit', cursor: readOnly ? 'default' : 'pointer', color: on ? 'var(--text-primary)' : done ? 'var(--accent)' : 'var(--text-tertiary)', minWidth: 62 }}>
+              <span style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                <span style={{ flex: 1, height: 1.5, background: i === 0 ? 'transparent' : done || on ? 'var(--accent)' : 'var(--border-hairline)' }} />
+                <span style={{ width: on ? 12 : 8, height: on ? 12 : 8, borderRadius: 6, background: done ? 'var(--accent)' : on ? 'var(--bg-surface)' : 'var(--border-strong)', boxShadow: on ? '0 0 0 2px var(--accent)' : undefined, transition: 'all .2s' }} />
+                <span style={{ flex: 1, height: 1.5, background: i === BOARD_COLUMNS.length - 1 ? 'transparent' : done ? 'var(--accent)' : 'var(--border-hairline)' }} />
+              </span>
+              <span style={{ fontSize: 10, lineHeight: 1.2, textAlign: 'center', fontWeight: on ? 500 : 400, whiteSpace: 'nowrap' }}>{c.label}</span>
+            </button>
+          );
+        })}
+      </div>
+      {closed && <p className="fd-caption" style={{ margin: 0, color: 'var(--text-secondary)' }}>Closed as <b style={{ fontWeight: 500 }}>{STATUS_LABEL[lead.pipeline_status]}</b>{lead.dismissal_reason ? ` — ${dismissalLabel(lead.dismissal_reason).toLowerCase()}` : ''}{lead.outcome ? ` · ${lead.outcome}` : ''}. <button type="button" onClick={() => go('RESEARCHING')} disabled={readOnly || saving} style={{ border: 'none', background: 'none', padding: 0, font: 'inherit', fontSize: 12, color: 'var(--accent)', cursor: 'pointer' }}>Reopen</button></p>}
+      {/* owner + close actions */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8, alignItems: 'center' }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+          <span className="fd-eyebrow" style={{ color: 'var(--text-tertiary)', fontSize: 10, flex: 'none' }}>Owner</span>
+          <select className="ni-select" style={{ flex: 1, minWidth: 0 }} value={lead.owner ?? ''} disabled={readOnly || saving} onChange={e => onPatch({ owner: e.target.value })} aria-label="Owner">
+            <option value="">Unassigned</option>
+            {team.map(t => <option key={t.id} value={t.email ?? t.id}>{t.name}</option>)}
+            {lead.owner && !team.some(t => t.email === lead.owner) && <option value={lead.owner}>{lead.owner}</option>}
+          </select>
+          {ownerName && <span aria-hidden style={{ width: 22, height: 22, borderRadius: 11, background: 'var(--bg-elevated)', color: 'var(--text-secondary)', fontFamily: MONO, fontSize: 9, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>{initialsOf(ownerName)}</span>}
+        </label>
+        {!closed && (
+          <span style={{ display: 'inline-flex', gap: 6 }}>
+            <button type="button" className="ni-ghost" style={{ height: 28, fontSize: 11.5 }} disabled={readOnly || saving} onClick={() => go('DEFERRED')}>Defer</button>
+            <button type="button" className="ni-ghost" style={{ height: 28, fontSize: 11.5 }} disabled={readOnly || saving} onClick={() => onAskReason('NOT_A_FIT')}>Not a fit</button>
+            {lead.pipeline_status === 'AWAITING_DECISION' && <><button type="button" className="ni-primary" style={{ height: 28, fontSize: 11.5 }} disabled={readOnly || saving} onClick={() => go('WON')}>Won</button><button type="button" className="ni-ghost" style={{ height: 28, fontSize: 11.5 }} disabled={readOnly || saving} onClick={() => go('LOST')}>Lost</button></>}
+          </span>
+        )}
+      </div>
+      {/* next action */}
+      {!closed && (
+        <div style={{ border: '1px solid var(--border-hairline)', borderRadius: 10, padding: '10px 12px', background: 'var(--bg-page)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+            <span className="fd-eyebrow" style={{ color: 'var(--text-tertiary)', fontSize: 10 }}>Next action</span>
+            {lead.next_action && days !== null && <span className="fd-mono" style={{ fontSize: 10, color: dueTone, marginLeft: 'auto' }}>{days < 0 ? `${-days} day${-days === 1 ? '' : 's'} overdue` : days === 0 ? 'due today' : `in ${days} day${days === 1 ? '' : 's'}`}</span>}
+          </div>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            <input className="ni-input" style={{ paddingLeft: 10, height: 28, flex: '1 1 180px', fontSize: 12 }} placeholder={lead.action ? lead.action.slice(0, 80) : 'What happens next?'} value={na} onChange={e => setNa(e.target.value)} disabled={readOnly || saving} aria-label="Next action" />
+            <input type="date" className="ni-input" style={{ paddingLeft: 8, height: 28, width: 136, fontSize: 12, flex: 'none' }} value={naDate} onChange={e => setNaDate(e.target.value)} disabled={readOnly || saving} aria-label="Due date" />
+            <button type="button" className="ni-ghost" style={{ height: 28 }} disabled={readOnly || saving || (na === (lead.next_action ?? '') && naDate === (lead.next_action_date ?? ''))} onClick={() => onPatch({ next_action: na, next_action_date: naDate })}>Set</button>
+            {lead.next_action && <button type="button" className="ni-primary" style={{ height: 28 }} disabled={readOnly || saving} onClick={() => onPatch({ complete_next_action: true })} title="Mark done"><Check style={{ width: 12, height: 12 }} />Done</button>}
+          </div>
+          {!lead.next_action && lead.action && !na && <button type="button" onClick={() => setNa(lead.action!.slice(0, 200))} style={{ border: 'none', background: 'none', padding: 0, marginTop: 6, font: 'inherit', fontSize: 11.5, color: 'var(--accent)', cursor: 'pointer' }}>Use Fundir&rsquo;s recommended action</button>}
+        </div>
+      )}
+      {(lead.pipeline_status === 'AWAITING_DECISION' || closed) && (
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span className="fd-eyebrow" style={{ color: 'var(--text-tertiary)', fontSize: 10, flex: 'none' }}>Outcome</span>
+          <input className="ni-input" style={{ paddingLeft: 10, height: 28, fontSize: 12 }} placeholder="e.g. $50,000 general operating, FY27" value={outcome} onChange={e => setOutcome(e.target.value)} onBlur={() => outcome !== (lead.outcome ?? '') && onPatch({ outcome })} disabled={readOnly || saving} aria-label="Outcome" />
+        </label>
+      )}
+      {/* notes */}
+      <div style={{ display: 'flex', gap: 6 }}>
+        <input className="ni-input" style={{ paddingLeft: 10, height: 28, flex: 1, fontSize: 12 }} placeholder="Add a note…" value={note} onChange={e => setNote(e.target.value)} disabled={readOnly || saving} onKeyDown={e => { if (e.key === 'Enter' && note.trim()) onPatch({ notes: note.trim() }); }} aria-label="Note" />
+        <button type="button" className="ni-ghost" style={{ height: 28 }} disabled={readOnly || saving || !note.trim()} onClick={() => onPatch({ notes: note.trim() })}>Save note</button>
+      </div>
+      {lead.actions.length > 0 && (
+        <ol style={{ margin: '2px 0 0', padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 5 }}>
+          {lead.actions.map(a => (
+            <li key={a.id} className="fd-caption" style={{ display: 'grid', gridTemplateColumns: '64px 1fr', gap: 8, color: 'var(--text-tertiary)', fontSize: 11.5, alignItems: 'baseline' }}>
+              <span className="fd-mono" style={{ fontSize: 10 }}>{fmtDate(a.created_at)}</span>
+              <span style={{ color: 'var(--text-secondary)' }}>
+                {a.action === 'status_change' ? `Moved to ${STATUS_LABEL[a.status as PipelineState] ?? a.status}` : a.action === 'dismiss' ? `Closed: not a fit` : a.action === 'outcome' ? `Outcome: ${STATUS_LABEL[a.status as PipelineState] ?? ''}` : a.action === 'assign' ? `Assigned to ${a.notes ?? 'someone'}` : a.action === 'next_action' ? 'Next action set' : a.action === 'note' ? '' : a.action}
+                {a.notes && a.action !== 'assign' ? `${a.action === 'note' ? '' : ' — '}${a.notes}` : ''}
+                {a.actor ? <span style={{ color: 'var(--text-tertiary)' }}> · {a.actor.split('@')[0]}</span> : null}
+              </span>
+            </li>
+          ))}
+        </ol>
+      )}
+    </div>
   );
 }
 

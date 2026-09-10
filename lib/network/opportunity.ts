@@ -250,7 +250,10 @@ export function signalsFor(ctx: SignalContext, t: TargetContext, personId: strin
 export interface AuditRow { id: string; lead_type: string; insight_type: string | null; target: string; via: string | null; score: number; confidence: string; before: number | null; subtotals: ScoreResult['breakdown']['subtotals']; reasons: string[] }
 
 export async function rescoreLeads(db: Db, orgId: string): Promise<{ scored: number; skipped: number; audit: AuditRow[] }> {
-  const leads = await pageAll<{ id: string; lead_type: string; person_id: string | null; via_person_id: string | null; via_org: string | null; target_org_id: string | null; score: number | null; insight_type: string | null; score_breakdown: Record<string, unknown> | null; pipeline_status: string }>((a, b) => db.from('network_leads').select('id, lead_type, person_id, via_person_id, via_org, target_org_id, score, insight_type, score_breakdown, pipeline_status').eq('org_id', orgId).order('id').range(a, b));
+  const leads = await pageAll<{ id: string; lead_type: string; person_id: string | null; via_person_id: string | null; via_org: string | null; target_org_id: string | null; score: number | null; insight_type: string | null; score_breakdown: Record<string, unknown> | null; pipeline_status: string; dismissal_reason: string | null }>((a, b) => db.from('network_leads').select('id, lead_type, person_id, via_person_id, via_org, target_org_id, score, insight_type, score_breakdown, pipeline_status, dismissal_reason').eq('org_id', orgId).order('id').range(a, b));
+  // The team's closed leads feed back into open ones (Phase 9): named, negative, visible components.
+  const { buildFeedback, feedbackAdjustments } = await import('@/lib/network/pipeline');
+  const feedback = buildFeedback(leads.map(l => ({ id: l.id, pipeline_status: l.pipeline_status as import('@/lib/network/pipeline').PipelineState, dismissal_reason: l.dismissal_reason, target_org_id: l.target_org_id, via_person_id: l.via_person_id, insight_type: l.insight_type })));
 
   // Person leads (employer scans) target the employer named in via_org — resolve it to its org node.
   const viaNames = [...new Set(leads.filter(l => !l.target_org_id && l.via_org).map(l => normalizeOrgName(l.via_org as string)))];
@@ -273,6 +276,13 @@ export async function rescoreLeads(db: Db, orgId: string): Promise<{ scored: num
     // A warm-path lead is scored on ITS trustee's ties; org-level leads on every tie to the target.
     const s = signalsFor(ctx, t, l.lead_type === 'organization' && l.person_id ? l.person_id : null);
     const r = scoreLead(s);
+    const fb = feedbackAdjustments({ id: l.id, target_org_id: l.target_org_id, via_person_id: l.via_person_id, insight_type: l.insight_type, pipeline_status: l.pipeline_status as import('@/lib/network/pipeline').PipelineState }, feedback, { via: id => viaName.get(id) });
+    if (fb.length) {
+      r.breakdown.penalties.push(...fb);
+      const delta = fb.reduce((n, c) => n + c.points, 0);
+      r.breakdown.subtotals.penalties += delta;
+      r.opportunity_score = Math.max(0, Math.min(100, r.opportunity_score + delta));
+    }
     const origin = (l.score_breakdown && (l.score_breakdown as { generator?: string }).generator !== 'scoring:v1') ? l.score_breakdown : (l.score_breakdown as { origin?: unknown } | null)?.origin ?? null;
     const { error } = await withRetry(() => db.from('network_leads').update({
       opportunity_score: r.opportunity_score, evidence_confidence: r.evidence_confidence, score: r.opportunity_score,

@@ -7,6 +7,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Search, ArrowUpDown } from 'lucide-react';
 import type { LeadRow, InsightRow } from '@/lib/network/queries';
+import { daysUntil } from '@/lib/network/pipeline';
 import { PathRail } from './path-rail';
 import { SERIF, MONO, ScoreBar, ConfChip, TypeChip, StatusChip, Eyebrow, hueFor, STATUS_LABEL, fmtDate } from './shared';
 
@@ -149,9 +150,9 @@ export function DiscoverView({ leads, insights, filters, onFilters, selectedId, 
             </div>
             <p data-ni-hide-md style={{ margin: 0, fontSize: 12.5, lineHeight: 1.5, color: 'var(--text-secondary)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{l.thesis}</p>
             <ConfChip confidence={l.confidence} />
-            <div data-ni-hide-md style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-start' }}>
+            <div data-ni-hide-md style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-start', minWidth: 0 }}>
               <StatusChip status={l.pipeline_status} />
-              <span className="fd-mono" style={{ fontSize: 9.5, color: 'var(--text-tertiary)' }}>{fmtDate(l.updated_at)}</span>
+              <NextDue lead={l} />
             </div>
           </div>
         ))}
@@ -164,6 +165,14 @@ export function DiscoverView({ leads, insights, filters, onFilters, selectedId, 
       <p className="fd-eyebrow" style={{ color: 'var(--text-tertiary)', margin: '16px 0 0' }}>Scores are deterministic · explanations cite their evidence · statuses: {Object.values(STATUS_LABEL).length} states</p>
     </div>
   );
+}
+
+/** Under the status: the next action's due date in a tone that says whether it is late. */
+function NextDue({ lead }: { lead: LeadRow }) {
+  const days = daysUntil(lead.next_action_date);
+  if (!lead.next_action) return <span className="fd-mono" style={{ fontSize: 9.5, color: 'var(--text-tertiary)' }}>{fmtDate(lead.updated_at)}</span>;
+  const tone = days === null ? 'var(--text-tertiary)' : days < 0 ? 'var(--critical)' : days <= 7 ? '#9C7A2A' : 'var(--text-secondary)';
+  return <span className="fd-mono" style={{ fontSize: 9.5, color: tone, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 110 }} title={lead.next_action}>{days === null ? 'next: ' : days < 0 ? `${-days}d late · ` : days === 0 ? 'today · ' : `${days}d · `}{lead.next_action}</span>;
 }
 
 function Kpi({ label, value, sub, accent }: { label: string; value: number; sub?: string; accent?: boolean }) {

@@ -39,11 +39,11 @@ export interface LeadRow {
   via_org: string | null;
   thesis: string; action: string | null;
   method: 'model' | 'deterministic' | null; claims: { kept: number; total: number } | null; evidence_count: number;
-  owner: string | null; next_action: string | null; next_action_date: string | null;
+  owner: string | null; next_action: string | null; next_action_date: string | null; outcome: string | null; dismissal_reason: string | null;
   updated_at: string; path: PathNode[];
 }
 
-const LEAD_SELECT = 'id, lead_type, insight_type, pipeline_status, opportunity_score, evidence_confidence, score_breakdown, explanation, via_org, owner, next_action, next_action_date, updated_at, reason, target:network_organizations!network_leads_target_org_id_fkey(id, name, organization_type, city, state, website, metadata), via:network_people!network_leads_via_person_id_fkey(id, name, board_role, kind), person:network_people!network_leads_person_id_fkey(id, name, current_title, current_org, kind)';
+const LEAD_SELECT = 'id, lead_type, insight_type, pipeline_status, opportunity_score, evidence_confidence, score_breakdown, explanation, via_org, owner, next_action, next_action_date, outcome, dismissal_reason, updated_at, reason, target:network_organizations!network_leads_target_org_id_fkey(id, name, organization_type, city, state, website, metadata), via:network_people!network_leads_via_person_id_fkey(id, name, board_role, kind), person:network_people!network_leads_person_id_fkey(id, name, current_title, current_org, kind)';
 
 type RawLead = Record<string, unknown> & {
   target: { id: string; name: string; organization_type: string | null; city: string | null; state: string | null; website?: string | null; metadata?: Record<string, unknown> | null } | null;
@@ -84,6 +84,7 @@ function shapeLead(l: RawLead): LeadRow {
     thesis, action: x?.recommended_action?.text ?? null,
     method: x?.method ?? null, claims: x ? { kept: x.validation.bullets_kept, total: x.validation.bullets_total } : null, evidence_count: x?.sources?.length ?? 0,
     owner: (l.owner as string | null) ?? null, next_action: (l.next_action as string | null) ?? null, next_action_date: (l.next_action_date as string | null) ?? null,
+    outcome: (l.outcome as string | null) ?? null, dismissal_reason: (l.dismissal_reason as string | null) ?? null,
     updated_at: String(l.updated_at ?? ''), path,
   };
 }

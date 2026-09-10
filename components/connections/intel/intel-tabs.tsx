@@ -16,10 +16,11 @@ import { OrganizationsView } from './organizations-view';
 import { RelationshipsView } from './relationships-view';
 import { MapView, type MapFocus } from './map-view';
 import { LeadDrawer } from './lead-drawer';
+import { PipelineView, type TeamMember } from './pipeline-view';
 
-type TabKey = 'discover' | 'paths' | 'map' | 'organizations' | 'relationships' | 'network' | 'funders';
+type TabKey = 'discover' | 'pipeline' | 'paths' | 'map' | 'organizations' | 'relationships' | 'network' | 'funders';
 const TABS: Array<{ key: TabKey; label: string }> = [
-  { key: 'discover', label: 'Discover' }, { key: 'paths', label: 'Warm paths' }, { key: 'map', label: 'Map' },
+  { key: 'discover', label: 'Discover' }, { key: 'pipeline', label: 'Pipeline' }, { key: 'paths', label: 'Warm paths' }, { key: 'map', label: 'Map' },
   { key: 'organizations', label: 'Organizations' }, { key: 'relationships', label: 'Relationships' },
   { key: 'network', label: 'CYC network' }, { key: 'funders', label: 'Funder boards' },
 ];
@@ -41,6 +42,8 @@ function IntelInner({ people, kpis, network, leads: initialLeads, insights: init
   const [leads, setLeads] = useState(initialLeads);
   const [insights, setInsights] = useState(initialInsights);
   const [filters, setFilters] = useState<DiscoverFilters>(DEFAULT_FILTERS);
+  const [team, setTeam] = useState<TeamMember[]>([]);
+  useEffect(() => { fetch('/api/network/team').then(r => r.json()).then(b => setTeam(b.team ?? [])).catch(() => {}); }, []);
 
   const setParams = useCallback((patch: Record<string, string | null>) => {
     const next = new URLSearchParams(sp.toString());
@@ -51,39 +54,41 @@ function IntelInner({ people, kpis, network, leads: initialLeads, insights: init
   const reload = useCallback(async () => { try { const b = await fetch('/api/network/leads').then(r => r.json()); if (!b.error) { setLeads(b.leads); setInsights(b.insights); } } catch { /* keep */ } }, []);
 
   // Drawer navigation walks the list as currently filtered on Discover, or all leads elsewhere.
-  const ordered = useMemo(() => (tab === 'discover' ? applyFilters(leads, filters) : tab === 'paths' ? leads.filter(l => l.via) : leads), [tab, leads, filters]);
+  const ordered = useMemo(() => (tab === 'discover' ? applyFilters(leads, filters) : tab === 'paths' ? leads.filter(l => l.via) : tab === 'pipeline' ? [...leads].sort((a, b) => a.pipeline_status.localeCompare(b.pipeline_status) || b.score - a.score) : leads), [tab, leads, filters]);
   const position = useMemo(() => { const i = ordered.findIndex(l => l.id === leadId); return i >= 0 ? { index: i, total: ordered.length } : null; }, [ordered, leadId]);
   const step = useCallback((dir: -1 | 1) => { if (!position) return; const n = ordered[position.index + dir]; if (n) setParams({ lead: n.id }); }, [ordered, position, setParams]);
   const openLead = useCallback((id: string) => setParams({ lead: id }), [setParams]);
   const openMap = useCallback((f: MapFocus) => setParams({ tab: 'map', focus: `${f.kind}:${f.id}`, lead: null }), [setParams]);
 
-  // Sliding indicator.
+  // Sliding indicator: measured after layout and positioned directly on the element (no render round-trip).
   const stripRef = useRef<HTMLDivElement>(null);
-  const [ind, setInd] = useState({ x: 0, w: 0 });
-  useLayoutEffect(() => {
-    const el = stripRef.current?.querySelector<HTMLElement>(`[data-tab="${tab}"]`);
-    if (el) setInd({ x: el.offsetLeft, w: el.offsetWidth });
-  }, [tab, leads.length]);
-  useEffect(() => { const onR = () => { const el = stripRef.current?.querySelector<HTMLElement>(`[data-tab="${tab}"]`); if (el) setInd({ x: el.offsetLeft, w: el.offsetWidth }); }; window.addEventListener('resize', onR); return () => window.removeEventListener('resize', onR); }, [tab]);
+  const indRef = useRef<HTMLSpanElement>(null);
+  const placeIndicator = useCallback(() => {
+    const el = stripRef.current?.querySelector<HTMLElement>(`[data-tab="${tab}"]`), ind = indRef.current;
+    if (el && ind) { ind.style.transform = `translateX(${el.offsetLeft}px)`; ind.style.width = `${el.offsetWidth}px`; ind.style.opacity = '1'; }
+  }, [tab]);
+  useLayoutEffect(() => { placeIndicator(); }, [placeIndicator, leads.length]);
+  useEffect(() => { window.addEventListener('resize', placeIndicator); return () => window.removeEventListener('resize', placeIndicator); }, [placeIndicator]);
 
-  const counts: Partial<Record<TabKey, number>> = { discover: leads.filter(l => !['NOT_A_FIT', 'LOST'].includes(l.pipeline_status)).length, paths: leads.filter(l => l.via && !['NOT_A_FIT', 'LOST'].includes(l.pipeline_status)).length, network: network.totals.leads, funders: people.length };
+  const counts: Partial<Record<TabKey, number>> = { discover: leads.filter(l => !['NOT_A_FIT', 'LOST'].includes(l.pipeline_status)).length, pipeline: leads.filter(l => !['NEW', 'NOT_A_FIT', 'LOST', 'WON'].includes(l.pipeline_status)).length, paths: leads.filter(l => l.via && !['NOT_A_FIT', 'LOST'].includes(l.pipeline_status)).length, network: network.totals.leads, funders: people.length };
 
   return (
     <div style={{ background: 'var(--bg-page)' }}>
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
       <div ref={stripRef} role="tablist" aria-label="Connections views" style={{ position: 'relative', display: 'flex', alignItems: 'stretch', borderBottom: '1px solid var(--border-hairline)', background: 'var(--bg-surface)', padding: '0 26px', overflowX: 'auto' }}>
         {TABS.map(t => (
-          <button key={t.key} type="button" role="tab" data-tab={t.key} aria-selected={t.key === tab} className="ni-tab" onClick={() => setParams({ tab: t.key, lead: t.key === 'discover' || t.key === 'paths' ? leadId : null })}>
+          <button key={t.key} type="button" role="tab" data-tab={t.key} aria-selected={t.key === tab} className="ni-tab" onClick={() => setParams({ tab: t.key, lead: t.key === 'discover' || t.key === 'paths' || t.key === 'pipeline' ? leadId : null })}>
             <span style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '11px 14px', whiteSpace: 'nowrap', fontSize: 12.5, fontFamily: "'Inter',-apple-system,BlinkMacSystemFont,sans-serif" }}>
               {t.label}
               {counts[t.key] !== undefined && <i style={{ fontStyle: 'normal', fontFamily: MONO, fontSize: 9, color: 'var(--text-tertiary)', opacity: t.key === tab ? 1 : 0.7 }}>{counts[t.key]}</i>}
             </span>
           </button>
         ))}
-        <span aria-hidden className="ni-indicator" style={{ transform: `translateX(${ind.x}px)`, width: ind.w, left: 0 }} />
+        <span ref={indRef} aria-hidden className="ni-indicator" style={{ left: 0, width: 0, opacity: 0 }} />
       </div>
 
       {tab === 'discover' && <DiscoverView leads={leads} insights={insights} filters={filters} onFilters={setFilters} selectedId={leadId} onOpen={openLead} onInsight={i => (i.lead_id ? openLead(i.lead_id) : i.path.find(p => p.id && p.kind === 'org') ? openMap({ kind: 'org', id: i.path.find(p => p.id && p.kind === 'org')!.id! }) : undefined)} />}
+      {tab === 'pipeline' && <PipelineView leads={leads} team={team} selectedId={leadId} onOpen={openLead} onChanged={reload} readOnly={readOnly} />}
       {tab === 'paths' && <WarmPathsView leads={leads} selectedId={leadId} onOpen={openLead} onPerson={id => openMap({ kind: 'person', id })} />}
       {tab === 'map' && <MapView focus={focus} onFocus={f => setParams({ focus: f ? `${f.kind}:${f.id}` : null })} onOpenLead={openLead} />}
       {tab === 'organizations' && <OrganizationsView onOpenLead={openLead} onFocus={openMap} />}

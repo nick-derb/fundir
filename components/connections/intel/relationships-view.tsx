@@ -12,15 +12,19 @@ const VER_TONE: Record<string, string> = { verified: 'var(--accent)', probable: 
 const VER_LABEL: Record<string, string> = { verified: 'documented', probable: 'undated', inferred: 'inferred' };
 
 export function RelationshipsView({ onFocus }: { onFocus: (f: { kind: 'person' | 'org'; id: string }) => void }) {
-  const [edges, setEdges] = useState<EdgeRow[] | null>(null);
+  const [loaded, setLoaded] = useState<{ key: string; edges: EdgeRow[] } | null>(null);
   const [type, setType] = useState<string>('');
   const [ver, setVer] = useState<string>('');
   const [q, setQ] = useState('');
+  const reqKey = `${type}|${ver}`;
   useEffect(() => {
-    setEdges(null);
+    let alive = true;
     const sp = new URLSearchParams(); if (type) sp.set('type', type); if (ver) sp.set('verification', ver); sp.set('limit', '500');
-    fetch(`/api/network/relationships?${sp}`).then(r => r.json()).then(b => setEdges(b.edges ?? [])).catch(() => setEdges([]));
-  }, [type, ver]);
+    fetch(`/api/network/relationships?${sp}`).then(r => r.json()).then(b => { if (alive) setLoaded({ key: reqKey, edges: b.edges ?? [] }); }).catch(() => { if (alive) setLoaded({ key: reqKey, edges: [] }); });
+    return () => { alive = false; };
+  }, [type, ver, reqKey]);
+  // Stale rows stay visible while the next filter loads; `edges` is null only before the first response for this key.
+  const edges = loaded && loaded.key === reqKey ? loaded.edges : null;
   const types = useMemo(() => { const m = new Map<string, number>(); for (const e of edges ?? []) m.set(e.type, (m.get(e.type) ?? 0) + 1); return [...m].sort((a, b) => b[1] - a[1]); }, [edges]);
   const visible = useMemo(() => (edges ?? []).filter(e => !q.trim() || `${e.a.name} ${e.b.name} ${e.summary ?? ''}`.toLowerCase().includes(q.trim().toLowerCase())), [edges, q]);
   const verCounts = useMemo(() => { const m: Record<string, number> = { verified: 0, probable: 0, inferred: 0 }; for (const e of edges ?? []) m[e.verification] = (m[e.verification] ?? 0) + 1; return m; }, [edges]);
