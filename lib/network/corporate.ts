@@ -25,35 +25,33 @@ const MODEL = 'claude-sonnet-4-6';
 
 // ── Public corporate-giving pages for companies that recur around CYC ───────
 export const KNOWN_GIVING_PAGES: Record<string, string> = {
+  // Verified 2026-09-10 to return 200 to an honest "FundirBot" user agent. Sites that
+  // answer 403 to any non-browser client (Huntington, PwC, First Merchants, AbbVie)
+  // and those without a giving page (GTCR, Abbott's moved page) are deliberately
+  // absent: we do not spoof browsers to get around bot protection.
   'bmo':                      'https://www.bmo.com/main/about-bmo/community-giving',
   'northern trust':           'https://www.northerntrust.com/united-states/about-us/corporate-social-responsibility',
-  'huntington bank':          'https://www.huntington.com/about-us/community',
   'jpmorgan chase':           'https://www.jpmorganchase.com/impact',
   'bank of america':          'https://about.bankofamerica.com/en/making-an-impact',
-  'wintrust':                 'https://www.wintrust.com/about-us/community.html',
+  'wintrust':                 'https://www.wintrustwealth.com/community.html',
   'fifth third bank':         'https://www.53.com/content/fifth-third/en/about-us/corporate-responsibility.html',
   'grainger':                 'https://www.grainger.com/content/corporate-responsibility',
-  'abbott':                   'https://www.abbott.com/responsibility/community-impact.html',
   'discover financial services': 'https://www.discover.com/company/corporate-responsibility/',
   'morgan stanley':           'https://www.morganstanley.com/about-us/giving-back',
-  'pwc':                      'https://www.pwc.com/us/en/about-us/corporate-responsibility.html',
-  'deloitte':                 'https://www2.deloitte.com/us/en/pages/about-deloitte/articles/corporate-citizenship.html',
-  'ibm':                      'https://www.ibm.com/impact',
+  'deloitte':                 'https://www2.deloitte.com/us/en/pages/about-deloitte/topics/corporate-responsibility-and-sustainability.html',
+  'ibm':                      'https://www.ibm.com/responsibility',
   'salesforce':               'https://www.salesforce.com/company/philanthropy/',
-  'kirkland & ellis':         'https://www.kirkland.com/about-us/pro-bono-and-community',
-  'gtcr':                     'https://www.gtcr.com/about/community',
+  'kirkland & ellis':         'https://www.kirkland.com/social-commitment',
   'associated bank':          'https://www.associatedbank.com/about/community',
-  'first merchants bank':     'https://www.firstmerchants.com/about-us/community',
   'exelon':                   'https://www.exeloncorp.com/community',
   'comed':                    'https://www.comed.com/community',
   'allstate':                 'https://www.allstate.com/about/community',
   'cme group':                'https://www.cmegroup.com/company/corporate-citizenship.html',
-  'motorola solutions':       'https://www.motorolasolutions.com/en_us/about/corporate-responsibility.html',
-  'accenture':                'https://www.accenture.com/us-en/about/corporate-citizenship/corporate-citizenship',
-  'abbvie':                   'https://www.abbvie.com/our-company/responsibility.html',
-  'boeing':                   'https://www.boeing.com/principles/community-engagement',
-  'utz brands':               'https://www.utzsnacks.com/pages/community',
-  'moelis & company':         'https://www.moelis.com/about/corporate-responsibility',
+  'motorola solutions':       'https://www.motorolasolutions.com/en_us/about/environmental-social-corporate-governance-esg.html',
+  'accenture':                'https://www.accenture.com/us-en/about/corporate-citizenship',
+  'boeing':                   'https://www.boeing.com/company/community-engagement',
+  'utz brands':               'https://www.utzsnacks.com/blogs/news/the-rice-family-foundation-to-support-local-area-non-profit-organizations',
+  'moelis & company':         'https://www.moelis.com/corporate-social-responsibility/',
 };
 
 // ── Program facts extracted from a public page ──────────────────────────────

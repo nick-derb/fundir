@@ -10,6 +10,7 @@
 // The metric-submission surface (site directors' workbook entries) is preserved
 // as its own section so nothing the org depends on is lost.
 
+import { InstrumentlCard } from '@/components/instrumentl-card';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Search, SlidersHorizontal, Upload, UploadCloud, X, MoreVertical, FileText,
@@ -282,6 +283,9 @@ export function DataHubView({ orgName, userEmail }: { orgName: string; userEmail
                 ))}
               </div>
             </div>
+
+            {/* ── Instrumentl export: swappable from the app ── */}
+            <InstrumentlCard />
 
             {/* ── Reading now (real upload + indexing) ── */}
             {queue.length > 0 && (
