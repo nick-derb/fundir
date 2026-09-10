@@ -59,7 +59,7 @@ export function numbersIn(text: string): number[] {
   for (const m of text.matchAll(/\$?(\d[\d,]*(?:\.\d+)?)\s*([kKmM](?![a-zA-Z]))?/g)) {
     // "IRS 990", "Form 990-PF", "Schedule I": identifiers, not quantities.
     const before = text.slice(Math.max(0, m.index! - 12), m.index!), after = text.slice(m.index! + m[0].length, m.index! + m[0].length + 8);
-    if (/(IRS|Form|Schedule)\s*$/i.test(before) || /^\s*-?PF\b|^\s*(filing|data|form)/i.test(after)) continue;
+    if (/(IRS|Form|Schedule)\s*$/i.test(before) || /^\s*-?PF\b|^s\b|^\s*(filing|data|form)/i.test(after)) continue;
     let n = Number(m[1].replace(/,/g, ''));
     if (!Number.isFinite(n)) continue;
     if (m[2]) n *= /k/i.test(m[2]) ? 1_000 : 1_000_000;
