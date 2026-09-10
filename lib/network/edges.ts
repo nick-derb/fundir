@@ -15,7 +15,7 @@ import { normalizeOrgName, yearsOverlap } from '@/lib/network/normalize';
 export type Verification = 'verified' | 'probable' | 'inferred';
 
 export interface EdgePerson { id: string; kind: string; name: string; organization_id: string | null; source_id: string | null }
-export interface EdgeEmployment { person_id: string; organization_id: string | null; org_name: string; start_year: number | null; end_year: number | null; is_current: boolean; source_id: string | null }
+export interface EdgeEmployment { person_id: string; organization_id: string | null; org_name: string; title?: string | null; start_year: number | null; end_year: number | null; is_current: boolean; source_id: string | null }
 export interface EdgeEducation { person_id: string; organization_id: string | null; school_name: string; start_year: number | null; end_year: number | null; source_id: string | null }
 export interface EdgeBoard { person_id: string; organization_id: string; title: string | null; is_current: boolean; source_id: string | null; confidence: number }
 export interface EdgeOrg { id: string; name: string; organization_type: string }
@@ -65,7 +65,7 @@ export function computeEdges(g: GraphInput): DerivedEdge[] {
   const covered = new Set<string>();
   for (const e of g.employments) {
     if (!e.organization_id) continue;
-    spans.push({ personId: e.person_id, orgId: e.organization_id, start: e.start_year, end: e.is_current ? null : e.end_year, current: e.is_current, sourceId: e.source_id, title: null });
+    spans.push({ personId: e.person_id, orgId: e.organization_id, start: e.start_year, end: e.is_current ? null : e.end_year, current: e.is_current, sourceId: e.source_id, title: e.title ?? null });
     covered.add(`${e.person_id}|${e.organization_id}`);
   }
   for (const p of g.people) {
@@ -99,6 +99,9 @@ export function computeEdges(g: GraphInput): DerivedEdge[] {
         if (sa.current && sb.current) cand = { type: 'current_colleague', strength: 25, conf: cited ? 0.85 : 0.6, ver: cited ? 'verified' : 'probable', sa, sb };
         else if (yearsOverlap(sa.start, sa.end, sb.start, sb.end)) cand = { type: 'former_colleague', strength: 25, conf: cited ? 0.8 : 0.55, ver: cited ? 'verified' : 'probable', sa, sb };
         else cand = { type: 'shared_employer', strength: 18, conf: cited ? 0.6 : 0.4, ver: cited ? 'probable' : 'inferred', sa, sb };
+        // An employment we INFERRED (e.g. officer of a corporate foundation →
+        // employee of the corporation) can never make a verified edge.
+        if (sa.title?.startsWith('[inferred]') || sb.title?.startsWith('[inferred]')) { cand.ver = 'inferred'; cand.conf = Math.round(cand.conf * 0.7 * 100) / 100; }
         if (!best || cand.strength > best.strength || (cand.strength === best.strength && cand.conf > best.conf)) best = cand;
       }
       if (!best) continue;
@@ -213,7 +216,7 @@ async function loadGraphInput(db: Db, orgId: string): Promise<GraphInput> {
     for (let i = 0; i < ids.length; i += 300) { const { data, error } = await sel(ids.slice(i, i + 300)); if (error) throw new Error(error.message); out.push(...(data ?? [])); }
     return out;
   };
-  const employments = await inChunks<EdgeEmployment>(c => db.from('network_employments').select('person_id, organization_id, org_name, start_year, end_year, is_current, source_id').in('person_id', c));
+  const employments = await inChunks<EdgeEmployment>(c => db.from('network_employments').select('person_id, organization_id, org_name, title, start_year, end_year, is_current, source_id').in('person_id', c));
   const educations  = await inChunks<EdgeEducation>(c => db.from('network_educations').select('person_id, organization_id, school_name, start_year, end_year, source_id').in('person_id', c));
   const boards      = await inChunks<EdgeBoard>(c => db.from('network_boards').select('person_id, organization_id, title, is_current, source_id, confidence').in('person_id', c));
 

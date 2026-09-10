@@ -35,6 +35,21 @@ const arg = (k: string) => { const i = process.argv.indexOf(k); return i > -1 ? 
 const has = (k: string) => process.argv.includes(k);
 const usd = (microCents: number) => `$${(microCents / 1_000_000).toFixed(3)}`;
 
+/** Retry transient failures (network blips, 5xx) with backoff; rethrow after `tries`. */
+async function withRetry<T>(fn: () => Promise<T>, tries = 4): Promise<T> {
+  let last: unknown;
+  for (let i = 0; i < tries; i++) {
+    try { return await fn(); }
+    catch (e) {
+      last = e;
+      const msg = e instanceof Error ? e.message : String(e);
+      if (!/fetch failed|ECONNRESET|ETIMEDOUT|EAI_AGAIN|502|503|504|timeout/i.test(msg)) throw e;
+      await new Promise(r => setTimeout(r, 1500 * (i + 1) ** 2));
+    }
+  }
+  throw last;
+}
+
 const ADAPTER = 'irs_bulk_local';
 const SMOKE_EINS = ['366079185', '363689171', '366108293']; // Joyce, McCormick, Polk Bros.
 
@@ -127,25 +142,36 @@ async function main() {
         });
         const funderOrg = await ensureOrganization(db, { name: parsed.funder_name, ein: parsed.funder_ein, type: orgTypeOf(parsed.funder_name, { funderType: 'private_foundation' }), funderId: funderRow.id, sourceId: filingSource, confidence: 0.95 });
 
-        // Grants → cited funding events.
+        // Grants → cited funding events. Each grant is retried on transient
+        // network errors and skipped (logged) if it keeps failing, so one bad
+        // round-trip never aborts a multi-hour run.
         const source = `990xml:${parsed.funder_ein}:${parsed.fiscal_year}`;
+        let grantErrors = 0;
         for (const g of parsed.grants) {
           if (costMicro > costCap) { console.log(`\n  ⛔ Claude cost cap reached (${usd(costMicro)} > ${usd(costCap)}) — stopping before further adjudication.`); await finish(); return; }
-          const resolved = await resolveRecipient({ ein: g.recipient_ein, name: g.recipient_name, state: g.recipient_state, purpose: g.purpose, metadata: { city: g.recipient_city, ...(g.irc_section ? { irc_section: g.irc_section } : {}) } });
-          breakdown[resolved.source === 'ein-exact' ? 'ein_exact' : resolved.source] += 1;
-          if (resolved.adjudication) { costMicro += resolved.adjudication.cost_micro_cents; }
-          const recipientOrg = await ensureOrganization(db, { name: resolved.recipient.name, ein: resolved.recipient.ein, type: 'nonprofit', recipientId: resolved.recipient.id, sourceId: filingSource, confidence: Math.min(0.95, resolved.confidence) });
-          const row = await upsertGrantsMade({
-            funder_id: funderRow.id, recipient_id: resolved.recipient.id, amount: g.amount, fiscal_year: parsed.fiscal_year, purpose: g.purpose,
-            source, data_freshness: new Date().toISOString().slice(0, 10), confidence: resolved.confidence,
-            raw: { recipient_state: g.recipient_state, recipient_city: g.recipient_city, irc_section: g.irc_section, source_url: sourceUrl, object_id: r.objectId, resolution: resolved.source },
-          });
-          await db.from('grants_made').update({ source_url: sourceUrl, source_id: filingSource, funder_org_id: funderOrg.id, recipient_org_id: recipientOrg.id, geography: g.recipient_state ?? null }).eq('id', row.id);
-          grants++;
+          try {
+            await withRetry(async () => {
+              const resolved = await resolveRecipient({ ein: g.recipient_ein, name: g.recipient_name, state: g.recipient_state, purpose: g.purpose, metadata: { city: g.recipient_city, ...(g.irc_section ? { irc_section: g.irc_section } : {}) } });
+              breakdown[resolved.source === 'ein-exact' ? 'ein_exact' : resolved.source] += 1;
+              if (resolved.adjudication) { costMicro += resolved.adjudication.cost_micro_cents; }
+              const recipientOrg = await ensureOrganization(db, { name: resolved.recipient.name, ein: resolved.recipient.ein, type: 'nonprofit', recipientId: resolved.recipient.id, sourceId: filingSource, confidence: Math.min(0.95, resolved.confidence) });
+              const row = await upsertGrantsMade({
+                funder_id: funderRow.id, recipient_id: resolved.recipient.id, amount: g.amount, fiscal_year: parsed.fiscal_year, purpose: g.purpose,
+                source, data_freshness: new Date().toISOString().slice(0, 10), confidence: resolved.confidence,
+                raw: { recipient_state: g.recipient_state, recipient_city: g.recipient_city, irc_section: g.irc_section, source_url: sourceUrl, object_id: r.objectId, resolution: resolved.source },
+              });
+              await db.from('grants_made').update({ source_url: sourceUrl, source_id: filingSource, funder_org_id: funderOrg.id, recipient_org_id: recipientOrg.id, geography: g.recipient_state ?? null }).eq('id', row.id);
+            });
+            grants++;
+          } catch (e) {
+            grantErrors++;
+            if (grantErrors <= 3) console.log(`    ! ${g.recipient_name}: ${e instanceof Error ? e.message.slice(0, 120) : e}`);
+          }
         }
+        if (grantErrors) console.log(`    ! ${grantErrors} grant(s) skipped after retries`);
 
         // Officers / trustees → people + seats (public filing = verified).
-        for (const o of officers) {
+        for (const o of officers) try {
           const { data: seated } = await db.from('network_boards').select('person_id, network_people!inner(id, name, kind, org_id)').eq('organization_id', funderOrg.id);
           const existing = (seated ?? []).map(s => s.network_people as unknown as { id: string; name: string; kind: string; org_id: string })
             .find(p => p.org_id === orgId && personNameKey(p.name) === personNameKey(o.name));
@@ -166,6 +192,8 @@ async function main() {
             await db.from('network_boards').insert({ person_id: personId, organization_id: funderOrg.id, title, started: String(parsed.fiscal_year), is_current: parsed.fiscal_year >= new Date().getFullYear() - 2, source_id: filingSource, confidence: 0.95 });
             seats++;
           }
+        } catch (e) {
+          console.log(`    ! seat ${o.name}: ${e instanceof Error ? e.message.slice(0, 120) : e}`);
         }
 
         await writeIngestState({ adapter_key: ADAPTER, batch_key: batchKey, cursor: r.objectId, records_seen: parsed.grants.length, records_kept: parsed.grants.length, errors: parsed.warnings.length, last_error: parsed.warnings[0] ?? null });

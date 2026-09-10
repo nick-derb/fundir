@@ -132,6 +132,14 @@ export function normalizeOrgName(name: string | null | undefined): string {
 }
 normalizeOrgName.aliasKey = (canonical: string) => canonical.toLowerCase().replace(/&/g, ' and ').replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
 
+/** The curated canonical display name when `name` matches a known employer alias; null otherwise. */
+export function knownEmployerDisplay(name: string | null | undefined): string | null {
+  const key = normalizeOrgName(name);
+  if (!key) return null;
+  const hit = EMPLOYER_ALIASES.find(a => a.patterns.some(p => p.test(key)) || normalizeOrgName.aliasKey(a.canonical) === key);
+  return hit ? hit.canonical : null;
+}
+
 /** Display name + comparison key for an employer string as it appears in the wild. */
 export function canonicalEmployer(name: string | null | undefined): { display: string; key: string } | null {
   // "Retired, Chicago Tribune" / "Chicago Tribune (retired)" / "BMO, retired" → the employer.
@@ -175,6 +183,10 @@ export interface OrgTypeHints {
   funderType?: string | null;
 }
 
+/** Well-known corporations whose foundations recur in Chicago philanthropy (name-based; the
+ *  officer→employee inference these enable is always graded 'inferred'). */
+export const CORPORATE_NAMES = /\b(accenture|abbvie|abbott|motorola|cme group|boeing|exelon|comed|allstate|discover|grainger|walgreens|mcdonald'?s|kraft|deere|caterpillar|united airlines|baxter|northern trust|bmo|jpmorgan|chase|wintrust|fifth third|bank of america|huntington|state farm|aon|cna|zurich|adm|archer daniels|conagra|mondelez|kellogg|hyatt|marriott|nike|microsoft|google|amazon|apple|salesforce|ibm|deloitte|pwc|kpmg|morgan stanley|goldman sachs|citi(?:group|bank)?|wells fargo|us bank|byline|first midwest|old national|pnc|truist|capital one|american express|mastercard|visa|ulta|us foods|sysco|wm|waste management|nicor|peoples gas|ameren|com ?ed|blue cross|health care service|cigna|humana|unitedhealth|cvs|walmart|target|home depot|lowe'?s|kohl'?s|sears|molex|illinois tool works|itw|zebra|cdw|gogo|groupon|orbitz|sprout social|morningstar|nuveen|ariel|citadel|gtcr|madison dearborn|ares|kirkland|sidley|mayer brown|jenner|winston|latham|skadden|baker mckenzie)\b/;
+
 /** One classifier for every path that used to have its own. */
 export function orgTypeOf(name: string | null | undefined, hints: OrgTypeHints = {}): OrgType {
   const n = clean(name).toLowerCase();
@@ -185,8 +197,15 @@ export function orgTypeOf(name: string | null | undefined, hints: OrgTypeHints =
   if (/\b(university|college|institute of technology|school of|academy)\b/.test(n) && !/foundation/.test(n)) return 'university';
   if (/\b(county|city of|state of|department of|village of|public schools|park district|sheriff|state'?s attorney)\b/.test(n)) return 'government';
   if (/foundation|charitable trust|memorial (fund|trust)|family fund|philanthrop|giving fund|donor advised/.test(n)) {
-    // A foundation named for a company is a corporate foundation.
-    if (/\b(bank|bancorp|railway|motors|energy|insurance|financial|capital|airlines|technologies|industries|corp|company)\b/.test(n)) return 'corporate_foundation';
+    // A foundation named for a company is a corporate foundation — by generic
+    // corporate vocabulary, or by a well-known corporate name.
+    // Never for family/person funds, bank trustee accounts, or congregations —
+    // the same exclusions the data was re-typed with.
+    const excluded = /\b(family|fam)\b|church|chapel|mosque|ministr|camping|ttee|\btr\b|trust ua|\bua\b|bk n a|association|assoc|scholarship|in memory|school ?district|united way/.test(n);
+    if (!excluded) {
+      if (/\b(bank|bancorp|bancshares|industries|corporation|company|companies|technologies|solutions|petroleum|financial|insurance|energy|airlines|motors|railway|manufacturing|logistics)\b/.test(n)) return 'corporate_foundation';
+      if (new RegExp(`^(the )?${CORPORATE_NAMES.source.replace(/^\\b|\\b$/g, '')}\\b`).test(n)) return 'corporate_foundation';
+    }
     return 'foundation';
   }
   const fc = hints.foundationCode ?? '';
