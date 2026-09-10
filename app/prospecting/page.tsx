@@ -116,7 +116,7 @@ export default async function ProspectingPage() {
 
   return (
     <AppShell orgName={ctx.orgName} orgId={ctx.orgId} userEmail={ctx.email} userName={ctx.displayName} userAvatar={ctx.avatarUrl} isAdmin={ctx.isAdmin} availableOrgs={ctx.availableOrgs} currentOrgCode={ctx.orgCode}>
-      <ProspectingView sheets={sheets} instrumentl={instrumentl} bmfTotal={bmfTotal} rowLimit={ROW_LIMIT} />
+      <ProspectingView sheets={sheets} instrumentl={instrumentl} bmfTotal={bmfTotal} rowLimit={ROW_LIMIT} canReplace={ctx.isAdmin || ctx.role === 'admin'} />
     </AppShell>
   );
 }

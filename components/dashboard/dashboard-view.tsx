@@ -67,11 +67,15 @@ const CSS = `
 .dv-root [data-calrow]{transition:background-color .15s ease}
 .dv-root [data-calrow]:hover{background:var(--bg-page)}
 .dv-root [data-hdr]{transition:padding .28s cubic-bezier(.2,.8,.3,1),border-color .28s ease,background-color .28s ease}
-.dv-root [data-hdr-title]{transition:font-size .28s cubic-bezier(.2,.8,.3,1),opacity .2s ease}
-.dv-root [data-hdr-sub]{transition:opacity .2s ease,max-height .28s cubic-bezier(.2,.8,.3,1),margin .28s ease}
-.dv-root [data-hdr].is-stuck{padding-top:11px;padding-bottom:11px;border-color:var(--border-hairline);background:rgba(255,255,255,.86);backdrop-filter:saturate(1.4) blur(10px);-webkit-backdrop-filter:saturate(1.4) blur(10px)}
-.dv-root [data-hdr].is-stuck [data-hdr-title]{font-size:1.06rem!important}
-.dv-root [data-hdr].is-stuck [data-hdr-sub]{opacity:0!important;max-height:0!important;margin:0!important;overflow:hidden}
+.dv-root [data-hdr].is-stuck{padding-top:11px;padding-bottom:11px;border-color:var(--border-hairline);background:rgba(255,255,255,.94);backdrop-filter:saturate(1.4) blur(10px);-webkit-backdrop-filter:saturate(1.4) blur(10px)}
+.dv-root [data-hdr-compact]{display:none;animation:fd-fade .2s ease}
+.dv-root [data-hdr].is-stuck [data-hdr-hero]{display:none}
+.dv-root [data-hdr].is-stuck [data-hdr-compact]{display:flex}
+.dv-root [data-hdr-pulse]{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border-radius:999px;border:1px solid var(--border-hairline);background:var(--bg-surface);color:var(--text-secondary);font:inherit;font-size:12px;cursor:pointer;white-space:nowrap;transition:border-color .15s ease,color .15s ease}
+.dv-root [data-hdr-pulse]:hover{border-color:#CBD5D0;color:var(--text-primary)}
+.dv-root [data-hdr-pulse][data-hot="true"]{border-color:rgba(156,122,42,.35);background:rgba(156,122,42,.07);color:#7A5E1E}
+.dv-root [data-hdr-pulse] b{font-family:'JetBrains Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums;font-weight:600;color:inherit}
+@media (max-width:820px){.dv-root [data-hdr-pulses]{display:none!important}}
 @media (prefers-reduced-motion:reduce){.dv-root [data-reveal]{opacity:1;transform:none;transition:none}}
 @media (max-width:1240px){.dv-root [data-dash-cols]{grid-template-columns:minmax(0,1fr)!important}.dv-root [data-dash-rail]{position:static!important}}
 @media (max-width:1080px){.dv-root [data-kpis]{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
@@ -93,6 +97,7 @@ export function DashboardView({ data }: { data: DashData }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<DashGoal[]>([]);
   const [saving, setSaving] = useState(false);
+  const [section, setSection] = useState('Overview');
   const rootRef = useRef<HTMLDivElement>(null);
 
   // Fonts + charts + field, then scroll behavior (condense header, hero
@@ -120,6 +125,8 @@ export function DashboardView({ data }: { data: DashData }) {
     const hdr = root?.querySelector('[data-hdr]');
     const inner = root?.querySelector<HTMLElement>('[data-hero-inner]');
     const band = root?.querySelector<HTMLElement>('[data-hero-band]');
+    const sections = Array.from(root?.querySelectorAll<HTMLElement>('[data-section]') ?? []);
+    let current = '';
     let raf = 0;
     const onScroll = () => {
       if (raf) return;
@@ -127,6 +134,10 @@ export function DashboardView({ data }: { data: DashData }) {
         raf = 0;
         const y = window.scrollY || document.documentElement.scrollTop || 0;
         if (hdr) hdr.classList.toggle('is-stuck', y > 26);
+        // Wayfinder: the last section whose top has passed under the bar.
+        let label = 'Overview';
+        for (const el of sections) { if (el.getBoundingClientRect().top <= 120) label = el.dataset.section || label; }
+        if (label !== current) { current = label; setSection(label); }
         if (reduced) return;
         if (inner) { const k = Math.min(1, y / 420); inner.style.transform = `translate3d(0,${(-y * 0.32).toFixed(1)}px,0)`; inner.style.opacity = String(1 - k * 0.72); }
         if (band) band.style.opacity = String(Math.max(0, 1 - y / 460));
@@ -144,6 +155,21 @@ export function DashboardView({ data }: { data: DashData }) {
     }
     return () => { clearInterval(boot); window.removeEventListener('scroll', onScroll); io?.disconnect(); };
   }, []);
+
+  // Condensed-header pulses: live counts from the same data the page renders.
+  const kpiValue = (label: string) => Number(data.kpis.find(k => k.label === label)?.value) || 0;
+  const dueSoon = data.deadlines.filter(d => d.days <= 14).length;
+  const pulses = [
+    { n: dueSoon, label: 'due in 14 days', hot: dueSoon > 0, target: 'Next deadlines', title: 'Deadlines within two weeks' },
+    { n: kpiValue('Awaiting decision'), label: 'awaiting decision', hot: false, target: 'Overview', title: 'Submitted, pending a funder decision' },
+    { n: kpiValue('In pipeline'), label: 'in pipeline', hot: false, target: 'Overview', title: 'Researching, planned or in progress' },
+  ];
+  const jumpTo = (label: string) => {
+    const el = rootRef.current?.querySelector<HTMLElement>(`[data-section="${label}"]`);
+    if (!el) return;
+    const top = el.getBoundingClientRect().top + window.scrollY - 104;
+    window.scrollTo({ top, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+  };
 
   const openGoals = () => { setDraft(goals.map(g => ({ ...g }))); setEditing(true); };
   const closeGoals = () => { setEditing(false); setDraft([]); };
@@ -173,9 +199,22 @@ export function DashboardView({ data }: { data: DashData }) {
       {/* condensing header */}
       <div data-hdr style={{ position: 'sticky', top: 48, zIndex: 15, padding: '22px 26px 16px', borderBottom: '1px solid transparent' }}>
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 24, flexWrap: 'wrap' }}>
-          <div style={{ minWidth: 0 }}>
-            <p data-hdr-sub className="fd-eyebrow" style={{ color: 'var(--text-tertiary)', margin: '0 0 8px' }}>{data.today}</p>
-            <h1 data-hdr-title style={{ fontFamily: SERIF, fontWeight: 400, fontSize: 'clamp(1.9rem,3vw,2.5rem)', lineHeight: 1.04, letterSpacing: '-.018em', margin: 0 }}>{data.greeting}, {data.firstName}</h1>
+          <div data-hdr-hero style={{ minWidth: 0 }}>
+            <p className="fd-eyebrow" style={{ color: 'var(--text-tertiary)', margin: '0 0 8px' }}>{data.today}</p>
+            <h1 style={{ fontFamily: SERIF, fontWeight: 400, fontSize: 'clamp(1.9rem,3vw,2.5rem)', lineHeight: 1.04, letterSpacing: '-.018em', margin: 0 }}>{data.greeting}, {data.firstName}</h1>
+          </div>
+          {/* Condensed strip: where you are + the live numbers that matter, not the greeting again. */}
+          <div data-hdr-compact style={{ alignItems: 'center', gap: 12, minWidth: 0, minHeight: 38, flexWrap: 'wrap' }}>
+            <span className="fd-eyebrow" style={{ color: 'var(--text-tertiary)' }}>Home</span>
+            <span aria-hidden="true" style={{ color: 'var(--border-hairline)' }}>/</span>
+            <span className="fd-eyebrow" style={{ color: 'var(--text-primary)' }} aria-live="polite">{section}</span>
+            <span data-hdr-pulses style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginLeft: 6, paddingLeft: 14, borderLeft: '1px solid var(--border-hairline)' }}>
+              {pulses.map(p => (
+                <button key={p.label} type="button" data-hdr-pulse data-hot={p.hot ? 'true' : 'false'} onClick={() => jumpTo(p.target)} title={p.title}>
+                  <b>{p.n}</b>{p.label}
+                </button>
+              ))}
+            </span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
             <Link href="/calendar" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, height: 38, padding: '0 14px', borderRadius: 'var(--radius-kpi)', border: '1px solid var(--border-hairline)', background: 'var(--bg-surface)', color: 'var(--text-primary)', fontSize: 12.5, textDecoration: 'none', whiteSpace: 'nowrap' }}><CalendarDays style={{ width: 13, height: 13 }} />Calendar</Link>
@@ -194,7 +233,7 @@ export function DashboardView({ data }: { data: DashData }) {
         </div>
 
         {/* KPI strip */}
-        <div data-reveal data-kpis style={{ display: 'grid', gridTemplateColumns: 'repeat(4,minmax(0,1fr))', gap: 14, marginBottom: 22 }}>
+        <div data-reveal data-kpis data-section="Overview" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,minmax(0,1fr))', gap: 14, marginBottom: 22 }}>
           {data.kpis.map(k => {
             const Icon = KPI_ICON[k.icon] ?? Radar;
             return (
@@ -213,7 +252,7 @@ export function DashboardView({ data }: { data: DashData }) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20, minWidth: 0 }}>
 
             {/* This week */}
-            <Link data-reveal data-lift href="/calendar" style={{ display: 'block', textDecoration: 'none', color: 'inherit', ...card, overflow: 'hidden' }}>
+            <Link data-reveal data-lift data-section="This week" href="/calendar" style={{ display: 'block', textDecoration: 'none', color: 'inherit', ...card, overflow: 'hidden' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '16px 18px 14px' }}>
                 <div style={{ minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
@@ -248,7 +287,7 @@ export function DashboardView({ data }: { data: DashData }) {
             </Link>
 
             {/* FY27 goals */}
-            <div data-reveal style={{ ...card, padding: '18px 20px' }}>
+            <div data-reveal data-section="FY27 goals" style={{ ...card, padding: '18px 20px' }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 18 }}>
                 <div>
                   <div className="fd-h2" style={{ color: 'var(--text-primary)' }}>FY27 goals</div>
@@ -273,7 +312,7 @@ export function DashboardView({ data }: { data: DashData }) {
             </div>
 
             {/* Activity */}
-            <div data-reveal style={{ ...card, padding: '18px 20px' }}>
+            <div data-reveal data-section="Deadline load" style={{ ...card, padding: '18px 20px' }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 16 }}>
                 <div>
                   <div className="fd-h2" style={{ color: 'var(--text-primary)' }}>Deadline load</div>
@@ -288,7 +327,7 @@ export function DashboardView({ data }: { data: DashData }) {
             </div>
 
             {/* Next deadlines */}
-            <div data-reveal style={{ ...card, padding: '18px 0 4px' }}>
+            <div data-reveal data-section="Next deadlines" style={{ ...card, padding: '18px 0 4px' }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, padding: '0 20px 14px' }}>
                 <div>
                   <div className="fd-h2" style={{ color: 'var(--text-primary)' }}>Next deadlines</div>
