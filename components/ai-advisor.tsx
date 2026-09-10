@@ -68,6 +68,14 @@ export function AiAdvisor({ orgCode, orgId, orgName }: AiAdvisorProps) {
     if (open) inputRef.current?.focus();
   }, [open]);
 
+  // Other surfaces (e.g. the dashboard's "Open assistant" card) open the
+  // panel by dispatching this event instead of reaching into our state.
+  useEffect(() => {
+    const onOpen = () => setOpen(true);
+    window.addEventListener('fundir:open-advisor', onOpen);
+    return () => window.removeEventListener('fundir:open-advisor', onOpen);
+  }, []);
+
   async function send(text: string) {
     const trimmed = text.trim();
     if (!trimmed || streaming) return;
