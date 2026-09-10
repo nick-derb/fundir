@@ -61,6 +61,9 @@ explicit confirmation from the user. All confirmed defaults documented inline.
 | 2026-09-09 | RG-4 | Foundation board cross-reference — 18 trustee bio pages harvested from foundation rosters (Sonnet) | $0.45 plan | **~$0.36** | **~$1.25** |
 | 2026-09-09 | RG-5 | Corporate giving-page extraction — 14 pages attempted, 3 fetched + extracted (Bank of America, Exelon, Motorola Solutions); 11 blocked (403/404/TLS) cost nothing | $0.45 plan | **~$0.09** | **~$1.34** |
 | 2026-09-09 | RG-6 | Deterministic scoring + Untapped Funder white-space (57 leads re-scored, 24 white-space leads) — pure DB compute, no model calls | $0.00 | **$0.00** | **~$1.34** |
+| 2026-09-09 | RG-7 | "Why this lead?" explanations (Sonnet 4.6, ~$0.023/lead, not the $0.014 estimated): 25-lead batch $0.53 + 16 targeted regenerations $0.35 + 3 single-lead tests $0.07 + **$0.23 wasted** on a first batch whose JSON never parsed (prompt bug, caught by the validator report). Network Insights: $0. | $0.34 plan | **~$1.18** | **~$2.52** |
+
+**BLOCKER (2026-09-09):** the Anthropic API key's console balance ran out during RG-7 (HTTP 400 "credit balance is too low"). The $90 the user mentioned is Claude.ai usage credit, which the API does not draw on. Every remaining model call — explanations for new leads, bio/giving-page extraction, 990 adjudication — waits on a top-up at console.anthropic.com → Plans & Billing. Deterministic paths (scoring, insights, evidence packs, fallback explanations) are unaffected.
 
 **Remaining budget:** ~$48.66 (against the $50 self-imposed cap; the Anthropic balance is $90).
 
