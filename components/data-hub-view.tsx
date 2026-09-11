@@ -10,6 +10,7 @@
 // The metric-submission surface (site directors' workbook entries) is preserved
 // as its own section so nothing the org depends on is lost.
 
+import { StrategyResources } from '@/components/strategy-resources';
 import { InstrumentlCard } from '@/components/instrumentl-card';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -283,6 +284,9 @@ export function DataHubView({ orgName, userEmail }: { orgName: string; userEmail
                 ))}
               </div>
             </div>
+
+            {/* ── Grant strategy resources: guides + intake forms, embedded ── */}
+            <StrategyResources />
 
             {/* ── Instrumentl export: swappable from the app ── */}
             <InstrumentlCard />

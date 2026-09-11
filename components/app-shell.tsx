@@ -10,7 +10,7 @@ const SHOW_THEME_TOGGLE = false;
 const readSidebarCollapsed = () => { try { return localStorage.getItem('fundir-sidebar') === 'collapsed'; } catch { return false; } };
 const subscribeSidebar = (cb: () => void) => { window.addEventListener('fundir-sidebar', cb); window.addEventListener('storage', cb); return () => { window.removeEventListener('fundir-sidebar', cb); window.removeEventListener('storage', cb); }; };
 import {
-  LayoutDashboard, Radar, Table2, Share2, FileText, Settings, LogOut,
+  LayoutDashboard, Radar, Share2, FileText, Settings, LogOut,
   TrendingUp, Building2, Shield,
   ChevronDown, Check, Sun, Moon,
   Menu, X, Database, PanelLeftClose, PanelLeftOpen, MessageSquare,
@@ -28,7 +28,6 @@ import { UserMenu } from '@/components/user-menu';
 const NAV_ITEMS = [
   { href: '/dashboard',    label: 'Dashboard',        icon: LayoutDashboard },
   { href: '/prospecting',  label: 'Prospecting',      icon: Radar           },
-  { href: '/cultivation',  label: 'Cultivation List', icon: Table2          },
   { href: '/connections',  label: 'Connections',      icon: Share2          },
   { href: '/data',         label: 'Data Hub',         icon: Database        },
   { href: '/applications', label: 'Applications',     icon: FileText        },
