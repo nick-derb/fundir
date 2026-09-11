@@ -24,6 +24,7 @@ import type { GraphFile } from '@/lib/microsoft-graph';
 import {
   getCachedHandles, setCachedHandles, invalidateHandles,
 } from '@/lib/data-hub-state';
+import { resolveDrive } from '@/lib/sharepoint';
 
 const GRAPH = 'https://graph.microsoft.com/v1.0';
 
@@ -70,11 +71,11 @@ export interface HubHandles {
 // ── Handle resolution (cached) ───────────────────────────────────────────────
 
 /** Path-addressed lookup that returns null on 404 instead of throwing. */
-async function findChild(token: string, parentId: string, name: string): Promise<GraphFile | null> {
+async function findChild(token: string, parentId: string, name: string, base: string): Promise<GraphFile | null> {
   try {
     const res = await graphFetch(
       token,
-      `/me/drive/items/${parentId}:/${encodeURIComponent(name)}`,
+      `${base}/items/${parentId}:/${encodeURIComponent(name)}`,
     );
     return await res.json();
   } catch {
@@ -87,11 +88,11 @@ async function findChild(token: string, parentId: string, name: string): Promise
  * + table), and documents folder all exist. This is the expensive path — it only
  * runs on a cache miss (see resolveHandles).
  */
-async function discoverHandles(token: string): Promise<HubHandles> {
-  const hub = await findOrCreateFolder(token, HUB_FOLDER);
+async function discoverHandles(token: string, base: string): Promise<HubHandles> {
+  const hub = await findOrCreateFolder(token, HUB_FOLDER, undefined, base);
 
   // ── Workbook ──
-  let workbook = await findChild(token, hub.id, WORKBOOK_NAME);
+  let workbook = await findChild(token, hub.id, WORKBOOK_NAME, base);
   if (!workbook) {
     // A zero-byte .xlsx is not a valid workbook — build a real one (header row)
     // with SheetJS and upload the bytes.
@@ -101,7 +102,7 @@ async function discoverHandles(token: string): Promise<HubHandles> {
     const buf = XLSX.write(book, { type: 'buffer', bookType: 'xlsx' }) as Buffer;
 
     const res = await fetch(
-      `${GRAPH}/me/drive/items/${hub.id}:/${encodeURIComponent(WORKBOOK_NAME)}:/content`,
+      `${GRAPH}${base}/items/${hub.id}:/${encodeURIComponent(WORKBOOK_NAME)}:/content`,
       {
         method: 'PUT',
         headers: {
@@ -116,14 +117,14 @@ async function discoverHandles(token: string): Promise<HubHandles> {
   }
 
   // ── Table over the header row (needed for concurrency-safe appends) ──
-  const tablesRes  = await graphFetch(token, `/me/drive/items/${workbook!.id}/workbook/tables?$select=name`);
+  const tablesRes  = await graphFetch(token, `${base}/items/${workbook!.id}/workbook/tables?$select=name`);
   const tables: Array<{ name: string }> = (await tablesRes.json()).value ?? [];
   let tableName = tables.find(t => t.name === TABLE_NAME)?.name ?? tables[0]?.name ?? null;
 
   if (!tableName) {
     const createdRes = await graphFetch(
       token,
-      `/me/drive/items/${workbook!.id}/workbook/tables/add`,
+      `${base}/items/${workbook!.id}/workbook/tables/add`,
       {
         method: 'POST',
         body: JSON.stringify({ address: `${SHEET_NAME}!A1:G1`, hasHeaders: true }),
@@ -133,7 +134,7 @@ async function discoverHandles(token: string): Promise<HubHandles> {
     tableName = created.name as string;
     // Stable name is nicer but cosmetic — best-effort rename.
     try {
-      await graphFetch(token, `/me/drive/items/${workbook!.id}/workbook/tables/${tableName}`, {
+      await graphFetch(token, `${base}/items/${workbook!.id}/workbook/tables/${tableName}`, {
         method: 'PATCH',
         body: JSON.stringify({ name: TABLE_NAME }),
       });
@@ -142,7 +143,7 @@ async function discoverHandles(token: string): Promise<HubHandles> {
   }
 
   // ── Documents folder ──
-  const docs = await findOrCreateFolder(token, DOCS_FOLDER, hub.id);
+  const docs = await findOrCreateFolder(token, DOCS_FOLDER, hub.id, base);
 
   return {
     workbookId:  workbook!.id,
@@ -155,10 +156,10 @@ async function discoverHandles(token: string): Promise<HubHandles> {
 }
 
 /** Cached handle resolution — the fast path for every read and write. */
-async function resolveHandles(token: string, orgCode: string): Promise<HubHandles> {
+async function resolveHandles(token: string, orgCode: string, base: string): Promise<HubHandles> {
   const cached = await getCachedHandles(orgCode);
   if (cached) return cached;
-  const handles = await discoverHandles(token);
+  const handles = await discoverHandles(token, base);
   await setCachedHandles(orgCode, handles);
   return handles;
 }
@@ -172,31 +173,38 @@ function isNotFound(err: unknown): boolean {
  * Run `fn` with resolved handles, self-healing on a stale cache: if a Graph call
  * 404s (the workbook or a folder was moved/renamed/deleted in OneDrive), drop the
  * cached handles, re-discover once, and retry.
+ *
+ * `base` is the drive the hub lives on — the org's SharePoint document library
+ * where one exists, otherwise the connecting user's OneDrive. It is resolved
+ * here and passed down rather than cached with the handles, because the cached
+ * handles are plain columns in Postgres and would otherwise pin an old drive.
+ * A hub created on the old personal drive self-heals through the same 404 path.
  */
 async function withHandles<T>(
   token: string,
   orgCode: string,
-  fn: (h: HubHandles) => Promise<T>,
+  fn: (h: HubHandles, base: string) => Promise<T>,
 ): Promise<T> {
-  const handles = await resolveHandles(token, orgCode);
+  const { base } = await resolveDrive(token, orgCode);
+  const handles = await resolveHandles(token, orgCode, base);
   try {
-    return await fn(handles);
+    return await fn(handles, base);
   } catch (err) {
     if (!isNotFound(err)) throw err;
     invalidateHandles(orgCode);
-    const fresh = await discoverHandles(token);
+    const fresh = await discoverHandles(token, base);
     await setCachedHandles(orgCode, fresh);
-    return fn(fresh);
+    return fn(fresh, base);
   }
 }
 
 // ── Reads ─────────────────────────────────────────────────────────────────────
 
 /** Read all data rows via a single usedRange call (cheaper than the table API). */
-async function readRows(token: string, h: HubHandles): Promise<HubRow[]> {
+async function readRows(token: string, h: HubHandles, base: string): Promise<HubRow[]> {
   const res = await graphFetch(
     token,
-    `/me/drive/items/${h.workbookId}/workbook/worksheets('${encodeURIComponent(h.sheetName)}')` +
+    `${base}/items/${h.workbookId}/workbook/worksheets('${encodeURIComponent(h.sheetName)}')` +
     `/usedRange(valuesOnly=true)?$select=values`,
   );
   const data = await res.json();
@@ -213,10 +221,10 @@ async function readRows(token: string, h: HubHandles): Promise<HubRow[]> {
   return rows;
 }
 
-async function readDocuments(token: string, h: HubHandles): Promise<HubDocument[]> {
+async function readDocuments(token: string, h: HubHandles, base: string): Promise<HubDocument[]> {
   const res = await graphFetch(
     token,
-    `/me/drive/items/${h.docsId}/children` +
+    `${base}/items/${h.docsId}/children` +
     `?$select=id,name,size,webUrl,lastModifiedDateTime,lastModifiedBy,folder` +
     `&$orderby=lastModifiedDateTime desc&$top=50`,
   );
@@ -242,6 +250,8 @@ export interface HubState {
   documents:   HubDocument[];
   workbookUrl: string | null;
   docsUrl:     string | null;
+  /** Where the hub physically lives, so the app can say so out loud. */
+  location:    { kind: 'sharepoint' | 'personal'; label: string; webUrl: string | null };
 }
 
 /**
@@ -250,12 +260,19 @@ export interface HubState {
  * in parallel — the whole open is 2 Graph calls on a warm cache.
  */
 export async function getHubState(token: string, orgCode: string): Promise<HubState> {
-  return withHandles(token, orgCode, async (h) => {
+  return withHandles(token, orgCode, async (h, base) => {
     const [rows, documents] = await Promise.all([
-      readRows(token, h),
-      readDocuments(token, h),
+      readRows(token, h, base),
+      readDocuments(token, h, base),
     ]);
-    return { rows, documents, workbookUrl: h.workbookUrl, docsUrl: h.docsUrl };
+    // Memoized — this is a map lookup, not another Graph round-trip.
+    const drive = await resolveDrive(token, orgCode);
+    return {
+      rows, documents,
+      workbookUrl: h.workbookUrl,
+      docsUrl: h.docsUrl,
+      location: { kind: drive.kind, label: drive.label, webUrl: drive.webUrl },
+    };
   });
 }
 
@@ -267,11 +284,11 @@ export async function appendRow(
   orgCode: string,
   row: Omit<HubRow, 'submitted'>,
 ): Promise<void> {
-  await withHandles(token, orgCode, async (h) => {
+  await withHandles(token, orgCode, async (h, base) => {
     const submitted = new Date().toISOString().slice(0, 10);
     await graphFetch(
       token,
-      `/me/drive/items/${h.workbookId}/workbook/tables/${h.tableName}/rows/add`,
+      `${base}/items/${h.workbookId}/workbook/tables/${h.tableName}/rows/add`,
       {
         method: 'POST',
         body: JSON.stringify({
@@ -292,9 +309,9 @@ export async function uploadDocument(
   buffer: Buffer,
   contentType: string,
 ): Promise<HubDocument> {
-  return withHandles(token, orgCode, async (h) => {
+  return withHandles(token, orgCode, async (h, base) => {
     const res = await fetch(
-      `${GRAPH}/me/drive/items/${h.docsId}:/${encodeURIComponent(name)}:/content` +
+      `${GRAPH}${base}/items/${h.docsId}:/${encodeURIComponent(name)}:/content` +
       `?@microsoft.graph.conflictBehavior=rename`,
       {
         method: 'PUT',

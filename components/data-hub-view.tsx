@@ -97,6 +97,7 @@ export function DataHubView({ orgName, userEmail }: { orgName: string; userEmail
   const [docsUrl, setDocsUrl]     = useState<string | null>(null);
   const [workbookUrl, setWbUrl]   = useState<string | null>(null);
   const [connected, setConnected] = useState<boolean | null>(null);
+  const [location, setLocation]   = useState<{ kind: 'sharepoint' | 'personal'; label: string; webUrl: string | null } | null>(null);
   const [loading, setLoading]     = useState(true);
   const [error, setError]         = useState('');
   const [query, setQuery]         = useState('');
@@ -117,6 +118,7 @@ export function DataHubView({ orgName, userEmail }: { orgName: string; userEmail
       setCorpus(res.corpus ?? { documents: 0, chunks: 0 });
       setDocsUrl(res.docsUrl ?? null);
       setWbUrl(res.workbookUrl ?? null);
+      setLocation(res.location ?? null);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not load the data hub');
     } finally {
@@ -251,6 +253,20 @@ export function DataHubView({ orgName, userEmail }: { orgName: string; userEmail
           </button>
           <span className="flex-1" />
           <span className="fd-eyebrow text-tertiary whitespace-nowrap">Shared with everyone at {orgName}</span>
+          {location && (
+            <span
+              title={location.kind === 'sharepoint'
+                ? `These files live in ${location.label}, owned by ${orgName} — not in any one person's account.`
+                : `These files live in the OneDrive of the person who connected Microsoft 365. Reconnect once SharePoint access is granted to move them to a library ${orgName} owns.`}
+              className="fd-eyebrow whitespace-nowrap px-2 py-1 rounded-md border border-hairline"
+              style={{
+                color: location.kind === 'sharepoint' ? 'var(--accent)' : 'var(--text-tertiary)',
+                background: location.kind === 'sharepoint' ? 'var(--accent-tint)' : 'transparent',
+              }}
+            >
+              {location.kind === 'sharepoint' ? location.label : 'Personal OneDrive'}
+            </span>
+          )}
         </div>
 
         {error && (
