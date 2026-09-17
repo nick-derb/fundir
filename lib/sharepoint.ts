@@ -7,7 +7,9 @@
 // organization instead, so the files outlive any individual.
 //
 // Resolution order, first hit wins:
-//   1. SHAREPOINT_SITE  — "contoso.sharepoint.com:/sites/Grants" (explicit)
+//   1. SHAREPOINT_SITE  — a site name as staff know it ("Development"), found
+//                         by Graph site search; or an explicit Graph path
+//                         ("contoso.sharepoint.com:/sites/Grants")
 //   2. the tenant's root SharePoint site and its default document library
 //   3. `/me/drive`      — the old personal drive, so a connection made before
 //                         the Sites scope existed keeps working untouched.
@@ -33,14 +35,36 @@ const PERSONAL: DriveTarget = { base: PERSONAL_DRIVE, kind: 'personal', label: '
 const memo = new Map<string, { target: DriveTarget; expires: number }>();
 const TTL_MS = 30 * 60 * 1000;
 
+interface GraphSite { id?: string; displayName?: string; name?: string; webUrl?: string }
+
+/**
+ * The configured site. SHAREPOINT_SITE is either an explicit Graph site path
+ * ("contoso.sharepoint.com:/sites/Grants", anything with a colon or a dot) or
+ * just the site's name as staff know it ("Development"), which is looked up
+ * with a Graph site search so nobody has to hunt for a URL. A name match is
+ * exact on the display name or on the last segment of the site URL.
+ */
+async function configuredSite(token: string, configured: string): Promise<GraphSite | null> {
+  if (/[:.]/.test(configured)) {
+    return await (await graphFetch(token, `/sites/${configured}?$select=id,displayName,webUrl`)).json() as GraphSite;
+  }
+  const res = await (await graphFetch(token, `/sites?search=${encodeURIComponent(configured)}&$select=id,displayName,name,webUrl`)).json() as { value?: GraphSite[] };
+  const want = configured.toLowerCase();
+  const hits = (res.value ?? []).filter(s => s.id);
+  return hits.find(s => (s.displayName ?? '').trim().toLowerCase() === want)
+    ?? hits.find(s => (s.webUrl ?? '').replace(/\/+$/, '').split('/').pop()?.toLowerCase() === want)
+    ?? hits.find(s => (s.name ?? '').trim().toLowerCase() === want)
+    ?? null;
+}
+
 /** Ask Graph for the document library of the configured (or root) site. */
 async function resolveFromGraph(token: string): Promise<DriveTarget | null> {
   const configured = process.env.SHAREPOINT_SITE?.trim();
-  const sitePath = configured ? `/sites/${configured}` : '/sites/root';
   try {
-    const site = await (await graphFetch(token, `${sitePath}?$select=id,displayName,webUrl`)).json() as
-      { id?: string; displayName?: string; webUrl?: string };
-    if (!site.id) return null;
+    const site = configured
+      ? await configuredSite(token, configured)
+      : await (await graphFetch(token, `/sites/root?$select=id,displayName,webUrl`)).json() as GraphSite;
+    if (!site?.id) return null;
     // The site's default library ("Documents") is the organization's drive.
     const drive = await (await graphFetch(token, `/sites/${site.id}/drive?$select=id,name,webUrl`)).json() as
       { id?: string; name?: string; webUrl?: string };
