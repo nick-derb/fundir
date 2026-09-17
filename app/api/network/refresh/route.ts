@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
     }, { status: 409 });
   }
   const body = await req.json().catch(() => ({})) as { categories?: unknown };
-  const categories = (Array.isArray(body.categories) ? body.categories : []).filter((c): c is RefreshCategory => c === 'people' || c === 'employers');
+  const categories = (Array.isArray(body.categories) ? body.categories : []).filter((c): c is RefreshCategory => c === 'candidates' || c === 'people' || c === 'employers');
 
   try {
     const result = await runRefreshStep(ctx.orgId, { categories });
