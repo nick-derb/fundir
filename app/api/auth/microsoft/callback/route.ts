@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { upsertIntegration, upsertUserIntegration } from '@/lib/oauth-tokens';
+import { clearDrive } from '@/lib/sharepoint';
+import { invalidateHandles } from '@/lib/data-hub-state';
 import { getUserEmail } from '@/lib/microsoft-graph';
 
 export async function GET(req: NextRequest) {
@@ -83,6 +85,11 @@ export async function GET(req: NextRequest) {
     scope:         tokens.scope,
     email,
   });
+  // A reconnect can change where the Data Hub belongs — a token granted
+  // Sites.ReadWrite.All can reach SharePoint where the previous one could not.
+  // Drop both caches so the next read re-resolves the drive and its folders.
+  clearDrive(orgCode);
+  invalidateHandles(orgCode);
   const dest = new URL(returnTo, appUrl);
   dest.searchParams.set('connected', 'microsoft');
   return NextResponse.redirect(dest.toString());

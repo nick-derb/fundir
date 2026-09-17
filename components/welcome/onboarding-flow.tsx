@@ -321,8 +321,9 @@ export function OnboardingFlow({
             </div>
           )}
 
-          {/* nav */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          {/* nav — spaced off the step content above it, so Continue never
+              sits flush against the last field (e.g. the name step's inputs). */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 32 }}>
             {canBack && <button type="button" onClick={back} style={{ fontFamily: MONO, fontSize: 10, letterSpacing: '.13em', textTransform: 'uppercase', background: 'none', border: 'none', padding: '6px 0', cursor: 'pointer', color: FAINT }}>← Back</button>}
             <span style={{ flex: 1 }} />
             {canSkip && <button type="button" onClick={next} style={{ fontFamily: MONO, fontSize: 10, letterSpacing: '.13em', textTransform: 'uppercase', background: 'none', border: 'none', padding: '6px 0', cursor: 'pointer', color: FAINT }}>Skip</button>}

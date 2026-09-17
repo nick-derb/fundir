@@ -88,8 +88,19 @@ export async function POST(req: NextRequest) {
           // tool_start / done are progress signals — the panel shows its own
           // "Thinking…" state, so we don't inject status text into the bubble.
         }
-      } catch {
-        controller.enqueue(encoder.encode('\n\n[The advisor was interrupted. Please try again.]'));
+      } catch (err) {
+        // Say what actually happened. A billing failure is not a transient glitch, and telling
+        // the user to "try again" when the account is out of credit wastes their time.
+        const msg = err instanceof Error ? err.message : String(err);
+        const friendly = /credit balance/i.test(msg)
+          ? 'The advisor is paused: the Anthropic API account is out of credit. Your administrator needs to top up the balance at console.anthropic.com (Plans & Billing); nothing you did caused this.'
+          : /rate limit|429/i.test(msg)
+            ? 'The advisor hit a rate limit. Wait a moment and try again.'
+            : /overloaded|529|503/i.test(msg)
+              ? 'The AI service is temporarily overloaded. Try again in a minute.'
+              : `The advisor stopped: ${msg.replace(/\{[\s\S]*\}/, '').trim().slice(0, 200) || 'unexpected error'}.`;
+        console.error('[chat] advisor error:', msg.slice(0, 500));
+        controller.enqueue(encoder.encode(`\n\n[${friendly}]`));
       } finally {
         controller.close();
       }

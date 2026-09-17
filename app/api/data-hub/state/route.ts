@@ -59,6 +59,7 @@ export async function GET() {
       documents:   state.documents,
       workbookUrl: state.workbookUrl,
       docsUrl:     state.docsUrl,
+      location:    state.location,
       indexedDocIds,
       corpus: { documents: indexedDocIds.length, chunks: (chunkRows ?? []).length },
       health: {

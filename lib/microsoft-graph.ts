@@ -12,6 +12,9 @@ export interface GraphFile {
   webUrl?: string;
 }
 
+/** Graph path prefix for a drive: `/me/drive` (personal) or `/drives/{id}` (SharePoint). */
+export const DEFAULT_DRIVE = '/me/drive';
+
 export async function graphFetch(
   token: string,
   path: string,
@@ -122,10 +125,11 @@ export async function listFolderItems(
 export async function extractExcelContent(
   token: string,
   itemId: string,
+  base: string = DEFAULT_DRIVE,
 ): Promise<string> {
   const sheetsRes = await graphFetch(
     token,
-    `/me/drive/items/${itemId}/workbook/worksheets`,
+    `${base}/items/${itemId}/workbook/worksheets`,
   );
   const sheetsData = await sheetsRes.json();
   const sheets: Array<{ name: string }> = sheetsData.value ?? [];
@@ -136,7 +140,7 @@ export async function extractExcelContent(
     try {
       const rangeRes = await graphFetch(
         token,
-        `/me/drive/items/${itemId}/workbook/worksheets('${encodeURIComponent(sheetName)}')/range(address='A1:Z500')`,
+        `${base}/items/${itemId}/workbook/worksheets('${encodeURIComponent(sheetName)}')/range(address='A1:Z500')`,
       );
       const rangeData = await rangeRes.json();
       const rows: string[][] = rangeData.values ?? [];
@@ -154,9 +158,10 @@ export async function extractExcelContent(
 export async function extractWordContent(
   token: string,
   itemId: string,
+  base: string = DEFAULT_DRIVE,
 ): Promise<string> {
   // Download raw bytes and extract readable text from docx XML
-  const res = await graphFetch(token, `/me/drive/items/${itemId}/content`);
+  const res = await graphFetch(token, `${base}/items/${itemId}/content`);
   const arrayBuf = await res.arrayBuffer();
   const buf = Buffer.from(arrayBuf);
   // docx files are ZIP archives; XML text runs are in <w:t> elements
@@ -174,9 +179,10 @@ export async function extractWordContent(
 export async function extractPowerPointContent(
   token: string,
   itemId: string,
+  base: string = DEFAULT_DRIVE,
 ): Promise<string> {
   // Best-effort: pptx slide text lives in <a:t> runs (same ZIP-XML trick as docx)
-  const res = await graphFetch(token, `/me/drive/items/${itemId}/content`);
+  const res = await graphFetch(token, `${base}/items/${itemId}/content`);
   const buf = Buffer.from(await res.arrayBuffer());
   const raw = buf.toString('binary');
   const matches = raw.match(/<a:t[^>]*>([^<]*)<\/a:t>/g) ?? [];
@@ -193,8 +199,9 @@ export async function extractPowerPointContent(
 export async function downloadFileBase64(
   token: string,
   itemId: string,
+  base: string = DEFAULT_DRIVE,
 ): Promise<{ base64: string; bytes: number }> {
-  const res = await graphFetch(token, `/me/drive/items/${itemId}/content`);
+  const res = await graphFetch(token, `${base}/items/${itemId}/content`);
   const buf = Buffer.from(await res.arrayBuffer());
   return { base64: buf.toString('base64'), bytes: buf.byteLength };
 }
@@ -202,19 +209,20 @@ export async function downloadFileBase64(
 export async function extractContent(
   token: string,
   file: GraphFile,
+  base: string = DEFAULT_DRIVE,
 ): Promise<string> {
   const name = file.name.toLowerCase();
   if (name.endsWith('.xlsx') || name.endsWith('.xls')) {
-    return extractExcelContent(token, file.id);
+    return extractExcelContent(token, file.id, base);
   }
   if (name.endsWith('.docx') || name.endsWith('.doc')) {
-    return extractWordContent(token, file.id);
+    return extractWordContent(token, file.id, base);
   }
   if (name.endsWith('.pptx')) {
-    return extractPowerPointContent(token, file.id);
+    return extractPowerPointContent(token, file.id, base);
   }
   // CSV or text files
-  const res = await graphFetch(token, `/me/drive/items/${file.id}/content`);
+  const res = await graphFetch(token, `${base}/items/${file.id}/content`);
   return res.text();
 }
 
@@ -222,12 +230,13 @@ export async function findOrCreateFolder(
   token: string,
   name: string,
   parentId?: string,
+  base: string = DEFAULT_DRIVE,
 ): Promise<GraphFile> {
   // Try to find existing folder
   try {
     const searchPath = parentId
-      ? `/me/drive/items/${parentId}/children?$filter=name eq '${name}' and folder ne null&$select=id,name,webUrl,folder`
-      : `/me/drive/root/children?$filter=name eq '${name}' and folder ne null&$select=id,name,webUrl,folder`;
+      ? `${base}/items/${parentId}/children?$filter=name eq '${name}' and folder ne null&$select=id,name,webUrl,folder`
+      : `${base}/root/children?$filter=name eq '${name}' and folder ne null&$select=id,name,webUrl,folder`;
     const res = await graphFetch(token, searchPath);
     const data = await res.json();
     if (data.value?.[0]) return data.value[0];
@@ -236,8 +245,8 @@ export async function findOrCreateFolder(
   }
 
   const path = parentId
-    ? `/me/drive/items/${parentId}/children`
-    : '/me/drive/root/children';
+    ? `${base}/items/${parentId}/children`
+    : `${base}/root/children`;
 
   const res = await graphFetch(token, path, {
     method: 'POST',

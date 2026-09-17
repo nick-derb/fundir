@@ -37,15 +37,17 @@ export interface ReportsIntel {
 export async function buildReportsIntel(db: Db, orgId: string): Promise<ReportsIntel> {
   const { data: cyc } = await db.from('network_organizations').select('id').eq('ein', CYC_EIN).maybeSingle();
   const cycId = (cyc?.id as string | undefined) ?? null;
-  const [{ data: leads }, { data: own }, relCounts, { data: runs }, peers, { count: srcCount }, { count: citedCount }, { data: actions }] = await Promise.all([
+  const [{ data: leads }, { data: own }, relCounts, { data: runs }, peers, { count: srcCount }, { count: citedCount }, { data: actions }, { data: mr }] = await Promise.all([
     db.from('network_leads').select('id, insight_type, pipeline_status, opportunity_score, evidence_confidence, explanation, via_person_id, target_org_id, owner, next_action_date, updated_at, target:network_organizations!network_leads_target_org_id_fkey(id, name)').eq('org_id', orgId),
     db.from('network_people').select('id, name, kind, board_role, linkedin_url, enriched_at').eq('org_id', orgId),
-    pageAll<{ verification: string }>((a, b) => db.from('network_relationships').select('verification').eq('org_id', orgId).order('id').range(a, b)),
+    // Grades are three numbers, not 3,500 rows: ask the database to count them.
+    Promise.all((['verified', 'probable', 'inferred'] as const).map(v => db.from('network_relationships').select('id', { count: 'exact', head: true }).eq('org_id', orgId).eq('verification', v).then(r => [v, r.count ?? 0] as const))),
     db.from('network_refresh_runs').select('started_at, api_calls, rapidapi_credits, claude_micro_cents, status, notes').eq('org_id', orgId).order('started_at', { ascending: false }).limit(200),
     pageAll<{ organization_id: string }>((a, b) => db.from('network_peer_orgs').select('organization_id').eq('org_id', orgId).order('id').range(a, b)),
     db.from('network_sources').select('id', { count: 'exact', head: true }),
     db.from('grants_made').select('id', { count: 'exact', head: true }).not('source_url', 'is', null),
     db.from('network_actions').select('lead_id, status, created_at').eq('org_id', orgId).in('action', ['status_change', 'dismiss', 'outcome']).order('created_at', { ascending: false }).limit(5000),
+    db.from('match_results').select('pipeline_stage, grant:grant_opportunities(extracted_fields)').eq('org_id', orgId).in('pipeline_stage', ['submitted', 'awarded', 'rejected']).limit(2000),
   ]);
   type L = { id: string; insight_type: string | null; pipeline_status: string; opportunity_score: number | null; evidence_confidence: string | null; explanation: { method?: string; validation?: { bullets_kept: number; bullets_total: number } } | null; via_person_id: string | null; target_org_id: string | null; owner: string | null; next_action_date: string | null; updated_at: string; target: { id: string; name: string } | null };
   const L = (leads ?? []) as unknown as L[];
@@ -69,8 +71,10 @@ export async function buildReportsIntel(db: Db, orgId: string): Promise<ReportsI
   const funderIds = [...new Set(untapped.map(l => l.target!.id))];
   const dollars = new Map<string, { dollars: number; peers: Set<string> }>();
   const byYear = new Map<number, { dollars: number; grants: number }>();
-  for (const c of chunks(funderIds, 50)) {
-    const data = await pageAll<{ funder_org_id: string; recipient_org_id: string | null; amount: number | null; fiscal_year: number | null }>((a, b) => db.from('grants_made').select('funder_org_id, recipient_org_id, amount, fiscal_year').in('funder_org_id', c).order('id').range(a, b));
+  // One funder (McCormick) can carry thousands of grants, so fetch the chunks concurrently.
+  const grantPages = await Promise.all(chunks(funderIds, 50).map(c =>
+    pageAll<{ funder_org_id: string; recipient_org_id: string | null; amount: number | null; fiscal_year: number | null }>((a, b) => db.from('grants_made').select('funder_org_id, recipient_org_id, amount, fiscal_year').in('funder_org_id', c).order('id').range(a, b))));
+  for (const data of grantPages) {
     for (const g of data) {
       if (!g.recipient_org_id || !peerIds.has(g.recipient_org_id as string)) continue;
       const d = dollars.get(g.funder_org_id as string) ?? { dollars: 0, peers: new Set() }; d.dollars += Number(g.amount) || 0; d.peers.add(g.recipient_org_id as string); dollars.set(g.funder_org_id as string, d);
@@ -86,7 +90,7 @@ export async function buildReportsIntel(db: Db, orgId: string): Promise<ReportsI
 
   // ── Evidence quality ──
   const rc = { verified: 0, probable: 0, inferred: 0 };
-  for (const r of relCounts ?? []) rc[(r.verification as keyof typeof rc)] = (rc[r.verification as keyof typeof rc] ?? 0) + 1;
+  for (const [v, n] of relCounts) rc[v] = n;
   const lc = { High: 0, Medium: 0, Low: 0 };
   for (const l of openL) if (l.evidence_confidence && l.evidence_confidence in lc) lc[l.evidence_confidence as keyof typeof lc]++;
   const ex = { model: 0, deterministic: 0, none: 0 }; let kept = 0, total = 0;
@@ -128,8 +132,7 @@ export async function buildReportsIntel(db: Db, orgId: string): Promise<ReportsI
     events_cited: citedCount ?? 0, sources: srcCount ?? 0,
   };
 
-  // ── Instrumentl-derived grant pipeline, only when it exists ──
-  const { data: mr } = await db.from('match_results').select('pipeline_stage, grant:grant_opportunities(extracted_fields)').eq('org_id', orgId).in('pipeline_stage', ['submitted', 'awarded', 'rejected']).limit(2000);
+  // ── Instrumentl-derived grant pipeline, only when it exists (fetched in the opening batch) ──
   const M = (mr ?? []) as unknown as Array<{ pipeline_stage: string; grant: { extracted_fields: Record<string, unknown> } | null }>;
   const awarded = M.filter(m => m.pipeline_stage === 'awarded');
   const grants = M.length ? { submitted: M.length, awarded: awarded.length, win_rate: Math.round((awarded.length / M.length) * 100), awarded_value: awarded.reduce((n, m) => n + (Number(m.grant?.extracted_fields?.award_ceiling) || 0), 0) } : null;

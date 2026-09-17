@@ -10,7 +10,7 @@ const SHOW_THEME_TOGGLE = false;
 const readSidebarCollapsed = () => { try { return localStorage.getItem('fundir-sidebar') === 'collapsed'; } catch { return false; } };
 const subscribeSidebar = (cb: () => void) => { window.addEventListener('fundir-sidebar', cb); window.addEventListener('storage', cb); return () => { window.removeEventListener('fundir-sidebar', cb); window.removeEventListener('storage', cb); }; };
 import {
-  LayoutDashboard, Radar, Table2, Share2, FileText, Settings, LogOut,
+  LayoutDashboard, Radar, Share2, FileText, Settings, LogOut,
   TrendingUp, Building2, Shield,
   ChevronDown, Check, Sun, Moon,
   Menu, X, Database, PanelLeftClose, PanelLeftOpen, MessageSquare,
@@ -28,7 +28,6 @@ import { UserMenu } from '@/components/user-menu';
 const NAV_ITEMS = [
   { href: '/dashboard',    label: 'Dashboard',        icon: LayoutDashboard },
   { href: '/prospecting',  label: 'Prospecting',      icon: Radar           },
-  { href: '/cultivation',  label: 'Cultivation List', icon: Table2          },
   { href: '/connections',  label: 'Connections',      icon: Share2          },
   { href: '/data',         label: 'Data Hub',         icon: Database        },
   { href: '/applications', label: 'Applications',     icon: FileText        },
@@ -308,7 +307,7 @@ export function AppShell({
           {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
             const active = isActive(href);
             return (
-              <Link key={href} href={href} prefetch={false} title={collapsed ? label : undefined}
+              <Link key={href} href={href} title={collapsed ? label : undefined}
                 className={`shell-nav-item flex items-center gap-2.5 py-[7px] text-[13px] mb-0.5 ${collapsed ? 'pl-3 pr-2 md:justify-center md:px-0' : 'pl-3 pr-2'} ${active ? 'shell-nav-active' : ''}`}>
                 <Icon className="shell-nav-icon w-4 h-4 flex-shrink-0" />
                 <span className={collapsed ? 'md:hidden' : ''}>{label}</span>
@@ -321,7 +320,7 @@ export function AppShell({
             {SETTINGS_ITEMS.map(({ href, label, icon: Icon }) => {
               const active = isActive(href);
               return (
-                <Link key={href} href={href} prefetch={false} title={collapsed ? label : undefined}
+                <Link key={href} href={href} title={collapsed ? label : undefined}
                   className={`shell-nav-item flex items-center gap-2.5 py-[7px] text-[13px] mb-0.5 ${collapsed ? 'pl-3 pr-2 md:justify-center md:px-0' : 'pl-3 pr-2'} ${active ? 'shell-nav-active' : ''}`}>
                   <Icon className="shell-nav-icon w-4 h-4 flex-shrink-0" />
                   <span className={collapsed ? 'md:hidden' : ''}>{label}</span>
@@ -334,7 +333,7 @@ export function AppShell({
         {/* Footer */}
         <div className={`py-3 border-t border-hairline ${collapsed ? 'px-3 md:px-2' : 'px-3'}`}>
           {isAdmin && (
-            <Link href="/admin" prefetch={false} title={collapsed ? 'Admin Console' : undefined}
+            <Link href="/admin" title={collapsed ? 'Admin Console' : undefined}
               className={`shell-nav-item flex items-center gap-2.5 py-[7px] text-caption mb-0.5 ${collapsed ? 'pl-3 pr-2 md:justify-center md:px-0' : 'pl-3 pr-2'}`}>
               <Shield className="shell-nav-icon w-4 h-4 flex-shrink-0" />
               <span className={collapsed ? 'md:hidden' : ''}>Admin Console</span>

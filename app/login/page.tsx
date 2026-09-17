@@ -41,14 +41,16 @@ function LoginPageContent() {
     // On success the browser navigates to the provider — keep the busy state.
   }
 
-  // Email + password sign-in — unchanged behavior (→ /dashboard).
+  // Email + password sign-in. Go to /welcome, not straight to the dashboard:
+  // that page runs the first-run setup for someone who has never onboarded and
+  // redirects everyone else to /dashboard, so both paths behave like OAuth.
   async function handleSubmit({ email, password }: { email: string; password: string }) {
     setSubmitting(true);
     setError(''); setNotice('');
     const supabase = getSupabaseClient();
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) { setError(error.message); setSubmitting(false); return; }
-    router.push('/dashboard');
+    router.push('/welcome');
     router.refresh();
   }
 

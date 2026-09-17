@@ -2,12 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthContext } from '@/lib/auth-context';
 
 // Two connect modes on one Azure app registration:
-//   org  (default) — the org's shared Microsoft 365 / OneDrive (Files.ReadWrite),
-//                    stored per-org in org_integrations.
+//   org  (default) — the org's shared Microsoft 365 storage, stored per-org in
+//                    org_integrations. Sites.ReadWrite.All is what lets the Data
+//                    Hub live in a SharePoint document library the organization
+//                    owns rather than in one employee's personal OneDrive;
+//                    Files.ReadWrite stays for the file picker, agent drafts and
+//                    the fallback when a tenant has no SharePoint.
 //   user (?mode=user) — the signed-in user's own calendar (Calendars.Read),
 //                    stored per-user in user_integrations, so the dashboard shows
 //                    THEIR schedule. No org-membership gate — it's their account.
-const ORG_SCOPES  = 'offline_access User.Read Files.ReadWrite';
+const ORG_SCOPES  = 'offline_access User.Read Files.ReadWrite Sites.ReadWrite.All';
 const USER_SCOPES = 'offline_access User.Read Calendars.Read';
 
 export async function GET(req: NextRequest) {

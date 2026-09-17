@@ -1,14 +1,9 @@
 import { redirect } from 'next/navigation';
-import { getAuthContext } from '@/lib/auth-context';
-import { AppShell } from '@/components/app-shell';
-import { ComingSoon } from '@/components/coming-soon';
 
-export default async function CultivationPage() {
-  const ctx = await getAuthContext();
-  if (!ctx) redirect('/login');
-  return (
-    <AppShell orgName={ctx.orgName} orgId={ctx.orgId} userEmail={ctx.email} userName={ctx.displayName} userAvatar={ctx.avatarUrl} isAdmin={ctx.isAdmin} availableOrgs={ctx.availableOrgs} currentOrgCode={ctx.orgCode}>
-      <ComingSoon title="Cultivation List" blurb="Your warm funder pipeline — invitation-only funders and board paths kept in one shared, living list. Designing this now." />
-    </AppShell>
-  );
+// "Cultivation" was never a separate list — it is the middle of the one funder
+// pipeline (Intro needed → Intro requested → Contacted → Meeting). Keeping a
+// second page meant the same funder lived in two places, so old links now land
+// on the pipeline itself.
+export default function CultivationPage() {
+  redirect('/connections?tab=pipeline');
 }

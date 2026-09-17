@@ -68,14 +68,6 @@ export function AiAdvisor({ orgCode, orgId, orgName }: AiAdvisorProps) {
     if (open) inputRef.current?.focus();
   }, [open]);
 
-  // Other surfaces (e.g. the dashboard's "Open assistant" card) open the
-  // panel by dispatching this event instead of reaching into our state.
-  useEffect(() => {
-    const onOpen = () => setOpen(true);
-    window.addEventListener('fundir:open-advisor', onOpen);
-    return () => window.removeEventListener('fundir:open-advisor', onOpen);
-  }, []);
-
   async function send(text: string) {
     const trimmed = text.trim();
     if (!trimmed || streaming) return;
@@ -120,10 +112,20 @@ export function AiAdvisor({ orgCode, orgId, orgName }: AiAdvisorProps) {
     }
   }
 
+  // The box grows with the message (up to ~8 lines), then scrolls inside itself —
+  // a long question stays readable instead of disappearing to the left.
+  function autoGrow(el: HTMLTextAreaElement | null) {
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${Math.min(200, el.scrollHeight)}px`;
+  }
+
   function onKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       send(input);
+      // Collapse back to one line after sending.
+      requestAnimationFrame(() => { if (inputRef.current) inputRef.current.style.height = 'auto'; });
     }
   }
 
@@ -180,7 +182,7 @@ export function AiAdvisor({ orgCode, orgId, orgName }: AiAdvisorProps) {
                   className="text-[12.5px] leading-relaxed p-3 rounded-xl"
                   style={{ background: 'var(--badge-bg, #f1f5f9)', color: 'var(--text-secondary, #475569)' }}
                 >
-                  I'm your grant strategist. I can read {isCyc ? "Chicago Youth Centers'" : 'your'} financials,
+                  I&rsquo;m your grant strategist. I can read {isCyc ? "Chicago Youth Centers'" : 'your'} financials,
                   federal funding risk, and live grant matches — and help you decide what to do next.
                 </div>
                 <p className="text-[11px] font-semibold uppercase tracking-wide px-1" style={{ color: 'var(--text-tertiary, #94a3b8)' }}>
@@ -235,12 +237,12 @@ export function AiAdvisor({ orgCode, orgId, orgName }: AiAdvisorProps) {
               <textarea
                 ref={inputRef}
                 value={input}
-                onChange={e => setInput(e.target.value)}
+                onChange={e => { setInput(e.target.value); autoGrow(e.currentTarget); }}
                 onKeyDown={onKeyDown}
                 rows={1}
-                placeholder="Ask about funding strategy…"
-                className="flex-1 resize-none bg-transparent text-[12.5px] outline-none max-h-24 leading-relaxed"
-                style={{ color: 'var(--text-primary, #0f172a)' }}
+                placeholder="Ask about funding strategy…  (Shift+Enter for a new line)"
+                className="flex-1 resize-none bg-transparent text-[12.5px] outline-none leading-relaxed"
+                style={{ color: 'var(--text-primary, #0f172a)', maxHeight: 200, overflowY: 'auto', minHeight: 22 }}
               />
               <button
                 onClick={() => send(input)}
