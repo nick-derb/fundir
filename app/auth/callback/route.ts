@@ -103,6 +103,10 @@ export async function GET(request: NextRequest) {
       if (
         provider === 'azure' &&
         result.orgCode &&
+        // Only an org admin is asked to connect the organization's Microsoft 365
+        // storage; a member signing in for the first time should land in
+        // onboarding, not on a tenant-wide consent screen they cannot approve.
+        result.role === 'admin' &&
         // If a previous bounce didn't end in a connection (declined consent,
         // tenant admin-consent block, personal account), don't wall the user
         // off at every sign-in — try again after the marker expires.
