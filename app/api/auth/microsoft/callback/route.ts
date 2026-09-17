@@ -34,6 +34,15 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(u.toString());
   };
 
+  // Return leg of the v2 admin-consent flow (Admin Console → System → Microsoft
+  // 365 readiness). No code is issued; the tenant admin has just approved the
+  // app for everyone, so send them back to Settings to click Connect.
+  if (searchParams.get('admin_consent') === 'True') {
+    const u = new URL('/settings', appUrl);
+    u.searchParams.set('connected', 'admin_consent');
+    return NextResponse.redirect(u.toString());
+  }
+
   if (error || !code) return fail('microsoft_denied');
 
   // Must match what /api/auth/microsoft asked the user to consent to: the v2
