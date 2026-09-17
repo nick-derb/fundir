@@ -35,8 +35,58 @@ const CARD: React.CSSProperties = {
   borderRadius: '12px',
 };
 
-export default async function AdminSystemPage() {
-  const { runs, recentMatches, supabaseOk } = await getSystemData();
+const GUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const GRAPH_SCOPES = ['Files.ReadWrite', 'Sites.ReadWrite.All', 'User.Read', 'Calendars.Read'];
+
+/** The tenant GUID behind a verified Microsoft 365 domain, from the public OpenID discovery document. */
+async function tenantIdForDomain(domain: string): Promise<string | null> {
+  try {
+    const res = await fetch(`https://login.microsoftonline.com/${encodeURIComponent(domain)}/v2.0/.well-known/openid-configuration`, { cache: 'no-store' });
+    if (!res.ok) return null;
+    const j = await res.json() as { issuer?: string };
+    return j.issuer?.match(/login\.microsoftonline\.com\/([0-9a-f-]{36})\//i)?.[1] ?? null;
+  } catch { return null; }
+}
+
+/**
+ * Everything the Microsoft 365 connection depends on, in one place, so the
+ * admin never has to read env vars or the Azure portal: authority, redirect
+ * URI, the live org connections and their scopes, and a ready-to-send
+ * admin-consent link (v2 adminconsent grants the scopes it names, so the app
+ * registration does not need them pre-listed).
+ */
+async function getMicrosoftReadiness(domain: string) {
+  const db = createServerClient();
+  const tenantSetting = process.env.MICROSOFT_TENANT_ID?.trim() || 'organizations';
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? '';
+  const redirect = process.env.MICROSOFT_REDIRECT_URI ?? '';
+  const clientId = process.env.MICROSOFT_CLIENT_ID ?? '';
+  const { data: rows } = await db.from('org_integrations').select('org_code, provider, scope, user_email, connected_at, token_expires_at').eq('provider', 'microsoft');
+  const tenantId = await tenantIdForDomain(domain);
+  const consentUrl = tenantId && clientId && redirect
+    ? `https://login.microsoftonline.com/${tenantId}/v2.0/adminconsent?` + new URLSearchParams({
+        client_id: clientId,
+        scope: [...GRAPH_SCOPES.map(s => `https://graph.microsoft.com/${s}`), 'offline_access'].join(' '),
+        redirect_uri: redirect,
+        state: 'adminconsent',
+      }).toString()
+    : null;
+  return {
+    tenantSetting, tenantIsGuid: GUID.test(tenantSetting),
+    redirect, redirectOk: !!appUrl && redirect === `${appUrl.replace(/\/$/, '')}/api/auth/microsoft/callback`,
+    clientIdSet: !!clientId, domain, tenantId, consentUrl,
+    connections: (rows ?? []).map(r => ({
+      org: r.org_code as string, email: (r.user_email as string | null) ?? '—',
+      connectedAt: r.connected_at as string | null,
+      sharepoint: /Sites\.ReadWrite\.All/.test((r.scope as string | null) ?? ''),
+    })),
+  };
+}
+
+export default async function AdminSystemPage({ searchParams }: { searchParams: Promise<{ domain?: string }> }) {
+  const sp = await searchParams;
+  const domain = (sp?.domain ?? 'chicagoyouthcenters.org').trim().toLowerCase();
+  const [{ runs, recentMatches, supabaseOk }, ms] = await Promise.all([getSystemData(), getMicrosoftReadiness(domain)]);
 
   const checks = [
     { label: 'Supabase DB',       ok: supabaseOk,  note: supabaseOk ? 'Connected' : 'Connection error' },
@@ -148,6 +198,54 @@ export default async function AdminSystemPage() {
             </table>
           </div>
         )}
+      </div>
+
+      {/* ── Microsoft 365 readiness ── */}
+      <div style={{ ...CARD, marginTop: '24px' }}>
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+          <h2 style={{ fontSize: '14px', fontWeight: 700, color: '#f1f5f9', margin: 0 }}>Microsoft 365 readiness</h2>
+          <p style={{ fontSize: '12px', color: '#64748b', margin: '4px 0 0' }}>What the shared Data Hub connection depends on, and the one link a tenant admin needs.</p>
+        </div>
+        <div style={{ padding: '14px 20px', display: 'grid', gap: '10px', fontSize: '13px' }}>
+          {[
+            { ok: !ms.tenantIsGuid, label: 'Sign-in authority', note: ms.tenantIsGuid ? `Pinned to one tenant (${ms.tenantSetting.slice(0, 8)}…) — every other organization is blocked. Set MICROSOFT_TENANT_ID to "organizations".` : `${ms.tenantSetting} — any work or school tenant can connect` },
+            { ok: ms.clientIdSet, label: 'App registration', note: ms.clientIdSet ? 'Client ID configured' : 'MICROSOFT_CLIENT_ID missing' },
+            { ok: ms.redirectOk, label: 'Redirect URI', note: ms.redirect ? `${ms.redirect}${ms.redirectOk ? '' : ' — does not match NEXT_PUBLIC_APP_URL/api/auth/microsoft/callback'}` : 'MICROSOFT_REDIRECT_URI missing' },
+          ].map(c => (
+            <div key={c.label} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+              {c.ok ? <CheckCircle size={15} color="#22c55e" style={{ marginTop: 2, flex: 'none' }} /> : <AlertCircle size={15} color="#f87171" style={{ marginTop: 2, flex: 'none' }} />}
+              <div><span style={{ color: '#e2e8f0', fontWeight: 600 }}>{c.label}</span><span style={{ color: '#94a3b8' }}> · {c.note}</span></div>
+            </div>
+          ))}
+          <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: '12px' }}>
+            <p style={{ margin: '0 0 6px', fontSize: '11px', fontWeight: 700, color: '#475569', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Org connections</p>
+            {ms.connections.length === 0
+              ? <p style={{ margin: 0, color: '#94a3b8' }}>None yet. A member connects from Settings → Cloud Storage → Microsoft 365.</p>
+              : ms.connections.map(c => (
+                <div key={c.org} style={{ display: 'flex', gap: '10px', alignItems: 'center', color: '#94a3b8', padding: '3px 0' }}>
+                  <span style={{ color: '#e2e8f0', fontWeight: 600, minWidth: 80 }}>{c.org}</span>
+                  <span>{c.email}</span>
+                  <span style={{ fontSize: '11px', padding: '1px 8px', borderRadius: 999, background: c.sharepoint ? 'rgba(34,197,94,0.12)' : 'rgba(234,179,8,0.12)', color: c.sharepoint ? '#22c55e' : '#eab308' }}>{c.sharepoint ? 'SharePoint scope' : 'files only — reconnect for SharePoint'}</span>
+                  <span style={{ fontSize: '11px', color: '#475569' }}>{c.connectedAt ? new Date(c.connectedAt).toLocaleDateString('en-US') : ''}</span>
+                </div>
+              ))}
+          </div>
+          <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: '12px' }}>
+            <p style={{ margin: '0 0 6px', fontSize: '11px', fontWeight: 700, color: '#475569', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Admin-consent link for {ms.domain}</p>
+            <form method="get" style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
+              <input name="domain" defaultValue={ms.domain} placeholder="organization domain" style={{ flex: 1, maxWidth: 320, padding: '6px 10px', fontSize: 12.5, borderRadius: 6, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.25)', color: '#e2e8f0' }} />
+              <button type="submit" style={{ padding: '6px 12px', fontSize: 12.5, borderRadius: 6, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.06)', color: '#e2e8f0', cursor: 'pointer' }}>Look up</button>
+            </form>
+            {ms.tenantId
+              ? <>
+                  <p style={{ margin: '0 0 8px', color: '#94a3b8' }}>Tenant <code style={{ color: '#e2e8f0' }}>{ms.tenantId}</code>. Send this to their Microsoft 365 administrator; one click approves Fundir for everyone in the organization (files, SharePoint, calendar read). Nothing in Azure needs to be pre-registered.</p>
+                  {ms.consentUrl
+                    ? <textarea readOnly rows={4} value={ms.consentUrl} style={{ width: '100%', fontSize: 11.5, fontFamily: 'ui-monospace, monospace', padding: '8px 10px', borderRadius: 6, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.25)', color: '#cbd5e1', boxSizing: 'border-box' }} />
+                    : <p style={{ margin: 0, color: '#f87171' }}>Client ID or redirect URI missing — fix the checks above first.</p>}
+                </>
+              : <p style={{ margin: 0, color: '#f87171' }}>No Microsoft 365 tenant found for {ms.domain}. Check the spelling, or the organization may not use Microsoft 365.</p>}
+          </div>
+        </div>
       </div>
     </div>
   );
