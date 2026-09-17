@@ -17,7 +17,7 @@ const EMPTY: Live = { steps: 0, enriched: 0, scanned: 0, leads: 0, relationships
 export function RefreshPanel({ open, onClose, onFinished, readOnly }: { open: boolean; onClose: () => void; onFinished: () => Promise<void> | void; readOnly?: boolean }) {
   const [est, setEst] = useState<RefreshEstimate | null>(null);
   const [error, setError] = useState('');
-  const [cats, setCats] = useState<RefreshCategory[]>(['people', 'employers']);
+  const [cats, setCats] = useState<RefreshCategory[]>(['candidates', 'people', 'employers']);
   const [phase, setPhase] = useState<'idle' | 'running' | 'snapshot' | 'done'>('idle');
   const [live, setLive] = useState<Live>(EMPTY);
   const [snapshot, setSnapshot] = useState<{ xlsx?: { name: string; webUrl: string | null }; json?: { name: string; webUrl: string | null }; downloadOnly?: boolean } | null>(null);
@@ -31,7 +31,7 @@ export function RefreshPanel({ open, onClose, onFinished, readOnly }: { open: bo
   const chosen = est?.categories.filter(c => cats.includes(c.key)) ?? [];
   const calls = chosen.reduce((n, c) => n + c.calls, 0), credits = chosen.reduce((n, c) => n + c.credits, 0);
   const share = est ? credits / est.plan.credits : 0;
-  const stepsPlanned = chosen.length ? Math.max(...chosen.map(c => Math.ceil(c.pending / (c.key === 'people' ? 6 : 2)))) : 0;
+  const stepsPlanned = chosen.length ? Math.max(...chosen.map(c => Math.ceil(c.pending / (c.key === 'people' ? 6 : c.key === 'candidates' ? 8 : 2)))) : 0;
 
   async function run() {
     if (!est || readOnly) return;

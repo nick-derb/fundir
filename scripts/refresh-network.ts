@@ -4,8 +4,13 @@
 // the step budget stops progress. Needs .env.local with RAPIDAPI_KEY +
 // Supabase service creds.
 //
-//   npx tsx scripts/refresh-network.ts            # loop to completion
-//   npx tsx scripts/refresh-network.ts --steps 1  # one bounded step (smoke)
+//   npx tsx scripts/refresh-network.ts                 # loop to completion (200 steps max)
+//   npx tsx scripts/refresh-network.ts --steps 1       # one bounded step (smoke)
+//   npx tsx scripts/refresh-network.ts --credits 3000  # stop once ~3,000 credits are spent
+//   npx tsx scripts/refresh-network.ts --only candidates,people   # skip employer scans
+//
+// Steps run candidates (verify web-search URLs, then name + employer search)
+// → profiles → employer scans, so the cheap, high-value work always goes first.
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
@@ -24,26 +29,33 @@ function loadEnv() {
 async function main() {
   loadEnv();
   if (!process.env.RAPIDAPI_KEY) throw new Error('RAPIDAPI_KEY missing from .env.local');
-  const stepsArg = process.argv.indexOf('--steps');
-  const maxSteps = stepsArg > -1 ? Math.max(1, Number(process.argv[stepsArg + 1]) || 1) : 12;
+  const arg = (k: string) => { const i = process.argv.indexOf(k); return i > -1 ? process.argv[i + 1] : undefined; };
+  const maxSteps = Math.max(1, Number(arg('--steps')) || 200);
+  const creditCap = Number(arg('--credits')) || Infinity;
+  const only = (arg('--only') ?? '').split(',').map(s => s.trim()).filter((c): c is RefreshCategory => c === 'candidates' || c === 'people' || c === 'employers');
 
   const { createServerClient } = await import('@/lib/supabase');
   const { runRefreshStep } = await import('@/lib/network/refresh');
+  type RefreshCategory = import('@/lib/network/refresh').RefreshCategory;
   const db = createServerClient();
   const { data: orgRow, error } = await db.from('organizations').select('id').eq('org_code', 'CYC2026').single();
   if (error || !orgRow) throw new Error('CYC org not found: ' + (error?.message ?? ''));
 
-  let totalCalls = 0;
+  let totalCalls = 0, totalCredits = 0;
   for (let i = 1; i <= maxSteps; i++) {
     console.log(`\n— step ${i} —`);
-    const r = await runRefreshStep(orgRow.id as string);
+    const r = await runRefreshStep(orgRow.id as string, { categories: only });
     totalCalls += r.apiCalls;
+    totalCredits += r.enriched.length * 2 + Math.max(0, r.apiCalls - r.enriched.length);
+    if (r.verified.length) console.log(`  verified URLs: ${r.verified.join(', ')}`);
+    if (r.discovered.length) console.log(`  found URLs by name + employer: ${r.discovered.join(', ')}`);
     if (r.enriched.length) console.log(`  read profiles: ${r.enriched.join(', ')}`);
     for (const s of r.scanned) console.log(`  scanned ${s.company}: ${s.leads} warm path${s.leads === 1 ? '' : 's'}`);
     for (const e of r.errors) console.log(`  ! ${e}`);
-    console.log(`  ${r.apiCalls} API calls · pending: ${r.pendingEnrich} profiles, ${r.pendingScans} employers`);
-    if (r.done) { console.log(`\nDone — network fully refreshed. Total API calls this run: ${totalCalls}.`); return; }
-    if (!r.enriched.length && !r.scanned.length) {
+    console.log(`  ${r.apiCalls} API calls (~${totalCredits} credits so far) · pending: ${r.pendingCandidates} URLs, ${r.pendingEnrich} profiles, ${r.pendingScans} employers`);
+    if (r.done) { console.log(`\nDone — network fully refreshed. Total API calls this run: ${totalCalls} (~${totalCredits} credits).`); return; }
+    if (totalCredits >= creditCap) { console.log(`\nCredit cap reached (~${totalCredits} of ${creditCap}). Re-run to continue.`); return; }
+    if (!r.enriched.length && !r.scanned.length && !r.discovered.length) {
       console.log('\nNo progress this step (see errors above) — stopping to protect the credit budget.');
       return;
     }

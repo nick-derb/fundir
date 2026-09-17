@@ -16,7 +16,7 @@
 
 import { createServerClient } from '@/lib/supabase';
 import {
-  enrichProfile, searchEmployees, resolveCompany, canonicalLinkedInUrl, isLinkedInConfigured, experienceYears,
+  enrichProfile, searchEmployees, resolveCompany, isLinkedInConfigured,
   CallBudget, type EmployeeHit, type CompanyMatch,
 } from '@/lib/network/linkedin';
 import { normalizeOrgName } from '@/lib/network/normalize';
@@ -43,10 +43,13 @@ export async function resolveCompanyMemo(db: ReturnType<typeof createServerClien
   }
   return match;
 }
-import { ensureSource, resolveEmployers } from '@/lib/network/bridge';
+import { resolveEmployers } from '@/lib/network/bridge';
 import { deriveRelationships } from '@/lib/network/edges';
+import { OWN_KINDS, ENRICH_CREDITS as CANDIDATE_ENRICH_CREDITS, DISCOVER_CALLS, applyProfile, linkedinSource, verifyCandidates, discoverByEmployer, candidateCounts } from '@/lib/network/candidates';
 
 const ENRICH_PER_STEP    = 6;    // profile enrichments per click (~2 credits each)
+const VERIFY_PER_STEP    = 8;    // candidate URLs checked per click (~2 credits each; a pass = an enriched person)
+const DISCOVER_PER_STEP  = 2;    // provider name+employer searches per click (~14 calls each)
 const SCANS_PER_STEP     = 2;    // employer searches per click (search polling is slow)
 const CALLS_PER_STEP     = 40;   // hard budget for one step, guide §3.4
 const LEADS_PER_COMPANY  = 8;    // keep only the strongest paths per employer
@@ -86,7 +89,7 @@ export async function getNetworkState(orgId: string): Promise<NetworkState> {
   const [peopleRes, leadsRes, runRes] = await Promise.all([
     db.from('network_people')
       .select('id, kind, name, linkedin_url, headline, current_title, current_org, location, summary, note, status, enriched_at, network_employments(org_name, title, started, ended, is_current)')
-      .eq('org_id', orgId).in('kind', ['board', 'staff'])
+      .eq('org_id', orgId).in('kind', [...OWN_KINDS])
       .order('created_at'),
     db.from('network_leads')
       .select('id, score, via_org, reason, person:network_people!network_leads_person_id_fkey(id, name, linkedin_url, headline, current_title, current_org, location, status), via:network_people!network_leads_via_person_id_fkey(id, name)')
@@ -157,6 +160,11 @@ export interface RefreshStepResult {
   scanned: { company: string; leads: number }[];
   leadsFound: number;
   apiCalls: number;
+  /** Candidate URLs that the live profile corroborated this step (also counted in `enriched`). */
+  verified: string[];
+  /** People whose URL was found this step by name + employer search (verified next step). */
+  discovered: string[];
+  pendingCandidates: number;
   pendingEnrich: number;
   pendingScans: number;
   relationshipsFound: number;
@@ -164,7 +172,7 @@ export interface RefreshStepResult {
   errors: string[];
 }
 
-export type RefreshCategory = 'people' | 'employers';
+export type RefreshCategory = 'candidates' | 'people' | 'employers';
 
 // ── Pre-flight: what a full refresh would do and cost, before a single call ──
 export interface RefreshEstimate {
@@ -185,20 +193,23 @@ const ENRICH_CREDITS = 2, SCAN_CALLS = 11;
 export async function estimateRefresh(orgId: string): Promise<RefreshEstimate> {
   const db = createServerClient();
   const staleCut = Date.now() - ENRICH_STALE_DAYS * 86400000;
-  const [{ data: own }, { companiesPending }, { data: run }, { data: snap }] = await Promise.all([
-    db.from('network_people').select('id, linkedin_url, enriched_at').eq('org_id', orgId).in('kind', ['board', 'staff']),
+  const [{ data: own }, { companiesPending }, cand, { data: run }, { data: snap }] = await Promise.all([
+    db.from('network_people').select('id, linkedin_url, enriched_at').eq('org_id', orgId).in('kind', [...OWN_KINDS]),
     pendingCompanies(orgId),
+    candidateCounts(db, orgId),
     db.from('network_refresh_runs').select('started_at, api_calls, status').eq('org_id', orgId).order('started_at', { ascending: false }).limit(1).maybeSingle(),
     db.from('network_refresh_runs').select('notes').eq('org_id', orgId).ilike('notes', '%snapshot%').order('started_at', { ascending: false }).limit(1).maybeSingle(),
   ]);
   const withUrl = (own ?? []).filter(p => p.linkedin_url);
   const pendingEnrich = withUrl.filter(p => !p.enriched_at || new Date(p.enriched_at as string).getTime() < staleCut).length;
+  const candCredits = cand.pendingPeople * CANDIDATE_ENRICH_CREDITS + cand.discoverablePeople * DISCOVER_CALLS;
   const cats: RefreshEstimate['categories'] = [
+    { key: 'candidates', label: 'Find + verify LinkedIn URLs', pending: cand.pendingPeople + cand.discoverablePeople, callsEach: 1, creditsEach: CANDIDATE_ENRICH_CREDITS, calls: cand.pendingPeople + cand.discoverablePeople * DISCOVER_CALLS, credits: candCredits, note: `${cand.pendingPeople} people have a candidate URL from web search to verify (one profile read each); ${cand.discoverablePeople} more have an employer to search by name (~${DISCOVER_CALLS} calls each). A verified URL is also a read profile.` },
     { key: 'people', label: 'CYC profiles', pending: pendingEnrich, callsEach: 1, creditsEach: ENRICH_CREDITS, calls: pendingEnrich, credits: pendingEnrich * ENRICH_CREDITS, note: `${withUrl.length} people have a LinkedIn URL; ${pendingEnrich} unread or older than ${ENRICH_STALE_DAYS} days` },
     { key: 'employers', label: 'Employer scans', pending: companiesPending.length, callsEach: SCAN_CALLS, creditsEach: SCAN_CALLS, calls: companiesPending.length * SCAN_CALLS, credits: companiesPending.length * SCAN_CALLS, note: `${companiesPending.length} employers from career histories not scanned in ${SCAN_STALE_DAYS} days` },
   ];
   const totalCalls = cats.reduce((n, c) => n + c.calls, 0), totalCredits = cats.reduce((n, c) => n + c.credits, 0);
-  const steps = Math.max(Math.ceil(pendingEnrich / ENRICH_PER_STEP), Math.ceil(companiesPending.length / SCANS_PER_STEP));
+  const steps = Math.max(Math.ceil(pendingEnrich / ENRICH_PER_STEP), Math.ceil(companiesPending.length / SCANS_PER_STEP), Math.ceil(cand.pendingPeople / VERIFY_PER_STEP) + Math.ceil(cand.discoverablePeople / DISCOVER_PER_STEP));
   return {
     configured: isLinkedInConfigured(), plan: PLAN, categories: cats, totalCalls, totalCredits, steps,
     creditShare: totalCredits / PLAN.credits, marginalUsd: Math.max(0, totalCredits - PLAN.credits) * (PLAN.monthlyUsd / PLAN.credits), claudeUsd: 0,
@@ -213,16 +224,39 @@ export async function runRefreshStep(orgId: string, opts: { categories?: Refresh
   const budget = new CallBudget(CALLS_PER_STEP);
   const errors: string[] = [];
   const now = Date.now();
-  const cats = new Set<RefreshCategory>(opts.categories?.length ? opts.categories : ['people', 'employers']);
+  const cats = new Set<RefreshCategory>(opts.categories?.length ? opts.categories : ['candidates', 'people', 'employers']);
 
   const { data: runRow } = await db.from('network_refresh_runs')
     .insert({ org_id: orgId, categories: [...cats] }).select('id').single();
   const runId = runRow?.id as string | undefined;
 
+  // ── 0. Candidate URLs: verify web-search candidates (one read each = a
+  //      verified, enriched person), then search by name + employer for the
+  //      people who still have nothing. ───────────────────────────────────────
+  const verified: string[] = [];
+  const discovered: string[] = [];
+  if (cats.has('candidates')) {
+    try {
+      const v = await verifyCandidates(db, orgId, budget, VERIFY_PER_STEP);
+      verified.push(...v.verified, ...v.probable);
+      errors.push(...v.errors);
+      if (v.rejected) errors.push(`${v.rejected} candidate URL${v.rejected === 1 ? '' : 's'} rejected (profile did not corroborate the person)`);
+      // Only search once the web-search candidates are drained, so credits go to the cheap check first.
+      if (!v.verified.length && !v.rejected && !v.errors.length) {
+        const d = await discoverByEmployer(db, orgId, budget, DISCOVER_PER_STEP, resolveCompanyMemo);
+        discovered.push(...d.found);
+        errors.push(...d.errors);
+        if (d.none || d.ambiguous || d.unresolvable) errors.push(`name search: ${d.none} not found, ${d.ambiguous} ambiguous, ${d.unresolvable} employer not on LinkedIn`);
+      }
+    } catch (e) {
+      errors.push(`candidates: ${e instanceof Error ? e.message : 'failed'}`);
+    }
+  }
+
   // ── 1. Enrich CYC people whose profile is missing or stale ───────────────
   const { data: own } = await db.from('network_people')
     .select('id, name, linkedin_url, enriched_at')
-    .eq('org_id', orgId).in('kind', ['board', 'staff'])
+    .eq('org_id', orgId).in('kind', [...OWN_KINDS])
     .not('linkedin_url', 'is', null);
 
   const staleCut = now - ENRICH_STALE_DAYS * 86400000;
@@ -230,38 +264,12 @@ export async function runRefreshStep(orgId: string, opts: { categories?: Refresh
     !p.enriched_at || new Date(p.enriched_at as string).getTime() < staleCut) : [];
   const toEnrich = pendingEnrichAll.slice(0, ENRICH_PER_STEP);
 
-  const enriched: string[] = [];
-  const linkedinSource = toEnrich.length
-    ? await ensureSource(db, { source_type: 'linkedin_api', source_name: 'LinkedIn profile via RapidAPI (Fresh LinkedIn Profile Data)', raw_reference: 'linkedin_api:fresh', confidence: 0.85 })
-    : null;
+  const enriched: string[] = [...verified];   // a verified candidate is a read profile too
+  const sourceId = toEnrich.length ? await linkedinSource(db) : null;
   for (const p of toEnrich) {
     try {
       const prof = await enrichProfile(p.linkedin_url as string, budget);
-      await db.from('network_people').update({
-        headline: prof.headline, current_title: prof.currentTitle, current_org: prof.currentOrg,
-        location: prof.location, summary: prof.summary,
-        enriched_at: new Date().toISOString(), verification: 'verified',
-      }).eq('id', p.id);
-      // Replace THIS SOURCE's career history wholesale — provider-owned data.
-      // Public-bio rows (other source_id) are left in place.
-      await db.from('network_employments').delete().eq('person_id', p.id).or(`source_id.eq.${linkedinSource},source_id.is.null`);
-      if (prof.experiences.length) {
-        await db.from('network_employments').insert(prof.experiences.map(e => {
-          const y = experienceYears(e);
-          return {
-            person_id: p.id, org_name: e.org, title: e.title,
-            started: e.started, ended: e.ended, is_current: e.isCurrent,
-            start_year: y.startYear, end_year: y.endYear, source_id: linkedinSource,
-          };
-        }));
-      }
-      await db.from('network_educations').delete().eq('person_id', p.id).eq('source_id', linkedinSource);
-      if (prof.educations.length) {
-        await db.from('network_educations').insert(prof.educations.map(s => ({
-          person_id: p.id, school_name: s.school, degree: s.degree, field: s.field,
-          start_year: s.startYear, end_year: s.endYear, source_id: linkedinSource,
-        })));
-      }
+      await applyProfile(db, p.id as string, prof, sourceId!, { verification: 'verified' });
       enriched.push(p.name as string);
     } catch (e) {
       errors.push(`${p.name}: ${e instanceof Error ? e.message : 'enrich failed'}`);
@@ -304,8 +312,10 @@ export async function runRefreshStep(orgId: string, opts: { categories?: Refresh
   }
 
   const after = cats.has('employers') ? await pendingCompanies(orgId) : { companiesPending: [] as { display: string; viaPersonIds: string[] }[] };
-  const pendingEnrich = Math.max(0, pendingEnrichAll.length - enriched.length);
+  const pendingEnrich = Math.max(0, pendingEnrichAll.length - (enriched.length - verified.length));
   const pendingScans = after.companiesPending.length;
+  const candAfter = cats.has('candidates') ? await candidateCounts(db, orgId) : { pendingPeople: 0, discoverablePeople: 0 };
+  const pendingCandidates = candAfter.pendingPeople + candAfter.discoverablePeople;
 
   // ── 3. Fold new facts into the graph: resolve employers → re-derive edges ─
   let relationshipsFound = 0;
@@ -329,20 +339,22 @@ export async function runRefreshStep(orgId: string, opts: { categories?: Refresh
       // Enrich is a known 2 credits/call; scan calls are counted 1:1 until the plan's
       // per-endpoint pricing is confirmed against the RapidAPI dashboard.
       rapidapi_credits: enriched.length * 2 + Math.max(0, budget.used - enriched.length),
-      categories: ['people', ...(scanned.length ? ['employers'] : [])],
+      categories: [...(verified.length || discovered.length ? ['candidates'] : []), 'people', ...(scanned.length ? ['employers'] : [])],
       profiles_enriched: enriched.length,
       companies_scanned: scanned.length,
+      urls_found: discovered.length,
       leads_found: leadsFound,
       relationships_found: relationshipsFound,
-      status: errors.length && !enriched.length && !scanned.length ? 'error' : 'done',
+      status: errors.length && !enriched.length && !scanned.length && !discovered.length ? 'error' : 'done',
       notes: errors.slice(0, 5).join(' | ') || null,
     }).eq('id', runId);
   }
 
   return {
     enriched, scanned, leadsFound, apiCalls: budget.used,
+    verified, discovered, pendingCandidates,
     pendingEnrich, pendingScans, relationshipsFound,
-    done: pendingEnrich === 0 && pendingScans === 0,
+    done: pendingEnrich === 0 && pendingScans === 0 && pendingCandidates === 0,
     errors,
   };
 }
@@ -356,7 +368,7 @@ async function pendingCompanies(orgId: string): Promise<{
   const [{ data: people }, { data: scans }] = await Promise.all([
     db.from('network_people')
       .select('id, network_employments(org_name)')
-      .eq('org_id', orgId).in('kind', ['board', 'staff']),
+      .eq('org_id', orgId).in('kind', [...OWN_KINDS]),
     db.from('network_org_scans').select('company, scanned_at').eq('org_id', orgId),
   ]);
 
@@ -395,7 +407,7 @@ async function storeLeads(
 
   // Don't rediscover CYC's own people as leads.
   const { data: ownRows } = await db.from('network_people')
-    .select('linkedin_url').eq('org_id', orgId).in('kind', ['board', 'staff']);
+    .select('linkedin_url').eq('org_id', orgId).in('kind', [...OWN_KINDS]);
   const ownUrls = new Set((ownRows ?? []).map(r => r.linkedin_url).filter(Boolean));
 
   const viaCount = company.viaPersonIds.length;
