@@ -36,9 +36,13 @@ export async function GET(req: NextRequest) {
 
   if (error || !code) return fail('microsoft_denied');
 
+  // Must match what /api/auth/microsoft asked the user to consent to: the v2
+  // token endpoint only issues the scopes named here, so leaving
+  // Sites.ReadWrite.All out silently produced a token that could never reach
+  // SharePoint and every org fell back to a personal OneDrive.
   const scope = kind === 'user'
     ? 'offline_access User.Read Calendars.Read'
-    : 'offline_access User.Read Files.ReadWrite';
+    : 'offline_access User.Read Files.ReadWrite Sites.ReadWrite.All';
   const tenant = process.env.MICROSOFT_TENANT_ID ?? 'organizations';
 
   const tokenRes = await fetch(

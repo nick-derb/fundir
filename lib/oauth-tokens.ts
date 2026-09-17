@@ -188,10 +188,15 @@ export async function getValidUserToken(
   }
 }
 
+/** The org connection's scopes — keep in sync with app/api/auth/microsoft/route.ts. */
+export const MS_ORG_SCOPE = 'Files.ReadWrite Sites.ReadWrite.All offline_access User.Read';
+/** What a connection made before the Sites scope existed can still refresh with. */
+const MS_ORG_SCOPE_LEGACY = 'Files.ReadWrite offline_access User.Read';
+
 async function refreshAccessToken(
   provider: Provider,
   refreshToken: string,
-  msScope = 'Files.ReadWrite offline_access User.Read',
+  msScope = MS_ORG_SCOPE,
 ): Promise<{ access_token: string; expires_in?: number; refresh_token?: string; scope?: string }> {
   if (provider === 'google') {
     const res = await fetch('https://oauth2.googleapis.com/token', {
@@ -229,7 +234,14 @@ async function refreshAccessToken(
       },
     );
     const data = await res.json();
-    if (!data.access_token) throw new Error('Microsoft refresh failed');
+    if (!data.access_token) {
+      // A refresh token granted before Sites.ReadWrite.All was requested cannot
+      // mint a token that includes it. Fall back to the scopes it was granted
+      // with so the old connection keeps working (on the personal drive) until
+      // someone reconnects from Settings.
+      if (msScope === MS_ORG_SCOPE) return refreshAccessToken(provider, refreshToken, MS_ORG_SCOPE_LEGACY);
+      throw new Error('Microsoft refresh failed');
+    }
     return data;
   }
 }
