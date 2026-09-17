@@ -23,17 +23,17 @@ import { switchAdminOrg } from '@/actions/admin-org';
 import { bundledLogoFor } from '@/lib/org-logo';
 import { UserMenu } from '@/components/user-menu';
 
-// New dashboard IA (Claude Design). Prospecting / Cultivation List /
-// Connections / Applications are placeholder routes until designed.
+// New dashboard IA (Claude Design). Applications is still a placeholder, so
+// during the beta only admins see it in the sidebar (the route stays live).
 const NAV_ITEMS = [
   { href: '/dashboard',    label: 'Dashboard',        icon: LayoutDashboard },
   { href: '/prospecting',  label: 'Prospecting',      icon: Radar           },
   { href: '/connections',  label: 'Connections',      icon: Share2          },
   { href: '/data',         label: 'Data Hub',         icon: Database        },
-  { href: '/applications', label: 'Applications',     icon: FileText        },
+  { href: '/applications', label: 'Applications',     icon: FileText,       adminOnly: true },
   { href: '/reports',      label: 'Reports',          icon: TrendingUp      },
   { href: '/feedback',     label: 'Feedback',         icon: MessageSquare   },
-];
+] as { href: string; label: string; icon: React.ComponentType<{ className?: string }>; adminOnly?: boolean }[];
 
 const SETTINGS_ITEMS = [
   { href: '/org',      label: 'Org Profile', icon: Building2 },
@@ -304,7 +304,7 @@ export function AppShell({
 
         {/* Main nav — labels hide in the rail; the title attribute keeps them a hover away. */}
         <nav className={`flex-1 py-3 overflow-y-auto ${collapsed ? 'px-3 md:px-2' : 'px-3'}`}>
-          {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
+          {NAV_ITEMS.filter(item => !item.adminOnly || isAdmin).map(({ href, label, icon: Icon }) => {
             const active = isActive(href);
             return (
               <Link key={href} href={href} title={collapsed ? label : undefined}
