@@ -18,7 +18,11 @@ export interface SubmissionRow {
 }
 export interface ImportPreview {
   file_rows: number; mapped: number; collapsed: number; funders: number; awarded: number; rejected: number;
-  new: number; updated: number; unchanged: number; removed: number;
+  new: number; updated: number; unchanged: number;
+  /** Pipeline rows (researching / planned / drafting) the export no longer carries — removed only when asked. */
+  removed: number;
+  /** Submitted, decided or abandoned rows the export no longer carries — always kept as history. */
+  kept_history: number;
   sample_new: Array<{ opportunity: string; funder: string; status: string | null }>;
   sample_updated: Array<{ opportunity: string; funder: string; changes: string[] }>;
   sample_removed: Array<{ opportunity: string; funder: string; status: string | null }>;
@@ -31,11 +35,20 @@ const str = (v: unknown) => { if (v == null) return null; const s = String(v).tr
 const isoDate = (v: unknown) => { if (v == null || v === '') return null; if (v instanceof Date && !Number.isNaN(v.getTime())) return v.toISOString().slice(0, 10); if (typeof v === 'number') { const d = new Date(Math.round((v - 25569) * 86400 * 1000)); return Number.isNaN(d.getTime()) ? null : d.toISOString().slice(0, 10); } const d = new Date(String(v)); return Number.isNaN(d.getTime()) ? null : d.toISOString().slice(0, 10); };
 const outcomeOf = (status: string | null): SubmissionRow['outcome'] => { const s = (status ?? '').toLowerCase(); return s.startsWith('awarded') ? 'awarded' : s === 'declined' ? 'rejected' : null; };
 const stageOf = (status: string | null) => { const s = (status ?? '').toLowerCase(); return s.startsWith('awarded') ? 'awarded' : s === 'declined' ? 'rejected' : s === 'abandoned' ? 'abandoned' : s.includes('submitted') ? 'submitted' : s.includes('in progress') ? 'drafting' : s === 'planned' ? 'planned' : 'researching'; };
+/** CSV exports are UTF-8; SheetJS assumes Windows-1252 for a bare buffer, which mangles apostrophes and dashes. Decode text ourselves. */
+export function readWorkbook(buffer: Buffer): XLSX.WorkBook {
+  const isZip = buffer.length > 3 && buffer[0] === 0x50 && buffer[1] === 0x4b;
+  const isOle = buffer.length > 3 && buffer[0] === 0xd0 && buffer[1] === 0xcf;
+  if (isZip || isOle) return XLSX.read(buffer, { type: 'buffer', cellDates: true });
+  const text = buffer.toString('utf8').replace(/^\uFEFF/, '');
+  return XLSX.read(text, { type: 'string', cellDates: true, raw: true });
+}
+
 const keyOf = (r: { opportunity_name: string; funder_name: string }) => `${r.opportunity_name}|||${r.funder_name}`;
 
 /** Parse the workbook and map rows; returns the mapped rows plus what the parser noticed. */
 export function parseInstrumentl(buffer: Buffer): { rows: SubmissionRow[]; file_rows: number; collapsed: number; missing_columns: string[] } {
-  const wb = XLSX.read(buffer, { type: 'buffer', cellDates: true });
+  const wb = readWorkbook(buffer);
   const ws = wb.Sheets[wb.SheetNames[0]];
   if (!ws) throw new Error('The workbook has no sheets');
   const raw = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws, { defval: '' });
@@ -73,23 +86,36 @@ export async function previewInstrumentl(db: Db, orgId: string, buffer: Buffer):
     if (changes.length) { updated++; if (sample_updated.length < 6) sample_updated.push({ opportunity: r.opportunity_name, funder: r.funder_name, changes }); }
     else unchanged++;
   }
-  const removedRows = (existing ?? []).filter(e => (e.source ?? 'instrumentl') === 'instrumentl' && !fileKeys.has(keyOf(e as { opportunity_name: string; funder_name: string })));
+  // An Instrumentl export is often a filtered view (one project, one fiscal year, "active" only),
+  // so a row missing from the file is not proof it is gone. Submitted applications, decisions
+  // and abandonments are history and are always kept; only never-submitted pipeline rows
+  // (researching / planned / drafting) are offered for removal.
+  const missing = (existing ?? []).filter(e => (e.source ?? 'instrumentl') === 'instrumentl' && !fileKeys.has(keyOf(e as { opportunity_name: string; funder_name: string })));
+  const removedRows = missing.filter(e => isPipeline(e.stage as string | null));
   return {
     rows: parsed.rows, file_rows: parsed.file_rows, mapped: parsed.rows.length + parsed.collapsed, collapsed: parsed.collapsed,
     funders: new Set(parsed.rows.map(r => r.funder_name)).size, awarded: parsed.rows.filter(r => r.outcome === 'awarded').length, rejected: parsed.rows.filter(r => r.outcome === 'rejected').length,
-    new: added, updated, unchanged, removed: removedRows.length,
+    new: added, updated, unchanged, removed: removedRows.length, kept_history: missing.length - removedRows.length,
     sample_new, sample_updated, sample_removed: removedRows.slice(0, 6).map(e => ({ opportunity: e.opportunity_name as string, funder: e.funder_name as string, status: (e.status as string | null) ?? null })),
     missing_columns: parsed.missing_columns,
   };
 }
 
-/** Replace the org's Instrumentl-sourced submissions with the file's rows. */
-export async function commitInstrumentl(db: Db, orgId: string, buffer: Buffer): Promise<{ written: number; removed: number; preview: ImportPreview }> {
+const PIPELINE_STAGES = new Set(['researching', 'planned', 'drafting']);
+const isPipeline = (stage: string | null) => PIPELINE_STAGES.has(stage ?? 'researching');
+
+/**
+ * Upsert the file's rows over the org's Instrumentl-sourced submissions. History (submitted,
+ * awarded, declined, abandoned) is never deleted; pipeline rows the export no longer carries
+ * are deleted only with `prune`.
+ */
+export async function commitInstrumentl(db: Db, orgId: string, buffer: Buffer, opts: { prune?: boolean } = {}): Promise<{ written: number; removed: number; kept_history: number; preview: ImportPreview }> {
   const { rows, ...preview } = await previewInstrumentl(db, orgId, buffer);
   const fileKeys = new Set(rows.map(keyOf));
-  // Remove instrumentl rows that the new export no longer carries (the file is the source of truth).
-  const { data: existing } = await db.from('cyc_grant_submissions').select('id, opportunity_name, funder_name, source').eq('org_id', orgId).limit(5000);
-  const gone = (existing ?? []).filter(e => (e.source ?? 'instrumentl') === 'instrumentl' && !fileKeys.has(keyOf(e as { opportunity_name: string; funder_name: string }))).map(e => e.id as string);
+  const { data: existing } = await db.from('cyc_grant_submissions').select('id, opportunity_name, funder_name, source, stage').eq('org_id', orgId).limit(5000);
+  const gone = opts.prune
+    ? (existing ?? []).filter(e => (e.source ?? 'instrumentl') === 'instrumentl' && isPipeline(e.stage as string | null) && !fileKeys.has(keyOf(e as { opportunity_name: string; funder_name: string }))).map(e => e.id as string)
+    : [];
   for (let i = 0; i < gone.length; i += 200) await db.from('cyc_grant_submissions').delete().in('id', gone.slice(i, i + 200));
   let written = 0;
   for (let i = 0; i < rows.length; i += 400) {
@@ -97,5 +123,5 @@ export async function commitInstrumentl(db: Db, orgId: string, buffer: Buffer): 
     if (error) throw new Error(error.message);
     written += data?.length ?? 0;
   }
-  return { written, removed: gone.length, preview };
+  return { written, removed: gone.length, kept_history: preview.kept_history, preview };
 }

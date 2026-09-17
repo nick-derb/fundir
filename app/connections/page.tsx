@@ -42,7 +42,7 @@ export default async function ConnectionsPage() {
   const [boardRes, cultRes, subRes, network, leads, insights] = await Promise.all([
     db.from('funder_board_members').select('foundation_name, member_name, title, connection_to_cyc, connection_type, who_knows_them, outreach_status').eq('org_id', org).order('foundation_name'),
     db.from('cyc_cultivation').select('foundation_name, funder_type, total_assets, funding_focus, notes').eq('org_id', org),
-    db.from('cyc_grant_submissions').select('funder_name, outcome, amount_awarded, status').eq('org_id', org),
+    db.from('cyc_grant_submissions').select('funder_name, outcome, amount_awarded, status, stage').eq('org_id', org),
     getNetworkState(org),
     listLeads(db, org).catch(() => []),
     listInsights(db, org).catch(() => []),
@@ -55,14 +55,18 @@ export default async function ConnectionsPage() {
       funderType: c.funder_type ?? '', assets: money(c.total_assets), focus: c.funding_focus ?? '', notes: c.notes ?? '',
     });
   }
-  // CYC's funding relationship per funder (from real Instrumentl history).
-  const fundMap = new Map<string, { awarded: number; applied: number; amount: number }>();
+  // CYC's funding relationship per funder (from real Instrumentl history). A tracker
+  // row is only an application once something was submitted; a "Researching" or
+  // "Outreach" row is the pipeline, and must never read as "CYC has applied".
+  const fundMap = new Map<string, { awarded: number; applied: number; declined: number; pipeline: number; amount: number }>();
   for (const s of subRes.data ?? []) {
     const k = norm(s.funder_name);
     if (!k) continue;
-    const f = fundMap.get(k) ?? { awarded: 0, applied: 0, amount: 0 };
+    const f = fundMap.get(k) ?? { awarded: 0, applied: 0, declined: 0, pipeline: 0, amount: 0 };
     if (s.outcome === 'awarded') { f.awarded++; f.amount += Number(s.amount_awarded) || 0; }
-    else f.applied++;
+    else if (s.outcome === 'rejected') f.declined++;
+    else if (s.stage === 'submitted') f.applied++;
+    else f.pipeline++;
     fundMap.set(k, f);
   }
 
@@ -87,7 +91,7 @@ export default async function ConnectionsPage() {
       assets: cult?.assets || '',
       fundingFocus: cult?.focus || '',
       notes: cult?.notes || '',
-      cycFunded: fund ? (fund.awarded > 0 ? 'awarded' : 'applied') : null,
+      cycFunded: !fund ? null : fund.awarded > 0 ? 'awarded' : fund.applied > 0 ? 'applied' : fund.declined > 0 ? 'declined' : 'pipeline',
       cycAmount: fund?.amount ? money(fund.amount) : '',
     };
   });

@@ -17,7 +17,7 @@ export interface CnPerson {
   connectionToCyc: string; connectionType: string; whoKnows: string; outreachStatus: string;
   warm: boolean; awaiting: boolean;
   funderType: string; assets: string; fundingFocus: string; notes: string;
-  cycFunded: 'awarded' | 'applied' | null; cycAmount: string;
+  cycFunded: 'awarded' | 'applied' | 'declined' | 'pipeline' | null; cycAmount: string;
 }
 export interface CnKpis { board: number; foundations: number; warm: number; awaiting: number; }
 
@@ -170,7 +170,7 @@ export function ConnectionsView({ people, kpis }: { people: CnPerson[]; kpis: Cn
                 </div>
                 <div style={{ border: '1px solid var(--border-hairline)', borderRadius: 'var(--radius-kpi)', padding: '11px 13px', background: 'var(--bg-page)' }}>
                   <p className="fd-eyebrow" style={{ color: 'var(--text-tertiary)', margin: '0 0 6px' }}>Funding</p>
-                  <p style={{ margin: '0 0 6px', fontSize: 12.5, lineHeight: 1.5 }}>{person.cycFunded === 'awarded' ? `${person.foundation} has funded CYC${person.cycAmount ? ` (${person.cycAmount})` : ''}.` : person.cycFunded === 'applied' ? `CYC has applied to ${person.foundation}, no award yet.` : `No CYC grant from ${person.foundation} on record.`}</p>
+                  <p style={{ margin: '0 0 6px', fontSize: 12.5, lineHeight: 1.5 }}>{person.cycFunded === 'awarded' ? `${person.foundation} has funded CYC${person.cycAmount ? ` (${person.cycAmount})` : ''}.` : person.cycFunded === 'applied' ? `CYC has applied to ${person.foundation}; no decision yet.` : person.cycFunded === 'declined' ? `CYC applied to ${person.foundation} and was declined.` : person.cycFunded === 'pipeline' ? `${person.foundation} is on CYC's Instrumentl radar (researching / outreach); no application yet.` : `No CYC grant from ${person.foundation} on record.`}</p>
                   <span className="fd-mono" style={{ fontSize: 9, letterSpacing: '.05em', color: 'var(--accent)' }}>Instrumentl history</span>
                 </div>
               </div>

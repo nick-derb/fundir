@@ -12,6 +12,7 @@
 
 import { StrategyResources } from '@/components/strategy-resources';
 import { InstrumentlCard } from '@/components/instrumentl-card';
+import { CultivationCard } from '@/components/cultivation-card';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Search, SlidersHorizontal, Upload, UploadCloud, X, MoreVertical, FileText,
@@ -194,13 +195,22 @@ export function DataHubView({ orgName, userEmail }: { orgName: string; userEmail
   for (const c of counts) if (c.files === 0) gaps.push(`No files in ${c.label}`);
 
   if (connected === false) {
+    // The two workbook imports write to Fundir's own tables, so they work before
+    // (and without) Microsoft 365. Only document storage needs the connection.
     return (
-      <div className="px-6 md:px-8 py-10 max-w-3xl mx-auto">
+      <div className="px-6 md:px-8 py-10 max-w-3xl mx-auto space-y-5">
+        <div>
+          <p className="fd-eyebrow text-tertiary mb-2.5">{orgName}</p>
+          <h1 style={{ fontFamily: SERIF, fontWeight: 400, fontSize: 'clamp(1.9rem,3vw,2.5rem)', lineHeight: 1.04, letterSpacing: '-.018em', margin: 0 }}>Data hub</h1>
+          <p className="mt-2.5 text-[13.5px] leading-relaxed text-secondary max-w-[62ch]">Refresh the two spreadsheets Fundir runs on here. Nothing is written until you have seen what would change.</p>
+        </div>
+        <InstrumentlCard />
+        <CultivationCard />
         <div className="bg-surface border border-hairline rounded-xl p-8 text-center">
           <UploadCloud className="w-8 h-8 text-tertiary mx-auto mb-4" />
-          <h2 className="text-[17px] font-semibold text-primary mb-2">Microsoft 365 isn’t connected</h2>
+          <h2 className="text-[17px] font-semibold text-primary mb-2">Document storage needs Microsoft 365</h2>
           <p className="text-[13px] text-secondary mb-5">
-            The Data Hub stores documents and metrics in your organization’s shared OneDrive folder.
+            Narratives, financials and board documents are stored in your organization’s shared SharePoint / OneDrive folder. The two imports above work without it.
           </p>
           <a href="/settings" className="inline-flex items-center gap-2 h-9 px-4 rounded-md bg-accent text-white text-[13px] font-semibold">
             Connect in Settings
@@ -304,8 +314,9 @@ export function DataHubView({ orgName, userEmail }: { orgName: string; userEmail
             {/* ── Grant strategy resources: guides + intake forms, embedded ── */}
             <StrategyResources />
 
-            {/* ── Instrumentl export: swappable from the app ── */}
+            {/* ── Workbook imports: swappable from the app ── */}
             <InstrumentlCard />
+            <CultivationCard />
 
             {/* ── Reading now (real upload + indexing) ── */}
             {queue.length > 0 && (
