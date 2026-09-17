@@ -75,6 +75,13 @@ explicit confirmation from the user. All confirmed defaults documented inline.
 
 **Remaining budget:** ~$48.66 (against the $50 self-imposed cap; the Anthropic balance is $90).
 
+**RapidAPI plan (2026-09-17):** ~30 credits spent of 4,500 with the cycle ending this month
+(unused credits do not roll over). The "candidates" refresh stage (verify web-search URLs →
+name + employer search → profile reads → employer scans) is the plan for spending the rest:
+52 staged candidates ≈ 105 credits; 109 name + employer searches ≈ 1,500 calls; each new
+verified person adds ~5 employers to scan at ~11 calls each. All of it is bounded per step and
+memoized so nothing is re-spent.
+
 **RapidAPI ledger (separate — Pro plan, $45/mo, 4,500 credits):** ~20 calls before Phase 5; Phase 5
 URL discovery pilot (provider search, 0 stored) ≈ 30 calls; URL verification of the 4 officers
 (5 enrich calls) = 10 credits; one refresh step (4 profile reads + employer scans) = 25 calls.
