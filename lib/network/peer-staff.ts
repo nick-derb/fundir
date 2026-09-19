@@ -128,7 +128,7 @@ export interface PeerStaffStepResult {
  * then read up to `maxEnrich` unread peer-staff profiles, then fold the new
  * facts into the graph. Spend is recorded in network_refresh_runs.
  */
-export async function runPeerStaffStep(orgId: string, opts: { maxEnrich?: number; callCap?: number; scan?: boolean } = {}): Promise<PeerStaffStepResult> {
+export async function runPeerStaffStep(orgId: string, opts: { maxEnrich?: number; callCap?: number; scan?: boolean; derive?: boolean } = {}): Promise<PeerStaffStepResult> {
   if (!isLinkedInConfigured()) throw new Error('RAPIDAPI_KEY is not configured');
   const db = createServerClient();
   const budget = new CallBudget(opts.callCap ?? 60);
@@ -207,18 +207,23 @@ export async function runPeerStaffStep(orgId: string, opts: { maxEnrich?: number
     }
   }
 
-  // ── 3. Fold into the graph ──
-  let relationshipsFound = 0;
-  if (enriched.length) {
-    try {
-      await resolveEmployers(db, orgId);
-      relationshipsFound = (await deriveRelationships(orgId)).written;
-    } catch (e) { errors.push(`graph derivation: ${e instanceof Error ? e.message : 'failed'}`); }
-  }
-
   const after = await peerTargets(db, orgId);
   const pendingScans = after.filter(isPending).length;
   const { count: pendingEnrich } = await db.from('network_people').select('id', { count: 'exact', head: true }).eq('org_id', orgId).eq('kind', PEER_STAFF_KIND).is('enriched_at', null).not('linkedin_url', 'is', null);
+
+  // ── 3. Fold into the graph ──
+  // Employers are resolved every step (cheap, and only touches new rows), but
+  // deriving relationships rebuilds every edge for the org — minutes of work
+  // once the graph is large. It runs on the last step only, or when asked, so a
+  // mid-run step never approaches the request timeout.
+  let relationshipsFound = 0;
+  const lastStep = pendingScans === 0 && (pendingEnrich ?? 0) === 0;
+  if (enriched.length) {
+    try {
+      await resolveEmployers(db, orgId);
+      if (lastStep || opts.derive) relationshipsFound = (await deriveRelationships(orgId)).written;
+    } catch (e) { errors.push(`graph derivation: ${e instanceof Error ? e.message : 'failed'}`); }
+  }
   const credits = enriched.length * 2 + Math.max(0, budget.used - enriched.length);
   if (runId) {
     await db.from('network_refresh_runs').update({

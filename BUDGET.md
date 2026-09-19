@@ -77,6 +77,8 @@ explicit confirmation from the user. All confirmed defaults documented inline.
 
 **Remaining budget:** ~$48.66 (against the $50 self-imposed cap; the Anthropic balance is $90).
 
+**Peer-staff scan (2026-09-19):** the development and executive staff of 30 Chicago youth-serving peers, read once a year. Per peer: ~3 calls to resolve the LinkedIn company (memoized forever) + 2 employee searches (~11 calls each, mostly polling) + up to 10 profile reads at 2 credits. That is ~45 credits a peer, ~1,300 for all 30, inside the 4,500-credit Pro plan. Every step is bounded and recorded in network_refresh_runs; network_peer_scans stops a re-run from re-spending on a peer already read.
+
 **RapidAPI plan (2026-09-17):** ~30 credits spent of 4,500 with the cycle ending this month
 (unused credits do not roll over). The "candidates" refresh stage (verify web-search URLs →
 name + employer search → profile reads → employer scans) is the plan for spending the rest:
