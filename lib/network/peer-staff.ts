@@ -29,12 +29,22 @@ const SCAN_STALE_DAYS = 365;                            // yearly is plenty: dev
 const TITLE_STRONG = /develop|philanthrop|foundation|grant|giving|advancement|donor|major gift|fundrais|institutional|external (affairs|relations)|partnership/i;
 const TITLE_EXEC = /chief|ceo|president|executive director|managing director|founder|vp|vice president|head of|director of/i;
 const TITLE_NOISE = /software|engineer|intern\b|volunteer|board member|coach|teacher|tutor|student|counselor|case manager|driver|custodian/i;
+/** "Development" that is not fundraising: training, curriculum, real estate, software. Stripped before the title test. */
+const NOT_FUNDRAISING = /(professional|youth|program|programme|workforce|talent|leadership|staff|curriculum|software|product|business|web|app|real estate|economic|community|organizational|learning|career|child|early childhood|teen|teacher) development/gi;
+
+/** The fundraising / leadership reading of a title, with the false "development"s removed. */
+export function titleTier(title: string | null, headline: string | null): 'development' | 'executive' | null {
+  const t = `${title ?? ''} ${headline ?? ''}`.replace(NOT_FUNDRAISING, ' ');
+  if (TITLE_STRONG.test(t)) return 'development';
+  if (TITLE_EXEC.test(t)) return 'executive';
+  return null;
+}
 
 export interface ScoredHit { hit: EmployeeHit; score: number; tier: 'development' | 'executive' }
 
 /** Which hits are worth a seat in the graph, and why. */
 export function scorePeerHit(hit: EmployeeHit): ScoredHit | null {
-  const t = `${hit.title ?? ''} ${hit.headline ?? ''}`;
+  const t = `${hit.title ?? ''} ${hit.headline ?? ''}`.replace(NOT_FUNDRAISING, ' ');
   if (TITLE_NOISE.test(t) && !TITLE_STRONG.test(t)) return null;
   let score = 0; let tier: ScoredHit['tier'] | null = null;
   if (TITLE_STRONG.test(t)) { score += 45; tier = 'development'; }

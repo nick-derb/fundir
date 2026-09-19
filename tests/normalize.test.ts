@@ -22,6 +22,8 @@ describe('LinkedIn URL', () => {
   it('canonicalizes to https://www.linkedin.com/in/<slug>', () => {
     expect(canonicalLinkedInUrl('linkedin.com/in/Satya-Nadella/?trk=x')).toBe('https://www.linkedin.com/in/satya-nadella');
     expect(canonicalLinkedInUrl('https://www.linkedin.com/company/microsoft')).toBeNull();
+    // Opaque member ids from employee search are case-sensitive; lowercasing one breaks the profile read.
+    expect(canonicalLinkedInUrl('https://www.linkedin.com/in/ACwAAAI3a6YB3rBfEQ-Ya3EpS-TagMYF3UtZ3s4/')).toBe('https://www.linkedin.com/in/ACwAAAI3a6YB3rBfEQ-Ya3EpS-TagMYF3UtZ3s4');
     expect(canonicalLinkedInUrl('')).toBeNull();
   });
 });
