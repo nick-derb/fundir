@@ -37,11 +37,12 @@ export async function POST(req: NextRequest) {
   if (r instanceof NextResponse) return r;
   if (!r.admin) return NextResponse.json({ error: 'Admins only' }, { status: 403 });
   if (!isLinkedInConfigured()) return NextResponse.json({ error: 'RAPIDAPI_KEY is not configured', notConfigured: true }, { status: 409 });
-  const body = await req.json().catch(() => ({})) as { maxEnrich?: unknown; scan?: unknown };
+  const body = await req.json().catch(() => ({})) as { maxEnrich?: unknown; scan?: unknown; derive?: unknown };
   try {
     const result = await runPeerStaffStep(r.orgId, {
       maxEnrich: typeof body.maxEnrich === 'number' ? Math.max(0, Math.min(20, body.maxEnrich)) : undefined,
       scan: body.scan === false ? false : undefined,
+      derive: body.derive === true ? true : undefined,
     });
     return NextResponse.json({ ok: true, ...result });
   } catch (e) {
