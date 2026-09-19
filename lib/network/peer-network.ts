@@ -144,25 +144,40 @@ export async function getPeerNetwork(db: Db, orgId: string): Promise<PeerNetwork
       if (pk && funderKey(pk) !== foundAtKey && !peerPast.includes(pk)) peerPast.push(pk);
     }
     const tier = tierOf(r.current_title as string | null, r.headline as string | null);
+    const moved = funderKey(orgName) !== foundAtKey;
     const chicago = /chicago|illinois|\bil\b/i.test((r.location as string | null) ?? '');
+    // What makes a person worth Elle's next hour, most decisive first: a documented
+    // path to someone at CYC, then a past inside a funder CYC cares about, then how
+    // much funding ground their organization shares with CYC, then seniority.
+    const orgShared = (peer?.funders ?? []).filter(f => f.relation !== 'untapped').length;
+    const orgUntapped = (peer?.funders ?? []).length - orgShared;
+    const senior = /chief|ceo|president|executive director|vice president|\bvp\b|head of/i.test(`${r.current_title ?? ''} ${r.headline ?? ''}`);
     let score = 0;
     score += Math.min(60, paths.reduce((n, p) => n + (p.verification === 'verified' ? 30 : p.verification === 'probable' ? 20 : 10), 0));
     score += Math.min(30, funderPast.reduce((n, f) => n + (f.relation === 'funds_cyc' ? 20 : 15), 0));
     score += Math.min(10, peerPast.length * 5);
     if (cycAlumni) score += 25;
+    if (moved) score += 10;                                  // a former insider can speak freely
+    score += Math.min(12, orgShared * 3);                    // their org and CYC chase the same money
+    score += Math.min(8, orgUntapped * 2);                   // …and their org has doors CYC has not knocked on
     score += tier === 'development' ? 15 : tier === 'executive' ? 8 : 0;
+    if (senior) score += 6;
     if (chicago) score += 5;
     score = Math.min(100, score);
 
     const why: string[] = [];
-    const moved = funderKey(orgName) !== foundAtKey;
     if (moved) why.push(`Ran ${tier === 'development' ? 'fundraising' : 'work'} at ${foundAt}${leftPeerYear ? ` until ${leftPeerYear}` : ''} and is now at ${orgName}: knows how that peer wins its grants, with no competitive tension left.`);
     for (const p of paths.slice(0, 3)) why.push(p.summary ? `${p.summary} (${p.person.kindLabel}${p.verification === 'verified' ? '' : `, ${p.verification}`}).` : `${p.label} with ${p.person.name}, ${p.person.kindLabel}.`);
     if (cycAlumni) why.push('Worked at Chicago Youth Centers before this role.');
     for (const f of funderPast.slice(0, 2)) why.push(f.relation === 'funds_cyc' ? `Previously at ${f.org}, which funds CYC.` : f.relation === 'cyc_pursuing' ? `Previously at ${f.org}, a funder CYC is pursuing.` : `Previously at ${f.org}, which funds one of CYC's peers.`);
     for (const p of peerPast.slice(0, 2)) why.push(`Also worked at ${p}, another CYC peer.`);
     const orgFunders = (peer?.funders ?? []).filter(f => f.relation !== 'untapped').slice(0, 3);
-    if (orgFunders.length) why.push(`${foundAt} is funded by ${orgFunders.map(f => f.name).join(', ')}${orgFunders.some(f => f.relation === 'cyc_pursuing') ? ', which CYC is pursuing' : ', which also funds CYC'}.`);
+    const shares = orgFunders.filter(f => f.relation === 'funds_cyc').map(f => f.name);
+    const chases = orgFunders.filter(f => f.relation === 'cyc_pursuing').map(f => f.name);
+    const list = (xs: string[]) => (xs.length > 1 ? `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}` : xs[0]);
+    if (shares.length) why.push(`${foundAt} is funded by ${list(shares)}, ${shares.length === 1 ? 'which also funds' : 'which also fund'} CYC.`);
+    if (chases.length) why.push(`${foundAt} is funded by ${list(chases)} — ${chases.length === 1 ? 'a funder' : 'funders'} CYC is pursuing.`);
+    if (orgUntapped > 0) why.push(`${orgUntapped} of ${foundAt}'s funders are ones CYC has never approached.`);
     if (!why.length) why.push(tier === 'development' ? `Runs fundraising at ${orgName}, a close CYC peer: sees the same program officers CYC does.` : tier === 'executive' ? `Leads ${orgName}, a close CYC peer.` : `Staff at ${orgName}, a close CYC peer.`);
 
     const best = paths[0];
@@ -171,7 +186,8 @@ export async function getPeerNetwork(db: Db, orgId: string): Promise<PeerNetwork
       : cycAlumni ? 'A CYC alum: a direct, friendly reach-out from Tina or Elle is appropriate.'
       : funderPast[0] ? `Reference their time at ${funderPast[0].org} when approaching that funder's program officer, or ask them how the foundation thinks.`
       : moved ? `A former ${foundAt} insider, now outside it: ask how they approached the funders CYC shares with ${foundAt}.`
-      : orgFunders.length ? `Peer-to-peer outreach: ask how ${orgName} got in with ${orgFunders[0].name}.`
+      : orgUntapped > 0 ? `Peer-to-peer outreach: ask how ${foundAt} got in with the funders CYC has not approached.`
+      : orgFunders.length ? `Peer-to-peer outreach: ask how ${foundAt} got in with ${orgFunders[0].name}.`
       : 'Peer-to-peer outreach: development leads at similar organizations trade program-officer intel freely.';
 
     return {
