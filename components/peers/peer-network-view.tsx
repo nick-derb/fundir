@@ -143,6 +143,7 @@ export function PeerNetworkView({ peers, people, status, isAdmin }: { peers: Pee
                     {p.paths.length > 0 && <Chip text={`${p.paths.length} path${p.paths.length === 1 ? '' : 's'}`} color="var(--accent)" border="rgba(12,107,90,.3)" />}
                     {p.cycAlumni && <Chip text="CYC alum" color={AMBER} border="rgba(156,122,42,.35)" />}
                     {p.funderPast.length > 0 && <Chip text="Ex-funder" color={INFO} border="rgba(62,108,168,.35)" />}
+                    {p.org !== p.foundAt && <Chip text={`Ex-${p.foundAt}`} color={AMBER} border="rgba(156,122,42,.35)" />}
                   </div>
                   <p style={{ margin: '3px 0 0', fontSize: 12, color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{[p.title, p.org, p.location].filter(Boolean).join(' · ')}</p>
                 </div>
@@ -161,6 +162,7 @@ export function PeerNetworkView({ peers, people, status, isAdmin }: { peers: Pee
                 <div style={{ minWidth: 0, flex: 1 }}>
                   <h2 style={{ fontFamily: SERIF, fontWeight: 400, fontSize: 22, lineHeight: 1.1, margin: 0 }}>{person.name}</h2>
                   <p style={{ margin: '5px 0 0', fontSize: 12.5, color: 'var(--text-secondary)', lineHeight: 1.5 }}>{[person.title, person.org].filter(Boolean).join(' · ')}{person.location ? <><br />{person.location}</> : null}</p>
+                  {person.org !== person.foundAt && <p style={{ margin: '4px 0 0', fontSize: 11.5, color: AMBER, lineHeight: 1.45 }}>Found at {person.foundAt}{person.leftPeerYear ? `, left in ${person.leftPeerYear}` : ''}</p>}
                   {person.headline && person.headline !== person.title && <p style={{ margin: '4px 0 0', fontSize: 11.5, color: 'var(--text-tertiary)', lineHeight: 1.45 }}>{person.headline}</p>}
                 </div>
                 {person.linkedinUrl && <a href={person.linkedinUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 h-7 px-2.5 rounded-[7px] border border-hairline text-[11.5px] text-secondary" style={{ flex: 'none' }}>LinkedIn <ExternalLink style={{ width: 11, height: 11 }} /></a>}
