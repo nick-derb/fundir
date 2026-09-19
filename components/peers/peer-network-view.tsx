@@ -50,7 +50,7 @@ export function PeerNetworkView({ peers, people, status, isAdmin }: { peers: Pee
   const [q, setQ] = useState('');
   const [org, setOrg] = useState<string | null>(null);
   const [tier, setTier] = useState<'all' | 'development' | 'executive'>('all');
-  const [only, setOnly] = useState<'all' | 'path' | 'funder'>('all');
+  const [only, setOnly] = useState<'all' | 'path' | 'funder' | 'untapped'>('all');
   const [sort, setSort] = useState<'best' | 'name' | 'org'>('best');
   const [selected, setSelected] = useState<string | null>(people[0]?.id ?? null);
 
@@ -59,12 +59,15 @@ export function PeerNetworkView({ peers, people, status, isAdmin }: { peers: Pee
     let r = people.filter(p =>
       (!org || p.orgId === org) &&
       (tier === 'all' || p.tier === tier) &&
-      (only === 'all' || (only === 'path' ? p.paths.length > 0 : p.funderPast.length > 0 || p.cycAlumni)) &&
+      (only === 'all'
+        || (only === 'path' && p.paths.length > 0)
+        || (only === 'funder' && (p.funderPast.length > 0 || p.cycAlumni))
+        || (only === 'untapped' && (peers.find(x => x.id === p.orgId)?.funders.some(f => f.relation === 'untapped') ?? false))) &&
       (!needle || `${p.name} ${p.title ?? ''} ${p.org} ${p.career.map(c => c.org).join(' ')}`.toLowerCase().includes(needle)));
     if (sort === 'name') r = [...r].sort((a, b) => a.name.localeCompare(b.name));
     if (sort === 'org') r = [...r].sort((a, b) => a.org.localeCompare(b.org) || b.score - a.score);
     return r;
-  }, [people, q, org, tier, only, sort]);
+  }, [people, peers, q, org, tier, only, sort]);
   const person = people.find(p => p.id === selected) ?? rows[0] ?? null;
   const peerOf = person ? peers.find(p => p.id === person.orgId) : null;
   const withPath = people.filter(p => p.paths.length).length;
@@ -106,7 +109,17 @@ export function PeerNetworkView({ peers, people, status, isAdmin }: { peers: Pee
             <p className="fd-mono" style={{ margin: '6px 0 0', fontSize: 10.5, color: 'var(--text-tertiary)' }}>
               {p.scan ? (p.scan.status === 'done' ? `${p.staff} people · ${p.withPath} with a path` : p.scan.status === 'no_company' ? 'not on LinkedIn' : 'scan error') : 'not scanned yet'}
             </p>
-            {p.funders.some(f => f.relation !== 'untapped') && <p style={{ margin: '5px 0 0', fontSize: 11, color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Shares {p.funders.filter(f => f.relation !== 'untapped').length} funder{p.funders.filter(f => f.relation !== 'untapped').length === 1 ? '' : 's'} with CYC&apos;s list</p>}
+            {p.funders.length > 0 && (() => {
+              const shared = p.funders.filter(f => f.relation !== 'untapped').length;
+              const untapped = p.funders.length - shared;
+              return (
+                <p style={{ margin: '5px 0 0', fontSize: 11, color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {shared > 0 && <>{shared} funder{shared === 1 ? '' : 's'} shared with CYC</>}
+                  {shared > 0 && untapped > 0 && ' · '}
+                  {untapped > 0 && <b style={{ color: AMBER, fontWeight: 500 }}>{untapped} untapped</b>}
+                </p>
+              );
+            })()}
           </div>
         ))}
       </div>
@@ -121,6 +134,7 @@ export function PeerNetworkView({ peers, people, status, isAdmin }: { peers: Pee
         <span style={{ width: 1, height: 18, background: 'var(--border-hairline)' }} />
         <button type="button" className="pn-pill" data-on={only === 'path'} onClick={() => setOnly(only === 'path' ? 'all' : 'path')}><Route style={{ width: 12, height: 12, marginRight: 5 }} />Has a path to CYC</button>
         <button type="button" className="pn-pill" data-on={only === 'funder'} onClick={() => setOnly(only === 'funder' ? 'all' : 'funder')}><Landmark style={{ width: 12, height: 12, marginRight: 5 }} />Ex-funder / CYC alumni</button>
+        <button type="button" className="pn-pill" data-on={only === 'untapped'} onClick={() => setOnly(only === 'untapped' ? 'all' : 'untapped')}><Building2 style={{ width: 12, height: 12, marginRight: 5 }} />Org has untapped funders</button>
         <span style={{ flex: 1 }} />
         <select value={sort} onChange={e => setSort(e.target.value as typeof sort)} style={{ height: 30, border: '1px solid var(--border-hairline)', borderRadius: 8, background: 'var(--bg-surface)', color: 'var(--text-secondary)', fontSize: 12, padding: '0 8px' }}>
           <option value="best">Best paths first</option><option value="name">Name</option><option value="org">Organization</option>
