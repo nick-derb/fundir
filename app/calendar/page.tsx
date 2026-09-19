@@ -34,6 +34,14 @@ export default async function CalendarPage() {
     .select('status, funder_name, opportunity_name, loi_deadline, preproposal_deadline, fullproposal_deadline')
     .eq('org_id', ctx.orgId);
   const subs = (subsData ?? []) as Sub[];
+  // CYC's own grant calendar workbook (reports, renewals, outreach and items
+  // Instrumentl does not track). Declined / N/A / rejected items are not due.
+  const { data: calData } = await db
+    .from('cyc_grant_calendar')
+    .select('fiscal_year, funder, status, item_type, due_date')
+    .eq('org_id', ctx.orgId)
+    .not('due_date', 'is', null);
+  const calRows = (calData ?? []) as Array<{ fiscal_year: string; funder: string; status: string | null; item_type: string | null; due_date: string }>;
 
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const st = (s: string | null) => (s || '').trim().toLowerCase();
@@ -64,6 +72,22 @@ export default async function CalendarPage() {
     }
     // …but the rail shows one row per opportunity (its earliest upcoming date).
     if (earliest) railRows.push(earliest);
+  }
+  // Workbook items land on the grid too, unless Instrumentl already has the same
+  // funder on the same day (the two lists overlap on submitted proposals).
+  const funderKey = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '').replace(/(foundation|inc|the|charitabletrust|trust|fund)/g, '');
+  const seen = new Set(deadlineEvents.map(e => `${e.date}|${funderKey(e.title)}`));
+  const NOT_DUE = new Set(['declined', 'n/a', 'rejected']);
+  for (const r of calRows) {
+    if (NOT_DUE.has(st(r.status))) continue;
+    const d = new Date(r.due_date + 'T00:00:00');
+    if (Number.isNaN(d.getTime()) || d < today) continue;
+    const key = `${dateKey(d)}|${funderKey(r.funder)}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const type = r.item_type || 'Item';
+    deadlineEvents.push({ date: dateKey(d), title: r.funder, time: `${type} due · ${r.fiscal_year} calendar`, kind: 'grant' });
+    railRows.push({ date: d, funder: r.funder, type: `${type} (${r.fiscal_year} calendar)` });
   }
   railRows.sort((a, b) => a.date.getTime() - b.date.getTime());
   const deadlines = railRows.slice(0, 6).map((r, i) => ({

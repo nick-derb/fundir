@@ -13,6 +13,7 @@
 import { StrategyResources } from '@/components/strategy-resources';
 import { InstrumentlCard } from '@/components/instrumentl-card';
 import { CultivationCard } from '@/components/cultivation-card';
+import { GrantCalendarCard } from '@/components/grant-calendar-card';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Search, SlidersHorizontal, Upload, UploadCloud, X, MoreVertical, FileText,
@@ -202,10 +203,11 @@ export function DataHubView({ orgName, userEmail }: { orgName: string; userEmail
         <div>
           <p className="fd-eyebrow text-tertiary mb-2.5">{orgName}</p>
           <h1 style={{ fontFamily: SERIF, fontWeight: 400, fontSize: 'clamp(1.9rem,3vw,2.5rem)', lineHeight: 1.04, letterSpacing: '-.018em', margin: 0 }}>Data hub</h1>
-          <p className="mt-2.5 text-[13.5px] leading-relaxed text-secondary max-w-[62ch]">Refresh the two spreadsheets Fundir runs on here. Nothing is written until you have seen what would change.</p>
+          <p className="mt-2.5 text-[13.5px] leading-relaxed text-secondary max-w-[62ch]">Refresh the spreadsheets Fundir runs on here. Nothing is written until you have seen what would change.</p>
         </div>
         <InstrumentlCard />
         <CultivationCard />
+        <GrantCalendarCard />
         <div className="bg-surface border border-hairline rounded-xl p-8 text-center">
           <UploadCloud className="w-8 h-8 text-tertiary mx-auto mb-4" />
           <h2 className="text-[17px] font-semibold text-primary mb-2">Document storage needs Microsoft 365</h2>
@@ -317,6 +319,7 @@ export function DataHubView({ orgName, userEmail }: { orgName: string; userEmail
             {/* ── Workbook imports: swappable from the app ── */}
             <InstrumentlCard />
             <CultivationCard />
+            <GrantCalendarCard />
 
             {/* ── Reading now (real upload + indexing) ── */}
             {queue.length > 0 && (
