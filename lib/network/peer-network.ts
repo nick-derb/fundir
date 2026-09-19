@@ -19,7 +19,11 @@ export interface PeerOrgCard {
 }
 export interface PeerPath { type: string; label: string; verification: string; person: { id: string; name: string; kind: string; kindLabel: string; title: string | null }; summary: string | null }
 export interface PeerPerson {
-  id: string; name: string; title: string | null; headline: string | null; org: string; orgId: string | null; location: string | null;
+  id: string; name: string; title: string | null; headline: string | null;
+  /** Where they work now (from the profile). */ org: string;
+  /** The peer organization the scan found them at — the same as `org` unless they have since moved. */ foundAt: string; orgId: string | null;
+  /** Set when they have left the peer: the year they left. */ leftPeerYear: number | null;
+  location: string | null;
   linkedinUrl: string | null; enrichedAt: string | null; verification: string; tier: 'development' | 'executive' | 'other';
   career: Array<{ org: string; title: string | null; start: number | null; end: number | null; current: boolean }>;
   education: Array<{ school: string; degree: string | null; field: string | null }>;
@@ -105,7 +109,10 @@ export async function getPeerNetwork(db: Db, orgId: string): Promise<PeerNetwork
   const people: PeerPerson[] = (rows ?? []).map(r => {
     const id = r.id as string;
     const peer = r.organization_id ? peerById.get(r.organization_id as string) : undefined;
-    const orgName = peer?.name ?? (r.current_org as string | null) ?? 'Peer organization';
+    const foundAt = peer?.name ?? (r.current_org as string | null) ?? 'Peer organization';
+    // The profile is the truth about where they work now. Someone the scan found at a
+    // peer may have moved since — still a warm contact, and worth saying so plainly.
+    const orgName = (r.current_org as string | null) ?? foundAt;
     const career = (empBy.get(id) ?? []).sort((a, b) => Number(b.is_current) - Number(a.is_current) || (b.start_year ?? 0) - (a.start_year ?? 0))
       .map(e => ({ org: e.org_name, title: e.title, start: e.start_year, end: e.is_current ? null : e.end_year, current: !!e.is_current }));
     const seenPath = new Set<string>();
@@ -121,16 +128,20 @@ export async function getPeerNetwork(db: Db, orgId: string): Promise<PeerNetwork
     const funderPast: PeerPerson['funderPast'] = [];
     const peerPast: string[] = [];
     let cycAlumni = false;
+    let leftPeerYear: number | null = null;
+    const foundAtKey = funderKey(foundAt);
     for (const c of career) {
-      if (c.current) continue;
       const k = funderKey(c.org);
       if (!k) continue;
+      // The scan found them at the peer, but the profile says they have left: note when.
+      if (!c.current && k === foundAtKey && funderKey(orgName) !== foundAtKey) { leftPeerYear = c.end ?? leftPeerYear; continue; }
+      if (c.current) continue;
       if (/chicago youth centers/i.test(c.org)) { cycAlumni = true; continue; }
       const rel = relation.get(k);
       if (rel) { if (!funderPast.some(f => funderKey(f.org) === k)) funderPast.push({ org: c.org, relation: rel }); continue; }
       if (peerFunderKeys.has(k)) { if (!funderPast.some(f => funderKey(f.org) === k)) funderPast.push({ org: c.org, relation: 'peer_funder' }); continue; }
       const pk = peerKeys.get(k);
-      if (pk && pk !== orgName && !peerPast.includes(pk)) peerPast.push(pk);
+      if (pk && funderKey(pk) !== foundAtKey && !peerPast.includes(pk)) peerPast.push(pk);
     }
     const tier = tierOf(r.current_title as string | null, r.headline as string | null);
     const chicago = /chicago|illinois|\bil\b/i.test((r.location as string | null) ?? '');
@@ -144,12 +155,14 @@ export async function getPeerNetwork(db: Db, orgId: string): Promise<PeerNetwork
     score = Math.min(100, score);
 
     const why: string[] = [];
+    const moved = funderKey(orgName) !== foundAtKey;
+    if (moved) why.push(`Ran ${tier === 'development' ? 'fundraising' : 'work'} at ${foundAt}${leftPeerYear ? ` until ${leftPeerYear}` : ''} and is now at ${orgName}: knows how that peer wins its grants, with no competitive tension left.`);
     for (const p of paths.slice(0, 3)) why.push(p.summary ? `${p.summary} (${p.person.kindLabel}${p.verification === 'verified' ? '' : `, ${p.verification}`}).` : `${p.label} with ${p.person.name}, ${p.person.kindLabel}.`);
     if (cycAlumni) why.push('Worked at Chicago Youth Centers before this role.');
     for (const f of funderPast.slice(0, 2)) why.push(f.relation === 'funds_cyc' ? `Previously at ${f.org}, which funds CYC.` : f.relation === 'cyc_pursuing' ? `Previously at ${f.org}, a funder CYC is pursuing.` : `Previously at ${f.org}, which funds one of CYC's peers.`);
     for (const p of peerPast.slice(0, 2)) why.push(`Also worked at ${p}, another CYC peer.`);
     const orgFunders = (peer?.funders ?? []).filter(f => f.relation !== 'untapped').slice(0, 3);
-    if (orgFunders.length) why.push(`${orgName} is funded by ${orgFunders.map(f => f.name).join(', ')}${orgFunders.some(f => f.relation === 'cyc_pursuing') ? ', which CYC is pursuing' : ', which also funds CYC'}.`);
+    if (orgFunders.length) why.push(`${foundAt} is funded by ${orgFunders.map(f => f.name).join(', ')}${orgFunders.some(f => f.relation === 'cyc_pursuing') ? ', which CYC is pursuing' : ', which also funds CYC'}.`);
     if (!why.length) why.push(tier === 'development' ? `Runs fundraising at ${orgName}, a close CYC peer: sees the same program officers CYC does.` : tier === 'executive' ? `Leads ${orgName}, a close CYC peer.` : `Staff at ${orgName}, a close CYC peer.`);
 
     const best = paths[0];
@@ -157,11 +170,12 @@ export async function getPeerNetwork(db: Db, orgId: string): Promise<PeerNetwork
       ? `Ask ${best.person.name} (${best.person.kindLabel}) for an introduction; they were ${best.label}.`
       : cycAlumni ? 'A CYC alum: a direct, friendly reach-out from Tina or Elle is appropriate.'
       : funderPast[0] ? `Reference their time at ${funderPast[0].org} when approaching that funder's program officer, or ask them how the foundation thinks.`
+      : moved ? `A former ${foundAt} insider, now outside it: ask how they approached the funders CYC shares with ${foundAt}.`
       : orgFunders.length ? `Peer-to-peer outreach: ask how ${orgName} got in with ${orgFunders[0].name}.`
       : 'Peer-to-peer outreach: development leads at similar organizations trade program-officer intel freely.';
 
     return {
-      id, name: r.name as string, title: (r.current_title as string | null) ?? null, headline: (r.headline as string | null) ?? null, org: orgName, orgId: (r.organization_id as string | null) ?? null,
+      id, name: r.name as string, title: (r.current_title as string | null) ?? null, headline: (r.headline as string | null) ?? null, org: orgName, foundAt, leftPeerYear, orgId: (r.organization_id as string | null) ?? null,
       location: (r.location as string | null) ?? null, linkedinUrl: (r.linkedin_url as string | null) ?? null, enrichedAt: (r.enriched_at as string | null) ?? null, verification: (r.verification as string) ?? 'probable', tier,
       career: career.slice(0, 8), education: (eduBy.get(id) ?? []).map(e => ({ school: e.school_name, degree: e.degree, field: e.field })).slice(0, 4),
       paths, funderPast, peerPast, cycAlumni, score, why, move,
