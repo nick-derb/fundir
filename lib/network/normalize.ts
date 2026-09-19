@@ -46,7 +46,11 @@ export const clean = (v: unknown): string => fixMojibake(typeof v === 'string' ?
 export function canonicalLinkedInUrl(raw: string | null | undefined): string | null {
   const m = String(raw || '').match(/linkedin\.com\/in\/([^/?#\s]+)/i);
   if (!m) return null;
-  const slug = decodeURIComponent(m[1]).replace(/\/+$/, '').toLowerCase();
+  const raw_slug = decodeURIComponent(m[1]).replace(/\/+$/, '');
+  // Vanity slugs are case-insensitive on LinkedIn, so lowercase makes one key per
+  // person. Opaque member ids ("/in/ACwAAB…", what employee search returns) are
+  // case-SENSITIVE: lowercasing one produces a URL the provider cannot read.
+  const slug = /^AC[A-Za-z0-9_-]{25,}$/.test(raw_slug) ? raw_slug : raw_slug.toLowerCase();
   return slug ? `https://www.linkedin.com/in/${slug}` : null;
 }
 

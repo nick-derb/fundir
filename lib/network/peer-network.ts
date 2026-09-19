@@ -6,7 +6,7 @@
 // graph; nothing here calls a provider.
 
 import { createServerClient } from '@/lib/supabase';
-import { PEER_STAFF_KIND, CYC_SIDE_KINDS } from '@/lib/network/peer-staff';
+import { PEER_STAFF_KIND, CYC_SIDE_KINDS, titleTier } from '@/lib/network/peer-staff';
 
 type Db = ReturnType<typeof createServerClient>;
 
@@ -35,8 +35,6 @@ export interface PeerNetwork { peers: PeerOrgCard[]; people: PeerPerson[] }
 
 const KIND_LABEL: Record<string, string> = { board: 'CYC board', auxiliary: 'CYC auxiliary board', council: 'CYC council', staff: 'CYC staff', trustee: 'funder trustee', executive: 'funder executive' };
 const REL_LABEL: Record<string, string> = { former_colleague: 'former colleagues', current_colleague: 'current colleagues', shared_employer: 'same employer, different years', shared_board: 'sit on the same board', shared_university: 'same university', existing_cyc_relationship: 'known to CYC', second_degree: 'second degree' };
-const TITLE_STRONG = /develop|philanthrop|foundation|grant|giving|advancement|donor|major gift|fundrais|institutional|external (affairs|relations)|partnership/i;
-const TITLE_EXEC = /chief|ceo|president|executive director|managing director|founder|vp|vice president|head of|director of/i;
 
 /** A forgiving key for funder / employer names ("The Polk Bros. Foundation, Inc." ≈ "Polk Bros Foundation"). */
 export const funderKey = (v: string | null | undefined) => (v ?? '').toLowerCase()
@@ -44,10 +42,7 @@ export const funderKey = (v: string | null | undefined) => (v ?? '').toLowerCase
   .replace(/\b(the|foundation|inc|incorporated|trust|tr|fund|funds|philanthropies|philanthropy|family|charitable|company|co|llc|corporation|corp|nfp)\b/g, ' ')
   .replace(/\s+/g, ' ').trim();
 
-const tierOf = (title: string | null, headline: string | null): PeerPerson['tier'] => {
-  const t = `${title ?? ''} ${headline ?? ''}`;
-  return TITLE_STRONG.test(t) ? 'development' : TITLE_EXEC.test(t) ? 'executive' : 'other';
-};
+const tierOf = (title: string | null, headline: string | null): PeerPerson['tier'] => titleTier(title, headline) ?? 'other';
 
 async function inChunks<T>(ids: string[], size: number, fn: (c: string[]) => PromiseLike<{ data: T[] | null }>): Promise<T[]> {
   const out: T[] = [];
