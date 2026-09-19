@@ -29,6 +29,7 @@ const NAV_ITEMS = [
   { href: '/dashboard',    label: 'Dashboard',        icon: LayoutDashboard },
   { href: '/prospecting',  label: 'Prospecting',      icon: Radar           },
   { href: '/connections',  label: 'Connections',      icon: Share2          },
+  { href: '/peers',        label: 'Peer Network',     icon: Building2       },
   { href: '/data',         label: 'Data Hub',         icon: Database        },
   { href: '/applications', label: 'Applications',     icon: FileText,       adminOnly: true },
   { href: '/reports',      label: 'Reports',          icon: TrendingUp      },
