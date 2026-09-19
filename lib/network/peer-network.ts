@@ -93,13 +93,14 @@ export async function getPeerNetwork(db: Db, orgId: string): Promise<PeerNetwork
     inChunks<Edge>(ids, 200, c => db.from('network_relationships').select('source_person_id, target_person_id, relationship_type, verification, evidence').eq('org_id', orgId).in('source_person_id', c).not('target_person_id', 'is', null)),
     inChunks<Edge>(ids, 200, c => db.from('network_relationships').select('source_person_id, target_person_id, relationship_type, verification, evidence').eq('org_id', orgId).in('target_person_id', c).not('source_person_id', 'is', null)),
   ]);
-  const otherIds = [...new Set([...e1, ...e2].flatMap(e => [e.source_person_id, e.target_person_id]).filter((x): x is string => !!x && !ids.includes(x)))];
+  const idSet = new Set(ids);
+  const otherIds = [...new Set([...e1, ...e2].flatMap(e => [e.source_person_id, e.target_person_id]).filter((x): x is string => !!x && !idSet.has(x)))];
   const others = new Map((await inChunks<{ id: string; name: string; kind: string; current_title: string | null }>(otherIds, 200, c => db.from('network_people').select('id, name, kind, current_title').in('id', c))).map(o => [o.id, o]));
 
   const empBy = new Map<string, Emp[]>(); for (const e of emps) { const a = empBy.get(e.person_id) ?? []; a.push(e); empBy.set(e.person_id, a); }
   const eduBy = new Map<string, Edu[]>(); for (const e of edus) { const a = eduBy.get(e.person_id) ?? []; a.push(e); eduBy.set(e.person_id, a); }
   const edgeBy = new Map<string, Edge[]>();
-  for (const e of [...e1, ...e2]) for (const pid of [e.source_person_id, e.target_person_id]) if (pid && ids.includes(pid)) { const a = edgeBy.get(pid) ?? []; a.push(e); edgeBy.set(pid, a); }
+  for (const e of [...e1, ...e2]) for (const pid of [e.source_person_id, e.target_person_id]) if (pid && idSet.has(pid)) { const a = edgeBy.get(pid) ?? []; a.push(e); edgeBy.set(pid, a); }
 
   const people: PeerPerson[] = (rows ?? []).map(r => {
     const id = r.id as string;
