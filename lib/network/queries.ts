@@ -314,7 +314,8 @@ export interface PersonRow {
   own: boolean; employers: number; boards: Array<{ id: string; name: string; title: string | null }>; paths: number; best_lead: { id: string; score: number; target: string } | null;
 }
 export async function listPeople(db: Db, orgId: string): Promise<PersonRow[]> {
-  const people = await pageAllRows<{ id: string; kind: string; name: string; board_role: string | null; current_title: string | null; current_org: string | null; organization_id: string | null; location: string | null; headline: string | null; linkedin_url: string | null; enriched_at: string | null; verification: string | null; source_id: string | null }>(db, 'network_people', 'id, kind, name, board_role, current_title, current_org, organization_id, location, headline, linkedin_url, enriched_at, verification, source_id', orgId);
+  // Peer-organization staff have their own page (Peer Network); they are not CYC contacts.
+  const people = (await pageAllRows<{ id: string; kind: string; name: string; board_role: string | null; current_title: string | null; current_org: string | null; organization_id: string | null; location: string | null; headline: string | null; linkedin_url: string | null; enriched_at: string | null; verification: string | null; source_id: string | null }>(db, 'network_people', 'id, kind, name, board_role, current_title, current_org, organization_id, location, headline, linkedin_url, enriched_at, verification, source_id', orgId)).filter(p => p.kind !== 'peer_staff');
   const ids = people.map(p => p.id);
   const empCount = new Map<string, number>(), seats = new Map<string, Array<{ id: string; name: string; title: string | null }>>(), paths = new Map<string, number>(), best = new Map<string, { id: string; score: number; target: string }>();
   for (const c of chunks(ids, 150)) {
