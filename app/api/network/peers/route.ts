@@ -3,6 +3,7 @@ import { getAuthContext } from '@/lib/auth-context';
 import { createServerClient } from '@/lib/supabase';
 import { isLinkedInConfigured } from '@/lib/network/linkedin';
 import { peerStaffStatus, runPeerStaffStep } from '@/lib/network/peer-staff';
+import { getPeerNetwork } from '@/lib/network/peer-network';
 
 // Peer-staff scan: one bounded step per call (≤ 60 API calls) — one peer's
 // employee searches, then up to ten profile reads, then graph derivation.
@@ -28,8 +29,19 @@ async function resolveOrg(req: NextRequest): Promise<{ orgId: string; admin: boo
 export async function GET(req: NextRequest) {
   const r = await resolveOrg(req);
   if (r instanceof NextResponse) return r;
-  try { return NextResponse.json(await peerStaffStatus(r.orgId)); }
-  catch (e) { return NextResponse.json({ error: e instanceof Error ? e.message : 'Status failed' }, { status: 500 }); }
+  try {
+    // ?data=1 returns what the Peer Network page renders, so the payload can be
+    // checked end to end without a browser session.
+    if (req.nextUrl.searchParams.get('data') === '1') {
+      const net = await getPeerNetwork(createServerClient(), r.orgId);
+      return NextResponse.json({
+        peers: net.peers.map(p => ({ name: p.name, staff: p.staff, withPath: p.withPath, funders: p.funders.length, scan: p.scan?.status ?? null })),
+        people: net.people.slice(0, 12).map(p => ({ name: p.name, title: p.title, org: p.org, foundAt: p.foundAt, score: p.score, tier: p.tier, paths: p.paths.length, funderPast: p.funderPast, peerPast: p.peerPast, cycAlumni: p.cycAlumni, why: p.why, move: p.move })),
+        total: net.people.length,
+      });
+    }
+    return NextResponse.json(await peerStaffStatus(r.orgId));
+  } catch (e) { return NextResponse.json({ error: e instanceof Error ? e.message : 'Status failed' }, { status: 500 }); }
 }
 
 export async function POST(req: NextRequest) {
