@@ -212,7 +212,7 @@ export function DataHubView({ orgName, userEmail }: { orgName: string; userEmail
           <UploadCloud className="w-8 h-8 text-tertiary mx-auto mb-4" />
           <h2 className="text-[17px] font-semibold text-primary mb-2">Document storage needs Microsoft 365</h2>
           <p className="text-[13px] text-secondary mb-5">
-            Narratives, financials and board documents are stored in your organization’s shared SharePoint / OneDrive folder. The two imports above work without it.
+            Narratives, financials and board documents are stored in your organization’s shared SharePoint / OneDrive folder. The imports above work without it.
           </p>
           <a href="/settings" className="inline-flex items-center gap-2 h-9 px-4 rounded-md bg-accent text-white text-[13px] font-semibold">
             Connect in Settings
