@@ -565,7 +565,7 @@ export async function hubDiagnostics(token: string, orgCode: string): Promise<{
   sites: Array<{ displayName: string | null; name: string | null; webUrl: string | null }>;
   lastMerge: typeof lastMerge;
   personalRoot: Array<{ name: string; folder: boolean }> | null;
-  found: FoundHub[];
+  found: Array<FoundHub & { state: 'present' | 'deleted' | 'gone' | 'unknown'; modified?: string | null; createdBy?: string | null }>;
 }> {
   const drive = await resolveDrive(token, orgCode);
   const base = drive.base;
@@ -592,6 +592,15 @@ export async function hubDiagnostics(token: string, orgCode: string): Promise<{
       personalRoot = (((await r.json()).value ?? []) as ChildItem[]).map(c => ({ name: c.name, folder: !!c.folder }));
     } catch { /* diagnostics only */ }
   }
-  const found = await findHubFoldersEverywhere(token);
+  // Search is an index and can lag a deletion by hours, so confirm each hit
+  // against the drive itself before anyone acts on it.
+  const found = await Promise.all((await findHubFoldersEverywhere(token)).map(async f => {
+    try {
+      const r = await fetch(`${GRAPH}/drives/${f.driveId}/items/${f.id}?$select=id,name,deleted,parentReference,lastModifiedDateTime,createdBy`, { headers: { Authorization: `Bearer ${token}` } });
+      if (r.status === 404) return { ...f, state: 'gone' as const };
+      const it = await r.json() as { deleted?: unknown; parentReference?: { path?: string }; lastModifiedDateTime?: string; createdBy?: { user?: { displayName?: string } } };
+      return { ...f, state: it.deleted ? 'deleted' as const : 'present' as const, parentPath: it.parentReference?.path ?? f.parentPath, modified: it.lastModifiedDateTime ?? null, createdBy: it.createdBy?.user?.displayName ?? null };
+    } catch { return { ...f, state: 'unknown' as const }; }
+  }));
   return { drive: { kind: drive.kind, label: drive.label, base, webUrl: drive.webUrl }, root, hub, documents, sites, lastMerge, personalRoot, found };
 }
