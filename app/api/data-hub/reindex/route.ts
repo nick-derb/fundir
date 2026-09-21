@@ -4,6 +4,7 @@ import { createServerClient } from '@/lib/supabase';
 import { getValidToken } from '@/lib/oauth-tokens';
 import { getHubState } from '@/lib/data-hub';
 import { reconcileDocuments } from '@/lib/cyc-context/documents';
+import { resolveDrive } from '@/lib/sharepoint';
 
 // Read the documents in the shared folder that Fundir has not read yet.
 // Files dropped straight into SharePoint never pass through the upload route,
@@ -30,7 +31,8 @@ export async function POST(req: NextRequest) {
   if (!token) return NextResponse.json({ error: 'Microsoft 365 is not connected' }, { status: 409 });
   try {
     const hub = await getHubState(token, orgCode);
-    const result = await reconcileDocuments(orgId, token, hub.documents.map(d => ({ id: d.id, name: d.name })), { maxDocs: 8, deadlineMs: 230_000 });
+    const { base } = await resolveDrive(token, orgCode);
+    const result = await reconcileDocuments(orgId, token, hub.documents.map(d => ({ id: d.id, name: d.name })), { maxDocs: 8, deadlineMs: 230_000, base });
     return NextResponse.json({ ok: true, ...result });
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : 'Reindex failed' }, { status: 500 });
