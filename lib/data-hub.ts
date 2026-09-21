@@ -127,6 +127,36 @@ let lastMerge: { folders: number; files: number; rows: number; removed: number; 
 
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 
+interface FoundHub { driveId: string; id: string; name: string; webUrl: string | null; parentPath: string | null }
+
+/**
+ * Every folder in the tenant called "CYC Data Hub" or "CYC Data Hub N" that
+ * this connection can see — Microsoft Search across SharePoint and OneDrive,
+ * so a hub that landed on the wrong site or drive is found, not guessed at.
+ * Returns [] when search is unavailable (older token without Sites scope).
+ */
+async function findHubFoldersEverywhere(token: string): Promise<FoundHub[]> {
+  try {
+    const res = await graphFetch(token, '/search/query', {
+      method: 'POST',
+      body: JSON.stringify({ requests: [{ entityTypes: ['driveItem'], query: { queryString: `"${HUB_FOLDER}" isDocument<>true` }, from: 0, size: 50 }] }),
+    });
+    const data = await res.json() as { value?: Array<{ hitsContainers?: Array<{ hits?: Array<{ resource?: Record<string, unknown> }> }> }> };
+    const out: FoundHub[] = [];
+    for (const c of data.value?.[0]?.hitsContainers ?? []) {
+      for (const h of c.hits ?? []) {
+        const r = h.resource ?? {};
+        const name = String(r.name ?? '');
+        if (!PERSONAL_HUB_RE.test(name)) continue;
+        const parent = (r.parentReference ?? {}) as { driveId?: string; path?: string };
+        if (!parent.driveId || !r.id) continue;
+        out.push({ driveId: parent.driveId, id: String(r.id), name, webUrl: (r.webUrl as string) ?? null, parentPath: parent.path ?? null });
+      }
+    }
+    return out;
+  } catch { return []; }
+}
+
 /**
  * Copy one file into another drive (Graph cannot move across drives), wait for
  * the async copy to finish, then delete the source — to its recycle bin.
@@ -174,10 +204,25 @@ async function mergeStrayHubFolders(
 
   // Which drives to sweep: the hub's own drive for numbered copies; when the
   // hub is on SharePoint, the connecting user's OneDrive for any copy at all.
-  const sweeps: Array<{ srcBase: string; re: RegExp; sameDrive: boolean }> = [{ srcBase: base, re: STRAY_HUB_RE, sameDrive: true }];
+  const sweeps: Array<{ srcBase: string; re: RegExp; sameDrive: boolean; only?: Set<string> }> = [{ srcBase: base, re: STRAY_HUB_RE, sameDrive: true }];
   if (destDriveId) {
     sweeps.push({ srcBase: '/me/drive', re: PERSONAL_HUB_RE, sameDrive: false });
     out.sweptPersonal = true;
+    // …and any other drive where search finds one (a different site, another
+    // library): sweep just those folders, whatever their number.
+    const byDrive = new Map<string, Set<string>>();
+    let personalDriveId: string | null = null;
+    try { personalDriveId = ((await (await graphFetch(token, '/me/drive?$select=id')).json()) as { id?: string }).id ?? null; } catch { /* no personal drive */ }
+    for (const f of await findHubFoldersEverywhere(token)) {
+      if (f.driveId === destDriveId && f.name === HUB_FOLDER) continue;   // the real one
+      if (f.driveId === destDriveId) continue;                          // same drive: first sweep has it
+      if (f.driveId === personalDriveId) continue;                      // the /me/drive sweep has it
+      if (!byDrive.has(f.driveId)) byDrive.set(f.driveId, new Set());
+      byDrive.get(f.driveId)!.add(f.id);
+    }
+    for (const [driveId, ids] of byDrive) {
+      sweeps.push({ srcBase: `/drives/${driveId}`, re: PERSONAL_HUB_RE, sameDrive: false, only: ids });
+    }
   }
 
   const relocate = async (srcBase: string, f: ChildItem, sameDrive: boolean, suffix: string): Promise<boolean> => {
@@ -191,7 +236,7 @@ async function mergeStrayHubFolders(
       const rootRes = await graphFetch(token, `${sweep.srcBase}/root/children?$select=id,name,folder&$top=200`);
       root = ((await rootRes.json()).value ?? []) as ChildItem[];
     } catch { continue; }   // e.g. no personal drive on this token
-    const strays = root.filter(c => c.folder && sweep.re.test(c.name));
+    const strays = root.filter(c => c.folder && sweep.re.test(c.name) && (!sweep.only || sweep.only.has(c.id)));
 
     for (const stray of strays) {
       if (Date.now() > deadline) { out.capped = true; return out; }
@@ -520,6 +565,7 @@ export async function hubDiagnostics(token: string, orgCode: string): Promise<{
   sites: Array<{ displayName: string | null; name: string | null; webUrl: string | null }>;
   lastMerge: typeof lastMerge;
   personalRoot: Array<{ name: string; folder: boolean }> | null;
+  found: FoundHub[];
 }> {
   const drive = await resolveDrive(token, orgCode);
   const base = drive.base;
@@ -546,5 +592,6 @@ export async function hubDiagnostics(token: string, orgCode: string): Promise<{
       personalRoot = (((await r.json()).value ?? []) as ChildItem[]).map(c => ({ name: c.name, folder: !!c.folder }));
     } catch { /* diagnostics only */ }
   }
-  return { drive: { kind: drive.kind, label: drive.label, base, webUrl: drive.webUrl }, root, hub, documents, sites, lastMerge, personalRoot };
+  const found = await findHubFoldersEverywhere(token);
+  return { drive: { kind: drive.kind, label: drive.label, base, webUrl: drive.webUrl }, root, hub, documents, sites, lastMerge, personalRoot, found };
 }

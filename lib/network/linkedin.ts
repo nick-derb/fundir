@@ -103,14 +103,18 @@ export class CallBudget {
 // profile read after it was lost). 30s is generous for this API.
 const CALL_TIMEOUT_MS = 30_000;
 
-async function api(path: string, budget: CallBudget, init?: RequestInit): Promise<Record<string, unknown>> {
+// /enrich-lead fetches a live profile and is routinely slower than the search
+// endpoints; give it longer before giving up on it.
+const ENRICH_TIMEOUT_MS = 90_000;
+
+async function api(path: string, budget: CallBudget, init?: RequestInit, timeoutMs = CALL_TIMEOUT_MS): Promise<Record<string, unknown>> {
   budget.spend();
   let res: Response;
   try {
-    res = await fetch(`${BASE}${path}`, { ...init, headers: { ...headers(), ...(init?.headers as Record<string, string>) }, signal: AbortSignal.timeout(CALL_TIMEOUT_MS) });
+    res = await fetch(`${BASE}${path}`, { ...init, headers: { ...headers(), ...(init?.headers as Record<string, string>) }, signal: AbortSignal.timeout(timeoutMs) });
   } catch (e) {
     const name = e instanceof Error ? e.name : '';
-    if (name === 'TimeoutError' || name === 'AbortError') throw new Error(`LinkedIn API timeout after ${CALL_TIMEOUT_MS / 1000}s on ${path.split('?')[0]}`);
+    if (name === 'TimeoutError' || name === 'AbortError') throw new Error(`LinkedIn API timeout after ${timeoutMs / 1000}s on ${path.split('?')[0]}`);
     throw e;
   }
   const text = await res.text();
@@ -169,7 +173,7 @@ function normalizeExperiences(raw: unknown): LinkedInExperience[] {
 export async function enrichProfile(linkedinUrl: string, budget: CallBudget): Promise<LinkedInProfile> {
   const url = canonicalLinkedInUrl(linkedinUrl);
   if (!url) throw new Error(`Not a LinkedIn profile URL: ${linkedinUrl}`);
-  const body = await api(`/enrich-lead?linkedin_url=${encodeURIComponent(url)}`, budget);
+  const body = await api(`/enrich-lead?linkedin_url=${encodeURIComponent(url)}`, budget, undefined, ENRICH_TIMEOUT_MS);
   const d = (body.data ?? body) as Record<string, unknown>;
 
   const experiences = normalizeExperiences(pick(d, 'experiences', 'experience', 'positions'));
