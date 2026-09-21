@@ -25,6 +25,8 @@ const SERIF = "'Instrument Serif',Palatino,Georgia,serif";
 interface HubDoc {
   id: string; name: string; size: number;
   webUrl: string | null; modified: string | null; modifiedBy: string | null;
+  /** Sub-folder inside Documents, when staff filed it one level down. */
+  folder?: string | null;
 }
 interface HubRow {
   submitted: string; submittedBy: string; site: string;
@@ -44,10 +46,11 @@ const METRICS = [
 const STAGES = ['Uploading', 'Extracting text', 'Reading', 'Updating profile', 'Indexed'];
 
 // ── Collection classification ───────────────────────────────────────────────
-// Documents live in one flat OneDrive folder, so collections are derived from
-// the file name and type. Keyword match wins; otherwise spreadsheets read as
-// outcome data and prose as narrative, which keeps every file in exactly one
-// bucket (counts always sum to the real total).
+// Collections are derived from the file name, its sub-folder (if staff filed
+// it under e.g. "Financials" in SharePoint) and its type — no folder structure
+// is required. Keyword match wins; otherwise spreadsheets read as outcome data
+// and prose as narrative, which keeps every file in exactly one bucket
+// (counts always sum to the real total).
 const COLLECTIONS = [
   { key: 'outcome',   label: 'Outcome data',            icon: BarChart3, color: 'var(--accent)', tint: 'rgba(101,154,128,.14)',
     re: /outcome|metric|attendance|enroll|participant|impact|program data|youth served|demographic/i },
@@ -61,8 +64,10 @@ const COLLECTIONS = [
 
 const ext = (n: string) => n.toLowerCase().slice(n.lastIndexOf('.') + 1);
 
-function collectionOf(name: string): typeof COLLECTIONS[number]['key'] {
-  for (const c of COLLECTIONS) if (c.re.test(name)) return c.key;
+function collectionOf(d: Pick<HubDoc, 'name' | 'folder'>): typeof COLLECTIONS[number]['key'] {
+  const { name } = d;
+  const haystack = d.folder ? `${d.folder}/${name}` : name;
+  for (const c of COLLECTIONS) if (c.re.test(haystack)) return c.key;
   return ['xlsx', 'xls', 'csv', 'tsv'].includes(ext(name)) ? 'outcome' : 'narrative';
 }
 
@@ -180,7 +185,7 @@ export function DataHubView({ orgName, userEmail }: { orgName: string; userEmail
     : docs;
 
   const counts = COLLECTIONS.map(c => {
-    const mine = docs.filter(d => collectionOf(d.name) === c.key);
+    const mine = docs.filter(d => collectionOf(d) === c.key);
     return { ...c, files: mine.length, bytes: mine.reduce((s, d) => s + (d.size || 0), 0) };
   });
 
@@ -392,7 +397,7 @@ export function DataHubView({ orgName, userEmail }: { orgName: string; userEmail
                     </td></tr>
                   )}
                   {visible.map(d => {
-                    const col = COLLECTIONS.find(c => c.key === collectionOf(d.name))!;
+                    const col = COLLECTIONS.find(c => c.key === collectionOf(d))!;
                     const isIndexed = indexedIds.has(d.id);
                     return (
                       <tr key={d.id} className="hover:bg-elevated transition-colors">
@@ -403,7 +408,7 @@ export function DataHubView({ orgName, userEmail }: { orgName: string; userEmail
                             </span>
                             <span className="min-w-0">
                               <b className="block text-[13px] font-medium tracking-[-.005em] text-primary truncate">{d.name}</b>
-                              <i className="not-italic text-[12px] text-tertiary">{col.label}</i>
+                              <i className="not-italic text-[12px] text-tertiary">{d.folder ? `${d.folder} · ` : ''}{col.label}</i>
                             </span>
                           </div>
                         </td>

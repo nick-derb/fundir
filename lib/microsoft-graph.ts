@@ -232,30 +232,44 @@ export async function findOrCreateFolder(
   parentId?: string,
   base: string = DEFAULT_DRIVE,
 ): Promise<GraphFile> {
-  // Try to find existing folder
-  try {
-    const searchPath = parentId
-      ? `${base}/items/${parentId}/children?$filter=name eq '${name}' and folder ne null&$select=id,name,webUrl,folder`
-      : `${base}/root/children?$filter=name eq '${name}' and folder ne null&$select=id,name,webUrl,folder`;
-    const res = await graphFetch(token, searchPath);
-    const data = await res.json();
-    if (data.value?.[0]) return data.value[0];
-  } catch {
-    // not found — create
-  }
+  // Look the folder up BY PATH. The old `$filter=name eq …` lookup only works
+  // on personal OneDrive; SharePoint document libraries reject it, the error
+  // was swallowed, and the create below (with conflictBehavior=rename) minted
+  // "CYC Data Hub 1", "CYC Data Hub 2", … on every cache miss. Path addressing
+  // works on every drive kind.
+  const byPath = parentId
+    ? `${base}/items/${parentId}:/${encodeURIComponent(name)}`
+    : `${base}/root:/${encodeURIComponent(name)}`;
+  const lookup = async (): Promise<GraphFile | null> => {
+    const res = await fetch(`${GRAPH}${byPath}?$select=id,name,webUrl,folder`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (res.status === 404) return null;
+    if (!res.ok) throw new Error(`Graph API ${res.status}: ${await res.text()}`);
+    const item = await res.json() as GraphFile & { folder?: unknown };
+    return item.folder ? item : null;
+  };
+
+  const existing = await lookup();
+  if (existing) return existing;
 
   const path = parentId
     ? `${base}/items/${parentId}/children`
     : `${base}/root/children`;
 
-  const res = await graphFetch(token, path, {
+  // `fail` instead of `rename`: if the folder appeared between the lookup and
+  // the create (two requests racing on a cold cache), Graph answers 409 and we
+  // simply look it up again — never a numbered duplicate.
+  const res = await fetch(`${GRAPH}${path}`, {
     method: 'POST',
-    body: JSON.stringify({
-      name,
-      folder: {},
-      '@microsoft.graph.conflictBehavior': 'rename',
-    }),
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, folder: {}, '@microsoft.graph.conflictBehavior': 'fail' }),
   });
+  if (res.status === 409) {
+    const again = await lookup();
+    if (again) return again;
+  }
+  if (!res.ok) throw new Error(`Graph API ${res.status}: ${await res.text()}`);
   return res.json();
 }
 
