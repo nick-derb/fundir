@@ -64,7 +64,10 @@ async function resolveFromGraph(token: string): Promise<DriveTarget | null> {
     const site = configured
       ? await configuredSite(token, configured)
       : await (await graphFetch(token, `/sites/root?$select=id,displayName,webUrl`)).json() as GraphSite;
-    if (!site?.id) return null;
+    if (!site?.id) {
+      if (configured) throw new Error(`no SharePoint site named "${configured}" is visible to this connection`);
+      return null;
+    }
     // The site's default library ("Documents") is the organization's drive.
     const drive = await (await graphFetch(token, `/sites/${site.id}/drive?$select=id,name,webUrl`)).json() as
       { id?: string; name?: string; webUrl?: string };
@@ -75,9 +78,15 @@ async function resolveFromGraph(token: string): Promise<DriveTarget | null> {
       label: [site.displayName, drive.name].filter(Boolean).join(' · ') || 'SharePoint',
       webUrl: drive.webUrl ?? site.webUrl ?? null,
     };
-  } catch {
-    // The token has no Sites permission, or the tenant has no SharePoint.
-    return null;
+  } catch (err) {
+    // No Sites permission on the token (an older connection) or no SharePoint
+    // at all → the personal drive is the honest answer. Anything else (a Graph
+    // blip, a throttle) must not be: writing an org's files into someone's
+    // OneDrive because one request hiccuped is exactly the bug this file
+    // exists to prevent.
+    const msg = err instanceof Error ? err.message : String(err);
+    if (/Graph API 40[13]/.test(msg)) return null;
+    throw new Error(`SharePoint site "${configured ?? 'root'}" could not be resolved: ${msg.slice(0, 200)}`);
   }
 }
 

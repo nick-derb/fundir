@@ -87,13 +87,17 @@ export async function setCachedHandles(orgCode: string, handles: HubHandles): Pr
   }
 }
 
-/** Drop both layers (called when a handle 404s so the next read re-discovers). */
-export function invalidateHandles(orgCode: string): void {
+/**
+ * Drop both layers (called when a handle 404s so the next read re-discovers).
+ * The Supabase delete is awaited: when it was fire-and-forget, the read that
+ * followed usually won the race, found the row still there, and skipped the
+ * re-discovery the caller had just asked for.
+ */
+export async function invalidateHandles(orgCode: string): Promise<void> {
   mem.delete(orgCode);
-  // Fire-and-forget; a stale persistent row would just be overwritten anyway.
   try {
     const db = createServerClient();
-    void db.from('data_hub_state').delete().eq('org_code', orgCode);
+    await db.from('data_hub_state').delete().eq('org_code', orgCode);
   } catch {
     /* ignore */
   }

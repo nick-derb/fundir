@@ -24,7 +24,7 @@ import type { GraphFile } from '@/lib/microsoft-graph';
 import {
   getCachedHandles, setCachedHandles, invalidateHandles,
 } from '@/lib/data-hub-state';
-import { resolveDrive } from '@/lib/sharepoint';
+import { resolveDrive, PERSONAL_DRIVE } from '@/lib/sharepoint';
 
 const GRAPH = 'https://graph.microsoft.com/v1.0';
 
@@ -120,62 +120,120 @@ async function moveItem(token: string, base: string, item: ChildItem, parentId: 
 }
 
 const STRAY_HUB_RE = /^CYC Data Hub \d+$/;
+/** On the personal drive even the un-numbered hub is a stray once SharePoint is in use. */
+const PERSONAL_HUB_RE = /^CYC Data Hub( \d+)?$/;
 /** What the last discovery on this instance tidied — surfaced by hubDiagnostics. */
-let lastMerge: { folders: number; files: number; rows: number; removed: number; at: string } | null = null;
+let lastMerge: { folders: number; files: number; rows: number; removed: number; sweptPersonal: boolean; capped: boolean; at: string } | null = null;
+
+const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
+
+/**
+ * Copy one file into another drive (Graph cannot move across drives), wait for
+ * the async copy to finish, then delete the source — to its recycle bin.
+ * Returns false (source untouched) if the copy could not be confirmed.
+ */
+async function copyAcrossDrives(token: string, srcBase: string, item: ChildItem, destDriveId: string, destParentId: string): Promise<boolean> {
+  const res = await fetch(`${GRAPH}${srcBase}/items/${item.id}/copy?@microsoft.graph.conflictBehavior=rename`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ parentReference: { driveId: destDriveId, id: destParentId }, name: item.name }),
+  });
+  if (res.status !== 202) return false;
+  const monitor = res.headers.get('Location');
+  if (!monitor) return false;
+  for (let i = 0; i < 12; i++) {
+    await sleep(1500 + i * 500);
+    const m = await fetch(monitor).then(r => r.json()).catch(() => null) as { status?: string } | null;
+    if (m?.status === 'completed') {
+      await fetch(`${GRAPH}${srcBase}/items/${item.id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+      return true;
+    }
+    if (m?.status === 'failed') return false;
+  }
+  return false;
+}
 
 /**
  * A SharePoint quirk once made every cold open create a fresh "CYC Data Hub N"
- * folder (see findOrCreateFolder), so staff uploads landed in whichever copy
- * that request happened to make. This folds them back: files from each stray's
- * Documents folder (and any loose files) move into the real Documents folder,
- * data rows typed into a stray workbook are appended to the real table, and a
- * stray that is then empty is deleted — to the SharePoint recycle bin, so
- * nothing is unrecoverable.
+ * folder (see findOrCreateFolder), and before the site resolved at all the hub
+ * lived in the connecting user's personal OneDrive — so staff uploads landed
+ * in whichever copy that request happened to make. This folds them back:
+ * files from each stray's Documents folder (and any loose files) go into the
+ * real Documents folder (moved on the same drive, copied then deleted across
+ * drives), data rows typed into a stray workbook are appended to the real
+ * table, and a stray that is then empty is deleted — to the recycle bin, so
+ * nothing is unrecoverable. Bounded by a time budget; it simply picks up where
+ * it left off on the next discovery or repair.
  */
 async function mergeStrayHubFolders(
   token: string, base: string, docsId: string, workbookId: string, tableName: string,
-): Promise<{ folders: number; files: number; rows: number; removed: number }> {
-  const out = { folders: 0, files: 0, rows: 0, removed: 0 };
-  const rootRes = await graphFetch(token, `${base}/root/children?$select=id,name,folder&$top=200`);
-  const root = ((await rootRes.json()).value ?? []) as ChildItem[];
-  const strays = root.filter(c => c.folder && STRAY_HUB_RE.test(c.name));
+): Promise<NonNullable<typeof lastMerge>> {
+  const out = { folders: 0, files: 0, rows: 0, removed: 0, sweptPersonal: false, capped: false, at: new Date().toISOString() };
+  const deadline = Date.now() + 38_000;
+  const destDriveId = base.startsWith('/drives/') ? base.slice('/drives/'.length) : null;
 
-  for (const stray of strays) {
-    out.folders++;
-    let leftovers = 0;
-    for (const kid of await listChildren(token, base, stray.id)) {
-      if (kid.folder && kid.name === DOCS_FOLDER) {
-        for (const f of await listChildren(token, base, kid.id)) {
-          if (f.folder) { leftovers++; continue; }   // nested folders: leave for a human
-          await moveItem(token, base, f, docsId, stray.name);
-          out.files++;
+  // Which drives to sweep: the hub's own drive for numbered copies; when the
+  // hub is on SharePoint, the connecting user's OneDrive for any copy at all.
+  const sweeps: Array<{ srcBase: string; re: RegExp; sameDrive: boolean }> = [{ srcBase: base, re: STRAY_HUB_RE, sameDrive: true }];
+  if (destDriveId) {
+    sweeps.push({ srcBase: '/me/drive', re: PERSONAL_HUB_RE, sameDrive: false });
+    out.sweptPersonal = true;
+  }
+
+  const relocate = async (srcBase: string, f: ChildItem, sameDrive: boolean, suffix: string): Promise<boolean> => {
+    if (sameDrive) { await moveItem(token, base, f, docsId, suffix); return true; }
+    return copyAcrossDrives(token, srcBase, f, destDriveId!, docsId);
+  };
+
+  for (const sweep of sweeps) {
+    let root: ChildItem[] = [];
+    try {
+      const rootRes = await graphFetch(token, `${sweep.srcBase}/root/children?$select=id,name,folder&$top=200`);
+      root = ((await rootRes.json()).value ?? []) as ChildItem[];
+    } catch { continue; }   // e.g. no personal drive on this token
+    const strays = root.filter(c => c.folder && sweep.re.test(c.name));
+
+    for (const stray of strays) {
+      if (Date.now() > deadline) { out.capped = true; return out; }
+      out.folders++;
+      let leftovers = 0;
+      for (const kid of await listChildren(token, sweep.srcBase, stray.id)) {
+        if (Date.now() > deadline) { out.capped = true; return out; }
+        if (kid.folder && kid.name === DOCS_FOLDER) {
+          for (const f of await listChildren(token, sweep.srcBase, kid.id)) {
+            if (Date.now() > deadline) { out.capped = true; return out; }
+            if (f.folder) { leftovers++; continue; }   // nested folders: leave for a human
+            if (await relocate(sweep.srcBase, f, sweep.sameDrive, stray.name)) out.files++; else leftovers++;
+          }
+          continue;
         }
-        continue;
-      }
-      if (!kid.folder && kid.name === WORKBOOK_NAME) {
-        // Only rows beyond the header are worth carrying over.
-        const ur = await graphFetch(
-          token,
-          `${base}/items/${kid.id}/workbook/worksheets('${encodeURIComponent(SHEET_NAME)}')/usedRange(valuesOnly=true)?$select=values`,
-        ).then(r => r.json()).catch(() => ({ values: [] }));
-        const rows = ((ur.values ?? []) as unknown[][]).slice(1)
-          .map(v => HUB_COLUMNS.map((_, i) => (v[i] == null ? '' : String(v[i]))))
-          .filter(v => v.some(Boolean));
-        if (rows.length) {
-          await graphFetch(token, `${base}/items/${workbookId}/workbook/tables/${tableName}/rows/add`, {
-            method: 'POST', body: JSON.stringify({ values: rows }),
-          });
-          out.rows += rows.length;
+        if (!kid.folder && kid.name === WORKBOOK_NAME) {
+          // Only rows beyond the header are worth carrying over.
+          const ur = await graphFetch(
+            token,
+            `${sweep.srcBase}/items/${kid.id}/workbook/worksheets('${encodeURIComponent(SHEET_NAME)}')/usedRange(valuesOnly=true)?$select=values`,
+          ).then(r => r.json()).catch(() => ({ values: [] }));
+          const rows = ((ur.values ?? []) as unknown[][]).slice(1)
+            .map(v => HUB_COLUMNS.map((_, i) => (v[i] == null ? '' : String(v[i]))))
+            .filter(v => v.some(Boolean));
+          if (rows.length) {
+            await graphFetch(token, `${base}/items/${workbookId}/workbook/tables/${tableName}/rows/add`, {
+              method: 'POST', body: JSON.stringify({ values: rows }),
+            });
+            out.rows += rows.length;
+            // Blank the copied rows' source so a second sweep cannot double-append:
+            // simplest is to leave the workbook alone and let the folder deletion
+            // below take it — which only happens once every file is out.
+          }
+          continue;
         }
-        continue;
+        if (kid.folder) { leftovers++; continue; }
+        if (await relocate(sweep.srcBase, kid, sweep.sameDrive, stray.name)) out.files++; else leftovers++;
       }
-      if (kid.folder) { leftovers++; continue; }
-      await moveItem(token, base, kid, docsId, stray.name);
-      out.files++;
-    }
-    if (leftovers === 0) {
-      const del = await fetch(`${GRAPH}${base}/items/${stray.id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
-      if (del.ok || del.status === 404) out.removed++;
+      if (leftovers === 0) {
+        const del = await fetch(`${GRAPH}${sweep.srcBase}/items/${stray.id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+        if (del.ok || del.status === 404) out.removed++;
+      }
     }
   }
   return out;
@@ -247,8 +305,8 @@ async function discoverHandles(token: string, base: string): Promise<HubHandles>
   // effort: discovery must never fail because a stray could not be tidied.
   try {
     const merged = await mergeStrayHubFolders(token, base, docs.id, workbook!.id, tableName);
-    lastMerge = { ...merged, at: new Date().toISOString() };
-    console.log(`[data-hub] discovery on ${base}: ${merged.folders} duplicate hub folder(s), moved ${merged.files} file(s) + ${merged.rows} row(s), removed ${merged.removed}`);
+    lastMerge = merged;
+    console.log(`[data-hub] discovery on ${base}: ${merged.folders} stray hub folder(s), moved ${merged.files} file(s) + ${merged.rows} row(s), removed ${merged.removed}${merged.capped ? ' (time-capped, will continue)' : ''}`);
   } catch (err) {
     console.warn('[data-hub] stray-folder merge skipped:', err instanceof Error ? err.message : err);
   }
@@ -299,7 +357,7 @@ async function withHandles<T>(
     return await fn(handles, base);
   } catch (err) {
     if (!isNotFound(err)) throw err;
-    invalidateHandles(orgCode);
+    await invalidateHandles(orgCode);
     const fresh = await discoverHandles(token, base);
     await setCachedHandles(orgCode, fresh);
     return fn(fresh, base);
@@ -461,6 +519,7 @@ export async function hubDiagnostics(token: string, orgCode: string): Promise<{
   documents: Array<{ name: string; folder: boolean }> | null;
   sites: Array<{ displayName: string | null; name: string | null; webUrl: string | null }>;
   lastMerge: typeof lastMerge;
+  personalRoot: Array<{ name: string; folder: boolean }> | null;
 }> {
   const drive = await resolveDrive(token, orgCode);
   const base = drive.base;
@@ -480,5 +539,12 @@ export async function hubDiagnostics(token: string, orgCode: string): Promise<{
         .map(x => ({ displayName: x.displayName ?? null, name: x.name ?? null, webUrl: x.webUrl ?? null }));
     } catch { /* diagnostics only */ }
   }
-  return { drive: { kind: drive.kind, label: drive.label, base, webUrl: drive.webUrl }, root, hub, documents, sites, lastMerge };
+  let personalRoot: Array<{ name: string; folder: boolean }> | null = null;
+  if (base !== PERSONAL_DRIVE) {
+    try {
+      const r = await graphFetch(token, `/me/drive/root/children?$select=id,name,folder&$top=200`);
+      personalRoot = (((await r.json()).value ?? []) as ChildItem[]).map(c => ({ name: c.name, folder: !!c.folder }));
+    } catch { /* diagnostics only */ }
+  }
+  return { drive: { kind: drive.kind, label: drive.label, base, webUrl: drive.webUrl }, root, hub, documents, sites, lastMerge, personalRoot };
 }

@@ -102,7 +102,7 @@ export async function GET(req: NextRequest) {
   // Sites.ReadWrite.All can reach SharePoint where the previous one could not.
   // Drop both caches so the next read re-resolves the drive and its folders.
   clearDrive(orgCode);
-  invalidateHandles(orgCode);
+  await invalidateHandles(orgCode);
   const dest = new URL(returnTo, appUrl);
   dest.searchParams.set('connected', 'microsoft');
   return NextResponse.redirect(dest.toString());
