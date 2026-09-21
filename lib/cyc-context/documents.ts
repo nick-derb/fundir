@@ -13,7 +13,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { createServerClient } from '@/lib/supabase';
 import { generateEmbedding } from '@/lib/embeddings';
-import { extractContent, downloadFileBase64, type GraphFile } from '@/lib/microsoft-graph';
+import { extractContent, downloadFileBase64, DEFAULT_DRIVE, type GraphFile } from '@/lib/microsoft-graph';
 
 export const DOCUMENT_KIND = 'document';
 const CHUNK_SIZE = 1400;
@@ -47,21 +47,26 @@ export function isIndexableDoc(name: string): boolean {
  * through the existing Graph extractors; PDFs are transcribed by Claude natively
  * (no server-side PDF library needed). Best-effort — returns '' if unreadable.
  */
-export async function extractIndexableText(token: string, file: { id: string; name: string }): Promise<string> {
+// `base` is the drive the Data Hub lives on (`/drives/<id>` for the org's
+// SharePoint library, `/me/drive` for a personal OneDrive). It must be passed:
+// the helpers default to the personal drive, and a SharePoint item id 404s
+// there — silently, which read as "unreadable" for every document.
+export async function extractIndexableText(token: string, file: { id: string; name: string }, base: string = DEFAULT_DRIVE): Promise<string> {
   try {
-    if (isPdf(file.name)) return await extractPdfText(token, file.id);
+    if (isPdf(file.name)) return await extractPdfText(token, file.id, base);
     if (!TEXTUAL.has(ext(file.name))) return '';
     const gf: GraphFile = { id: file.id, name: file.name, lastModifiedDateTime: '' };
-    const text = await extractContent(token, gf);
+    const text = await extractContent(token, gf, base);
     return (text ?? '').trim();
-  } catch {
+  } catch (e) {
+    console.error('doc extract failed', file.name, e instanceof Error ? e.message : e);
     return '';
   }
 }
 
-async function extractPdfText(token: string, itemId: string): Promise<string> {
+async function extractPdfText(token: string, itemId: string, base: string): Promise<string> {
   if (!process.env.ANTHROPIC_API_KEY) return '';
-  const { base64, bytes } = await downloadFileBase64(token, itemId);
+  const { base64, bytes } = await downloadFileBase64(token, itemId, base);
   // Graph's document block accepts PDFs comfortably to ~32MB; skip huge scans.
   if (bytes > 24_000_000) return '';
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -98,10 +103,11 @@ export async function indexDocument(
   orgId: string,
   token: string,
   file: { id: string; name: string },
+  base: string = DEFAULT_DRIVE,
 ): Promise<{ chunks: number; skipped?: string }> {
   if (!isIndexableDoc(file.name)) return { chunks: 0, skipped: 'unsupported type' };
 
-  const text = await extractIndexableText(token, file);
+  const text = await extractIndexableText(token, file, base);
   const pieces = splitText(text);
   const db = createServerClient();
 
@@ -140,8 +146,9 @@ export async function reconcileDocuments(
   orgId: string,
   token: string,
   liveDocs: Array<{ id: string; name: string }>,
-  opts: { maxDocs?: number; deadlineMs?: number } = {},
+  opts: { maxDocs?: number; deadlineMs?: number; base?: string } = {},
 ): Promise<{ indexed: number; removed: number; remaining: number; unreadable: string[] }> {
+  const base = opts.base ?? DEFAULT_DRIVE;
   const maxDocs = opts.maxDocs ?? 8;
   const deadline = Date.now() + (opts.deadlineMs ?? 240_000);
   const db = createServerClient();
@@ -168,7 +175,7 @@ export async function reconcileDocuments(
     if (indexed + unreadable.length >= maxDocs || Date.now() > deadline) break;
     const d = todo[i];
     try {
-      const { chunks } = await indexDocument(orgId, token, d);
+      const { chunks } = await indexDocument(orgId, token, d, base);
       if (chunks > 0) indexed++; else unreadable.push(d.name);
     } catch (e) {
       console.error('doc index failed', d.name, e instanceof Error ? e.message : e);

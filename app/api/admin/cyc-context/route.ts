@@ -5,6 +5,7 @@ import { indexCycContext } from '@/lib/cyc-context/build';
 import { getValidToken } from '@/lib/oauth-tokens';
 import { getHubState } from '@/lib/data-hub';
 import { reconcileDocuments } from '@/lib/cyc-context/documents';
+import { resolveDrive } from '@/lib/sharepoint';
 
 export const maxDuration = 300;
 
@@ -34,9 +35,11 @@ export async function POST() {
     if (token) {
       try {
         const hub = await getHubState(token, ctx.orgCode);
+        const { base } = await resolveDrive(token, ctx.orgCode);
         documents = await reconcileDocuments(
           ctx.orgId, token,
           hub.documents.map(d => ({ id: d.id, name: d.name })),
+          { base },
         );
       } catch (e) {
         console.error('doc reconcile failed', e instanceof Error ? e.message : e);

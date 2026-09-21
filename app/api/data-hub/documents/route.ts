@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthContext } from '@/lib/auth-context';
 import { getValidToken } from '@/lib/oauth-tokens';
 import { uploadDocument } from '@/lib/data-hub';
+import { resolveDrive } from '@/lib/sharepoint';
 import { indexDocument } from '@/lib/cyc-context/documents';
 
 // Upload + inline RAG indexing (extract → embed) can take a moment for a PDF.
@@ -43,7 +44,8 @@ export async function POST(req: NextRequest) {
     let skipped: string | undefined;
     if (wantsIndex) {
       try {
-        const r = await indexDocument(ctx.orgId, token, { id: doc.id, name: doc.name });
+        const { base } = await resolveDrive(token, ctx.orgCode);
+        const r = await indexDocument(ctx.orgId, token, { id: doc.id, name: doc.name }, base);
         indexed = r.chunks;
         skipped = r.skipped;
       } catch (e) {

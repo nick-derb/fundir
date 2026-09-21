@@ -3,6 +3,7 @@ import { createServerClient } from '@/lib/supabase';
 import { getValidToken } from '@/lib/oauth-tokens';
 import { getHubState } from '@/lib/data-hub';
 import { reconcileDocuments } from '@/lib/cyc-context/documents';
+import { resolveDrive } from '@/lib/sharepoint';
 
 // Nightly backstop: for every org with a Microsoft 365 connection, read any
 // document in the shared folder that Fundir has not read yet and drop chunks
@@ -31,7 +32,8 @@ async function run(req: NextRequest) {
       const token = org ? await getValidToken(code, 'microsoft') : null;
       if (!org || !token) { out[code] = 'not connected'; continue; }
       const hub = await getHubState(token, code);
-      out[code] = await reconcileDocuments(org.id as string, token, hub.documents.map(d => ({ id: d.id, name: d.name })), { maxDocs: 6, deadlineMs: Math.max(30_000, 230_000 - (Date.now() - started)) });
+      const { base } = await resolveDrive(token, code);
+      out[code] = await reconcileDocuments(org.id as string, token, hub.documents.map(d => ({ id: d.id, name: d.name })), { maxDocs: 6, deadlineMs: Math.max(30_000, 230_000 - (Date.now() - started)), base });
     } catch (e) { out[code] = `failed: ${e instanceof Error ? e.message : e}`; }
   }
   return NextResponse.json({ ok: true, orgs: out });
