@@ -130,15 +130,20 @@ export async function indexDocument(
 }
 
 /**
- * Reconcile the whole Documents folder against the index: index anything new or
- * changed, drop chunks for documents that no longer exist. Used by the manual
- * "reindex documents" admin action and a nightly backstop.
+ * Reconcile the Documents folder against the index: index anything new, drop
+ * chunks for documents that no longer exist. Bounded — a PDF is transcribed by
+ * Claude and can take 20–40s, so one call reads at most `maxDocs` documents
+ * inside `deadlineMs` and reports how many are still waiting; callers loop.
+ * Used by the Data Hub's "read them now" action and the nightly backstop.
  */
 export async function reconcileDocuments(
   orgId: string,
   token: string,
   liveDocs: Array<{ id: string; name: string }>,
-): Promise<{ indexed: number; removed: number }> {
+  opts: { maxDocs?: number; deadlineMs?: number } = {},
+): Promise<{ indexed: number; removed: number; remaining: number; unreadable: string[] }> {
+  const maxDocs = opts.maxDocs ?? 8;
+  const deadline = Date.now() + (opts.deadlineMs ?? 240_000);
   const db = createServerClient();
   const { data: existing } = await db
     .from('cyc_context_chunks')
@@ -149,17 +154,26 @@ export async function reconcileDocuments(
   const liveIds = new Set(liveDocs.map(d => d.id));
   const indexedIds = new Set((existing ?? []).map(r => r.source_doc_id as string).filter(Boolean));
 
-  // Remove chunks for documents deleted from OneDrive.
+  // Remove chunks for documents deleted from the folder.
   let removed = 0;
   for (const id of indexedIds) {
     if (!liveIds.has(id)) { await removeDocumentChunks(orgId, id); removed++; }
   }
-  // Index documents not yet in the store.
+  // Index documents not yet in the store, newest first, within the budget.
+  const todo = liveDocs.filter(d => !indexedIds.has(d.id) && isIndexableDoc(d.name));
   let indexed = 0;
-  for (const d of liveDocs) {
-    if (indexedIds.has(d.id) || !isIndexableDoc(d.name)) continue;
-    const { chunks } = await indexDocument(orgId, token, d);
-    if (chunks > 0) indexed++;
+  const unreadable: string[] = [];
+  let i = 0;
+  for (; i < todo.length; i++) {
+    if (indexed + unreadable.length >= maxDocs || Date.now() > deadline) break;
+    const d = todo[i];
+    try {
+      const { chunks } = await indexDocument(orgId, token, d);
+      if (chunks > 0) indexed++; else unreadable.push(d.name);
+    } catch (e) {
+      console.error('doc index failed', d.name, e instanceof Error ? e.message : e);
+      unreadable.push(d.name);
+    }
   }
-  return { indexed, removed };
+  return { indexed, removed, remaining: todo.length - i, unreadable };
 }

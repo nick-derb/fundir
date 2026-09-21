@@ -55,7 +55,7 @@ const COLLECTIONS = [
   { key: 'outcome',   label: 'Outcome data',            icon: BarChart3, color: 'var(--accent)', tint: 'rgba(101,154,128,.14)',
     re: /outcome|metric|attendance|enroll|participant|impact|program data|youth served|demographic/i },
   { key: 'financial', label: 'Financials & audits',     icon: Landmark,  color: '#5B7383',       tint: 'rgba(91,115,131,.14)',
-    re: /financ|audit|990|budget|statement|balance|expense|revenue|fy\d{2}|irs/i },
+    re: /financ|audit|990|budget|statement|balance|expense|revenue|irs|p&l|cash flow/i },
   { key: 'narrative', label: 'Narratives & boilerplate', icon: FileText,  color: '#9C7A2A',      tint: 'rgba(156,122,42,.14)',
     re: /narrative|boilerplate|proposal|loi|letter|case for|story|about us|program description/i },
   { key: 'board',     label: 'Board & governance',      icon: Users,     color: '#0C6B5A',       tint: 'rgba(12,107,90,.12)',
@@ -64,10 +64,19 @@ const COLLECTIONS = [
 
 const ext = (n: string) => n.toLowerCase().slice(n.lastIndexOf('.') + 1);
 
+// A fiscal-year tag ("FY27 …") is on almost everything CYC files, so it only
+// counts when no real keyword matched — otherwise "FY27 Board list" reads as
+// a financial. Board & governance is checked first for the same reason.
+const FISCAL_YEAR = /(?<![a-z])fy\s?'?\d{2}(?!\d)/i;
+const CHECK_ORDER: Array<typeof COLLECTIONS[number]['key']> = ['board', 'financial', 'outcome', 'narrative'];
 function collectionOf(d: Pick<HubDoc, 'name' | 'folder'>): typeof COLLECTIONS[number]['key'] {
   const { name } = d;
   const haystack = d.folder ? `${d.folder}/${name}` : name;
-  for (const c of COLLECTIONS) if (c.re.test(haystack)) return c.key;
+  for (const key of CHECK_ORDER) {
+    const c = COLLECTIONS.find(x => x.key === key)!;
+    if (c.re.test(haystack)) return key;
+  }
+  if (FISCAL_YEAR.test(haystack)) return 'financial';
   return ['xlsx', 'xls', 'csv', 'tsv'].includes(ext(name)) ? 'outcome' : 'narrative';
 }
 
@@ -110,6 +119,7 @@ export function DataHubView({ orgName, userEmail }: { orgName: string; userEmail
   const [query, setQuery]         = useState('');
 
   const [queue, setQueue]         = useState<QueueItem[]>([]);
+  const [reading, setReading]     = useState<null | { done: number; left: number | null }>(null);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [consent, setConsent]     = useState(true);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -191,6 +201,28 @@ export function DataHubView({ orgName, userEmail }: { orgName: string; userEmail
 
   const totalBytes = docs.reduce((s, d) => s + (d.size || 0), 0);
   const notIndexed = docs.filter(d => !indexedIds.has(d.id)).length;
+
+  // Files dropped straight into SharePoint never pass through the upload
+  // route, so nothing has read them; this reads them in batches until none
+  // are left, refreshing the table after each batch.
+  const readUnread = useCallback(async () => {
+    setReading({ done: 0, left: null });
+    let done = 0;
+    try {
+      for (let i = 0; i < 12; i++) {
+        const res = await fetch('/api/data-hub/reindex', { method: 'POST' }).then(r => r.json());
+        if (res.error) throw new Error(res.error);
+        done += Number(res.indexed ?? 0);
+        setReading({ done, left: Number(res.remaining ?? 0) });
+        await load();
+        if (!res.remaining) break;
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not read the documents');
+    } finally {
+      setReading(null);
+    }
+  }, [load]);
   const sites   = new Set(rows.map(r => r.site).filter(Boolean));
   const periods = new Set(rows.map(r => r.period).filter(Boolean));
   const thisMonth = rows.filter(r => r.period === currentMonth()).length;
@@ -479,6 +511,13 @@ export function DataHubView({ orgName, userEmail }: { orgName: string; userEmail
                   </div>
                 ))}
               </div>
+              {notIndexed > 0 && (
+                <button type="button" onClick={readUnread} disabled={reading !== null}
+                  className="mt-3.5 inline-flex items-center gap-2 h-8 px-3.5 rounded-md bg-accent text-white text-[12.5px] font-medium disabled:opacity-60">
+                  {reading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+                  {reading ? `Reading… ${reading.done} done${reading.left != null ? `, ${reading.left} left` : ''}` : `Read ${notIndexed === 1 ? 'it' : `all ${notIndexed}`} now`}
+                </button>
+              )}
             </div>
 
             <div className="bg-surface border border-hairline rounded-[14px] p-[18px]">
