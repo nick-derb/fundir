@@ -112,7 +112,11 @@ export async function getPeerNetwork(db: Db, orgId: string): Promise<PeerNetwork
     const foundAt = peer?.name ?? (r.current_org as string | null) ?? 'Peer organization';
     // The profile is the truth about where they work now. Someone the scan found at a
     // peer may have moved since — still a warm contact, and worth saying so plainly.
-    const orgName = (r.current_org as string | null) ?? foundAt;
+    // A "company" field like "Retired president and CEO Family Focus" is a
+    // status, not an employer; say so instead of printing it as one.
+    const rawOrg = (r.current_org as string | null) ?? null;
+    const retired = !!rawOrg && /\bretired\b/i.test(rawOrg);
+    const orgName = retired ? 'Retired' : (rawOrg ?? foundAt);
     const career = (empBy.get(id) ?? []).sort((a, b) => Number(b.is_current) - Number(a.is_current) || (b.start_year ?? 0) - (a.start_year ?? 0))
       .map(e => ({ org: e.org_name, title: e.title, start: e.start_year, end: e.is_current ? null : e.end_year, current: !!e.is_current }));
     const seenPath = new Set<string>();
@@ -166,7 +170,7 @@ export async function getPeerNetwork(db: Db, orgId: string): Promise<PeerNetwork
     score = Math.min(100, score);
 
     const why: string[] = [];
-    if (moved) why.push(`Ran ${tier === 'development' ? 'fundraising' : 'work'} at ${foundAt}${leftPeerYear ? ` until ${leftPeerYear}` : ''} and is now at ${orgName}: knows how that peer wins its grants, with no competitive tension left.`);
+    if (moved) why.push(`Ran ${tier === 'development' ? 'fundraising' : 'work'} at ${foundAt}${leftPeerYear ? ` until ${leftPeerYear}` : ''} and ${retired ? 'has since retired' : `is now at ${orgName}`}: knows how that peer wins its grants, with no competitive tension left.`);
     for (const p of paths.slice(0, 3)) why.push(p.summary ? `${p.summary} (${p.person.kindLabel}${p.verification === 'verified' ? '' : `, ${p.verification}`}).` : `${p.label} with ${p.person.name}, ${p.person.kindLabel}.`);
     if (cycAlumni) why.push('Worked at Chicago Youth Centers before this role.');
     for (const f of funderPast.slice(0, 2)) why.push(f.relation === 'funds_cyc' ? `Previously at ${f.org}, which funds CYC.` : f.relation === 'cyc_pursuing' ? `Previously at ${f.org}, a funder CYC is pursuing.` : `Previously at ${f.org}, which funds one of CYC's peers.`);
