@@ -16,13 +16,14 @@ import { redirect } from 'next/navigation';
 import {
   CheckCircle, Settings as SettingsIcon, Database, Cpu,
   RefreshCw, Building2, AlertTriangle,
-  Info, Zap, Activity, Sparkles,
+  Info, Zap, Activity, Sparkles, CalendarDays,
 } from 'lucide-react';
 import { SyncFinancialsButton } from '@/components/sync-financials-button';
 import { Org990Search } from '@/components/org-990-search';
 import { IntegrationConnector } from '@/components/integration-connector';
 import { RefreshExtractionButton } from '@/components/refresh-extraction-button';
-import { getAllIntegrations } from '@/lib/oauth-tokens';
+import { getAllIntegrations, getUserIntegration } from '@/lib/oauth-tokens';
+import { CalendarConnector } from '@/components/calendar-connector';
 import { MatchConfigEditor } from '@/components/settings/match-config-editor';
 import { getMatchConfig } from '@/lib/match-config';
 
@@ -90,12 +91,14 @@ export default async function SettingsPage() {
   const ctx = await getAuthContext();
   if (!ctx) redirect('/login');
 
-  const [lastRun, connections, orgFinancial, integrations, matchConfig] = await Promise.all([
+  const [lastRun, connections, orgFinancial, integrations, matchConfig, myMicrosoft, myGoogle] = await Promise.all([
     getLastRun(),
     checkConnections(),
     getOrgFinancialStatus(ctx.orgCode),
     getAllIntegrations(ctx.orgCode),
     getMatchConfig(ctx.orgId),
+    getUserIntegration(ctx.userId, 'microsoft'),
+    getUserIntegration(ctx.userId, 'google'),
   ]);
 
   const googleConnected     = integrations.some(i => i.provider === 'google');
@@ -195,6 +198,27 @@ export default async function SettingsPage() {
               </div>
             </div>
           )}
+
+          {/* ── Your calendar (per person, not per org) ── */}
+          <SectionCard
+            eyebrow="Your Calendar"
+            sub="Your own Outlook or Google events, next to grant deadlines · this is separate from the org's Microsoft 365 connection below"
+            icon={CalendarDays}
+            right={
+              <StatusTag
+                ok={!!(myMicrosoft || myGoogle)}
+                label={myMicrosoft || myGoogle ? 'Connected' : 'Not connected'}
+                tone={myMicrosoft || myGoogle ? 'success' : 'warning'}
+              />
+            }
+          >
+            <CalendarConnector
+              status={{
+                microsoft: { connected: !!myMicrosoft, email: myMicrosoft?.email },
+                google:    { connected: !!myGoogle,    email: myGoogle?.email },
+              }}
+            />
+          </SectionCard>
 
           {/* ── Cloud Storage & Documents ── */}
           <SectionCard

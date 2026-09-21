@@ -56,6 +56,8 @@ export interface HubDocument {
   webUrl:       string | null;
   modified:     string | null;
   modifiedBy:   string | null;
+  /** Sub-folder of Documents the file sits in, or null at the top level. */
+  folder:       string | null;
 }
 
 /** Resolved, cacheable OneDrive handles for one org's hub. */
@@ -81,6 +83,100 @@ async function findChild(token: string, parentId: string, name: string, base: st
   } catch {
     return null;
   }
+}
+
+interface ChildItem {
+  id: string; name: string; size?: number; webUrl?: string;
+  lastModifiedDateTime?: string; folder?: unknown;
+  lastModifiedBy?: { user?: { displayName?: string } };
+}
+
+async function listChildren(token: string, base: string, itemId: string): Promise<ChildItem[]> {
+  const res = await graphFetch(
+    token,
+    `${base}/items/${itemId}/children` +
+    `?$select=id,name,size,webUrl,lastModifiedDateTime,lastModifiedBy,folder&$top=200`,
+  );
+  const data = await res.json();
+  return (data.value ?? []) as ChildItem[];
+}
+
+/** Move a file under a new parent; on a name clash, suffix the name and retry. */
+async function moveItem(token: string, base: string, item: ChildItem, parentId: string, suffix: string): Promise<void> {
+  const move = (name?: string) => fetch(`${GRAPH}${base}/items/${item.id}`, {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ parentReference: { id: parentId }, ...(name ? { name } : {}) }),
+  });
+  let res = await move();
+  if (res.status === 409) {
+    const dot = item.name.lastIndexOf('.');
+    const renamed = dot > 0
+      ? `${item.name.slice(0, dot)} (${suffix})${item.name.slice(dot)}`
+      : `${item.name} (${suffix})`;
+    res = await move(renamed);
+  }
+  if (!res.ok) throw new Error(`Graph API ${res.status}: ${await res.text()}`);
+}
+
+const STRAY_HUB_RE = /^CYC Data Hub \d+$/;
+
+/**
+ * A SharePoint quirk once made every cold open create a fresh "CYC Data Hub N"
+ * folder (see findOrCreateFolder), so staff uploads landed in whichever copy
+ * that request happened to make. This folds them back: files from each stray's
+ * Documents folder (and any loose files) move into the real Documents folder,
+ * data rows typed into a stray workbook are appended to the real table, and a
+ * stray that is then empty is deleted — to the SharePoint recycle bin, so
+ * nothing is unrecoverable.
+ */
+async function mergeStrayHubFolders(
+  token: string, base: string, docsId: string, workbookId: string, tableName: string,
+): Promise<{ folders: number; files: number; rows: number; removed: number }> {
+  const out = { folders: 0, files: 0, rows: 0, removed: 0 };
+  const rootRes = await graphFetch(token, `${base}/root/children?$select=id,name,folder&$top=200`);
+  const root = ((await rootRes.json()).value ?? []) as ChildItem[];
+  const strays = root.filter(c => c.folder && STRAY_HUB_RE.test(c.name));
+
+  for (const stray of strays) {
+    out.folders++;
+    let leftovers = 0;
+    for (const kid of await listChildren(token, base, stray.id)) {
+      if (kid.folder && kid.name === DOCS_FOLDER) {
+        for (const f of await listChildren(token, base, kid.id)) {
+          if (f.folder) { leftovers++; continue; }   // nested folders: leave for a human
+          await moveItem(token, base, f, docsId, stray.name);
+          out.files++;
+        }
+        continue;
+      }
+      if (!kid.folder && kid.name === WORKBOOK_NAME) {
+        // Only rows beyond the header are worth carrying over.
+        const ur = await graphFetch(
+          token,
+          `${base}/items/${kid.id}/workbook/worksheets('${encodeURIComponent(SHEET_NAME)}')/usedRange(valuesOnly=true)?$select=values`,
+        ).then(r => r.json()).catch(() => ({ values: [] }));
+        const rows = ((ur.values ?? []) as unknown[][]).slice(1)
+          .map(v => HUB_COLUMNS.map((_, i) => (v[i] == null ? '' : String(v[i]))))
+          .filter(v => v.some(Boolean));
+        if (rows.length) {
+          await graphFetch(token, `${base}/items/${workbookId}/workbook/tables/${tableName}/rows/add`, {
+            method: 'POST', body: JSON.stringify({ values: rows }),
+          });
+          out.rows += rows.length;
+        }
+        continue;
+      }
+      if (kid.folder) { leftovers++; continue; }
+      await moveItem(token, base, kid, docsId, stray.name);
+      out.files++;
+    }
+    if (leftovers === 0) {
+      const del = await fetch(`${GRAPH}${base}/items/${stray.id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+      if (del.ok || del.status === 404) out.removed++;
+    }
+  }
+  return out;
 }
 
 /**
@@ -144,6 +240,15 @@ async function discoverHandles(token: string, base: string): Promise<HubHandles>
 
   // ── Documents folder ──
   const docs = await findOrCreateFolder(token, DOCS_FOLDER, hub.id, base);
+
+  // Sweep any "CYC Data Hub 1/2/3…" duplicates back into this one. Best
+  // effort: discovery must never fail because a stray could not be tidied.
+  try {
+    const merged = await mergeStrayHubFolders(token, base, docs.id, workbook!.id, tableName);
+    if (merged.folders) console.log(`[data-hub] merged ${merged.files} file(s) and ${merged.rows} row(s) from ${merged.folders} duplicate hub folder(s); removed ${merged.removed}`);
+  } catch (err) {
+    console.warn('[data-hub] stray-folder merge skipped:', err instanceof Error ? err.message : err);
+  }
 
   return {
     workbookId:  workbook!.id,
@@ -222,27 +327,33 @@ async function readRows(token: string, h: HubHandles, base: string): Promise<Hub
 }
 
 async function readDocuments(token: string, h: HubHandles, base: string): Promise<HubDocument[]> {
-  const res = await graphFetch(
-    token,
-    `${base}/items/${h.docsId}/children` +
-    `?$select=id,name,size,webUrl,lastModifiedDateTime,lastModifiedBy,folder` +
-    `&$orderby=lastModifiedDateTime desc&$top=50`,
-  );
-  const data = await res.json();
-  return ((data.value ?? []) as Array<{
-    id: string; name: string; size?: number; webUrl?: string;
-    lastModifiedDateTime?: string; folder?: unknown;
-    lastModifiedBy?: { user?: { displayName?: string } };
-  }>)
-    .filter(f => !f.folder)
-    .map(f => ({
+  // Server-side $orderby/$filter are not reliable across drive kinds, so the
+  // listing is plain and sorting happens here. Files one level down (a
+  // "Financials" or "Board" sub-folder someone made in SharePoint) are
+  // included too, tagged with the folder name, so nothing goes missing just
+  // because staff organised the library.
+  const top = await listChildren(token, base, h.docsId);
+  const subfolders = top.filter(f => f.folder).slice(0, 25);
+  const nested = await Promise.all(subfolders.map(async sf => {
+    try { return (await listChildren(token, base, sf.id)).filter(f => !f.folder).map(f => ({ f, folder: sf.name })); }
+    catch { return []; }
+  }));
+  const all = [
+    ...top.filter(f => !f.folder).map(f => ({ f, folder: null as string | null })),
+    ...nested.flat(),
+  ];
+  return all
+    .map(({ f, folder }) => ({
       id:         f.id,
       name:       f.name,
       size:       f.size ?? 0,
       webUrl:     f.webUrl ?? null,
       modified:   f.lastModifiedDateTime ?? null,
       modifiedBy: f.lastModifiedBy?.user?.displayName ?? null,
-    }));
+      folder,
+    }))
+    .sort((a, b) => (b.modified ?? '').localeCompare(a.modified ?? ''))
+    .slice(0, 100);
 }
 
 export interface HubState {
@@ -330,7 +441,7 @@ export async function uploadDocument(
     const f = await res.json();
     return {
       id: f.id, name: f.name, size: f.size ?? 0, webUrl: f.webUrl ?? null,
-      modified: f.lastModifiedDateTime ?? null, modifiedBy: null,
+      modified: f.lastModifiedDateTime ?? null, modifiedBy: null, folder: null,
     };
   });
 }

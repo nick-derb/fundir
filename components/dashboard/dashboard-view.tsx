@@ -259,7 +259,7 @@ export function DashboardView({ data }: { data: DashData }) {
                     <div className="fd-h2" style={{ color: 'var(--text-primary)' }}>This week</div>
                     <span className="fd-eyebrow" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: 'var(--text-tertiary)' }}><i style={{ width: 4, height: 4, borderRadius: '50%', background: data.calendarConnected ? 'var(--accent)' : 'var(--border-hairline)', animation: data.calendarConnected ? 'fd-pulse 2.6s ease-in-out infinite' : undefined }} />{data.calendarConnected ? 'Microsoft 365' : 'Not connected'}</span>
                   </div>
-                  <p className="fd-caption" style={{ color: 'var(--text-tertiary)', margin: '4px 0 0' }}>{data.calendarConnected ? 'Your week, next to your deadlines' : 'Connect a calendar in onboarding to see your week'}</p>
+                  <p className="fd-caption" style={{ color: 'var(--text-tertiary)', margin: '4px 0 0' }}>{data.calendarConnected ? 'Your week, next to your deadlines' : 'Connect your calendar in Settings to see your week'}</p>
                 </div>
                 <span style={{ flex: 1 }} />
                 <span className="fd-eyebrow" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--accent)', whiteSpace: 'nowrap' }}>Open calendar <ArrowRight style={{ width: 12, height: 12 }} /></span>
