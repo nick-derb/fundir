@@ -104,7 +104,7 @@ export async function POST(req: Request) {
   const token = await getValidToken(orgCode, 'microsoft');
   if (!token) return NextResponse.json({ error: 'Microsoft 365 is not connected' }, { status: 409 });
   try {
-    invalidateHandles(orgCode);
+    await invalidateHandles(orgCode);
     const state = await getHubState(token, orgCode);
     const debug = body.debug === true ? await hubDiagnostics(token, orgCode) : undefined;
     return NextResponse.json({ ok: true, documents: state.documents.length, rows: state.rows.length, docsUrl: state.docsUrl, location: state.location, ...(debug ? { debug } : {}) });
