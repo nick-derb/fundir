@@ -120,6 +120,8 @@ async function moveItem(token: string, base: string, item: ChildItem, parentId: 
 }
 
 const STRAY_HUB_RE = /^CYC Data Hub \d+$/;
+/** What the last discovery on this instance tidied — surfaced by hubDiagnostics. */
+let lastMerge: { folders: number; files: number; rows: number; removed: number; at: string } | null = null;
 
 /**
  * A SharePoint quirk once made every cold open create a fresh "CYC Data Hub N"
@@ -245,7 +247,8 @@ async function discoverHandles(token: string, base: string): Promise<HubHandles>
   // effort: discovery must never fail because a stray could not be tidied.
   try {
     const merged = await mergeStrayHubFolders(token, base, docs.id, workbook!.id, tableName);
-    if (merged.folders) console.log(`[data-hub] merged ${merged.files} file(s) and ${merged.rows} row(s) from ${merged.folders} duplicate hub folder(s); removed ${merged.removed}`);
+    lastMerge = { ...merged, at: new Date().toISOString() };
+    console.log(`[data-hub] discovery on ${base}: ${merged.folders} duplicate hub folder(s), moved ${merged.files} file(s) + ${merged.rows} row(s), removed ${merged.removed}`);
   } catch (err) {
     console.warn('[data-hub] stray-folder merge skipped:', err instanceof Error ? err.message : err);
   }
@@ -444,4 +447,38 @@ export async function uploadDocument(
       modified: f.lastModifiedDateTime ?? null, modifiedBy: null, folder: null,
     };
   });
+}
+
+/**
+ * Operator view of where the hub resolved to and what sits at the library
+ * root — for checking, without a browser, that files landed where staff see
+ * them and that no numbered duplicates remain.
+ */
+export async function hubDiagnostics(token: string, orgCode: string): Promise<{
+  drive: { kind: string; label: string; base: string; webUrl: string | null };
+  root: Array<{ name: string; folder: boolean; webUrl: string | null }>;
+  hub: Array<{ name: string; folder: boolean }> | null;
+  documents: Array<{ name: string; folder: boolean }> | null;
+  sites: Array<{ displayName: string | null; name: string | null; webUrl: string | null }>;
+  lastMerge: typeof lastMerge;
+}> {
+  const drive = await resolveDrive(token, orgCode);
+  const base = drive.base;
+  const rootRes = await graphFetch(token, `${base}/root/children?$select=id,name,folder,webUrl&$top=200`);
+  const rootItems = ((await rootRes.json()).value ?? []) as ChildItem[];
+  const root = rootItems.map(c => ({ name: c.name, folder: !!c.folder, webUrl: c.webUrl ?? null }));
+  const hubItem = rootItems.find(c => c.folder && c.name === HUB_FOLDER);
+  const hub = hubItem ? (await listChildren(token, base, hubItem.id)).map(c => ({ name: c.name, folder: !!c.folder })) : null;
+  const cached = await getCachedHandles(orgCode);
+  const documents = cached ? (await listChildren(token, base, cached.docsId).catch(() => [] as ChildItem[])).map(c => ({ name: c.name, folder: !!c.folder })) : null;
+  let sites: Array<{ displayName: string | null; name: string | null; webUrl: string | null }> = [];
+  const configured = process.env.SHAREPOINT_SITE;
+  if (configured && !/[:.]/.test(configured)) {
+    try {
+      const r = await graphFetch(token, `/sites?search=${encodeURIComponent(configured)}&$select=id,displayName,name,webUrl`);
+      sites = (((await r.json()).value ?? []) as Array<{ displayName?: string; name?: string; webUrl?: string }>)
+        .map(x => ({ displayName: x.displayName ?? null, name: x.name ?? null, webUrl: x.webUrl ?? null }));
+    } catch { /* diagnostics only */ }
+  }
+  return { drive: { kind: drive.kind, label: drive.label, base, webUrl: drive.webUrl }, root, hub, documents, sites, lastMerge };
 }

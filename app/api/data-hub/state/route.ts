@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getAuthContext } from '@/lib/auth-context';
 import { getValidToken, getIntegration } from '@/lib/oauth-tokens';
-import { getHubState } from '@/lib/data-hub';
+import { getHubState, hubDiagnostics } from '@/lib/data-hub';
 import { createServerClient } from '@/lib/supabase';
 import { invalidateHandles } from '@/lib/data-hub-state';
 
@@ -99,14 +99,15 @@ export async function POST(req: Request) {
     if (ctx.impersonating) return NextResponse.json({ error: 'Read-only while viewing as another user' }, { status: 403 });
     orgCode = ctx.orgCode;
   }
-  const body = await req.json().catch(() => ({})) as { repair?: unknown };
+  const body = await req.json().catch(() => ({})) as { repair?: unknown; debug?: unknown };
   if (body.repair !== true) return NextResponse.json({ error: 'Expected { repair: true }' }, { status: 400 });
   const token = await getValidToken(orgCode, 'microsoft');
   if (!token) return NextResponse.json({ error: 'Microsoft 365 is not connected' }, { status: 409 });
   try {
     invalidateHandles(orgCode);
     const state = await getHubState(token, orgCode);
-    return NextResponse.json({ ok: true, documents: state.documents.length, rows: state.rows.length, docsUrl: state.docsUrl });
+    const debug = body.debug === true ? await hubDiagnostics(token, orgCode) : undefined;
+    return NextResponse.json({ ok: true, documents: state.documents.length, rows: state.rows.length, docsUrl: state.docsUrl, location: state.location, ...(debug ? { debug } : {}) });
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : 'Repair failed' }, { status: 500 });
   }
