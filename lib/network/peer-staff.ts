@@ -134,6 +134,11 @@ export async function runPeerStaffStep(orgId: string, opts: { maxEnrich?: number
   const budget = new CallBudget(opts.callCap ?? 60);
   const maxEnrich = opts.maxEnrich ?? 10;
   const errors: string[] = [];
+  // The route dies at 300s. Everything below checks this clock so a slow
+  // provider costs a shorter step, never a 504 that throws the step away.
+  const startedAt = Date.now();
+  const STEP_BUDGET_MS = 220_000;
+  const timeLeft = () => STEP_BUDGET_MS - (Date.now() - startedAt);
   const { data: runRow } = await db.from('network_refresh_runs').insert({ org_id: orgId, categories: ['peer_staff'] }).select('id').single();
   const runId = runRow?.id as string | undefined;
   const sourceId = await linkedinSource(db);
@@ -195,6 +200,7 @@ export async function runPeerStaffStep(orgId: string, opts: { maxEnrich?: number
   const enriched: string[] = [];
   const { data: unread } = await db.from('network_people').select('id, name, linkedin_url').eq('org_id', orgId).eq('kind', PEER_STAFF_KIND).is('enriched_at', null).not('linkedin_url', 'is', null).order('created_at').limit(maxEnrich);
   for (const p of unread ?? []) {
+    if (timeLeft() < 35_000) { errors.push('step time budget reached — remaining profiles are read next step'); break; }
     try {
       const prof = await enrichProfile(p.linkedin_url as string, budget);
       await applyProfile(db, p.id as string, prof, sourceId, { verification: 'verified', ...(prof.name ? { name: prof.name } : {}) });
@@ -218,10 +224,15 @@ export async function runPeerStaffStep(orgId: string, opts: { maxEnrich?: number
   // mid-run step never approaches the request timeout.
   let relationshipsFound = 0;
   const lastStep = pendingScans === 0 && (pendingEnrich ?? 0) === 0;
-  if (enriched.length) {
+  if (enriched.length || opts.derive) {
     try {
       await resolveEmployers(db, orgId);
-      if (lastStep || opts.derive) relationshipsFound = (await deriveRelationships(orgId)).written;
+      // Derivation can take a couple of minutes on a large graph; if this step
+      // has already spent its time, leave it for a `derive: true` call.
+      if (lastStep || opts.derive) {
+        if (timeLeft() > 90_000) relationshipsFound = (await deriveRelationships(orgId)).written;
+        else errors.push('graph derivation deferred — run a step with { derive: true }');
+      }
     } catch (e) { errors.push(`graph derivation: ${e instanceof Error ? e.message : 'failed'}`); }
   }
   const credits = enriched.length * 2 + Math.max(0, budget.used - enriched.length);

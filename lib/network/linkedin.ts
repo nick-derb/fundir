@@ -98,9 +98,21 @@ export class CallBudget {
   }
 }
 
+// One provider call must never be allowed to hang a whole step: the route has
+// a 300s ceiling, and a single stalled socket used to eat all of it (every
+// profile read after it was lost). 30s is generous for this API.
+const CALL_TIMEOUT_MS = 30_000;
+
 async function api(path: string, budget: CallBudget, init?: RequestInit): Promise<Record<string, unknown>> {
   budget.spend();
-  const res = await fetch(`${BASE}${path}`, { ...init, headers: { ...headers(), ...(init?.headers as Record<string, string>) } });
+  let res: Response;
+  try {
+    res = await fetch(`${BASE}${path}`, { ...init, headers: { ...headers(), ...(init?.headers as Record<string, string>) }, signal: AbortSignal.timeout(CALL_TIMEOUT_MS) });
+  } catch (e) {
+    const name = e instanceof Error ? e.name : '';
+    if (name === 'TimeoutError' || name === 'AbortError') throw new Error(`LinkedIn API timeout after ${CALL_TIMEOUT_MS / 1000}s on ${path.split('?')[0]}`);
+    throw e;
+  }
   const text = await res.text();
   if (!res.ok) {
     // Guide §3.4: the body names the exact problem — surface it, always.
@@ -199,7 +211,7 @@ export interface CompanyMatch {
 }
 
 /** Poll an async search until done (bounded). Returns the final status string. */
-async function pollSearch(statusPath: string, budget: CallBudget, maxPolls = 14): Promise<string> {
+async function pollSearch(statusPath: string, budget: CallBudget, maxPolls = 10): Promise<string> {
   let status = '';
   for (let i = 0; i < maxPolls; i++) {
     await new Promise(r => setTimeout(r, i < 4 ? 6000 : 12000));
