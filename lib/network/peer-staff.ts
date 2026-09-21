@@ -200,7 +200,7 @@ export async function runPeerStaffStep(orgId: string, opts: { maxEnrich?: number
   const enriched: string[] = [];
   const { data: unread } = await db.from('network_people').select('id, name, linkedin_url').eq('org_id', orgId).eq('kind', PEER_STAFF_KIND).is('enriched_at', null).not('linkedin_url', 'is', null).order('created_at').limit(maxEnrich);
   for (const p of unread ?? []) {
-    if (timeLeft() < 35_000) { errors.push('step time budget reached — remaining profiles are read next step'); break; }
+    if (timeLeft() < 95_000) { errors.push('step time budget reached — remaining profiles are read next step'); break; }
     try {
       const prof = await enrichProfile(p.linkedin_url as string, budget);
       await applyProfile(db, p.id as string, prof, sourceId, { verification: 'verified', ...(prof.name ? { name: prof.name } : {}) });
