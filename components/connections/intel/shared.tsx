@@ -4,7 +4,7 @@
 // handful of typographic atoms, the type/confidence palette, and the score
 // glyphs. Everything reads the app's tokens so light and dark both work.
 
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import type { PipelineState } from '@/lib/network/queries';
 
 export const SERIF = 'var(--font-display)';
@@ -16,7 +16,7 @@ export const INFO = '#3E6CA8';
 
 export const CSS = `
 .ni-root{color:var(--text-primary);background:var(--bg-page);min-height:60vh}
-.ni-root .ni-root .ni-root .ni-root .ni-root button,.ni-peek button{font-family:inherit}
+.ni-root button,.ni-peek button{font-family:inherit}
 @keyframes ni-rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 @keyframes ni-peek-in{from{opacity:0;transform:translateX(24px)}to{opacity:1;transform:none}}
 @keyframes ni-flash{0%{background:var(--accent-tint)}100%{background:transparent}}
@@ -49,7 +49,9 @@ export const CSS = `
 .ni-source[data-hi="true"]{border-color:var(--accent);animation:ni-flash 1.6s ease-out}
 .ni-skel{background:var(--bg-elevated);border-radius:6px;animation:ni-pulse 1.4s ease-in-out infinite}
 .ni-card{background:var(--bg-surface);border:1px solid var(--border-hairline);border-radius:var(--radius-console)}
-.ni-kpi{background:var(--bg-surface);border:1px solid var(--border-hairline);border-radius:var(--radius-kpi);padding:14px 15px;min-width:0}
+.ni-kpi{padding:12px 14px 12px 0;margin-right:14px;min-width:0}
+.ni-kpi+.ni-kpi{border-left:1px solid var(--border-hairline);padding-left:14px}
+.ni-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));border-top:1px solid var(--border-hairline);border-bottom:1px solid var(--border-hairline)}
 .ni-ghost{display:inline-flex;align-items:center;gap:7px;height:32px;padding:0 12px;border-radius:8px;border:1px solid var(--border-hairline);background:var(--bg-surface);color:var(--text-primary);font-size:12px;cursor:pointer;white-space:nowrap;transition:background .14s}
 .ni-ghost:hover{background:var(--bg-elevated)}
 .ni-ghost:disabled{opacity:.5;cursor:default}
@@ -95,7 +97,7 @@ export const relLabel = (t: string) => ({ former_colleague: 'former colleagues',
 
 // ── Atoms ───────────────────────────────────────────────────────────────────
 export function Chip({ text, color, border, tint, style }: { text: string; color: string; border: string; tint?: string; style?: CSSProperties }) {
-  return <i className="fd-mono" style={{ fontStyle: 'normal', fontSize: 8.5, letterSpacing: '.07em', textTransform: 'uppercase', color, border: `1px solid ${border}`, background: tint, borderRadius: 3, padding: '2px 6px', whiteSpace: 'nowrap', lineHeight: 1.3, ...style }}>{text}</i>;
+  return <i className="fd-tag" style={{ color, borderColor: border, background: tint, ...style }}>{text}</i>;
 }
 export function TypeChip({ type }: { type: string | null | undefined }) { const h = hueFor(type); return <Chip text={h.short} color={h.color} border={h.border} />; }
 export function ConfChip({ confidence }: { confidence: string | null | undefined }) {

@@ -124,20 +124,15 @@ function KpiStrip({ kpis }: { kpis: ReportsData['kpis'] }) {
   ] as const;
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-      {items.map(({ label, value, delta, icon: Icon, color, bg, fmtDelta }) => (
-        <div key={label} className="rounded-md border p-4" style={CARD}>
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-[10px] font-bold text-secondary uppercase tracking-wide">{label}</span>
-            <div className="w-6 h-6 rounded-sm flex items-center justify-center" style={{ background: bg }}>
-              <Icon className="w-3.5 h-3.5" style={{ color }} />
-            </div>
-          </div>
-          <p className="text-[22px] font-bold leading-none text-primary mb-1.5">{value}</p>
-          <p className={`text-[10px] flex items-center gap-0.5 ${delta > 0 ? 'text-success' : delta < 0 ? 'text-critical' : 'text-tertiary'}`}>
+    <div className="fd-stats">
+      {items.map(({ label, value, delta, icon: Icon, color, fmtDelta }) => (
+        <div key={label} className="fd-stat">
+          <span className="fd-eyebrow" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Icon className="w-3 h-3" style={{ color }} />{label}</span>
+          <b>{value}</b>
+          <small className={`flex items-center gap-0.5 ${delta > 0 ? 'text-success' : delta < 0 ? 'text-critical' : 'text-tertiary'}`}>
             {delta > 0 ? <ArrowUpRight className="w-3 h-3" /> : delta < 0 ? <ArrowDownRight className="w-3 h-3" /> : null}
             {fmtDelta(delta)}
-          </p>
+          </small>
         </div>
       ))}
     </div>

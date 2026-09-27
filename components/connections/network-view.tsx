@@ -41,7 +41,7 @@ export interface NwState {
 
 const CSS = `
 .nw-root{color:var(--text-primary);background:var(--bg-page)}
-.nw-root .nw-root .nw-root .nw-root @keyframes nw-rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes nw-rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 .nw-root [data-nw-person]{transition:background .14s}
 @media (max-width:1180px){.nw-root [data-nw-cols]{grid-template-columns:minmax(0,1fr)!important}.nw-root [data-nw-list]{max-height:none!important}}
 `;

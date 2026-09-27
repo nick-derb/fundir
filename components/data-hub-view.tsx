@@ -333,18 +333,15 @@ export function DataHubView({ orgName, userEmail }: { orgName: string; userEmail
                   <a href={docsUrl} target="_blank" rel="noopener noreferrer" className="fd-eyebrow text-accent no-underline">Open folder</a>
                 )}
               </div>
-              <div data-hub-folders className="grid gap-3" style={{ gridTemplateColumns: 'repeat(4,minmax(0,1fr))' }}>
+              <div className="bg-surface border border-hairline rounded-md overflow-hidden">
                 {counts.map(c => (
-                  <div key={c.key} className="bg-surface border border-hairline rounded-md p-[14px_15px]">
-                    <div className="flex items-start justify-between mb-6">
-                      <span className="w-[30px] h-[30px] rounded-sm flex items-center justify-center" style={{ background: c.tint }}>
-                        <c.icon className="w-[15px] h-[15px]" style={{ color: c.color }} />
-                      </span>
-                    </div>
-                    <b className="block text-[13.5px] font-medium tracking-[-.005em] mb-1 text-primary">{c.label}</b>
-                    <span className="font-mono text-[10px] text-tertiary tabular-nums">
-                      {c.files} file{c.files === 1 ? '' : 's'} · {fmtSize(c.bytes)}
+                  <div key={c.key} className="flex items-center gap-3 px-4 py-2.5 border-b border-hairline last:border-b-0">
+                    <span className="w-7 h-7 rounded-sm flex items-center justify-center flex-none" style={{ background: c.tint }}>
+                      <c.icon className="w-3.5 h-3.5" style={{ color: c.color }} />
                     </span>
+                    <b className="flex-1 min-w-0 truncate text-[13px] font-medium tracking-[-.005em] text-primary">{c.label}</b>
+                    <span className="font-mono text-[11px] text-secondary tabular-nums whitespace-nowrap">{c.files} file{c.files === 1 ? '' : 's'}</span>
+                    <span className="font-mono text-[11px] text-tertiary tabular-nums whitespace-nowrap w-16 text-right">{fmtSize(c.bytes)}</span>
                   </div>
                 ))}
               </div>
@@ -354,9 +351,19 @@ export function DataHubView({ orgName, userEmail }: { orgName: string; userEmail
             <StrategyResources />
 
             {/* ── Workbook imports: swappable from the app ── */}
-            <InstrumentlCard />
-            <CultivationCard />
-            <GrantCalendarCard />
+            <div>
+              <div className="flex items-baseline justify-between gap-3 mb-3">
+                <div>
+                  <h2 className="text-[17px] font-semibold text-primary">Workbook imports</h2>
+                  <p className="text-[12px] text-tertiary mt-1">Swap the tracker exports Fundir reads from. Each shows what would change before it writes.</p>
+                </div>
+              </div>
+              <div className="flex flex-col gap-3">
+                <InstrumentlCard />
+                <CultivationCard />
+                <GrantCalendarCard />
+              </div>
+            </div>
 
             {/* ── Reading now (real upload + indexing) ── */}
             {queue.length > 0 && (
@@ -728,12 +735,10 @@ function Th({ children, hide, className = '' }: { children: React.ReactNode; hid
 
 const CSS = `
 .dh-root{font-family:var(--font-sans)}
-.dh-root @keyframes fd-pulse{0%,100%{opacity:1}50%{opacity:.3}}
+@keyframes fd-pulse{0%,100%{opacity:1}50%{opacity:.3}}
 @keyframes fd-fade{from{opacity:0}to{opacity:1}}
 @keyframes fd-rise{from{opacity:0;transform:translateY(10px) scale(.99)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){.dh-root *{animation-duration:.01ms!important}}
 @media (max-width:1240px){.dh-root [data-hub-cols]{grid-template-columns:minmax(0,1fr)!important}.dh-root [data-hub-rail]{position:static!important}}
-@media (max-width:1040px){.dh-root [data-hub-folders]{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
 @media (max-width:900px){.dh-root [data-hub-hidecol]{display:none!important}}
-@media (max-width:620px){.dh-root [data-hub-folders]{grid-template-columns:minmax(0,1fr)!important}}
 `;

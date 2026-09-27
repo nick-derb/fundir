@@ -57,7 +57,7 @@ export function PipelineView({ leads, team, selectedId, onOpen, onChanged, readO
           <h1 style={{ fontFamily: SERIF, fontWeight: 400, fontSize: 'clamp(1.9rem,3vw,2.5rem)', lineHeight: 1.04, letterSpacing: '-.018em', margin: 0 }}>Pipeline</h1>
           <p style={{ margin: '9px 0 0', fontSize: 13.5, lineHeight: 1.6, color: 'var(--text-secondary)', maxWidth: '62ch' }}>Drag a lead as the work moves. Closing one as &ldquo;not a fit&rdquo; asks why, and the reason lowers the score of the next lead of the same shape — the team&rsquo;s judgement, written into the number.</p>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(104px,1fr))', gap: 10, flex: '0 1 520px' }}>
+        <div className="ni-kpis" style={{ flex: '0 1 560px' }}>
           <Kpi label="In motion" value={inMotion} accent />
           <Kpi label="Due this week" value={due} />
           <Kpi label="Overdue" value={overdue} tone={overdue ? 'var(--critical)' : undefined} />
@@ -174,9 +174,9 @@ export function ReasonDialog({ lead, onCancel, onPick }: { lead: LeadRow; onCanc
 
 function Kpi({ label, value, accent, tone }: { label: string; value: number; accent?: boolean; tone?: string }) {
   return (
-    <div className="ni-kpi" style={accent ? { borderColor: 'rgba(12,107,90,.28)' } : undefined}>
-      <span className="fd-eyebrow" style={{ display: 'block', color: accent ? 'var(--accent)' : 'var(--text-tertiary)', marginBottom: 6, fontSize: 10 }}>{label}</span>
-      <b className="fd-kpi" style={{ fontSize: 22, color: tone ?? (accent ? 'var(--accent)' : undefined), fontFamily: MONO }}>{value}</b>
+    <div className="ni-kpi">
+      <span className="fd-eyebrow" style={{ display: 'block', color: accent ? 'var(--accent)' : 'var(--text-tertiary)', marginBottom: 6 }}>{label}</span>
+      <b className="fd-kpi" style={{ fontSize: 20, color: tone ?? (accent ? 'var(--accent)' : undefined), fontFamily: MONO }}>{value}</b>
     </div>
   );
 }

@@ -8,7 +8,7 @@
 
 import Link from 'next/link';
 import type { ReportsIntel } from '@/lib/network/reports';
-import { CSS, SERIF, MONO, Eyebrow, Avatar, OrgMark, Chip, ScoreBar, fmtDate, money, SLATE, AMBER, INFO } from '@/components/connections/intel/shared';
+import { CSS, MONO, Eyebrow, Avatar, OrgMark, Chip, ScoreBar, fmtDate, money, SLATE, AMBER, INFO } from '@/components/connections/intel/shared';
 
 export function ReportsIntelView({ data, orgName }: { data: ReportsIntel; orgName: string }) {
   const d = data;
@@ -21,17 +21,17 @@ export function ReportsIntelView({ data, orgName }: { data: ReportsIntel; orgNam
   return (
     <div className="ni-root" style={{ padding: '24px 26px 60px' }}>
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
-      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 24, flexWrap: 'wrap', marginBottom: 20 }}>
+      <div className="fd-page-head">
         <div style={{ minWidth: 0 }}>
-          <Eyebrow style={{ display: 'block', margin: '0 0 9px' }}>{orgName} · Reports</Eyebrow>
-          <h1 style={{ fontFamily: SERIF, fontWeight: 400, fontSize: 'clamp(1.9rem,3vw,2.5rem)', lineHeight: 1.04, letterSpacing: '-.018em', margin: 0 }}>What only Fundir can see</h1>
-          <p style={{ margin: '9px 0 0', fontSize: 13.5, lineHeight: 1.6, color: 'var(--text-secondary)', maxWidth: '66ch' }}>Six measures of CYC&rsquo;s funding network that no grant tracker carries: how far the board&rsquo;s relationships reach, who funds CYC&rsquo;s peers but not CYC, how well-documented the evidence is, how much of the board is mapped, whether leads are moving, and what each refresh cost.</p>
+          <Eyebrow style={{ display: 'block' }}>{orgName} · Reports</Eyebrow>
+          <h1>What only Fundir can see</h1>
+          <p className="fd-lede">Six measures of CYC&rsquo;s funding network that no grant tracker carries: how far the board&rsquo;s relationships reach, who funds CYC&rsquo;s peers but not CYC, how well-documented the evidence is, how much of the board is mapped, whether leads are moving, and what each refresh cost.</p>
         </div>
         <span className="fd-mono" style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>as of {fmtDate(d.generated_at)}</span>
       </div>
 
       {/* headline numbers */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10, marginBottom: 20 }}>
+      <div className="fd-stats" style={{ marginBottom: 20 }}>
         <Kpi label="Funders reachable" value={d.reach.funders_reachable} sub="through a CYC person" accent />
         <Kpi label="White space" value={d.white_space.funders} sub={`${money(d.white_space.peer_dollars)} to CYC peers`} />
         <Kpi label="High-confidence leads" value={d.reach.high_confidence} sub={`of ${d.reach.leads_open} open`} />
@@ -118,7 +118,7 @@ export function ReportsIntelView({ data, orgName }: { data: ReportsIntel; orgNam
               <span className="fd-mono" style={{ fontSize: 10, color: 'var(--text-tertiary)', textAlign: 'right' }}>{s.avg_days !== null ? `${s.avg_days}d avg` : ''}</span>
             </div>
           ))}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginTop: 12 }}>
+          <div className="fd-stats" style={{ marginTop: 12 }}>
             <Mini label="Due this week" value={d.pipeline.due_week} /><Mini label="Overdue" value={d.pipeline.overdue} tone={d.pipeline.overdue ? 'var(--critical)' : undefined} /><Mini label="Won" value={d.pipeline.won} tone="var(--accent)" /><Mini label="Closed out" value={d.pipeline.lost + d.pipeline.not_fit} />
           </div>
           {d.pipeline.owners.length > 0 && (
@@ -131,7 +131,7 @@ export function ReportsIntelView({ data, orgName }: { data: ReportsIntel; orgNam
 
         {/* Ledger */}
         <Panel title="Refresh and spend" sub="Every run and what it found. Refreshes are on demand; there is no schedule." link={{ href: '/connections?refresh=1', label: 'Refresh' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+          <div className="fd-stats">
             <Mini label="Runs" value={d.ledger.runs} /><Mini label="API calls" value={d.ledger.api_calls} /><Mini label="Credits" value={d.ledger.credits} />
             <Mini label="Model spend" value={`$${d.ledger.claude_usd.toFixed(2)}`} /><Mini label="Cited funding events" value={d.ledger.events_cited.toLocaleString('en-US')} /><Mini label="Sources" value={d.ledger.sources} />
           </div>
@@ -141,7 +141,7 @@ export function ReportsIntelView({ data, orgName }: { data: ReportsIntel; orgNam
         {/* Instrumentl-derived, only when present */}
         {d.grants && (
           <Panel title="Grant applications" sub="From CYC's own submission history. Kept small on purpose: Instrumentl already reports this in depth." link={{ href: '/pipeline', label: 'Pipeline' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+            <div className="fd-stats">
               <Mini label="Submitted" value={d.grants.submitted} /><Mini label="Awarded" value={d.grants.awarded} tone="var(--accent)" /><Mini label="Win rate" value={`${d.grants.win_rate}%`} /><Mini label="Awarded value" value={money(d.grants.awarded_value)} />
             </div>
           </Panel>
@@ -156,7 +156,7 @@ function Panel({ title, sub, link, children }: { title: string; sub: string; lin
     <section className="ni-card ni-rise" style={{ padding: '16px 18px 14px', minWidth: 0 }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 12 }}>
         <div style={{ minWidth: 0, flex: 1 }}>
-          <h2 style={{ fontFamily: SERIF, fontWeight: 400, fontSize: '1.3rem', lineHeight: 1.15, letterSpacing: '-.012em', margin: '0 0 4px' }}>{title}</h2>
+          <h2 className="fd-display" style={{ fontSize: '1.25rem', lineHeight: 1.15, margin: '0 0 4px' }}>{title}</h2>
           <p className="fd-caption" style={{ margin: 0, color: 'var(--text-secondary)' }}>{sub}</p>
         </div>
         {link && <Link href={link.href} className="ni-ghost" style={{ height: 26, fontSize: 11, textDecoration: 'none', flex: 'none' }}>{link.label} →</Link>}
@@ -167,15 +167,15 @@ function Panel({ title, sub, link, children }: { title: string; sub: string; lin
 }
 function Kpi({ label, value, sub, accent, tone }: { label: string; value: number | string; sub?: string; accent?: boolean; tone?: string }) {
   return (
-    <div className="ni-kpi" style={accent ? { borderColor: 'rgba(12,107,90,.28)' } : undefined}>
-      <span className="fd-eyebrow" style={{ display: 'block', color: accent ? 'var(--accent)' : 'var(--text-tertiary)', marginBottom: 6, fontSize: 10 }}>{label}</span>
-      <b className="fd-kpi" style={{ fontSize: 22, color: tone ?? (accent ? 'var(--accent)' : undefined), fontFamily: MONO }}>{typeof value === 'number' ? value.toLocaleString('en-US') : value}</b>
-      {sub && <span className="fd-caption" style={{ display: 'block', color: 'var(--text-tertiary)', marginTop: 2, fontSize: 11 }}>{sub}</span>}
+    <div className="fd-stat" data-accent={accent ? 'true' : undefined}>
+      <span className="fd-eyebrow">{label}</span>
+      <b style={{ color: tone }}>{typeof value === 'number' ? value.toLocaleString('en-US') : value}</b>
+      {sub && <small>{sub}</small>}
     </div>
   );
 }
 function Mini({ label, value, tone }: { label: string; value: number | string; tone?: string }) {
-  return <div style={{ border: '1px solid var(--border-hairline)', borderRadius: 8, padding: '8px 10px', background: 'var(--bg-page)' }}><span className="fd-eyebrow" style={{ display: 'block', color: 'var(--text-tertiary)', fontSize: 9.5, marginBottom: 3 }}>{label}</span><b className="fd-mono" style={{ fontSize: 15, fontWeight: 600, color: tone, fontFamily: MONO }}>{typeof value === 'number' ? value.toLocaleString('en-US') : value}</b></div>;
+  return <div className="fd-stat" style={{ padding: '8px 10px 8px 0' }}><span className="fd-eyebrow" style={{ fontSize: 9.5, marginBottom: 3 }}>{label}</span><b style={{ fontSize: 15, color: tone }}>{typeof value === 'number' ? value.toLocaleString('en-US') : value}</b></div>;
 }
 function Stack({ label, parts }: { label: string; parts: Array<{ k: string; v: number; tone: string }> }) {
   const total = parts.reduce((n, p) => n + p.v, 0) || 1;

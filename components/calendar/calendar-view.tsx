@@ -28,7 +28,7 @@ export interface CalData {
 
 const CSS = `
 .cv-root{color:var(--text-primary);}
-.cv-root .cv-root .cv-root .cv-root [data-kind="grant"]{border-left-color:#0C6B5A!important;background:#EDF4F0}
+.cv-root [data-kind="grant"]{border-left-color:#0C6B5A!important;background:#EDF4F0}
 .cv-root [data-kind="funder"]{border-left-color:#9C7A2A!important;background:#F7F2E6}
 .cv-root [data-kind="internal"]{border-left-color:#5B7383!important;background:#EEF2F4}
 .cv-root [data-kind="site"]{border-left-color:#A25A44!important;background:#F7EFEC}

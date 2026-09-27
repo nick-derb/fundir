@@ -15,7 +15,7 @@ export interface OrgFacet { key: string; label: string; title: string; blurb: st
 
 const CSS = `
 .op-root{color:var(--text-primary);background:var(--bg-page)}
-.op-root .op-root .op-root .op-root .op-root @keyframes op-swap{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes op-swap{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 @media (max-width:1180px){.op-root [data-op-cols]{grid-template-columns:minmax(0,1fr)!important}.op-root [data-op-facets]{position:static!important;flex-direction:row!important;flex-wrap:wrap;max-height:none!important}}
 @media (max-width:900px){.op-root [data-op-summary]{grid-template-columns:repeat(2,minmax(0,1fr))!important}.op-root [data-op-hidecol]{display:none!important}}
 @media (max-width:620px){.op-root [data-op-summary]{grid-template-columns:minmax(0,1fr)!important}}

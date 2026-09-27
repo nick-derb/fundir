@@ -22,7 +22,7 @@ export interface InstrumentlSummary {
 
 const CSS = `
 .pr-root{color:var(--text-primary);background:var(--bg-page)}
-.pr-root .pr-root .pr-root .pr-root @keyframes pr-fade{from{opacity:0}to{opacity:1}}
+@keyframes pr-fade{from{opacity:0}to{opacity:1}}
 @keyframes pr-rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 @keyframes pr-spin{to{transform:rotate(360deg)}}
 @media (max-width:1240px){.pr-root [data-pr-cols]{grid-template-columns:minmax(0,1fr)!important}}

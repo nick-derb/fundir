@@ -30,7 +30,7 @@ const ENTITIES = ['person', 'organization', 'grant / funding event', 'relationsh
 
 const CSS = `
 .fb-root{color:var(--text-primary);background:var(--bg-page)}
-.fb-root .fb-root .fb-root .fb-input{width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--border-hairline);background:var(--bg-surface);font:inherit;font-size:13px;color:var(--text-primary);outline:none;transition:border-color .14s,box-shadow .14s}
+.fb-root .fb-input{width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--border-hairline);background:var(--bg-surface);font:inherit;font-size:13px;color:var(--text-primary);outline:none;transition:border-color .14s,box-shadow .14s}
 .fb-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-tint)}
 textarea.fb-input{min-height:88px;resize:vertical;line-height:1.5}
 .fb-kind{display:grid;grid-template-columns:22px 1fr;gap:10px;align-items:start;text-align:left;padding:12px 14px;border-radius:var(--radius);border:1px solid var(--border-hairline);background:var(--bg-surface);font:inherit;cursor:pointer;color:inherit;transition:border-color .14s,background .14s}
