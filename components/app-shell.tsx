@@ -11,7 +11,7 @@ const readSidebarCollapsed = () => { try { return localStorage.getItem('fundir-s
 const subscribeSidebar = (cb: () => void) => { window.addEventListener('fundir-sidebar', cb); window.addEventListener('storage', cb); return () => { window.removeEventListener('fundir-sidebar', cb); window.removeEventListener('storage', cb); }; };
 import {
   LayoutDashboard, Radar, Share2, FileText, Settings, LogOut,
-  TrendingUp, Building2, Shield,
+  TrendingUp, Building2, Shield, CalendarDays, Users,
   ChevronDown, Check, Sun, Moon,
   Menu, X, Database, PanelLeftClose, PanelLeftOpen, MessageSquare,
 } from 'lucide-react';
@@ -23,28 +23,40 @@ import { switchAdminOrg } from '@/actions/admin-org';
 import { bundledLogoFor } from '@/lib/org-logo';
 import { UserMenu } from '@/components/user-menu';
 
-// New dashboard IA (Claude Design). Applications is still a placeholder, so
-// during the beta only admins see it in the sidebar (the route stays live).
-const NAV_ITEMS = [
-  { href: '/dashboard',    label: 'Dashboard',        icon: LayoutDashboard },
-  { href: '/prospecting',  label: 'Prospecting',      icon: Radar           },
-  { href: '/connections',  label: 'Connections',      icon: Share2          },
-  { href: '/peers',        label: 'Peer Network',     icon: Building2       },
-  { href: '/data',         label: 'Data Hub',         icon: Database        },
-  { href: '/applications', label: 'Applications',     icon: FileText,       adminOnly: true },
-  { href: '/reports',      label: 'Reports',          icon: TrendingUp      },
-  { href: '/feedback',     label: 'Feedback',         icon: MessageSquare   },
-] as { href: string; label: string; icon: React.ComponentType<{ className?: string }>; adminOnly?: boolean }[];
+// Sidebar IA. Three groups, read top to bottom in the order a development
+// officer works: what is due (Work), what Fundir knows (Knowledge), and the
+// organisation itself. Applications is still a placeholder, so during the
+// beta only admins see it (the route stays live).
+type NavItem = { href: string; label: string; icon: React.ComponentType<{ className?: string }>; adminOnly?: boolean };
+type NavGroup = { label: string; items: NavItem[] };
 
-const SETTINGS_ITEMS = [
-  { href: '/org',      label: 'Org Profile', icon: Building2 },
-  { href: '/settings', label: 'Settings',    icon: Settings  },
+const NAV_GROUPS: NavGroup[] = [
+  { label: 'Work', items: [
+    { href: '/dashboard',    label: 'Dashboard',    icon: LayoutDashboard },
+    { href: '/prospecting',  label: 'Prospecting',  icon: Radar           },
+    { href: '/connections',  label: 'Connections',  icon: Share2          },
+    { href: '/calendar',     label: 'Calendar',     icon: CalendarDays    },
+    { href: '/applications', label: 'Applications', icon: FileText,       adminOnly: true },
+  ] },
+  { label: 'Knowledge', items: [
+    { href: '/peers',        label: 'Peer Network', icon: Users           },
+    { href: '/data',         label: 'Data Hub',     icon: Database        },
+    { href: '/reports',      label: 'Reports',      icon: TrendingUp      },
+  ] },
+  { label: 'Organization', items: [
+    { href: '/org',          label: 'Org Profile',  icon: Building2       },
+    { href: '/settings',     label: 'Settings',     icon: Settings        },
+    { href: '/feedback',     label: 'Feedback',     icon: MessageSquare   },
+  ] },
 ];
 
 const SHORTCUT_MAP: Record<string, string> = {
   d: '/dashboard',
   p: '/prospecting',
   c: '/connections',
+  k: '/calendar',
+  n: '/peers',
+  h: '/data',
   r: '/reports',
   s: '/settings',
 };
@@ -303,32 +315,28 @@ export function AppShell({
           )}
         </div>
 
-        {/* Main nav — labels hide in the rail; the title attribute keeps them a hover away. */}
-        <nav className={`flex-1 py-3 overflow-y-auto ${collapsed ? 'px-3 md:px-2' : 'px-3'}`}>
-          {NAV_ITEMS.filter(item => !item.adminOnly || isAdmin).map(({ href, label, icon: Icon }) => {
-            const active = isActive(href);
+        {/* Main nav — three labelled groups. Labels hide in the rail (a hairline
+            keeps the grouping legible); the title attribute keeps them a hover away. */}
+        <nav className={`flex-1 py-2 overflow-y-auto ${collapsed ? 'px-3 md:px-2' : 'px-3'}`}>
+          {NAV_GROUPS.map((group, gi) => {
+            const items = group.items.filter(item => !item.adminOnly || isAdmin);
+            if (items.length === 0) return null;
             return (
-              <Link key={href} href={href} title={collapsed ? label : undefined}
-                className={`shell-nav-item flex items-center gap-2.5 py-[7px] text-[13px] mb-0.5 ${collapsed ? 'pl-3 pr-2 md:justify-center md:px-0' : 'pl-3 pr-2'} ${active ? 'shell-nav-active' : ''}`}>
-                <Icon className="shell-nav-icon w-4 h-4 flex-shrink-0" />
-                <span className={collapsed ? 'md:hidden' : ''}>{label}</span>
-              </Link>
+              <div key={group.label} className={gi > 0 ? `mt-2 pt-2 border-t border-hairline ${collapsed ? 'md:mt-1 md:pt-1' : ''}` : ''}>
+                <p className={`fd-eyebrow px-3 pt-2 pb-1.5 text-tertiary ${collapsed ? 'md:hidden' : ''}`}>{group.label}</p>
+                {items.map(({ href, label, icon: Icon }) => {
+                  const active = isActive(href);
+                  return (
+                    <Link key={href} href={href} title={collapsed ? label : undefined} aria-current={active ? 'page' : undefined}
+                      className={`shell-nav-item flex items-center gap-2.5 py-[7px] text-[13px] mb-0.5 ${collapsed ? 'pl-3 pr-2 md:justify-center md:px-0' : 'pl-3 pr-2'} ${active ? 'shell-nav-active' : ''}`}>
+                      <Icon className="shell-nav-icon w-4 h-4 flex-shrink-0" />
+                      <span className={collapsed ? 'md:hidden' : ''}>{label}</span>
+                    </Link>
+                  );
+                })}
+              </div>
             );
           })}
-
-          {/* Hairline divider before utility nav */}
-          <div className="pt-3 mt-3 border-t border-hairline">
-            {SETTINGS_ITEMS.map(({ href, label, icon: Icon }) => {
-              const active = isActive(href);
-              return (
-                <Link key={href} href={href} title={collapsed ? label : undefined}
-                  className={`shell-nav-item flex items-center gap-2.5 py-[7px] text-[13px] mb-0.5 ${collapsed ? 'pl-3 pr-2 md:justify-center md:px-0' : 'pl-3 pr-2'} ${active ? 'shell-nav-active' : ''}`}>
-                  <Icon className="shell-nav-icon w-4 h-4 flex-shrink-0" />
-                  <span className={collapsed ? 'md:hidden' : ''}>{label}</span>
-                </Link>
-              );
-            })}
-          </div>
         </nav>
 
         {/* Footer */}

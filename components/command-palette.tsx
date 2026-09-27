@@ -4,27 +4,34 @@ import { useState, useEffect, useRef, useCallback, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { searchGrantsAction, GrantSearchHit } from '@/actions/search-grants';
 import {
-  Search, LayoutDashboard, Zap, KanbanSquare, BarChart3,
-  CalendarDays, TrendingUp, Settings, Building2,
+  Search, LayoutDashboard, KanbanSquare, BarChart3,
+  CalendarDays, TrendingUp, Settings, Building2, Radar, Share2,
+  Users, Database, MessageSquare,
   FileText, ArrowRight, Command, X, Loader2,
 } from 'lucide-react';
 
 // ── Static navigation items ───────────────────────────────────────────────────
 
 const NAV_ITEMS = [
-  { label: 'Dashboard',       href: '/dashboard',  icon: LayoutDashboard, group: 'Navigate' },
-  { label: 'Discover Grants', href: '/discover',   icon: Search,          group: 'Navigate' },
-  { label: 'Financials',      href: '/financials', icon: BarChart3,       group: 'Navigate' },
-  { label: 'Pipeline',        href: '/pipeline',   icon: KanbanSquare,    group: 'Navigate' },
-  { label: 'Calendar',        href: '/calendar',   icon: CalendarDays,    group: 'Navigate' },
-  { label: 'Reports',         href: '/reports',    icon: TrendingUp,      group: 'Navigate' },
-  { label: 'Org Profile',     href: '/org',        icon: Building2,       group: 'Navigate' },
-  { label: 'Settings',        href: '/settings',   icon: Settings,        group: 'Navigate' },
+  { label: 'Dashboard',       href: '/dashboard',   icon: LayoutDashboard, group: 'Navigate' },
+  { label: 'Prospecting',     href: '/prospecting', icon: Radar,           group: 'Navigate' },
+  { label: 'Connections',     href: '/connections', icon: Share2,          group: 'Navigate' },
+  { label: 'Calendar',        href: '/calendar',    icon: CalendarDays,    group: 'Navigate' },
+  { label: 'Peer Network',    href: '/peers',       icon: Users,           group: 'Navigate' },
+  { label: 'Data Hub',        href: '/data',        icon: Database,        group: 'Navigate' },
+  { label: 'Reports',         href: '/reports',     icon: TrendingUp,      group: 'Navigate' },
+  { label: 'Org Profile',     href: '/org',         icon: Building2,       group: 'Navigate' },
+  { label: 'Settings',        href: '/settings',    icon: Settings,        group: 'Navigate' },
+  { label: 'Feedback',        href: '/feedback',    icon: MessageSquare,   group: 'Navigate' },
+  // Older routes that are still live but no longer in the sidebar.
+  { label: 'Discover Grants', href: '/discover',    icon: Search,          group: 'Navigate' },
+  { label: 'Financials',      href: '/financials',  icon: BarChart3,       group: 'Navigate' },
+  { label: 'Pipeline',        href: '/pipeline',    icon: KanbanSquare,    group: 'Navigate' },
 ];
 
 // ── Score color ───────────────────────────────────────────────────────────────
 function scoreColor(s: number) {
-  return s >= 70 ? '#16a34a' : s >= 40 ? '#d97706' : '#dc2626';
+  return s >= 70 ? 'var(--success)' : s >= 40 ? 'var(--warning)' : 'var(--critical)';
 }
 
 // ── Command Palette component ─────────────────────────────────────────────────
@@ -132,18 +139,19 @@ export function CommandPalette() {
       onClick={close}
     >
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-[#0f172a]/40 backdrop-blur-sm" />
+      <div className="absolute inset-0" style={{ background: 'rgba(11,18,32,.38)' }} />
 
       {/* Panel */}
       <div
-        className="relative w-full max-w-[560px] mx-4 bg-white rounded-md shadow-2xl border border-[#e2e8f0] overflow-hidden"
+        className="relative w-full max-w-[560px] mx-4 bg-surface rounded-md border border-hairline overflow-hidden"
+        style={{ boxShadow: 'var(--shadow-overlay)' }}
         onClick={e => e.stopPropagation()}
       >
         {/* Search input */}
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-[#f1f5f9]">
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-hairline">
           {isPending
-            ? <Loader2 className="w-4 h-4 text-[#94a3b8] flex-shrink-0 animate-spin" />
-            : <Search className="w-4 h-4 text-[#94a3b8] flex-shrink-0" />
+            ? <Loader2 className="w-4 h-4 text-tertiary flex-shrink-0 animate-spin" />
+            : <Search className="w-4 h-4 text-tertiary flex-shrink-0" />
           }
           <input
             ref={inputRef}
@@ -151,15 +159,15 @@ export function CommandPalette() {
             onChange={handleInput}
             onKeyDown={handleKeyDown}
             placeholder="Search grants, pages, actions…"
-            className="flex-1 text-[14px] text-[#0f172a] placeholder-[#94a3b8] bg-transparent outline-none"
+            className="flex-1 text-[14px] text-primary placeholder:text-tertiary bg-transparent outline-none"
           />
           <div className="flex items-center gap-1.5">
             {query && (
               <button onClick={() => { setQuery(''); setGrants([]); inputRef.current?.focus(); }}>
-                <X className="w-3.5 h-3.5 text-[#94a3b8] hover:text-[#475569]" />
+                <X className="w-3.5 h-3.5 text-tertiary hover:text-secondary" />
               </button>
             )}
-            <kbd className="px-1.5 py-0.5 bg-[#f1f5f9] border border-[#e2e8f0] rounded text-[10px] text-[#94a3b8] font-mono">ESC</kbd>
+            <kbd className="px-1.5 py-0.5 bg-elevated border border-hairline rounded-xs text-[10px] text-tertiary font-mono">ESC</kbd>
           </div>
         </div>
 
@@ -168,7 +176,7 @@ export function CommandPalette() {
           {/* Navigation section */}
           {filtered.length > 0 && (
             <div>
-              <p className="px-4 pt-3 pb-1.5 text-[10px] font-semibold text-[#94a3b8] uppercase tracking-widest">
+              <p className="fd-eyebrow px-4 pt-3 pb-1.5 text-tertiary">
                 {query ? 'Pages' : 'Navigate'}
               </p>
               {filtered.map((item) => {
@@ -180,15 +188,15 @@ export function CommandPalette() {
                     key={item.href}
                     data-idx={idx}
                     onClick={() => { router.push(item.href); close(); }}
-                    className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${active ? 'bg-[#f0fdfa]' : 'hover:bg-[#f8fafc]'}`}
+                    className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${active ? 'bg-accent-tint' : 'hover:bg-elevated'}`}
                   >
-                    <div className={`w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0 ${active ? 'bg-[#0d9488]/10' : 'bg-[#f1f5f9]'}`}>
-                      <Icon className={`w-3.5 h-3.5 ${active ? 'text-[#0d9488]' : 'text-[#64748b]'}`} />
+                    <div className={`w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0 ${active ? 'bg-surface' : 'bg-elevated'}`}>
+                      <Icon className={`w-3.5 h-3.5 ${active ? 'text-accent' : 'text-secondary'}`} />
                     </div>
-                    <span className={`text-[13px] font-medium flex-1 ${active ? 'text-[#0d9488]' : 'text-[#0f172a]'}`}>
+                    <span className={`text-[13px] font-medium flex-1 ${active ? 'text-accent' : 'text-primary'}`}>
                       {item.label}
                     </span>
-                    {active && <ArrowRight className="w-3.5 h-3.5 text-[#0d9488]" />}
+                    {active && <ArrowRight className="w-3.5 h-3.5 text-accent" />}
                   </button>
                 );
               })}
@@ -198,7 +206,7 @@ export function CommandPalette() {
           {/* Grant results section */}
           {grants.length > 0 && (
             <div>
-              <p className="px-4 pt-3 pb-1.5 text-[10px] font-semibold text-[#94a3b8] uppercase tracking-widest">
+              <p className="fd-eyebrow px-4 pt-3 pb-1.5 text-tertiary">
                 Grant Matches
               </p>
               {grants.map((grant) => {
@@ -213,26 +221,26 @@ export function CommandPalette() {
                     key={grant.id}
                     data-idx={idx}
                     onClick={() => { router.push(`/grant/${grant.id}`); close(); }}
-                    className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${active ? 'bg-[#f0fdfa]' : 'hover:bg-[#f8fafc]'}`}
+                    className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${active ? 'bg-accent-tint' : 'hover:bg-elevated'}`}
                   >
-                    <div className={`w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0 ${active ? 'bg-[#0d9488]/10' : 'bg-[#f1f5f9]'}`}>
-                      <FileText className={`w-3.5 h-3.5 ${active ? 'text-[#0d9488]' : 'text-[#64748b]'}`} />
+                    <div className={`w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0 ${active ? 'bg-surface' : 'bg-elevated'}`}>
+                      <FileText className={`w-3.5 h-3.5 ${active ? 'text-accent' : 'text-secondary'}`} />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className={`text-[13px] font-medium truncate ${active ? 'text-[#0d9488]' : 'text-[#0f172a]'}`}>
+                      <p className={`text-[13px] font-medium truncate ${active ? 'text-accent' : 'text-primary'}`}>
                         {grant.title}
                       </p>
-                      <p className="text-[11px] text-[#64748b] truncate">{grant.agency}</p>
+                      <p className="text-[11px] text-secondary truncate">{grant.agency}</p>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
                       <span
-                        className="text-[11px] font-bold tabular-nums px-1.5 py-0.5 rounded"
-                        style={{ color: scoreColor(grant.score), background: scoreColor(grant.score) + '18' }}
+                        className="text-[11px] font-semibold font-mono tabular-nums px-1.5 py-0.5 rounded-xs"
+                        style={{ color: scoreColor(grant.score), background: 'var(--bg-elevated)' }}
                       >
                         {grant.score.toFixed(0)}
                       </span>
                       {daysLeft !== null && daysLeft >= 0 && daysLeft <= 30 && (
-                        <span className="text-[10px] text-amber-600 font-medium">{daysLeft}d</span>
+                        <span className="text-[10px] font-mono font-medium" style={{ color: 'var(--warning)' }}>{daysLeft}d</span>
                       )}
                     </div>
                   </button>
@@ -244,14 +252,14 @@ export function CommandPalette() {
           {/* Empty state */}
           {query.trim().length >= 2 && !isPending && filtered.length === 0 && grants.length === 0 && (
             <div className="px-4 py-8 text-center">
-              <p className="text-[13px] text-[#94a3b8]">No results for &ldquo;{query}&rdquo;</p>
+              <p className="text-[13px] text-tertiary">No results for &ldquo;{query}&rdquo;</p>
             </div>
           )}
 
           {/* Default empty (no query) */}
           {!query && (
-            <div className="px-4 pb-3 pt-2 border-t border-[#f1f5f9] mt-1">
-              <p className="text-[11px] text-[#94a3b8]">
+            <div className="px-4 pb-3 pt-2 border-t border-hairline mt-1">
+              <p className="text-[11px] text-tertiary">
                 Type to search grants · navigate pages · run actions
               </p>
             </div>
@@ -259,13 +267,13 @@ export function CommandPalette() {
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between px-4 py-2 border-t border-[#f1f5f9] bg-[#f8fafc]">
-          <div className="flex items-center gap-3 text-[10px] text-[#94a3b8]">
-            <span className="flex items-center gap-1"><kbd className="px-1 py-0.5 bg-white border border-[#e2e8f0] rounded font-mono">↑↓</kbd> navigate</span>
-            <span className="flex items-center gap-1"><kbd className="px-1 py-0.5 bg-white border border-[#e2e8f0] rounded font-mono">↵</kbd> open</span>
-            <span className="flex items-center gap-1"><kbd className="px-1 py-0.5 bg-white border border-[#e2e8f0] rounded font-mono">esc</kbd> close</span>
+        <div className="flex items-center justify-between px-4 py-2 border-t border-hairline bg-page">
+          <div className="flex items-center gap-3 text-[10px] text-tertiary">
+            <span className="flex items-center gap-1"><kbd className="px-1 py-0.5 bg-surface border border-hairline rounded-xs font-mono">↑↓</kbd> navigate</span>
+            <span className="flex items-center gap-1"><kbd className="px-1 py-0.5 bg-surface border border-hairline rounded-xs font-mono">↵</kbd> open</span>
+            <span className="flex items-center gap-1"><kbd className="px-1 py-0.5 bg-surface border border-hairline rounded-xs font-mono">esc</kbd> close</span>
           </div>
-          <div className="flex items-center gap-1 text-[10px] text-[#94a3b8]">
+          <div className="flex items-center gap-1 text-[10px] text-tertiary">
             <Command className="w-3 h-3" />
             <span>K to open</span>
           </div>
@@ -280,16 +288,17 @@ export function CommandPalette() {
 export function CommandPaletteTrigger({ onClick }: { onClick: () => void }) {
   return (
     <button
+      type="button"
       onClick={onClick}
-      className="flex items-center gap-2 px-3 py-1.5 rounded-md text-[12px] text-white/50 hover:text-white/80 transition-all border border-white/10 hover:border-white/20"
-      style={{ background: 'rgba(255,255,255,0.07)' }}
+      aria-label="Search grants, pages and actions (⌘K)"
+      className="flex items-center gap-2 h-8 px-2.5 rounded-sm text-[12.5px] text-tertiary hover:text-primary bg-page hover:bg-elevated border border-hairline hover:border-border-strong transition-colors w-full max-w-[360px]"
     >
-      <Search className="w-3.5 h-3.5" />
-      <span>Search…</span>
-      <div className="flex items-center gap-0.5 ml-1">
-        <kbd className="px-1 py-0.5 rounded text-[10px] font-mono text-white/30 border border-white/10" style={{ background: 'rgba(255,255,255,0.06)' }}>⌘</kbd>
-        <kbd className="px-1 py-0.5 rounded text-[10px] font-mono text-white/30 border border-white/10" style={{ background: 'rgba(255,255,255,0.06)' }}>K</kbd>
-      </div>
+      <Search className="w-3.5 h-3.5 flex-shrink-0" />
+      <span className="flex-1 text-left truncate">Search grants, pages…</span>
+      <span className="hidden sm:flex items-center gap-0.5 font-mono text-[10px] text-tertiary">
+        <kbd className="px-1 py-0.5 rounded-xs border border-hairline bg-surface">⌘</kbd>
+        <kbd className="px-1 py-0.5 rounded-xs border border-hairline bg-surface">K</kbd>
+      </span>
     </button>
   );
 }
