@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Target, Send, Table2, Check, FileText } from 'lucide-react';
 
 // Real board-network view in the "officer trail" design language, wired to
@@ -8,7 +8,7 @@ import { Target, Send, Table2, Check, FileText } from 'lucide-react';
 // (The multi-year seat trail across 990 filings is a future pipeline; this shows
 // the real board seats, connections, and CYC funding relationships we do have.)
 
-const SERIF = "'Instrument Serif',Palatino,Georgia,serif";
+const SERIF = 'var(--font-display)';
 const AMBER = '#9C7A2A';
 const SLATE = '#5B7383';
 
@@ -22,12 +22,8 @@ export interface CnPerson {
 export interface CnKpis { board: number; foundations: number; warm: number; awaiting: number; }
 
 const CSS = `
-.cn-root{--radius-kpi:12px;--radius-console:14px;font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;color:var(--text-primary);background:var(--bg-page)}
-.cn-root .fd-eyebrow{font-size:11px;line-height:1.2;letter-spacing:.08em;font-weight:600;text-transform:uppercase}
-.cn-root .fd-kpi{font-family:'JetBrains Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums;font-weight:600;letter-spacing:-.01em}
-.cn-root .fd-mono{font-family:'JetBrains Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
-.cn-root .fd-caption{font-size:12px;line-height:1.5}
-@keyframes cn-rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.cn-root{color:var(--text-primary);background:var(--bg-page)}
+.cn-root .cn-root .cn-root .cn-root @keyframes cn-rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 .cn-root [data-cn-person]{transition:background .14s}
 @media (max-width:1180px){.cn-root [data-cn-cols]{grid-template-columns:minmax(0,1fr)!important}.cn-root [data-cn-list]{max-height:none!important}}
 @media (max-width:760px){.cn-root [data-cn-filters]{overflow-x:auto}}
@@ -55,13 +51,6 @@ export function ConnectionsView({ people, kpis }: { people: CnPerson[]; kpis: Cn
   const [filter, setFilter] = useState<'all' | 'warm' | 'awaiting'>('all');
   const [selected, setSelected] = useState(people[0]?.id ?? '');
 
-  useEffect(() => {
-    if (document.getElementById('cn-fonts')) return;
-    const l = document.createElement('link');
-    l.id = 'cn-fonts'; l.rel = 'stylesheet';
-    l.href = 'https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap';
-    document.head.appendChild(l);
-  }, []);
 
   const visible = filter === 'warm' ? people.filter(p => p.warm)
     : filter === 'awaiting' ? people.filter(p => p.awaiting)
@@ -131,7 +120,7 @@ export function ConnectionsView({ people, kpis }: { people: CnPerson[]; kpis: Cn
               return (
                 <div key={p.id} data-cn-person onClick={() => setSelected(p.id)} style={{ borderBottom: '1px solid var(--border-hairline)', cursor: 'pointer', background: on ? 'var(--bg-page)' : undefined }}>
                   <div style={{ display: 'flex', gap: 11, padding: '13px 16px', ...(on ? { boxShadow: 'inset 2px 0 0 var(--accent)' } : {}) }}>
-                    <b style={{ width: 30, height: 30, flex: 'none', borderRadius: '50%', background: on ? 'var(--accent)' : 'var(--bg-elevated)', color: on ? '#fff' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'JetBrains Mono',monospace", fontSize: 10, fontWeight: 500 }}>{p.initials}</b>
+                    <b style={{ width: 30, height: 30, flex: 'none', borderRadius: '50%', background: on ? 'var(--accent)' : 'var(--bg-elevated)', color: on ? '#fff' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 500 }}>{p.initials}</b>
                     <div style={{ minWidth: 0, flex: 1 }}>
                       <b style={{ display: 'block', fontSize: 13, fontWeight: 500, letterSpacing: '-.005em', marginBottom: 2 }}>{p.name}</b>
                       <span style={{ display: 'block', fontSize: 11.5, lineHeight: 1.45, color: on ? 'var(--text-secondary)' : 'var(--text-tertiary)', marginBottom: 6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.title ? `${p.title}, ` : ''}{p.foundation}</span>
@@ -186,12 +175,12 @@ export function ConnectionsView({ people, kpis }: { people: CnPerson[]; kpis: Cn
           {/* person + seat */}
           <div style={{ ...card, overflow: 'hidden' }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, padding: '18px 20px', borderBottom: '1px solid var(--border-hairline)', flexWrap: 'wrap' }}>
-              <b style={{ width: 44, height: 44, flex: 'none', borderRadius: '50%', background: 'var(--accent)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'JetBrains Mono',monospace", fontSize: 13, fontWeight: 500 }}>{person.initials}</b>
+              <b style={{ width: 44, height: 44, flex: 'none', borderRadius: '50%', background: 'var(--accent)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 500 }}>{person.initials}</b>
               <div style={{ minWidth: 0, flex: 1 }}>
                 <h2 style={{ fontFamily: SERIF, fontWeight: 400, fontSize: '1.55rem', lineHeight: 1.12, letterSpacing: '-.015em', margin: '0 0 4px' }}>{person.name}</h2>
                 <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)' }}>{person.title ? `${person.title}, ` : ''}{person.foundation}</p>
               </div>
-              <span style={{ flex: 'none', display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: "'JetBrains Mono',monospace", fontSize: 9, letterSpacing: '.07em', textTransform: 'uppercase', color: person.warm ? 'var(--accent)' : SLATE, border: `1px solid ${person.warm ? 'rgba(12,107,90,.28)' : 'rgba(91,115,131,.3)'}`, borderRadius: 3, padding: '4px 8px', whiteSpace: 'nowrap' }}>
+              <span style={{ flex: 'none', display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '.07em', textTransform: 'uppercase', color: person.warm ? 'var(--accent)' : SLATE, border: `1px solid ${person.warm ? 'rgba(12,107,90,.28)' : 'rgba(91,115,131,.3)'}`, borderRadius: 3, padding: '4px 8px', whiteSpace: 'nowrap' }}>
                 {person.warm ? <Check style={{ width: 11, height: 11 }} /> : null}{person.warm ? 'Warm connection' : 'Cold seat'}
               </span>
             </div>
@@ -248,7 +237,7 @@ export function ConnectionsView({ people, kpis }: { people: CnPerson[]; kpis: Cn
               <span className="fd-eyebrow" style={{ color: 'var(--text-secondary)', display: 'block', marginBottom: 14 }}>How to reach them</span>
               {person.whoKnows ? (
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: 11, padding: '11px 0', borderBottom: '1px solid var(--border-hairline)' }}>
-                  <b style={{ width: 26, height: 26, flex: 'none', borderRadius: '50%', background: 'var(--bg-elevated)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'JetBrains Mono',monospace", fontSize: 9, fontWeight: 500 }}>{person.whoKnows.split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase()}</b>
+                  <b style={{ width: 26, height: 26, flex: 'none', borderRadius: '50%', background: 'var(--bg-elevated)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-mono)', fontSize: 9, fontWeight: 500 }}>{person.whoKnows.split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase()}</b>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <b style={{ display: 'block', fontSize: 12.5, fontWeight: 500, marginBottom: 2 }}>{person.whoKnows}</b>
                     <span style={{ display: 'block', fontSize: 11.5, lineHeight: 1.5, color: 'var(--text-tertiary)' }}>{person.connectionType || 'Knows this board member'}</span>

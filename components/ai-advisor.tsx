@@ -146,7 +146,7 @@ export function AiAdvisor({ orgCode, orgId, orgName }: AiAdvisorProps) {
       {/* Panel */}
       {open && (
         <div
-          className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-[60] flex flex-col rounded-2xl shadow-2xl overflow-hidden border w-[calc(100vw-32px)] sm:w-[420px] h-[calc(100vh-32px)] sm:h-[620px] sm:max-h-[calc(100vh-48px)]"
+          className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-[60] flex flex-col rounded-md shadow-2xl overflow-hidden border w-[calc(100vw-32px)] sm:w-[420px] h-[calc(100vh-32px)] sm:h-[620px] sm:max-h-[calc(100vh-48px)]"
           style={{
             background: 'var(--card-bg, #ffffff)',
             borderColor: 'var(--card-border, #e2e8f0)',
@@ -157,7 +157,7 @@ export function AiAdvisor({ orgCode, orgId, orgName }: AiAdvisorProps) {
             className="flex items-center gap-2.5 px-4 py-3 flex-shrink-0"
             style={{ background: 'linear-gradient(135deg, #0d9488, #0891b2)' }}
           >
-            <div className="w-7 h-7 rounded-lg bg-white/15 flex items-center justify-center">
+            <div className="w-7 h-7 rounded-md bg-white/15 flex items-center justify-center">
               <Sparkles className="w-4 h-4 text-white" />
             </div>
             <div className="flex-1 min-w-0">
@@ -168,7 +168,7 @@ export function AiAdvisor({ orgCode, orgId, orgName }: AiAdvisorProps) {
             </div>
             <button
               onClick={() => setOpen(false)}
-              className="w-7 h-7 rounded-lg flex items-center justify-center text-white/80 hover:bg-white/15 transition-colors"
+              className="w-7 h-7 rounded-md flex items-center justify-center text-white/80 hover:bg-white/15 transition-colors"
             >
               <X className="w-4 h-4" />
             </button>
@@ -179,7 +179,7 @@ export function AiAdvisor({ orgCode, orgId, orgName }: AiAdvisorProps) {
             {messages.length === 0 && (
               <div className="space-y-3">
                 <div
-                  className="text-[12.5px] leading-relaxed p-3 rounded-xl"
+                  className="text-[12.5px] leading-relaxed p-3 rounded-md"
                   style={{ background: 'var(--badge-bg, #f1f5f9)', color: 'var(--text-secondary, #475569)' }}
                 >
                   I&rsquo;m your grant strategist. I can read {isCyc ? "Chicago Youth Centers'" : 'your'} financials,
@@ -192,7 +192,7 @@ export function AiAdvisor({ orgCode, orgId, orgName }: AiAdvisorProps) {
                   <button
                     key={s}
                     onClick={() => send(s)}
-                    className="w-full text-left text-[12.5px] px-3 py-2.5 rounded-xl border transition-colors hover:border-[#0d9488]"
+                    className="w-full text-left text-[12.5px] px-3 py-2.5 rounded-md border transition-colors hover:border-[#0d9488]"
                     style={{
                       background: 'var(--card-bg, #ffffff)',
                       borderColor: 'var(--card-border, #e2e8f0)',
@@ -208,7 +208,7 @@ export function AiAdvisor({ orgCode, orgId, orgName }: AiAdvisorProps) {
             {messages.map((m, i) => (
               <div key={i} className={m.role === 'user' ? 'flex justify-end' : 'flex justify-start'}>
                 <div
-                  className="max-w-[88%] text-[12.5px] leading-relaxed rounded-2xl px-3.5 py-2.5"
+                  className="max-w-[88%] text-[12.5px] leading-relaxed rounded-md px-3.5 py-2.5"
                   style={
                     m.role === 'user'
                       ? { background: 'linear-gradient(135deg, #0d9488, #0891b2)', color: '#ffffff' }
@@ -231,7 +231,7 @@ export function AiAdvisor({ orgCode, orgId, orgName }: AiAdvisorProps) {
           {/* Input */}
           <div className="flex-shrink-0 p-3 border-t" style={{ borderColor: 'var(--card-border, #e2e8f0)' }}>
             <div
-              className="flex items-end gap-2 rounded-xl border px-3 py-2"
+              className="flex items-end gap-2 rounded-md border px-3 py-2"
               style={{ borderColor: 'var(--card-border, #e2e8f0)', background: 'var(--card-bg, #ffffff)' }}
             >
               <textarea
@@ -247,7 +247,7 @@ export function AiAdvisor({ orgCode, orgId, orgName }: AiAdvisorProps) {
               <button
                 onClick={() => send(input)}
                 disabled={!input.trim() || streaming}
-                className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-opacity disabled:opacity-30"
+                className="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0 transition-opacity disabled:opacity-30"
                 style={{ background: 'linear-gradient(135deg, #0d9488, #0891b2)' }}
               >
                 {streaming

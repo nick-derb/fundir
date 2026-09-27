@@ -74,7 +74,7 @@ function HealthCard({ health, workbookUrl }: { health: HubHealth; workbookUrl: s
     speed === 'fast' ? 'var(--success)' : speed === 'ok' ? 'var(--warning)' : 'var(--critical)';
 
   return (
-    <div className="bg-surface rounded-xl border border-hairline p-5">
+    <div className="bg-surface rounded-md border border-hairline p-5">
       <div className="flex items-center gap-2 mb-3">
         <Activity className="w-4 h-4 text-accent" />
         <h3 className="text-[13.5px] font-bold text-primary flex-1">Connection health</h3>
@@ -247,7 +247,7 @@ export function DataHub({ userEmail }: { userEmail: string }) {
 
   if (connected === false) {
     return (
-      <div className="max-w-xl mx-auto my-14 bg-surface rounded-xl border border-dashed border-hairline p-10 text-center">
+      <div className="max-w-xl mx-auto my-14 bg-surface rounded-md border border-dashed border-hairline p-10 text-center">
         <CloudUpload className="w-9 h-9 text-tertiary mx-auto mb-4" />
         <h3 className="text-[15px] font-semibold text-primary mb-2">Connect Microsoft 365 to open the Data Hub</h3>
         <p className="text-[13px] text-secondary mb-6">
@@ -266,7 +266,7 @@ export function DataHub({ userEmail }: { userEmail: string }) {
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
 
       {/* ── LEFT (2 cols): the living spreadsheet ── */}
-      <div className="lg:col-span-2 bg-surface rounded-xl border border-hairline overflow-hidden">
+      <div className="lg:col-span-2 bg-surface rounded-md border border-hairline overflow-hidden">
         <div className="px-5 py-3.5 border-b border-hairline flex items-center gap-3 flex-wrap">
           <div className="w-7 h-7 rounded-md flex items-center justify-center bg-elevated flex-shrink-0">
             <Table2 className="w-3.5 h-3.5 text-accent" />
@@ -278,12 +278,12 @@ export function DataHub({ userEmail }: { userEmail: string }) {
             </p>
           </div>
           <button onClick={() => load(true)} disabled={refreshing}
-            className="flex items-center gap-1.5 text-[12px] font-semibold text-primary bg-elevated hover:bg-elevated border border-hairline px-3 py-1.5 rounded-lg transition-all disabled:opacity-50">
+            className="flex items-center gap-1.5 text-[12px] font-semibold text-primary bg-elevated hover:bg-elevated border border-hairline px-3 py-1.5 rounded-md transition-all disabled:opacity-50">
             <RefreshCw className={`w-3 h-3 ${refreshing ? 'animate-spin' : ''}`} /> Refresh
           </button>
           {workbookUrl && (
             <a href={workbookUrl} target="_blank" rel="noreferrer"
-              className="flex items-center gap-1.5 text-[12px] font-semibold text-white bg-accent hover:bg-accent-hover px-3 py-1.5 rounded-lg transition-all">
+              className="flex items-center gap-1.5 text-[12px] font-semibold text-white bg-accent hover:bg-accent-hover px-3 py-1.5 rounded-md transition-all">
               Open in Excel <ExternalLink className="w-3 h-3" />
             </a>
           )}
@@ -342,7 +342,7 @@ export function DataHub({ userEmail }: { userEmail: string }) {
         {health && <HealthCard health={health} workbookUrl={workbookUrl} />}
 
         {/* Submission form */}
-        <div className="bg-surface rounded-xl border border-hairline p-5">
+        <div className="bg-surface rounded-md border border-hairline p-5">
           <div className="flex items-center gap-2 mb-4">
             <Plus className="w-4 h-4 text-accent" />
             <h3 className="text-[13.5px] font-bold text-primary">Add an entry</h3>
@@ -400,7 +400,7 @@ export function DataHub({ userEmail }: { userEmail: string }) {
         </div>
 
         {/* Shared documents */}
-        <div className="bg-surface rounded-xl border border-hairline p-5">
+        <div className="bg-surface rounded-md border border-hairline p-5">
           <div className="flex items-center gap-2 mb-1">
             <FileText className="w-4 h-4 text-accent" />
             <h3 className="text-[13.5px] font-bold text-primary flex-1">Shared documents</h3>

@@ -13,8 +13,8 @@ import { getSupabaseClient } from '@/lib/supabase';
 interface Attachment { name: string; path: string; size: number; type: string | null }
 const fmtSize = (n: number) => (n >= 1e6 ? `${(n / 1e6).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1e3))} KB`);
 
-const SERIF = "'Instrument Serif',Palatino,Georgia,serif";
-const MONO = "'JetBrains Mono',ui-monospace,monospace";
+const SERIF = 'var(--font-display)';
+const MONO = 'var(--font-mono)';
 const AMBER = '#9C7A2A', SLATE = '#5B7383', INFO = '#3E6CA8';
 
 type Kind = 'bug' | 'data' | 'idea';
@@ -29,17 +29,14 @@ const STATUS: Record<string, { label: string; tone: string }> = { new: { label: 
 const ENTITIES = ['person', 'organization', 'grant / funding event', 'relationship', 'lead', 'board seat', 'other'];
 
 const CSS = `
-.fb-root{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;color:var(--text-primary);background:var(--bg-page)}
-.fb-root .fd-eyebrow{font-size:11px;line-height:1.2;letter-spacing:.08em;font-weight:600;text-transform:uppercase}
-.fb-root .fd-mono{font-family:${MONO};font-variant-numeric:tabular-nums}
-.fb-root .fd-caption{font-size:12px;line-height:1.5}
-.fb-input{width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--border-hairline);background:var(--bg-surface);font:inherit;font-size:13px;color:var(--text-primary);outline:none;transition:border-color .14s,box-shadow .14s}
+.fb-root{color:var(--text-primary);background:var(--bg-page)}
+.fb-root .fb-root .fb-root .fb-input{width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--border-hairline);background:var(--bg-surface);font:inherit;font-size:13px;color:var(--text-primary);outline:none;transition:border-color .14s,box-shadow .14s}
 .fb-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-tint)}
 textarea.fb-input{min-height:88px;resize:vertical;line-height:1.5}
-.fb-kind{display:grid;grid-template-columns:22px 1fr;gap:10px;align-items:start;text-align:left;padding:12px 14px;border-radius:12px;border:1px solid var(--border-hairline);background:var(--bg-surface);font:inherit;cursor:pointer;color:inherit;transition:border-color .14s,background .14s}
+.fb-kind{display:grid;grid-template-columns:22px 1fr;gap:10px;align-items:start;text-align:left;padding:12px 14px;border-radius:var(--radius);border:1px solid var(--border-hairline);background:var(--bg-surface);font:inherit;cursor:pointer;color:inherit;transition:border-color .14s,background .14s}
 .fb-kind:hover{border-color:var(--border-strong)}
 .fb-kind[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-tint)}
-.fb-primary{display:inline-flex;align-items:center;gap:7px;height:36px;padding:0 16px;border-radius:10px;border:none;background:var(--accent);color:var(--accent-on);font:inherit;font-size:12.5px;font-weight:500;cursor:pointer}
+.fb-primary{display:inline-flex;align-items:center;gap:7px;height:36px;padding:0 16px;border-radius:var(--radius);border:none;background:var(--accent);color:var(--accent-on);font:inherit;font-size:12.5px;font-weight:500;cursor:pointer}
 .fb-primary:disabled{opacity:.55;cursor:default}
 .fb-ghost{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border-radius:8px;border:1px solid var(--border-hairline);background:var(--bg-surface);color:var(--text-primary);font:inherit;font-size:11.5px;cursor:pointer}
 .fb-ghost:hover{background:var(--bg-elevated)}
@@ -118,7 +115,7 @@ export function FeedbackView({ initialPage, isAdmin, orgName }: { initialPage: s
 
       <div className="fb-cols" style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.1fr) minmax(0,1fr)', gap: 20, alignItems: 'start' }}>
         {/* form */}
-        <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-hairline)', borderRadius: 14, padding: '18px 20px' }}>
+        <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-hairline)', borderRadius: 'var(--radius)', padding: '18px 20px' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0,1fr))', gap: 8, marginBottom: 16 }}>
             {KINDS.map(k => { const Icon = k.icon; return (
               <button key={k.key} type="button" className="fb-kind" aria-pressed={kind === k.key} onClick={() => setKind(k.key)}>
@@ -178,7 +175,7 @@ export function FeedbackView({ initialPage, isAdmin, orgName }: { initialPage: s
         </div>
 
         {/* queue */}
-        <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-hairline)', borderRadius: 14, overflow: 'hidden' }}>
+        <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-hairline)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', borderBottom: '1px solid var(--border-hairline)' }}>
             <span className="fd-eyebrow" style={{ color: 'var(--text-secondary)' }}>{isAdmin ? 'Queue · everyone at CYC' : 'Your messages'}</span>
             <span className="fd-mono" style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>{openCount} open</span>

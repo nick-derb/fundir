@@ -44,7 +44,7 @@ export default async function TrainingPage() {
   const pct = Math.min(100, Math.round((total / MIN_LABELS) * 100));
 
   const card: React.CSSProperties = {
-    border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12,
+    border: '1px solid rgba(255,255,255,0.08)', borderRadius: 'var(--radius)',
     background: 'rgba(255,255,255,0.02)', padding: '18px 20px',
   };
   const stat: React.CSSProperties = { ...card, flex: 1, minWidth: 150 };

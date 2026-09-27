@@ -257,7 +257,7 @@ export function TeamPanel({ userEmail, orgId, open, onClose }: TeamPanelProps) {
 
   return (
     <div
-      className="fixed bottom-4 right-4 z-50 flex flex-col rounded-2xl shadow-2xl border overflow-hidden"
+      className="fixed bottom-4 right-4 z-50 flex flex-col rounded-md shadow-2xl border overflow-hidden"
       style={{
         width: 360,
         height: 520,
@@ -413,7 +413,7 @@ export function TeamPanel({ userEmail, orgId, open, onClose }: TeamPanelProps) {
                           {msg.user_email.split('@')[0]}
                         </p>
                       )}
-                      <div className="px-3 py-2 rounded-[12px] text-[12px] leading-snug"
+                      <div className="px-3 py-2 rounded-md text-[12px] leading-snug"
                         style={isSelf
                           ? { background: '#0d9488', color: '#fff', borderBottomRightRadius: 4 }
                           : { background: 'var(--nav-hover-bg)', color: 'var(--brand-text)', borderBottomLeftRadius: 4 }}>
@@ -432,7 +432,7 @@ export function TeamPanel({ userEmail, orgId, open, onClose }: TeamPanelProps) {
 
           {/* Input */}
           <div className="px-3 py-3 border-t flex-shrink-0" style={{ borderColor: 'var(--sidebar-border)' }}>
-            <div className="flex items-center gap-2 rounded-[10px] border px-3 py-2"
+            <div className="flex items-center gap-2 rounded-md border px-3 py-2"
               style={{ borderColor: 'var(--sidebar-border)', background: 'var(--nav-hover-bg)' }}>
               <input
                 ref={inputRef}

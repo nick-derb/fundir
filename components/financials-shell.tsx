@@ -14,7 +14,7 @@ import type { ComputedFinancials, OrgProfile } from '@/lib/propublica';
 // ── Shared helpers (exported so CYC shell can import them) ────────────────────
 export function Card({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={`rounded-xl border ${className}`}
+    <div className={`rounded-md border ${className}`}
       style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)' }}>
       {children}
     </div>
@@ -70,7 +70,7 @@ export function AITab({ orgCode, orgId, orgName, googleConnected, microsoftConne
         {/* Storage connect only appears when nothing is connected — once
             connected, the header chip is the only chrome (no wizard steps). */}
         {!anyConnected && (
-          <div className="mx-5 mt-4 mb-5 rounded-xl border overflow-hidden" style={{ borderColor: 'var(--card-border)' }}>
+          <div className="mx-5 mt-4 mb-5 rounded-md border overflow-hidden" style={{ borderColor: 'var(--card-border)' }}>
             <div className="px-4 py-2.5 border-b" style={{ borderColor: 'var(--card-border)', background: 'var(--badge-bg)' }}>
               <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-tertiary)' }}>Connect cloud storage</p>
             </div>
@@ -255,7 +255,7 @@ export function DocumentLibraryTab({
 
       {!loading && docs.length === 0 && (
         <div className="flex flex-col items-center gap-4 py-16 text-center">
-          <div className="w-14 h-14 rounded-2xl flex items-center justify-center"
+          <div className="w-14 h-14 rounded-md flex items-center justify-center"
             style={{ background: 'var(--badge-bg)' }}>
             <Library className="w-7 h-7" style={{ color: 'var(--text-tertiary)' }} />
           </div>
@@ -279,7 +279,7 @@ export function DocumentLibraryTab({
             const badge  = DOC_BADGE[doc.doc_type] ?? DOC_BADGE.general;
             const isOpen = expanded === doc.id;
             return (
-              <div key={doc.id} className="rounded-[10px] border overflow-hidden transition-all"
+              <div key={doc.id} className="rounded-md border overflow-hidden transition-all"
                 style={{ borderColor: isOpen ? 'var(--accent-tint)' : 'var(--card-border)', background: 'var(--card-bg)' }}>
                 <button onClick={() => handleExpand(doc.id)}
                   className="w-full flex items-start gap-4 px-5 py-4 text-left hover:bg-elevated transition-colors">
@@ -373,7 +373,7 @@ export function StrategyBriefTab({ orgCode, orgName }: { orgCode: string; orgNam
     return (
       <div className="flex flex-col items-center gap-5 py-16">
         <div className="relative">
-          <div className="w-14 h-14 rounded-2xl flex items-center justify-center"
+          <div className="w-14 h-14 rounded-md flex items-center justify-center"
             style={{ background: 'var(--info-tint)' }}>
             <Wand2 className="w-6 h-6 text-info" />
           </div>
@@ -402,7 +402,7 @@ export function StrategyBriefTab({ orgCode, orgName }: { orgCode: string; orgNam
   if (!brief) {
     return (
       <div className="flex flex-col items-center gap-6 py-16 text-center">
-        <div className="w-16 h-16 rounded-2xl flex items-center justify-center"
+        <div className="w-16 h-16 rounded-md flex items-center justify-center"
           style={{ background: 'var(--info-tint)' }}>
           <Wand2 className="w-8 h-8 text-info" />
         </div>
@@ -420,7 +420,7 @@ export function StrategyBriefTab({ orgCode, orgName }: { orgCode: string; orgNam
           </div>
         )}
         <button onClick={generate}
-          className="flex items-center gap-2 px-6 py-3 rounded-[10px] text-[13px] font-bold text-primary transition-all hover:opacity-90"
+          className="flex items-center gap-2 px-6 py-3 rounded-md text-[13px] font-bold text-primary transition-all hover:opacity-90"
           style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)' }}>
           <Wand2 className="w-4 h-4" /> Generate Strategy Brief
         </button>
@@ -445,7 +445,7 @@ export function StrategyBriefTab({ orgCode, orgName }: { orgCode: string; orgNam
         </button>
       </div>
 
-      <div className="p-5 rounded-xl border"
+      <div className="p-5 rounded-md border"
         style={{ background: 'var(--info-tint)', borderColor: 'var(--info-tint)' }}>
         <p className="text-[10px] font-bold text-info uppercase tracking-widest mb-2">Executive Summary</p>
         <p className="text-[13px] text-muted leading-relaxed">{brief.executive_summary}</p>
@@ -599,7 +599,7 @@ export function OrgFinancialsTab({
   if (!financialData?.computed) {
     return (
       <div className="flex flex-col items-center gap-5 py-20 text-center">
-        <div className="w-16 h-16 rounded-2xl flex items-center justify-center" style={{ background: 'var(--accent-tint)' }}>
+        <div className="w-16 h-16 rounded-md flex items-center justify-center" style={{ background: 'var(--accent-tint)' }}>
           <BarChart3 className="w-8 h-8 text-accent" />
         </div>
         <div>
@@ -672,7 +672,7 @@ export function OrgFinancialsTab({
             sub: '% to programs',
           },
         ].map(({ label, value, icon: Icon, color, sub }) => (
-          <div key={label} className="rounded-xl border p-4"
+          <div key={label} className="rounded-md border p-4"
             style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)' }}>
             <div className="flex items-center justify-between mb-3">
               <span className="text-[11px] font-semibold uppercase tracking-wide"
@@ -690,7 +690,7 @@ export function OrgFinancialsTab({
 
       {/* Revenue mix + eligibility signals */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="rounded-xl border p-5" style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)' }}>
+        <div className="rounded-md border p-5" style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)' }}>
           <p className="text-[11px] font-bold uppercase tracking-widest mb-4"
             style={{ color: 'var(--text-tertiary)' }}>Revenue Mix</p>
           <div className="space-y-4">
@@ -712,7 +712,7 @@ export function OrgFinancialsTab({
           </div>
         </div>
 
-        <div className="rounded-xl border p-5" style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)' }}>
+        <div className="rounded-md border p-5" style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)' }}>
           <p className="text-[11px] font-bold uppercase tracking-widest mb-4"
             style={{ color: 'var(--text-tertiary)' }}>Grant Eligibility Signals</p>
           <div className="space-y-4">
@@ -756,7 +756,7 @@ export function OrgFinancialsTab({
 
       {/* Revenue history sparkline */}
       {history && history.length > 1 && (
-        <div className="rounded-xl border p-5" style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)' }}>
+        <div className="rounded-md border p-5" style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)' }}>
           <p className="text-[11px] font-bold uppercase tracking-widest mb-4"
             style={{ color: 'var(--text-tertiary)' }}>Revenue History</p>
           <div className="flex items-end gap-3" style={{ height: 80 }}>
@@ -765,9 +765,9 @@ export function OrgFinancialsTab({
               const barH = Math.round((yr.totrevenue / max) * 56);
               return (
                 <div key={yr.tax_prd_yr} className="flex-1 flex flex-col items-center gap-1">
-                  <div className="w-full rounded-[4px] flex flex-col-reverse overflow-hidden"
+                  <div className="w-full rounded-xs flex flex-col-reverse overflow-hidden"
                     style={{ height: 56, background: 'var(--score-track)' }}>
-                    <div className="w-full rounded-[3px]" style={{
+                    <div className="w-full rounded-xs" style={{
                       height: barH,
                       background: 'linear-gradient(to top, #0d9488, rgba(13,148,136,0.35))',
                     }} />

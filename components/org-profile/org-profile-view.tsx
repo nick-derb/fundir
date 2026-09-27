@@ -1,26 +1,21 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { AlertCircle } from 'lucide-react';
 
 // Faithful port of templates/org-profile/OrgProfile.dc.html — "What Fundir knows
 // about CYC" — wired to REAL data: programs (cyc-profile), audited FY25 financials
 // + impact + board (cyc-live-data), and the live funder_board_members counts.
 
-const SERIF = "'Instrument Serif',Palatino,Georgia,serif";
+const SERIF = 'var(--font-display)';
 
 export interface OrgKpi { label: string; value: string; }
 export interface OrgRow { name: string; scope: string; value: string; period: string; source: string; state: 'confirmed' | 'pending' | 'corrected'; }
 export interface OrgFacet { key: string; label: string; title: string; blurb: string; rows: OrgRow[]; }
 
 const CSS = `
-.op-root{--radius-kpi:12px;--radius-console:14px;font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;color:var(--text-primary);background:var(--bg-page)}
-.op-root .fd-eyebrow{font-size:11px;line-height:1.2;letter-spacing:.08em;font-weight:600;text-transform:uppercase}
-.op-root .fd-kpi{font-family:'JetBrains Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums;font-weight:600;letter-spacing:-.01em}
-.op-root .fd-mono{font-family:'JetBrains Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
-.op-root .fd-caption{font-size:12px;line-height:1.5}
-.op-root .fd-h2{font-size:17px;line-height:1.4;font-weight:600}
-@keyframes op-swap{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.op-root{color:var(--text-primary);background:var(--bg-page)}
+.op-root .op-root .op-root .op-root .op-root @keyframes op-swap{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 @media (max-width:1180px){.op-root [data-op-cols]{grid-template-columns:minmax(0,1fr)!important}.op-root [data-op-facets]{position:static!important;flex-direction:row!important;flex-wrap:wrap;max-height:none!important}}
 @media (max-width:900px){.op-root [data-op-summary]{grid-template-columns:repeat(2,minmax(0,1fr))!important}.op-root [data-op-hidecol]{display:none!important}}
 @media (max-width:620px){.op-root [data-op-summary]{grid-template-columns:minmax(0,1fr)!important}}
@@ -32,19 +27,12 @@ function StateTag({ state }: { state: OrgRow['state'] }) {
     pending: { c: '#9C7A2A', bg: 'rgba(156,122,42,.10)', b: 'rgba(156,122,42,.3)', t: 'Watch' },
     corrected: { c: '#3E6CA8', bg: 'rgba(62,108,168,.10)', b: 'rgba(62,108,168,.3)', t: 'Corrected' },
   }[state];
-  return <span style={{ display: 'inline-flex', alignItems: 'center', fontFamily: "'JetBrains Mono',monospace", fontSize: 9, letterSpacing: '.06em', textTransform: 'uppercase', color: map.c, background: map.bg, border: `1px solid ${map.b}`, borderRadius: 3, padding: '3px 7px' }}>{map.t}</span>;
+  return <span style={{ display: 'inline-flex', alignItems: 'center', fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '.06em', textTransform: 'uppercase', color: map.c, background: map.bg, border: `1px solid ${map.b}`, borderRadius: 3, padding: '3px 7px' }}>{map.t}</span>;
 }
 
 export function OrgProfileView({ ein, facets, kpis, gaps }: { ein: string; facets: OrgFacet[]; kpis: OrgKpi[]; gaps: string[] }) {
   const [active, setActive] = useState(facets[1]?.key ?? facets[0]?.key ?? '');
 
-  useEffect(() => {
-    if (document.getElementById('op-fonts')) return;
-    const l = document.createElement('link');
-    l.id = 'op-fonts'; l.rel = 'stylesheet';
-    l.href = 'https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap';
-    document.head.appendChild(l);
-  }, []);
 
   const section = facets.find(f => f.key === active) ?? facets[0];
   const card: React.CSSProperties = { background: 'var(--bg-surface)', border: '1px solid var(--border-hairline)', borderRadius: 'var(--radius-console)' };

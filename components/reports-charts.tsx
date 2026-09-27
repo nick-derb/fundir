@@ -44,7 +44,7 @@ function DarkTooltip({ active, payload, label, formatter }: {
 }) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="rounded-lg border px-3 py-2.5 text-[12px] shadow-xl"
+    <div className="rounded-md border px-3 py-2.5 text-[12px] shadow-xl"
       style={{ background: 'var(--bg-surface)', borderColor: 'var(--border-hairline)', minWidth: 140 }}>
       {label != null && <p className="text-secondary mb-1.5 font-medium">{label}</p>}
       {payload.map((p, i) => (
@@ -126,10 +126,10 @@ function KpiStrip({ kpis }: { kpis: ReportsData['kpis'] }) {
   return (
     <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
       {items.map(({ label, value, delta, icon: Icon, color, bg, fmtDelta }) => (
-        <div key={label} className="rounded-xl border p-4" style={CARD}>
+        <div key={label} className="rounded-md border p-4" style={CARD}>
           <div className="flex items-center justify-between mb-3">
             <span className="text-[10px] font-bold text-secondary uppercase tracking-wide">{label}</span>
-            <div className="w-6 h-6 rounded-[5px] flex items-center justify-center" style={{ background: bg }}>
+            <div className="w-6 h-6 rounded-sm flex items-center justify-center" style={{ background: bg }}>
               <Icon className="w-3.5 h-3.5" style={{ color }} />
             </div>
           </div>
@@ -150,7 +150,7 @@ function ChartCard({ title, sub, children, action }: {
   action?: { label: string; href: string };
 }) {
   return (
-    <div className="rounded-xl border p-5" style={CARD}>
+    <div className="rounded-md border p-5" style={CARD}>
       <div className="flex items-start justify-between mb-4">
         <div>
           <p className="text-[13px] font-bold text-primary">{title}</p>
@@ -273,8 +273,8 @@ function PipelineFunnel({ stages }: { stages: ReportsData['stages'] }) {
           return (
             <div key={stage} className="flex items-center gap-3">
               <span className="text-[11px] text-secondary w-24 flex-shrink-0 text-right">{label}</span>
-              <div className="flex-1 h-6 rounded-[4px] overflow-hidden" style={{ background: 'var(--bg-elevated)' }}>
-                <div className="h-full rounded-[4px] flex items-center px-2 transition-all duration-500"
+              <div className="flex-1 h-6 rounded-xs overflow-hidden" style={{ background: 'var(--bg-elevated)' }}>
+                <div className="h-full rounded-xs flex items-center px-2 transition-all duration-500"
                   style={{ width: `${Math.max(pct, 5)}%`, background: color + '33', borderLeft: `3px solid ${color}` }}>
                 </div>
               </div>
@@ -408,7 +408,7 @@ export function ReportsCharts({ data }: { data: ReportsData }) {
                 Grant Intelligence · Reports
               </span>
             </div>
-            <h1 style={{ fontFamily: "'Instrument Serif',Palatino,Georgia,serif", fontWeight: 400, fontSize: 'clamp(1.9rem,3vw,2.5rem)', lineHeight: 1.04, letterSpacing: '-.018em', margin: 0, color: 'var(--text-primary)' }}>
+            <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 400, fontSize: 'clamp(1.9rem,3vw,2.5rem)', lineHeight: 1.04, letterSpacing: '-.018em', margin: 0, color: 'var(--text-primary)' }}>
               Performance
             </h1>
             <p className="text-[13px] mt-2" style={{ color: 'var(--text-secondary)' }}>
@@ -418,11 +418,11 @@ export function ReportsCharts({ data }: { data: ReportsData }) {
             </p>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
-            <Link href="/pipeline" className="flex items-center gap-2 px-3.5 h-9 rounded-[10px] text-[12.5px] font-medium transition-colors" style={{ background: 'var(--accent)', color: 'var(--accent-on)' }}>
+            <Link href="/pipeline" className="flex items-center gap-2 px-3.5 h-9 rounded-md text-[12.5px] font-medium transition-colors" style={{ background: 'var(--accent)', color: 'var(--accent-on)' }}>
               <TrendingUp className="w-3.5 h-3.5" />
               Open pipeline
             </Link>
-            <Link href="/discover" className="flex items-center gap-2 px-3.5 h-9 rounded-[10px] text-[12.5px] border transition-colors hover:bg-elevated" style={{ background: 'var(--bg-surface)', borderColor: 'var(--border-hairline)', color: 'var(--text-primary)' }}>
+            <Link href="/discover" className="flex items-center gap-2 px-3.5 h-9 rounded-md text-[12.5px] border transition-colors hover:bg-elevated" style={{ background: 'var(--bg-surface)', borderColor: 'var(--border-hairline)', color: 'var(--text-primary)' }}>
               <Zap className="w-3.5 h-3.5" style={{ color: 'var(--warning)' }} />
               Find grants
             </Link>
@@ -454,7 +454,7 @@ export function ReportsCharts({ data }: { data: ReportsData }) {
         </div>
 
         {/* Fundir advantage callout */}
-        <div className="rounded-xl border p-5" style={{ background: 'rgba(13,148,136,0.05)', borderColor: 'rgba(13,148,136,0.15)' }}>
+        <div className="rounded-md border p-5" style={{ background: 'rgba(13,148,136,0.05)', borderColor: 'rgba(13,148,136,0.15)' }}>
           <div className="flex items-start gap-4">
             <div className="w-8 h-8 rounded-[8px] flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(13,148,136,0.15)' }}>
               <Zap className="w-4 h-4 text-accent" />

@@ -313,7 +313,7 @@ function KpiCard({ label, tone, value, delta, sparkline, delay = 0 }: KpiCardPro
   return (
     <div
       ref={ref}
-      className="bg-surface border border-hairline rounded-[12px] px-4 py-[15px] flex flex-col"
+      className="bg-surface border border-hairline rounded-md px-4 py-[15px] flex flex-col"
       style={{ ...revealStyle(seen, reduce, delay), boxShadow: '0 1px 2px rgba(11,18,32,0.04)' }}
     >
       <div className="flex items-center justify-between">
@@ -561,7 +561,7 @@ function RevenueTrajectory({ series }: TrajectoryProps) {
   return (
     <div
       ref={ref}
-      className="bg-surface border border-hairline rounded-[12px] px-[22px] py-5"
+      className="bg-surface border border-hairline rounded-md px-[22px] py-5"
       style={revealStyle(seen, reduce, 0)}
     >
       <div className="flex items-center justify-between mb-1.5 flex-wrap gap-2">
@@ -765,7 +765,7 @@ function CompositeHealth({ score, verdict, subcopy, drivers }: CompositeHealthPr
   return (
     <div
       ref={ref}
-      className="bg-surface border border-hairline rounded-[12px] px-[22px] py-5"
+      className="bg-surface border border-hairline rounded-md px-[22px] py-5"
       style={revealStyle(seen, reduce, 60)}
     >
       <div className="flex items-center justify-between mb-1.5">
@@ -859,7 +859,7 @@ function RevenueConcentration({ data }: { data: FinancialsOverviewData['concentr
   return (
     <div
       ref={ref}
-      className="bg-surface border border-hairline rounded-[12px] px-[22px] py-5"
+      className="bg-surface border border-hairline rounded-md px-[22px] py-5"
       style={revealStyle(seen, reduce, 0)}
     >
       <div className="flex items-center justify-between mb-1.5 flex-wrap gap-2">
@@ -905,7 +905,7 @@ function RevenueConcentration({ data }: { data: FinancialsOverviewData['concentr
       </div>
 
       {data.callout && (
-        <div className="mt-3.5 border border-hairline border-l-[3px] border-l-critical rounded-lg px-3 py-2.5 text-[12.5px] text-muted leading-[1.5]">
+        <div className="mt-3.5 border border-hairline border-l-[3px] border-l-critical rounded-md px-3 py-2.5 text-[12.5px] text-muted leading-[1.5]">
           {data.callout}
         </div>
       )}
@@ -932,7 +932,7 @@ function LiquidityRunway({ data }: { data: FinancialsOverviewData['liquidity'] }
   return (
     <div
       ref={ref}
-      className="bg-surface border border-hairline rounded-[12px] px-[22px] py-5"
+      className="bg-surface border border-hairline rounded-md px-[22px] py-5"
       style={revealStyle(seen, reduce, 60)}
     >
       <div className="flex items-center justify-between mb-1.5">
@@ -1017,7 +1017,7 @@ function LiquidityRunway({ data }: { data: FinancialsOverviewData['liquidity'] }
 
       {/* LOC chip */}
       {data.lineOfCredit && (
-        <div className="mt-4 border border-hairline border-l-[3px] border-l-critical rounded-lg px-3 py-2.5">
+        <div className="mt-4 border border-hairline border-l-[3px] border-l-critical rounded-md px-3 py-2.5">
           <div className="text-[12.5px] text-muted font-medium">
             ⚠ Line of credit drawn{data.lineOfCredit.note ? ` — ${data.lineOfCredit.note}` : ''}
           </div>
@@ -1067,7 +1067,7 @@ function ExpenseAllocation({ data }: { data: FinancialsOverviewData['expense'] }
   return (
     <div
       ref={ref}
-      className="bg-surface border border-hairline rounded-[12px] px-[22px] py-5 mt-4"
+      className="bg-surface border border-hairline rounded-md px-[22px] py-5 mt-4"
       style={revealStyle(seen, reduce, 0)}
     >
       <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
@@ -1152,7 +1152,7 @@ function FlagCard({ flag, reduce, delay }: { flag: FlagRow; reduce: boolean; del
   return (
     <div
       ref={ref}
-      className={`bg-surface border border-hairline border-l-[3px] ${sev.left} rounded-[12px] px-5 py-4`}
+      className={`bg-surface border border-hairline border-l-[3px] ${sev.left} rounded-md px-5 py-4`}
       style={revealStyle(seen, reduce, delay)}
     >
       <div className="flex items-start justify-between gap-3">

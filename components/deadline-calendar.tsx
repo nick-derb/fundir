@@ -76,23 +76,23 @@ export function DeadlineCalendar({ grants }: DeadlineCalendarProps) {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
       {/* ── Main calendar ── */}
-      <div className="lg:col-span-3 bg-white rounded-xl border border-[#e2e8f0] shadow-card overflow-hidden">
+      <div className="lg:col-span-3 bg-white rounded-md border border-[#e2e8f0] shadow-card overflow-hidden">
         {/* Header */}
         <div className="px-5 py-4 border-b border-[#e2e8f0] bg-[#f8fafc] flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <button onClick={prevMonth} className="p-1.5 rounded-lg hover:bg-[#e2e8f0] transition-colors">
+            <button onClick={prevMonth} className="p-1.5 rounded-md hover:bg-[#e2e8f0] transition-colors">
               <ChevronLeft className="w-4 h-4 text-[#475569]" />
             </button>
             <h2 className="text-[16px] font-bold text-[#0f172a] min-w-[160px] text-center">
               {MONTHS[month]} {year}
             </h2>
-            <button onClick={nextMonth} className="p-1.5 rounded-lg hover:bg-[#e2e8f0] transition-colors">
+            <button onClick={nextMonth} className="p-1.5 rounded-md hover:bg-[#e2e8f0] transition-colors">
               <ChevronRight className="w-4 h-4 text-[#475569]" />
             </button>
           </div>
           <button
             onClick={goToday}
-            className="px-3 py-1.5 text-[12px] font-semibold text-[#0d9488] border border-[#0d9488]/30 rounded-lg hover:bg-[#f0fdfa] transition-colors"
+            className="px-3 py-1.5 text-[12px] font-semibold text-[#0d9488] border border-[#0d9488]/30 rounded-md hover:bg-[#f0fdfa] transition-colors"
           >
             Today
           </button>
@@ -190,7 +190,7 @@ export function DeadlineCalendar({ grants }: DeadlineCalendarProps) {
       <div className="space-y-4">
         {/* Urgent deadlines */}
         {urgentGrants.length > 0 && (
-          <div className="bg-white rounded-xl border border-[#e2e8f0] shadow-card overflow-hidden">
+          <div className="bg-white rounded-md border border-[#e2e8f0] shadow-card overflow-hidden">
             <div className="px-4 py-3 border-b border-[#f1f5f9] bg-[#fef2f2]">
               <p className="text-[12px] font-semibold text-[#dc2626]">Due in 30 days ({urgentGrants.length})</p>
             </div>
@@ -214,7 +214,7 @@ export function DeadlineCalendar({ grants }: DeadlineCalendarProps) {
         )}
 
         {/* This month's grants */}
-        <div className="bg-white rounded-xl border border-[#e2e8f0] shadow-card overflow-hidden">
+        <div className="bg-white rounded-md border border-[#e2e8f0] shadow-card overflow-hidden">
           <div className="px-4 py-3 border-b border-[#f1f5f9] bg-[#f8fafc]">
             <p className="text-[12px] font-semibold text-[#0f172a]">{MONTHS[month]} Deadlines</p>
             <p className="text-[10px] text-[#94a3b8]">{thisMonth.length} grant{thisMonth.length !== 1 ? 's' : ''}</p>
@@ -227,7 +227,7 @@ export function DeadlineCalendar({ grants }: DeadlineCalendarProps) {
                 const day = new Date(g.close_date).getUTCDate();
                 return (
                   <Link key={g.match_id} href={`/grant/${g.grant_id}`} className="flex items-center gap-3 px-4 py-2.5 hover:bg-[#f8fafc] transition-colors">
-                    <div className="w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center text-[12px] font-bold" style={{ background: scoreBg(g.composite_score), color: scoreColor(g.composite_score) }}>
+                    <div className="w-8 h-8 rounded-md flex-shrink-0 flex items-center justify-center text-[12px] font-bold" style={{ background: scoreBg(g.composite_score), color: scoreColor(g.composite_score) }}>
                       {day}
                     </div>
                     <div className="min-w-0">

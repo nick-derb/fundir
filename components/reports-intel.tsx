@@ -8,10 +8,9 @@
 
 import Link from 'next/link';
 import type { ReportsIntel } from '@/lib/network/reports';
-import { CSS, SERIF, MONO, Eyebrow, Avatar, OrgMark, Chip, ScoreBar, useConsoleFonts, fmtDate, money, SLATE, AMBER, INFO } from '@/components/connections/intel/shared';
+import { CSS, SERIF, MONO, Eyebrow, Avatar, OrgMark, Chip, ScoreBar, fmtDate, money, SLATE, AMBER, INFO } from '@/components/connections/intel/shared';
 
 export function ReportsIntelView({ data, orgName }: { data: ReportsIntel; orgName: string }) {
-  useConsoleFonts();
   const d = data;
   const relTotal = d.evidence.relationships.verified + d.evidence.relationships.probable + d.evidence.relationships.inferred || 1;
   const leadTotal = d.evidence.leads.High + d.evidence.leads.Medium + d.evidence.leads.Low || 1;
@@ -102,7 +101,7 @@ export function ReportsIntelView({ data, orgName }: { data: ReportsIntel; orgNam
             <>
               <Eyebrow style={{ display: 'block', margin: '14px 0 6px' }}>Still need a URL</Eyebrow>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                {d.coverage.missing.map(p => <Link key={p.id} href={`/connections?tab=people&person=${p.id}`} style={{ textDecoration: 'none' }}><Chip text={p.role ? `${p.name} · ${p.role}` : p.name} color={AMBER} border="rgba(156,122,42,.36)" style={{ textTransform: 'none', letterSpacing: 0, fontSize: 10.5, fontFamily: "'Inter',sans-serif" }} /></Link>)}
+                {d.coverage.missing.map(p => <Link key={p.id} href={`/connections?tab=people&person=${p.id}`} style={{ textDecoration: 'none' }}><Chip text={p.role ? `${p.name} · ${p.role}` : p.name} color={AMBER} border="rgba(156,122,42,.36)" style={{ textTransform: 'none', letterSpacing: 0, fontSize: 10.5, fontFamily: 'var(--font-sans)' }} /></Link>)}
                 {d.coverage.own_total - d.coverage.with_url > d.coverage.missing.length && <span className="fd-caption" style={{ color: 'var(--text-tertiary)', alignSelf: 'center' }}>and {d.coverage.own_total - d.coverage.with_url - d.coverage.missing.length} more</span>}
               </div>
             </>

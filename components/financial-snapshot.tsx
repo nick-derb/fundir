@@ -28,7 +28,7 @@ function MetricCard({ label, value, sub, icon: Icon, color, bg, negative = false
   icon: React.ElementType; color: string; bg: string; negative?: boolean;
 }) {
   return (
-    <div className="bg-white rounded-[10px] border border-[#e2e8f0] p-4">
+    <div className="bg-white rounded-md border border-[#e2e8f0] p-4">
       <div className="flex items-center justify-between mb-2">
         <span className="text-[11px] font-semibold text-[#94a3b8] uppercase tracking-wide">{label}</span>
         <div className="w-7 h-7 rounded-[6px] flex items-center justify-center" style={{ background: bg }}>
@@ -96,7 +96,7 @@ function GrantReadinessGauge() {
   const dash = (score / 100) * circ;
 
   return (
-    <div className="bg-[#f8fafc] rounded-[10px] border border-[#e2e8f0] p-4">
+    <div className="bg-[#f8fafc] rounded-md border border-[#e2e8f0] p-4">
       <div className="flex items-center justify-between mb-3">
         <p className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-widest">Grant Readiness Index</p>
         <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
@@ -228,7 +228,7 @@ export function FinancialSnapshot({ orgName, ein }: FinancialSnapshotProps) {
   const einFormatted = ein ? ein.replace(/(\d{2})(\d{7})/, '$1-$2') : '36-2196050';
 
   return (
-    <div className="bg-white rounded-xl border border-[#e2e8f0] shadow-card overflow-hidden">
+    <div className="bg-white rounded-md border border-[#e2e8f0] shadow-card overflow-hidden">
       {/* Header */}
       <div className="px-5 py-4 border-b border-[#e2e8f0] flex items-center justify-between"
         style={{ background: 'linear-gradient(to right, #f8fafc, #fff)' }}>
@@ -360,7 +360,7 @@ export function FinancialSnapshot({ orgName, ein }: FinancialSnapshotProps) {
         )}
 
         {/* Strategy insight + link to full financials */}
-        <div className="p-4 rounded-[10px] border border-[#99f6e4]"
+        <div className="p-4 rounded-md border border-[#99f6e4]"
           style={{ background: 'linear-gradient(135deg, #f0fdfa 0%, #ecfdf5 100%)' }}>
           <div className="flex items-start gap-3">
             <div className="w-7 h-7 rounded-[6px] bg-[#0d9488] flex items-center justify-center flex-shrink-0 mt-0.5">

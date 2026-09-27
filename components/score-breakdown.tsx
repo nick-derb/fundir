@@ -25,7 +25,7 @@ export function ScoreBreakdownChart({ score }: ScoreBreakdownProps) {
   return (
     <div>
       {/* Composite score */}
-      <div className="flex items-center gap-4 mb-6 p-4 rounded-lg border" style={{ background: scoreBg, borderColor: scoreBorder }}>
+      <div className="flex items-center gap-4 mb-6 p-4 rounded-md border" style={{ background: scoreBg, borderColor: scoreBorder }}>
         <div
           className="w-16 h-16 rounded-full flex items-center justify-center text-[22px] font-bold flex-shrink-0 border-2"
           style={{ color: scoreColor, borderColor: scoreBorder, background: '#ffffff' }}

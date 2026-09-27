@@ -148,7 +148,7 @@ export function Org990Search({ orgCode }: Org990SearchProps) {
             onChange={handleInput}
             onFocus={() => { if (results.length > 0) setIsOpen(true); }}
             placeholder="Search by organization name…"
-            className="w-full pl-9 pr-8 py-2.5 border border-[#e2e8f0] rounded-lg text-[13px] text-[#0f172a] placeholder-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-[#0d9488]/20 focus:border-[#0d9488] transition-all bg-white"
+            className="w-full pl-9 pr-8 py-2.5 border border-[#e2e8f0] rounded-md text-[13px] text-[#0f172a] placeholder-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-[#0d9488]/20 focus:border-[#0d9488] transition-all bg-white"
           />
           {query && (
             <button
@@ -162,7 +162,7 @@ export function Org990Search({ orgCode }: Org990SearchProps) {
 
         {/* Dropdown */}
         {isOpen && results.length > 0 && (
-          <div className="absolute z-50 left-0 right-0 mt-1 bg-white border border-[#e2e8f0] rounded-lg shadow-lg overflow-hidden">
+          <div className="absolute z-50 left-0 right-0 mt-1 bg-white border border-[#e2e8f0] rounded-md shadow-lg overflow-hidden">
             <div className="px-3 py-2 border-b border-[#f1f5f9] bg-[#f8fafc]">
               <p className="text-[11px] text-[#94a3b8]">{results.length} results · click to select</p>
             </div>
@@ -212,10 +212,10 @@ export function Org990Search({ orgCode }: Org990SearchProps) {
 
       {/* Selected org card + sync button */}
       {selected && (
-        <div className="mt-3 p-4 bg-[#f0fdfa] border border-[#99f6e4] rounded-lg">
+        <div className="mt-3 p-4 bg-[#f0fdfa] border border-[#99f6e4] rounded-md">
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-start gap-3 min-w-0">
-              <div className="w-8 h-8 rounded-lg bg-[#0d9488] flex items-center justify-center flex-shrink-0">
+              <div className="w-8 h-8 rounded-md bg-[#0d9488] flex items-center justify-center flex-shrink-0">
                 <Building2 className="w-4 h-4 text-white" />
               </div>
               <div className="min-w-0">
@@ -235,7 +235,7 @@ export function Org990Search({ orgCode }: Org990SearchProps) {
             <button
               onClick={handleSync}
               disabled={isBusy}
-              className="flex items-center gap-2 px-4 py-2 bg-[#0d9488] text-white rounded-lg text-[13px] font-semibold hover:bg-[#0f766e] disabled:opacity-40 disabled:cursor-not-allowed transition-colors whitespace-nowrap flex-shrink-0"
+              className="flex items-center gap-2 px-4 py-2 bg-[#0d9488] text-white rounded-md text-[13px] font-semibold hover:bg-[#0f766e] disabled:opacity-40 disabled:cursor-not-allowed transition-colors whitespace-nowrap flex-shrink-0"
             >
               {syncStatus === 'syncing'
                 ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Syncing…</>

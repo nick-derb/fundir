@@ -21,7 +21,7 @@ declare global {
   }
 }
 
-const SERIF = "'Instrument Serif',Palatino,Georgia,serif";
+const SERIF = 'var(--font-display)';
 
 export interface DashGoal { id: string; label: string; current: number; target: number; unit: 'percent' | 'count' | 'currency'; pct: number; readout: string }
 export interface DashData {
@@ -42,14 +42,8 @@ const KPI_ICON: Record<string, React.ComponentType<{ style?: React.CSSProperties
 };
 
 const CSS = `
-.dv-root{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;color:var(--text-primary)}
-.dv-root{--radius-kpi:12px;--radius-console:14px}
-.dv-root .fd-eyebrow{font-size:11px;line-height:1.2;letter-spacing:.08em;font-weight:600;text-transform:uppercase}
-.dv-root .fd-kpi{font-family:'JetBrains Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums;font-weight:600;letter-spacing:-.01em}
-.dv-root .fd-mono{font-family:'JetBrains Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
-.dv-root .fd-caption{font-size:12px;line-height:1.5}
-.dv-root .fd-h2{font-size:17px;line-height:1.4;font-weight:600}
-.dv-root [data-hero] .cyc-hero{background:transparent!important;border:none!important;border-radius:0!important}
+.dv-root{color:var(--text-primary)}
+.dv-root .dv-root .dv-root .dv-root .dv-root .dv-root [data-hero] .cyc-hero{background:transparent!important;border:none!important;border-radius:0!important}
 .dv-root [data-hero] .cyc-replay{background:rgba(247,248,247,.9)!important}
 .dv-root [data-kind="grant"]{border-left-color:#0C6B5A!important;background:#EDF4F0}
 .dv-root [data-kind="funder"]{border-left-color:#9C7A2A!important;background:#F7F2E6}
@@ -74,7 +68,7 @@ const CSS = `
 .dv-root [data-hdr-pulse]{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border-radius:999px;border:1px solid var(--border-hairline);background:var(--bg-surface);color:var(--text-secondary);font:inherit;font-size:12px;cursor:pointer;white-space:nowrap;transition:border-color .15s ease,color .15s ease}
 .dv-root [data-hdr-pulse]:hover{border-color:#CBD5D0;color:var(--text-primary)}
 .dv-root [data-hdr-pulse][data-hot="true"]{border-color:rgba(156,122,42,.35);background:rgba(156,122,42,.07);color:#7A5E1E}
-.dv-root [data-hdr-pulse] b{font-family:'JetBrains Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums;font-weight:600;color:inherit}
+.dv-root [data-hdr-pulse] b{font-family:var(--font-mono);font-variant-numeric:tabular-nums;font-weight:600;color:inherit}
 @media (max-width:820px){.dv-root [data-hdr-pulses]{display:none!important}}
 @media (prefers-reduced-motion:reduce){.dv-root [data-reveal]{opacity:1;transform:none;transition:none}}
 @media (max-width:1240px){.dv-root [data-dash-cols]{grid-template-columns:minmax(0,1fr)!important}.dv-root [data-dash-rail]{position:static!important}}
@@ -100,15 +94,9 @@ export function DashboardView({ data }: { data: DashData }) {
   const [section, setSection] = useState('Overview');
   const rootRef = useRef<HTMLDivElement>(null);
 
-  // Fonts + charts + field, then scroll behavior (condense header, hero
-  // parallax, reveal-on-scroll).
+  // Charts + field, then scroll behavior (condense header, hero
+  // parallax, reveal-on-scroll). Fonts are self-hosted via app/layout.tsx.
   useEffect(() => {
-    if (!document.getElementById('dash-fonts')) {
-      const l = document.createElement('link');
-      l.id = 'dash-fonts'; l.rel = 'stylesheet';
-      l.href = 'https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap';
-      document.head.appendChild(l);
-    }
     const ensure = (id: string, src: string) => { if (!document.getElementById(id)) { const s = document.createElement('script'); s.id = id; s.src = src; document.body.appendChild(s); } };
     ensure('dash-charts', '/dashboard/charts.js');
     ensure('dash-field', '/dashboard/field.js');
@@ -293,7 +281,7 @@ export function DashboardView({ data }: { data: DashData }) {
                   <div className="fd-h2" style={{ color: 'var(--text-primary)' }}>FY27 goals</div>
                   <p className="fd-caption" style={{ color: 'var(--text-tertiary)', margin: '4px 0 0' }}>Organization-wide, July 2026 to June 2027</p>
                 </div>
-                <button type="button" onClick={openGoals} className="fd-eyebrow" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', padding: '2px 0', cursor: 'pointer', color: 'var(--text-tertiary)', fontFamily: "'JetBrains Mono',monospace" }}>
+                <button type="button" onClick={openGoals} className="fd-eyebrow" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', padding: '2px 0', cursor: 'pointer', color: 'var(--text-tertiary)', fontFamily: 'var(--font-mono)' }}>
                   <svg width="11" height="11" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.4"><path d="M9.6 1.9 L12.1 4.4 L4.6 11.9 L1.6 12.4 L2.1 9.4 Z" /></svg>Edit
                 </button>
               </div>
@@ -441,16 +429,16 @@ export function DashboardView({ data }: { data: DashData }) {
               </div>
               {draft.map(g => (
                 <div key={g.id} data-goal-row style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 74px 74px 92px 28px', gap: '0 10px', alignItems: 'center', padding: '6px 0', borderTop: '1px solid var(--border-hairline)' }}>
-                  <input value={g.label} onChange={e => patch(g.id, 'label', e.target.value)} placeholder="Name this goal" style={{ width: '100%', fontFamily: "'Inter',sans-serif", fontSize: 13, color: 'var(--text-primary)', background: 'transparent', border: '1px solid transparent', borderRadius: 'var(--radius-sm)', padding: '7px 8px' }} />
-                  <input value={String(g.current)} onChange={e => patch(g.id, 'current', e.target.value)} inputMode="decimal" style={{ width: '100%', fontFamily: "'JetBrains Mono',monospace", fontSize: 12, textAlign: 'right', color: 'var(--text-primary)', background: 'transparent', border: '1px solid transparent', borderRadius: 'var(--radius-sm)', padding: '7px 8px' }} />
-                  <input value={String(g.target)} onChange={e => patch(g.id, 'target', e.target.value)} inputMode="decimal" style={{ width: '100%', fontFamily: "'JetBrains Mono',monospace", fontSize: 12, textAlign: 'right', color: 'var(--text-primary)', background: 'transparent', border: '1px solid transparent', borderRadius: 'var(--radius-sm)', padding: '7px 8px' }} />
-                  <select value={g.unit} onChange={e => patch(g.id, 'unit', e.target.value)} style={{ width: '100%', fontFamily: "'JetBrains Mono',monospace", fontSize: 10, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--text-secondary)', background: 'var(--bg-surface)', border: '1px solid var(--border-hairline)', borderRadius: 'var(--radius-sm)', padding: '6px 7px', cursor: 'pointer' }}><option value="percent">Percent</option><option value="count">Count</option><option value="currency">Dollars</option></select>
+                  <input value={g.label} onChange={e => patch(g.id, 'label', e.target.value)} placeholder="Name this goal" style={{ width: '100%', fontFamily: 'var(--font-sans)', fontSize: 13, color: 'var(--text-primary)', background: 'transparent', border: '1px solid transparent', borderRadius: 'var(--radius-sm)', padding: '7px 8px' }} />
+                  <input value={String(g.current)} onChange={e => patch(g.id, 'current', e.target.value)} inputMode="decimal" style={{ width: '100%', fontFamily: 'var(--font-mono)', fontSize: 12, textAlign: 'right', color: 'var(--text-primary)', background: 'transparent', border: '1px solid transparent', borderRadius: 'var(--radius-sm)', padding: '7px 8px' }} />
+                  <input value={String(g.target)} onChange={e => patch(g.id, 'target', e.target.value)} inputMode="decimal" style={{ width: '100%', fontFamily: 'var(--font-mono)', fontSize: 12, textAlign: 'right', color: 'var(--text-primary)', background: 'transparent', border: '1px solid transparent', borderRadius: 'var(--radius-sm)', padding: '7px 8px' }} />
+                  <select value={g.unit} onChange={e => patch(g.id, 'unit', e.target.value)} style={{ width: '100%', fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--text-secondary)', background: 'var(--bg-surface)', border: '1px solid var(--border-hairline)', borderRadius: 'var(--radius-sm)', padding: '6px 7px', cursor: 'pointer' }}><option value="percent">Percent</option><option value="count">Count</option><option value="currency">Dollars</option></select>
                   <button type="button" onClick={() => setDraft(d => d.filter(x => x.id !== g.id))} aria-label="Remove goal" style={{ width: 24, height: 24, borderRadius: 'var(--radius-sm)', border: 'none', background: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.4"><path d="M2 3.2 H10 M4.8 3.2 V2 H7.2 V3.2 M3.1 3.2 L3.6 10 H8.4 L8.9 3.2" /></svg>
                   </button>
                 </div>
               ))}
-              <button type="button" onClick={() => setDraft(d => [...d, { id: 'new-' + Date.now(), label: '', current: 0, target: 100, unit: 'count', pct: 0, readout: '' }])} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginTop: 14, fontFamily: "'JetBrains Mono',monospace", fontSize: 10, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--text-secondary)', background: 'none', border: '1px dashed var(--border-hairline)', borderRadius: 'var(--radius-sm)', padding: '9px 13px', cursor: 'pointer' }}>
+              <button type="button" onClick={() => setDraft(d => [...d, { id: 'new-' + Date.now(), label: '', current: 0, target: 100, unit: 'count', pct: 0, readout: '' }])} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginTop: 14, fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--text-secondary)', background: 'none', border: '1px dashed var(--border-hairline)', borderRadius: 'var(--radius-sm)', padding: '9px 13px', cursor: 'pointer' }}>
                 <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M6 2 V10 M2 6 H10" /></svg>Add goal
               </button>
             </div>

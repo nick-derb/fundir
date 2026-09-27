@@ -111,7 +111,7 @@ export function GrantTasks({ grantId, initialTasks }: GrantTasksProps) {
   }
 
   return (
-    <div className="bg-white rounded-xl border border-[#e2e8f0] shadow-card overflow-hidden">
+    <div className="bg-white rounded-md border border-[#e2e8f0] shadow-card overflow-hidden">
       <div className="px-5 py-4 border-b border-[#e2e8f0] bg-[#f8fafc] flex items-center justify-between">
         <div>
           <h2 className="text-[14px] font-semibold text-[#0f172a]">Application Tasks</h2>
@@ -119,7 +119,7 @@ export function GrantTasks({ grantId, initialTasks }: GrantTasksProps) {
         </div>
         <button
           onClick={() => { setShowAddForm(true); setTimeout(() => inputRef.current?.focus(), 50); }}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-[#0d9488] text-white rounded-lg text-[12px] font-semibold hover:bg-[#0f766e] transition-colors"
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-[#0d9488] text-white rounded-md text-[12px] font-semibold hover:bg-[#0f766e] transition-colors"
         >
           <Plus className="w-3.5 h-3.5" /> Add task
         </button>
@@ -136,13 +136,13 @@ export function GrantTasks({ grantId, initialTasks }: GrantTasksProps) {
               onChange={e => setNewTitle(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') handleAdd(); if (e.key === 'Escape') setShowAddForm(false); }}
               placeholder="Task description…"
-              className="flex-1 px-3 py-2 border border-[#e2e8f0] rounded-lg text-[13px] focus:outline-none focus:ring-2 focus:ring-[#0d9488]/20 focus:border-[#0d9488] transition-all bg-white"
+              className="flex-1 px-3 py-2 border border-[#e2e8f0] rounded-md text-[13px] focus:outline-none focus:ring-2 focus:ring-[#0d9488]/20 focus:border-[#0d9488] transition-all bg-white"
             />
             <div className="relative">
               <select
                 value={newPriority}
                 onChange={e => setNewPriority(e.target.value as 'high' | 'medium' | 'low')}
-                className="appearance-none pl-3 pr-7 py-2 border border-[#e2e8f0] rounded-lg text-[12px] font-medium bg-white focus:outline-none focus:border-[#0d9488] transition-all cursor-pointer"
+                className="appearance-none pl-3 pr-7 py-2 border border-[#e2e8f0] rounded-md text-[12px] font-medium bg-white focus:outline-none focus:border-[#0d9488] transition-all cursor-pointer"
                 style={{ color: PRIORITY_CONFIG[newPriority].color }}
               >
                 <option value="high">High</option>
@@ -155,11 +155,11 @@ export function GrantTasks({ grantId, initialTasks }: GrantTasksProps) {
               type="date"
               value={newDue}
               onChange={e => setNewDue(e.target.value)}
-              className="px-3 py-2 border border-[#e2e8f0] rounded-lg text-[12px] text-[#475569] bg-white focus:outline-none focus:border-[#0d9488] transition-all"
+              className="px-3 py-2 border border-[#e2e8f0] rounded-md text-[12px] text-[#475569] bg-white focus:outline-none focus:border-[#0d9488] transition-all"
             />
           </div>
           <div className="flex gap-2">
-            <button onClick={handleAdd} disabled={!newTitle.trim() || isPending} className="flex items-center gap-1.5 px-3 py-1.5 bg-[#0d9488] text-white rounded-lg text-[12px] font-semibold hover:bg-[#0f766e] disabled:opacity-40 transition-colors">
+            <button onClick={handleAdd} disabled={!newTitle.trim() || isPending} className="flex items-center gap-1.5 px-3 py-1.5 bg-[#0d9488] text-white rounded-md text-[12px] font-semibold hover:bg-[#0f766e] disabled:opacity-40 transition-colors">
               {isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />} Add
             </button>
             <button onClick={() => setShowAddForm(false)} className="px-3 py-1.5 text-[12px] text-[#64748b] hover:text-[#0f172a] transition-colors">Cancel</button>

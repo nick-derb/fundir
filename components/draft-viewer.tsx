@@ -121,7 +121,7 @@ function renderWithCitations(segment: string): React.ReactNode[] {
 export function DraftViewer({ draft, grantId }: DraftViewerProps) {
   if (!draft) {
     return (
-      <div className="bg-canvas-1 rounded-lg shadow-flat p-6">
+      <div className="bg-canvas-1 rounded-md shadow-flat p-6">
         <div className="flex items-start gap-3">
           <div className="w-7 h-7 rounded-sm flex items-center justify-center bg-action-soft text-action shrink-0">
             <Sparkles className="w-4 h-4" />
@@ -156,7 +156,7 @@ export function DraftViewer({ draft, grantId }: DraftViewerProps) {
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="bg-canvas-1 rounded-lg shadow-flat p-5">
+      <div className="bg-canvas-1 rounded-md shadow-flat p-5">
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div className="flex items-start gap-3 min-w-0 flex-1">
             <div className="w-7 h-7 rounded-sm flex items-center justify-center bg-action-soft text-action shrink-0">
@@ -185,7 +185,7 @@ export function DraftViewer({ draft, grantId }: DraftViewerProps) {
 
       {/* Sections */}
       {SECTIONS.map(s => (
-        <section key={s.key} className="bg-canvas-1 rounded-lg shadow-flat p-5">
+        <section key={s.key} className="bg-canvas-1 rounded-md shadow-flat p-5">
           <header className="mb-3">
             <h3 className="text-h2 font-semibold text-ink-0">{s.label}</h3>
             <p className="text-caption text-ink-2 mt-0.5">{s.hint}</p>
@@ -197,7 +197,7 @@ export function DraftViewer({ draft, grantId }: DraftViewerProps) {
       ))}
 
       {/* Source citations */}
-      <section className="bg-canvas-1 rounded-lg shadow-flat p-5">
+      <section className="bg-canvas-1 rounded-md shadow-flat p-5">
         <h3 className="text-h2 font-semibold text-ink-0 mb-3">Source citations</h3>
         <ol className="space-y-2">
           {draft.source_citations.map(s => (

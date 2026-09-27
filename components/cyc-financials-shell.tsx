@@ -257,7 +257,7 @@ function IncomeTab() {
               <DRow label="Total Expenses"            value={inc.expenses.totalExpenses} prior={inc.expenses.totalExpensesPrior} highlight />
             </div>
           </Card>
-          <div className="rounded-xl border p-4" style={{ background: 'var(--critical-tint)', borderColor: 'var(--critical)' }}>
+          <div className="rounded-md border p-4" style={{ background: 'var(--critical-tint)', borderColor: 'var(--critical)' }}>
             <div className="flex items-center justify-between mb-1">
               <p className="text-[13px] font-bold text-critical">Net Change in Assets</p>
               <p className="text-[20px] font-bold text-critical font-mono">({fmt(Math.abs(inc.netChange))})</p>
@@ -769,7 +769,7 @@ export function CYCFinancialsShell({
                   Org Intelligence · Financials
                 </span>
               </div>
-              <h1 style={{ fontFamily: "'Instrument Serif',Palatino,Georgia,serif", fontWeight: 400, fontSize: 'clamp(1.9rem,3vw,2.5rem)', lineHeight: 1.04, letterSpacing: '-.018em', margin: 0, color: 'var(--text-primary)' }}>
+              <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 400, fontSize: 'clamp(1.9rem,3vw,2.5rem)', lineHeight: 1.04, letterSpacing: '-.018em', margin: 0, color: 'var(--text-primary)' }}>
                 Chicago Youth Centers
               </h1>
               <p className="text-[13px] mt-2" style={{ color: 'var(--text-secondary)' }}>

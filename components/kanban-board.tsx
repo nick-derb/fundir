@@ -125,7 +125,7 @@ function DroppableColumn({ col, children, count, totalPotential }: {
   const { setNodeRef, isOver } = useDroppable({ id: col.id });
   return (
     <div className="flex-shrink-0 w-64">
-      <div className={`bg-canvas-1 rounded-lg overflow-hidden ring-1 transition-shadow ${
+      <div className={`bg-canvas-1 rounded-md overflow-hidden ring-1 transition-shadow ${
         isOver ? 'ring-action shadow-lift' : 'ring-canvas-3'
       }`}>
         {/* Single accent stripe carries the stage identity */}

@@ -21,7 +21,7 @@ function CardRoot({ nested, raised, className, ...rest }: CardProps) {
   return (
     <div
       className={clsx(
-        'bg-canvas-1 rounded-lg p-5',
+        'bg-canvas-1 rounded-md p-5',
         !nested && (raised ? 'shadow-lift' : 'shadow-flat'),
         className,
       )}

@@ -56,7 +56,7 @@ export function StrategyResources() {
   }, [open]);
 
   return (
-    <div className="bg-surface border border-hairline rounded-[14px] overflow-hidden">
+    <div className="bg-surface border border-hairline rounded-md overflow-hidden">
       <div className="flex items-center gap-2.5 px-[18px] py-3.5 border-b border-hairline">
         <FileText className="w-[14px] h-[14px] text-accent flex-none" />
         <span className="fd-eyebrow text-secondary">Grant strategy resources</span>
@@ -68,8 +68,8 @@ export function StrategyResources() {
         <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))' }}>
           {RESOURCES.map(r => (
             <button key={r.id} type="button" onClick={() => setOpen(r)}
-              className="text-left bg-page border border-hairline rounded-[12px] p-[14px_15px] transition-colors hover:border-strong">
-              <span className="w-[30px] h-[30px] rounded-[7px] flex items-center justify-center mb-3.5" style={{ background: 'var(--accent-tint)' }}>
+              className="text-left bg-page border border-hairline rounded-md p-[14px_15px] transition-colors hover:border-strong">
+              <span className="w-[30px] h-[30px] rounded-sm flex items-center justify-center mb-3.5" style={{ background: 'var(--accent-tint)' }}>
                 <r.icon className="w-[15px] h-[15px] text-accent" />
               </span>
               <b className="block text-[13px] font-medium tracking-[-.005em] mb-1.5 text-primary leading-snug">{r.title}</b>
@@ -83,16 +83,16 @@ export function StrategyResources() {
       {open && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 sm:p-6" role="dialog" aria-modal="true" aria-label={open.title}>
           <button aria-label="Close" onClick={() => setOpen(null)} className="absolute inset-0 bg-black/45 backdrop-blur-[2px] border-0 cursor-default" />
-          <div className="relative flex flex-col w-full max-w-[880px] h-[min(88vh,900px)] rounded-[16px] overflow-hidden border border-hairline bg-surface" style={{ boxShadow: 'var(--shadow-overlay)', animation: 'fd-fade .22s ease' }}>
+          <div className="relative flex flex-col w-full max-w-[880px] h-[min(88vh,900px)] rounded-md overflow-hidden border border-hairline bg-surface" style={{ boxShadow: 'var(--shadow-overlay)', animation: 'fd-fade .22s ease' }}>
             <div className="flex items-center gap-2.5 px-4 py-3 border-b border-hairline flex-none">
               <open.icon className="w-[14px] h-[14px] text-accent flex-none" />
               <b className="text-[13px] font-medium text-primary truncate">{open.title}</b>
               <span className="flex-1" />
               {open.kind === 'pdf' && (
-                <a href={open.href} download className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg border border-hairline text-[11.5px] text-primary hover:bg-elevated no-underline"><Download className="w-3 h-3" />Download</a>
+                <a href={open.href} download className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md border border-hairline text-[11.5px] text-primary hover:bg-elevated no-underline"><Download className="w-3 h-3" />Download</a>
               )}
-              <a href={open.href} target="_blank" rel="noopener noreferrer" title="Open in a new tab if the embed will not load" className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg border border-hairline text-[11.5px] text-secondary hover:bg-elevated no-underline"><Maximize2 className="w-3 h-3" />New tab</a>
-              <button type="button" onClick={() => setOpen(null)} aria-label="Close" className="w-8 h-8 rounded-lg flex items-center justify-center text-tertiary hover:bg-elevated"><X className="w-4 h-4" /></button>
+              <a href={open.href} target="_blank" rel="noopener noreferrer" title="Open in a new tab if the embed will not load" className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md border border-hairline text-[11.5px] text-secondary hover:bg-elevated no-underline"><Maximize2 className="w-3 h-3" />New tab</a>
+              <button type="button" onClick={() => setOpen(null)} aria-label="Close" className="w-8 h-8 rounded-md flex items-center justify-center text-tertiary hover:bg-elevated"><X className="w-4 h-4" /></button>
             </div>
             <iframe
               src={open.embed}

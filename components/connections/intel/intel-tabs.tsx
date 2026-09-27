@@ -9,7 +9,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import type { LeadRow, InsightRow } from '@/lib/network/queries';
 import { ConnectionsView, type CnPerson, type CnKpis } from '@/components/connections/connections-view';
 import { NetworkView, type NwState } from '@/components/connections/network-view';
-import { CSS, useConsoleFonts, MONO } from './shared';
+import { CSS, MONO } from './shared';
 import { DiscoverView, DEFAULT_FILTERS, applyFilters, type DiscoverFilters } from './discover-view';
 import { WarmPathsView } from './warm-paths-view';
 import { OrganizationsView } from './organizations-view';
@@ -36,7 +36,6 @@ export function IntelTabs(props: IntelProps) {
 }
 
 function IntelInner({ people, kpis, network, leads: initialLeads, insights: initialInsights, readOnly }: IntelProps) {
-  useConsoleFonts();
   const router = useRouter(), pathname = usePathname(), sp = useSearchParams();
   const tab = (TABS.find(t => t.key === sp.get('tab'))?.key ?? 'discover') as TabKey;
   const leadId = sp.get('lead');
@@ -90,7 +89,7 @@ function IntelInner({ people, kpis, network, leads: initialLeads, insights: init
       <div ref={stripRef} role="tablist" aria-label="Connections views" style={{ position: 'relative', display: 'flex', alignItems: 'stretch', borderBottom: '1px solid var(--border-hairline)', background: 'var(--bg-surface)', padding: '0 26px', overflowX: 'auto' }}>
         {TABS.map(t => (
           <button key={t.key} type="button" role="tab" data-tab={t.key} aria-selected={t.key === tab} className="ni-tab" onClick={() => setParams({ tab: t.key, lead: t.key === 'discover' || t.key === 'paths' || t.key === 'pipeline' ? leadId : null, person: t.key === 'people' ? personId : null })}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '11px 14px', whiteSpace: 'nowrap', fontSize: 12.5, fontFamily: "'Inter',-apple-system,BlinkMacSystemFont,sans-serif" }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '11px 14px', whiteSpace: 'nowrap', fontSize: 12.5, fontFamily: 'var(--font-sans)' }}>
               {t.label}
               {counts[t.key] !== undefined && <i style={{ fontStyle: 'normal', fontFamily: MONO, fontSize: 9, color: 'var(--text-tertiary)', opacity: t.key === tab ? 1 : 0.7 }}>{counts[t.key]}</i>}
             </span>

@@ -397,7 +397,7 @@ function StatTile({
   label, children,
 }: { label: string; children: ReactNode }) {
   return (
-    <div className="border border-hairline rounded-[7px] px-[13px] py-3 bg-page">
+    <div className="border border-hairline rounded-sm px-[13px] py-3 bg-page">
       <div className="font-mono text-[9px] tracking-[0.08em] uppercase text-secondary">{label}</div>
       <div className="font-mono font-semibold text-[18px] mt-[5px] -tracking-[0.01em] text-primary leading-tight">
         {children}
@@ -502,7 +502,7 @@ function AskBand({ edges, range, hot, onHot, seq, reduce }: AskBandProps) {
   const maxAmount = Math.max(...amounts);
 
   return (
-    <div className="border border-hairline rounded-[10px] px-[22px] py-5 pb-2.5 bg-surface">
+    <div className="border border-hairline rounded-md px-[22px] py-5 pb-2.5 bg-surface">
       <svg viewBox="0 0 900 170" preserveAspectRatio="xMidYMid meet" className="w-full h-[170px] block overflow-visible">
         {/* Recommended band */}
         {range && (() => {
@@ -658,13 +658,13 @@ function PeerLedger({ edges, range, hot, onHot, seq, reduce }: PeerLedgerProps) 
             key={e.peerId}
             onMouseEnter={() => onHot(e.peerId)}
             onMouseLeave={() => onHot(null)}
-            className={`grid grid-cols-[1fr_64px_96px_22px] items-center gap-3 px-2.5 py-2.5 rounded-lg transition-colors ${isHot ? 'bg-elevated' : 'hover:bg-elevated'}`}
+            className={`grid grid-cols-[1fr_64px_96px_22px] items-center gap-3 px-2.5 py-2.5 rounded-md transition-colors ${isHot ? 'bg-elevated' : 'hover:bg-elevated'}`}
           >
             <div className="flex flex-col min-w-0">
               <span className="text-[13.5px] font-medium text-primary truncate">{e.peer}</span>
-              <span className="h-1 bg-ink-100 rounded-[3px] mt-1.5 overflow-hidden">
+              <span className="h-1 bg-ink-100 rounded-xs mt-1.5 overflow-hidden">
                 <span
-                  className={`block h-full rounded-[3px] ${barCol}`}
+                  className={`block h-full rounded-xs ${barCol}`}
                   style={{
                     width: `${widths[i] ? ratio * 100 : 0}%`,
                     transition: reduce ? 'none' : 'width 700ms cubic-bezier(.2,.7,.2,1)',
@@ -713,7 +713,7 @@ function WarmPath({
 }: WarmPathProps) {
   const peers = topPeerNames.slice(0, 2).join(' · ');
   return (
-    <div className="border border-hairline rounded-[10px] p-[18px] bg-surface">
+    <div className="border border-hairline rounded-md p-[18px] bg-surface">
       <div className="font-mono text-[10.5px] tracking-[0.1em] uppercase text-secondary font-semibold">
         Warm path in
       </div>
@@ -757,7 +757,7 @@ function RiskCallout({
   showTodos:  boolean;
 }) {
   return (
-    <div className="border border-hairline border-l-[3px] border-l-warning rounded-[10px] px-[18px] py-4 bg-surface">
+    <div className="border border-hairline border-l-[3px] border-l-warning rounded-md px-[18px] py-4 bg-surface">
       <div className="flex items-center gap-2 mb-2">
         <AlertTriangle className="w-3.5 h-3.5 text-warning" />
         <span className="font-mono text-[9.5px] tracking-[0.08em] uppercase text-warning font-semibold">
@@ -814,7 +814,7 @@ function SourceList({ edges, hot, funderId, funderName, registerRef }: SourceLis
             key={e.id}
             id={`fbrief-src-${funderId}-${e.id}`}
             ref={el => registerRef(e.id, el)}
-            className={`flex items-center gap-3 px-2.5 py-2 rounded-[7px] text-[12.5px] transition-colors ${hot === e.id ? 'bg-accent-tint' : ''}`}
+            className={`flex items-center gap-3 px-2.5 py-2 rounded-sm text-[12.5px] transition-colors ${hot === e.id ? 'bg-accent-tint' : ''}`}
           >
             <span className="font-mono text-[10px] font-semibold text-tertiary w-[18px] h-[18px] border border-hairline rounded-sm flex items-center justify-center flex-none tabular-nums">
               {e.id}
@@ -1032,7 +1032,7 @@ export function FunderBrief({ data, playSeq }: FunderBriefProps) {
             type="button"
             onClick={() => setShowTodos(v => !v)}
             aria-pressed={showTodos}
-            className="text-[12.5px] text-secondary border border-hairline bg-surface rounded-[7px] px-[13px] py-[7px] inline-flex items-center gap-[7px] hover:text-primary hover:border-ink-300 transition-colors"
+            className="text-[12.5px] text-secondary border border-hairline bg-surface rounded-sm px-[13px] py-[7px] inline-flex items-center gap-[7px] hover:text-primary hover:border-ink-300 transition-colors"
           >
             <span className="font-mono tabular-nums">{todoCount}</span>
             {showTodos
@@ -1107,7 +1107,7 @@ export function FunderProspectRow({ row, orgName }: FunderProspectRowProps) {
 
   return (
     <li
-      className={`bg-surface border rounded-[10px] mt-3.5 overflow-hidden transition-colors duration-200 ${open ? 'border-ink-300' : 'border-hairline'}`}
+      className={`bg-surface border rounded-md mt-3.5 overflow-hidden transition-colors duration-200 ${open ? 'border-ink-300' : 'border-hairline'}`}
     >
       <button
         type="button"
@@ -1124,7 +1124,7 @@ export function FunderProspectRow({ row, orgName }: FunderProspectRowProps) {
           <div className="text-[17px] font-semibold -tracking-[0.01em] flex items-center gap-2.5 flex-wrap">
             <span className="truncate text-primary">{row.funder_name}</span>
             {row.funder_type && (
-              <span className="font-mono text-[9.5px] tracking-[0.1em] text-tertiary border border-hairline rounded-[5px] px-[7px] py-[3px] font-semibold">
+              <span className="font-mono text-[9.5px] tracking-[0.1em] text-tertiary border border-hairline rounded-sm px-[7px] py-[3px] font-semibold">
                 {FUNDER_TYPE_LABEL[row.funder_type] ?? row.funder_type.toUpperCase()}
               </span>
             )}

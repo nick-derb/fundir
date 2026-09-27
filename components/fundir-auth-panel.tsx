@@ -86,7 +86,7 @@ const CSS = `
 
 .fa-card{position:relative;display:flex;width:100%;max-width:1180px;background:${CARD};border-radius:26px;
   box-shadow:0 30px 70px rgba(20,26,22,.24);overflow:hidden}
-.fa-art{position:relative;flex:0 0 50%;margin:14px 0 14px 14px;border-radius:16px;overflow:hidden;background:#BFC8BE}
+.fa-art{position:relative;flex:0 0 50%;margin:14px 0 14px 14px;border-radius:var(--radius);overflow:hidden;background:#BFC8BE}
 .fa-art img{width:100%;height:100%;object-fit:cover;display:block}
 .fa-pane{flex:1;display:flex;flex-direction:column;padding:40px 64px 44px}
 
@@ -109,7 +109,7 @@ const CSS = `
 
 .fa-sso{display:flex;flex-direction:column;gap:12px;margin-bottom:32px}
 .fa-provider{display:flex;align-items:center;justify-content:center;gap:11px;width:100%;height:52px;background:#fff;
-  border:1px solid ${HAIR};border-radius:12px;cursor:pointer;font:inherit;font-size:15px;font-weight:500;color:${INK};
+  border:1px solid ${HAIR};border-radius:var(--radius);cursor:pointer;font:inherit;font-size:15px;font-weight:500;color:${INK};
   transition:border-color .15s ease,background .15s ease}
 .fa-provider:hover{border-color:#BFC4BB;background:#FCFCFA}
 .fa-provider:focus-visible{outline:2px solid ${SAGE};outline-offset:2px}
@@ -118,7 +118,7 @@ const CSS = `
 .fa-or{display:flex;align-items:center;gap:14px;margin:0 0 32px;color:${MUTED};font-size:13px;line-height:1}
 .fa-or::before,.fa-or::after{content:'';flex:1;height:1px;background:${HAIR}}
 
-.fa-field{display:block;width:100%;height:52px;background:${FIELD};border:1px solid transparent;border-radius:12px;
+.fa-field{display:block;width:100%;height:52px;background:${FIELD};border:1px solid transparent;border-radius:var(--radius);
   padding:0 18px;font:inherit;font-size:15px;color:${INK};margin-bottom:12px}
 .fa-field::placeholder{color:#8C918C}
 .fa-field:focus{outline:none;border-color:${SAGE};background:#F2F3EF}
@@ -128,7 +128,7 @@ const CSS = `
 .fa-forgot:hover{text-decoration:underline}
 .fa-forgot:focus-visible{outline:2px solid ${SAGE};outline-offset:3px;border-radius:3px}
 
-.fa-submit{width:100%;height:52px;background:${SAGE};color:#fff;border:0;border-radius:12px;cursor:pointer;
+.fa-submit{width:100%;height:52px;background:${SAGE};color:#fff;border:0;border-radius:var(--radius);cursor:pointer;
   font:inherit;font-size:15px;font-weight:600;margin-top:12px;transition:background .15s ease}
 .fa-submit:hover{background:${SAGE_DEEP}}
 .fa-submit:focus-visible{outline:2px solid ${SAGE_DEEP};outline-offset:3px}

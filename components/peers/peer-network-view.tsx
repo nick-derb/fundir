@@ -9,13 +9,11 @@ import { Search, ExternalLink, Route, Landmark, Briefcase, GraduationCap, Users,
 import type { PeerOrgCard, PeerPerson, FunderRelation } from '@/lib/network/peer-network';
 import type { PeerStaffStatus } from '@/lib/network/peer-staff';
 import { PeerScanPanel } from '@/components/peers/peer-scan-panel';
-import { useConsoleFonts, SERIF, MONO, Avatar, Chip, Eyebrow, SectionRule, ScoreBar, SLATE, AMBER, INFO } from '@/components/connections/intel/shared';
+import { SERIF, Avatar, Chip, Eyebrow, SectionRule, ScoreBar, SLATE, AMBER, INFO } from '@/components/connections/intel/shared';
 
 const CSS = `
-.pn-root{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;color:var(--text-primary)}
-.pn-root .fd-eyebrow{font-size:11px;line-height:1.2;letter-spacing:.08em;font-weight:600;text-transform:uppercase}
-.pn-root .fd-mono{font-family:${MONO};font-variant-numeric:tabular-nums}
-.pn-row{display:grid;grid-template-columns:34px minmax(0,1fr) 92px;gap:12px;align-items:center;padding:11px 12px;border-bottom:1px solid var(--border-hairline);cursor:pointer;transition:background .14s}
+.pn-root{color:var(--text-primary)}
+.pn-root .pn-root .pn-row{display:grid;grid-template-columns:34px minmax(0,1fr) 92px;gap:12px;align-items:center;padding:11px 12px;border-bottom:1px solid var(--border-hairline);cursor:pointer;transition:background .14s}
 .pn-row:hover{background:var(--bg-elevated)}
 .pn-row[data-on="true"]{background:var(--accent-tint)}
 .pn-cols{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:16px;align-items:start}
@@ -23,7 +21,7 @@ const CSS = `
 .pn-pill{display:inline-flex;align-items:center;height:26px;padding:0 10px;border-radius:999px;border:1px solid var(--border-hairline);background:var(--bg-surface);font-size:12px;color:var(--text-secondary);cursor:pointer;white-space:nowrap}
 .pn-pill[data-on="true"]{border-color:var(--accent);color:var(--accent);background:var(--accent-tint)}
 .pn-orgs{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px}
-.pn-org{flex:0 0 190px;background:var(--bg-surface);border:1px solid var(--border-hairline);border-radius:12px;padding:10px 12px;cursor:pointer;transition:border-color .14s}
+.pn-org{flex:0 0 190px;background:var(--bg-surface);border:1px solid var(--border-hairline);border-radius:var(--radius);padding:10px 12px;cursor:pointer;transition:border-color .14s}
 .pn-org:hover{border-color:var(--border-strong)}
 .pn-org[data-on="true"]{border-color:var(--accent)}
 @media (max-width:1100px){.pn-cols{grid-template-columns:minmax(0,1fr)}.pn-list{max-height:none}.pn-panel{position:static!important}}
@@ -38,7 +36,7 @@ const years = (s: number | null, e: number | null, cur: boolean) => (s || e || c
 
 function Kpi({ label, value, accent }: { label: string; value: number | string; accent?: boolean }) {
   return (
-    <div style={{ background: 'var(--bg-surface)', border: `1px solid ${accent ? 'rgba(12,107,90,.28)' : 'var(--border-hairline)'}`, borderRadius: 12, padding: '13px 15px' }}>
+    <div style={{ background: 'var(--bg-surface)', border: `1px solid ${accent ? 'rgba(12,107,90,.28)' : 'var(--border-hairline)'}`, borderRadius: 'var(--radius)', padding: '13px 15px' }}>
       <Eyebrow color={accent ? 'var(--accent)' : undefined}>{label}</Eyebrow>
       <b className="fd-mono" style={{ display: 'block', marginTop: 6, fontSize: 22, fontWeight: 600, color: accent ? 'var(--accent)' : undefined }}>{value}</b>
     </div>
@@ -46,7 +44,6 @@ function Kpi({ label, value, accent }: { label: string; value: number | string; 
 }
 
 export function PeerNetworkView({ peers, people, status, isAdmin }: { peers: PeerOrgCard[]; people: PeerPerson[]; status: PeerStaffStatus; isAdmin: boolean }) {
-  useConsoleFonts();
   const [q, setQ] = useState('');
   const [org, setOrg] = useState<string | null>(null);
   const [tier, setTier] = useState<'all' | 'development' | 'executive'>('all');
@@ -143,7 +140,7 @@ export function PeerNetworkView({ peers, people, status, isAdmin }: { peers: Pee
       </div>
 
       <div className="pn-cols">
-        <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-hairline)', borderRadius: 14, overflow: 'hidden' }}>
+        <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-hairline)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
           <div className="pn-list">
             {rows.length === 0 && <p style={{ padding: 28, textAlign: 'center', fontSize: 13, color: 'var(--text-tertiary)' }}>{people.length ? 'No one matches these filters.' : 'No peer staff yet. Run the scan above to read the peers.'}</p>}
             {rows.map((p, i) => (
@@ -168,7 +165,7 @@ export function PeerNetworkView({ peers, people, status, isAdmin }: { peers: Pee
         </div>
 
         {/* Record panel */}
-        <div className="pn-panel" style={{ position: 'sticky', top: 16, background: 'var(--bg-surface)', border: '1px solid var(--border-hairline)', borderRadius: 14, padding: '18px 18px 20px', minHeight: 200 }}>
+        <div className="pn-panel" style={{ position: 'sticky', top: 16, background: 'var(--bg-surface)', border: '1px solid var(--border-hairline)', borderRadius: 'var(--radius)', padding: '18px 18px 20px', minHeight: 200 }}>
           {!person ? <p style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>Select a person.</p> : (
             <>
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
@@ -179,7 +176,7 @@ export function PeerNetworkView({ peers, people, status, isAdmin }: { peers: Pee
                   {person.org !== person.foundAt && <p style={{ margin: '4px 0 0', fontSize: 11.5, color: AMBER, lineHeight: 1.45 }}>Found at {person.foundAt}{person.leftPeerYear ? `, left in ${person.leftPeerYear}` : ''}</p>}
                   {person.headline && person.headline !== person.title && <p style={{ margin: '4px 0 0', fontSize: 11.5, color: 'var(--text-tertiary)', lineHeight: 1.45 }}>{person.headline}</p>}
                 </div>
-                {person.linkedinUrl && <a href={person.linkedinUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 h-7 px-2.5 rounded-[7px] border border-hairline text-[11.5px] text-secondary" style={{ flex: 'none' }}>LinkedIn <ExternalLink style={{ width: 11, height: 11 }} /></a>}
+                {person.linkedinUrl && <a href={person.linkedinUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 h-7 px-2.5 rounded-sm border border-hairline text-[11.5px] text-secondary" style={{ flex: 'none' }}>LinkedIn <ExternalLink style={{ width: 11, height: 11 }} /></a>}
               </div>
 
               <SectionRule label="Why this person matters" />

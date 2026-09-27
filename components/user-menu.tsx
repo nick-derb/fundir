@@ -172,7 +172,7 @@ export function UserMenu({
         {open && (
           <div
             role="menu"
-            className="absolute right-0 top-[calc(100%+8px)] w-[252px] bg-surface border border-hairline rounded-xl overflow-hidden z-50"
+            className="absolute right-0 top-[calc(100%+8px)] w-[252px] bg-surface border border-hairline rounded-md overflow-hidden z-50"
             style={{ boxShadow: '0 16px 40px rgba(16,25,23,.14)', animation: 'fd-menu-in .16s cubic-bezier(.2,.8,.3,1)' }}
           >
             <style>{'@keyframes fd-menu-in{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}'}</style>
@@ -236,7 +236,7 @@ export function UserMenu({
             role="dialog"
             aria-modal="true"
             aria-label="Your profile"
-            className="relative w-full max-w-[420px] bg-surface border border-hairline rounded-xl overflow-hidden"
+            className="relative w-full max-w-[420px] bg-surface border border-hairline rounded-md overflow-hidden"
             style={{ boxShadow: '0 24px 60px rgba(16,25,23,.20)' }}
           >
             <div className="px-5 pt-5 pb-4 border-b border-hairline">

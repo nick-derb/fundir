@@ -14,7 +14,7 @@ export function FederalExposure() {
     .reduce((sum, p) => sum + p.amount, 0);
 
   return (
-    <div className="bg-white rounded-lg border border-[#e2e8f0] shadow-card overflow-hidden">
+    <div className="bg-white rounded-md border border-[#e2e8f0] shadow-card overflow-hidden">
       {/* Header */}
       <div className="flex items-center gap-3 px-5 py-3 bg-red-50 border-b border-red-200">
         <AlertTriangle className="w-4 h-4 text-red-600 flex-shrink-0" />

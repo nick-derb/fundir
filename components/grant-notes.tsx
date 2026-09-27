@@ -38,7 +38,7 @@ export function GrantNotes({ grantId, initialBody, updatedAt }: GrantNotesProps)
   }, [body, grantId, isDirty]);
 
   return (
-    <div className="bg-white rounded-xl border border-[#e2e8f0] shadow-card overflow-hidden">
+    <div className="bg-white rounded-md border border-[#e2e8f0] shadow-card overflow-hidden">
       <div className="px-5 py-4 border-b border-[#e2e8f0] bg-[#f8fafc] flex items-center justify-between">
         <div className="flex items-center gap-2">
           <FileText className="w-4 h-4 text-[#0d9488]" />
@@ -68,7 +68,7 @@ export function GrantNotes({ grantId, initialBody, updatedAt }: GrantNotesProps)
           onChange={e => setBody(e.target.value)}
           placeholder="Add notes about this grant — application strategy, funder relationships, internal review feedback, next steps…"
           rows={14}
-          className="w-full px-4 py-3 text-[13px] text-[#0f172a] placeholder-[#94a3b8] leading-relaxed border border-[#e2e8f0] rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-[#0d9488]/20 focus:border-[#0d9488] transition-all bg-[#fafafa] focus:bg-white"
+          className="w-full px-4 py-3 text-[13px] text-[#0f172a] placeholder-[#94a3b8] leading-relaxed border border-[#e2e8f0] rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-[#0d9488]/20 focus:border-[#0d9488] transition-all bg-[#fafafa] focus:bg-white"
         />
         <p className="text-[10px] text-[#94a3b8] mt-2">
           Auto-saves 0.8s after you stop typing · Markdown supported

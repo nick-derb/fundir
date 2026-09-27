@@ -7,20 +7,16 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import type { PipelineState } from '@/lib/network/queries';
 
-export const SERIF = "'Instrument Serif',Palatino,Georgia,serif";
-export const SANS = "'Inter',-apple-system,BlinkMacSystemFont,sans-serif";
-export const MONO = "'JetBrains Mono',ui-monospace,monospace";
+export const SERIF = 'var(--font-display)';
+export const SANS = 'var(--font-sans)';
+export const MONO = 'var(--font-mono)';
 export const AMBER = '#9C7A2A';
 export const SLATE = '#5B7383';
 export const INFO = '#3E6CA8';
 
 export const CSS = `
-.ni-root{--radius-kpi:12px;--radius-console:14px;font-family:${SANS};color:var(--text-primary);background:var(--bg-page);min-height:60vh}
-.ni-root .fd-eyebrow{font-size:11px;line-height:1.2;letter-spacing:.08em;font-weight:600;text-transform:uppercase}
-.ni-root .fd-kpi{font-family:${MONO};font-variant-numeric:tabular-nums;font-weight:600;letter-spacing:-.01em}
-.ni-root .fd-mono,.ni-peek .fd-mono{font-family:${MONO};font-variant-numeric:tabular-nums}
-.ni-root .fd-caption,.ni-peek .fd-caption{font-size:12px;line-height:1.5}
-.ni-root button,.ni-peek button{font-family:inherit}
+.ni-root{color:var(--text-primary);background:var(--bg-page);min-height:60vh}
+.ni-root .ni-root .ni-root .ni-root .ni-root button,.ni-peek button{font-family:inherit}
 @keyframes ni-rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 @keyframes ni-peek-in{from{opacity:0;transform:translateX(24px)}to{opacity:1;transform:none}}
 @keyframes ni-flash{0%{background:var(--accent-tint)}100%{background:transparent}}
@@ -40,15 +36,14 @@ export const CSS = `
 .ni-seg:hover{background:var(--bg-elevated);color:var(--text-primary)}
 .ni-seg[aria-pressed="true"]{background:var(--text-primary);color:var(--bg-surface);border-color:var(--text-primary)}
 .ni-seg[aria-pressed="true"] i{color:inherit;opacity:.7}
-.ni-seg i{font-style:normal;font-family:${MONO};font-size:9.5px;color:var(--text-tertiary)}
+.ni-seg i{font-style:normal;font-family:var(--font-mono);font-size:9.5px;color:var(--text-tertiary)}
 .ni-input{height:32px;padding:0 10px 0 30px;border-radius:8px;border:1px solid var(--border-hairline);background:var(--bg-surface);font:inherit;font-size:12.5px;color:var(--text-primary);outline:none;transition:border-color .14s,box-shadow .14s;width:100%}
 .ni-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-tint)}
 .ni-select{height:28px;padding:0 26px 0 9px;border-radius:6px;border:1px solid var(--border-hairline);background:var(--bg-surface);font:inherit;font-size:11.5px;color:var(--text-primary);appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath d='M2 3.5l3 3 3-3' fill='none' stroke='%238696AE' stroke-width='1.4'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;cursor:pointer}
 .ni-select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-tint)}
-.ni-peek{position:fixed;top:48px;right:0;bottom:0;width:min(640px,100vw);z-index:60;background:var(--bg-surface);border-left:1px solid var(--border-hairline);box-shadow:-24px 0 60px rgba(11,18,32,.10);display:flex;flex-direction:column;font-family:${SANS};color:var(--text-primary);animation:ni-peek-in .28s cubic-bezier(.2,.8,.2,1) both}
+.ni-peek{position:fixed;top:48px;right:0;bottom:0;width:min(640px,100vw);z-index:60;background:var(--bg-surface);border-left:1px solid var(--border-hairline);box-shadow:-24px 0 60px rgba(11,18,32,.10);display:flex;flex-direction:column;color:var(--text-primary);animation:ni-peek-in .28s cubic-bezier(.2,.8,.2,1) both}
 [data-theme="dark"] .ni-peek{box-shadow:-24px 0 60px rgba(0,0,0,.5)}
-.ni-peek .fd-eyebrow{font-size:11px;line-height:1.2;letter-spacing:.08em;font-weight:600;text-transform:uppercase}
-.ni-cite{display:inline-flex;align-items:center;font-family:${MONO};font-size:9.5px;line-height:1;padding:3px 5px;border-radius:4px;background:var(--accent-tint);color:var(--accent);border:none;cursor:pointer;margin-left:3px;vertical-align:2px;transition:background .12s,color .12s}
+.ni-peek .ni-cite{display:inline-flex;align-items:center;font-family:var(--font-mono);font-size:9.5px;line-height:1;padding:3px 5px;border-radius:4px;background:var(--accent-tint);color:var(--accent);border:none;cursor:pointer;margin-left:3px;vertical-align:2px;transition:background .12s,color .12s}
 .ni-cite:hover,.ni-cite[data-on="true"]{background:var(--accent);color:var(--accent-on)}
 .ni-source{padding:10px 12px;border-radius:8px;border:1px solid transparent;transition:border-color .2s}
 .ni-source[data-hi="true"]{border-color:var(--accent);animation:ni-flash 1.6s ease-out}
@@ -64,21 +59,11 @@ export const CSS = `
 .ni-strip::-webkit-scrollbar{height:4px}
 .ni-insight{flex:0 0 300px;scroll-snap-align:start;background:var(--bg-surface);border:1px solid var(--border-hairline);border-radius:var(--radius-kpi);padding:12px 14px;cursor:pointer;transition:border-color .14s,transform .2s cubic-bezier(.2,.8,.2,1)}
 .ni-insight:hover{border-color:var(--border-strong);transform:translateY(-1px)}
-.ni-kbd{display:inline-block;font-family:${MONO};font-size:9.5px;padding:1px 5px;border:1px solid var(--border-hairline);border-bottom-width:2px;border-radius:4px;color:var(--text-tertiary);background:var(--bg-surface)}
+.ni-kbd{display:inline-block;font-family:var(--font-mono);font-size:9.5px;padding:1px 5px;border:1px solid var(--border-hairline);border-bottom-width:2px;border-radius:4px;color:var(--text-tertiary);background:var(--bg-surface)}
 @media (max-width:1100px){.ni-root [data-ni-hide-md]{display:none!important}.ni-root [data-ni-grid="lead"]{grid-template-columns:112px minmax(0,1fr) 90px!important}.ni-root [data-ni-grid="org"]{grid-template-columns:minmax(0,1fr) 110px 100px!important}.ni-root [data-ni-grid="edge"]{grid-template-columns:minmax(0,1fr) 30px minmax(0,1fr) 120px 50px!important}}
 @media (max-width:760px){.ni-root [data-ni-hide-sm]{display:none!important}.ni-peek{top:0;width:100vw}}
 @media (prefers-reduced-motion:reduce){.ni-rise,.ni-peek,.ni-source[data-hi="true"]{animation:none}.ni-bar > i,.ni-indicator,.ni-insight{transition:none}}
 `;
-
-export function useConsoleFonts() {
-  useEffect(() => {
-    if (document.getElementById('cn-fonts')) return;
-    const l = document.createElement('link');
-    l.id = 'cn-fonts'; l.rel = 'stylesheet';
-    l.href = 'https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap';
-    document.head.appendChild(l);
-  }, []);
-}
 
 // ── Palette by meaning ──────────────────────────────────────────────────────
 export function hueFor(insightType: string | null | undefined): { color: string; border: string; tint: string; short: string } {

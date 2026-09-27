@@ -132,18 +132,11 @@ const config: Config = {
       },
 
       fontFamily: {
-        // Geist sans + mono are loaded via next/font in app/layout.tsx
-        // and exposed as CSS variables. Fall back to the system stack so
-        // the page still renders if the font ever fails to load.
-        sans: [
-          'var(--font-geist-sans)',
-          'ui-sans-serif', 'system-ui', '-apple-system', 'BlinkMacSystemFont',
-          'Segoe UI', 'Helvetica', 'Arial', 'sans-serif',
-        ],
-        mono: [
-          'var(--font-geist-mono)',
-          'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace',
-        ],
+        // The families are named once in app/globals.css (self-hosted through
+        // Fontsource); these utilities just point at those tokens.
+        sans:    ['var(--font-sans)'],
+        mono:    ['var(--font-mono)'],
+        display: ['var(--font-display)'],
       },
 
       fontSize: {
@@ -161,12 +154,16 @@ const config: Config = {
       },
 
       borderRadius: {
-        // One radius system — no pills (except via rounded-full for avatars).
-        DEFAULT: '8px',
-        sm:      '6px',
-        md:      '8px',
-        lg:      '8px',
-        xl:      '8px',
+        // One radius system: 8px containers, 6px controls, 4px tags. Larger
+        // Tailwind sizes collapse onto it so `rounded-xl` etc. cannot drift.
+        DEFAULT: 'var(--radius)',
+        xs:      'var(--radius-xs)',
+        sm:      'var(--radius-sm)',
+        md:      'var(--radius)',
+        lg:      'var(--radius)',
+        xl:      'var(--radius)',
+        '2xl':   'var(--radius)',
+        '3xl':   'var(--radius)',
         pill:    '9999px',
       },
 

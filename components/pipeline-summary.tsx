@@ -18,7 +18,7 @@ export function PipelineSummary({ totalTracked, highMatches, mediumMatches, upco
   return (
     <div className="grid grid-cols-4 gap-4">
       {cards.map(({ label, value, icon: Icon, color, bg }) => (
-        <div key={label} className="bg-white rounded-lg border border-[#e2e8f0] p-4 shadow-card">
+        <div key={label} className="bg-white rounded-md border border-[#e2e8f0] p-4 shadow-card">
           <div className="flex items-center justify-between mb-2">
             <span className="text-[12px] font-medium text-[#64748b]">{label}</span>
             <div className="w-7 h-7 rounded-[6px] flex items-center justify-center" style={{ background: bg }}>

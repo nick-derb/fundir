@@ -117,7 +117,7 @@ function ResetPasswordPageContent() {
           <span className="font-bold text-[18px] text-[#0f172a]">Fundir</span>
         </div>
 
-        <div className="bg-white rounded-xl border border-[#e2e8f0] shadow-sm p-8">
+        <div className="bg-white rounded-md border border-[#e2e8f0] shadow-sm p-8">
 
           {/* ── Verifying ── */}
           {pageState === 'loading' && (

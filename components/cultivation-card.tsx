@@ -36,7 +36,7 @@ export function CultivationCard({ readOnly }: { readOnly?: boolean }) {
   const reset = () => { setPreview(null); setFile(null); if (ref.current) ref.current.value = ''; };
 
   return (
-    <div className="bg-surface border border-hairline rounded-[14px] overflow-hidden">
+    <div className="bg-surface border border-hairline rounded-md overflow-hidden">
       <div className="flex items-center gap-2.5 px-[18px] py-3.5 border-b border-hairline">
         <Users className="w-[14px] h-[14px] text-accent flex-none" />
         <span className="fd-eyebrow text-secondary">Foundation cultivation list</span>
@@ -47,12 +47,12 @@ export function CultivationCard({ readOnly }: { readOnly?: boolean }) {
         <p className="text-[12.5px] leading-relaxed text-secondary mb-3">Drop the Foundation Cultivation List workbook here (both sheets are read, including “Rejected or Reconsider”). Each foundation is matched to the IRS Illinois file on its name so the EIN, legal name and assets come from the IRS. Board members are replaced per foundation; a connection or outreach note you entered in Fundir is kept. Trustees are then re-synced into the relationship graph.</p>
         <div className="flex items-center gap-2 flex-wrap">
           <input ref={ref} type="file" accept=".xlsx,.xls,.csv" hidden onChange={e => { setFile(e.target.files?.[0] ?? null); setPreview(null); setDone(null); setError(''); }} />
-          <button type="button" onClick={() => ref.current?.click()} disabled={readOnly || !!busy} className="inline-flex items-center gap-2 h-9 px-3.5 rounded-[10px] border border-hairline bg-surface text-[12.5px] text-primary hover:bg-elevated disabled:opacity-50"><Upload className="w-3.5 h-3.5" />{file ? file.name : 'Choose the list'}</button>
-          {file && !preview && <button type="button" onClick={() => run(false)} disabled={!!busy} className="inline-flex items-center gap-2 h-9 px-4 rounded-[10px] bg-accent text-[12.5px] font-medium disabled:opacity-60" style={{ color: 'var(--accent-on)' }}>{busy === 'preview' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}Preview changes</button>}
+          <button type="button" onClick={() => ref.current?.click()} disabled={readOnly || !!busy} className="inline-flex items-center gap-2 h-9 px-3.5 rounded-md border border-hairline bg-surface text-[12.5px] text-primary hover:bg-elevated disabled:opacity-50"><Upload className="w-3.5 h-3.5" />{file ? file.name : 'Choose the list'}</button>
+          {file && !preview && <button type="button" onClick={() => run(false)} disabled={!!busy} className="inline-flex items-center gap-2 h-9 px-4 rounded-md bg-accent text-[12.5px] font-medium disabled:opacity-60" style={{ color: 'var(--accent-on)' }}>{busy === 'preview' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}Preview changes</button>}
         </div>
         {error && <p className="mt-3 text-[12px] text-critical flex items-center gap-1.5"><AlertTriangle className="w-3.5 h-3.5" />{error}</p>}
         {preview && (
-          <div className="mt-4 rounded-[10px] border border-hairline bg-page p-3.5" style={{ animation: 'fd-fade .3s ease' }}>
+          <div className="mt-4 rounded-md border border-hairline bg-page p-3.5" style={{ animation: 'fd-fade .3s ease' }}>
             <span className="fd-eyebrow block text-tertiary mb-1.5" style={{ fontSize: 9.5 }}>Foundations</span>
             <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(4, minmax(0,1fr))' }}>
               <Stat label="New" value={preview.foundations.new} tone="var(--accent)" /><Stat label="Updated" value={preview.foundations.updated} tone="#9C7A2A" /><Stat label="Unchanged" value={preview.foundations.unchanged} /><Stat label="IRS matched" value={preview.foundations.matched_irs} />
@@ -66,8 +66,8 @@ export function CultivationCard({ readOnly }: { readOnly?: boolean }) {
             {preview.sample_new.length > 0 && <p className="mt-2 text-[11.5px] text-secondary"><span className="text-accent">new</span> {preview.sample_new.join('; ')}</p>}
             {preview.sample_removed.length > 0 && <p className="mt-2 text-[11.5px] text-secondary"><span className="text-critical">remove</span> {preview.sample_removed.join('; ')}</p>}
             <div className="flex items-center gap-2 mt-3">
-              <button type="button" onClick={() => run(true)} disabled={!!busy || readOnly} className="inline-flex items-center gap-2 h-9 px-4 rounded-[10px] bg-accent text-[12.5px] font-medium disabled:opacity-60" style={{ color: 'var(--accent-on)' }}>{busy === 'commit' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}Replace with this list</button>
-              <button type="button" onClick={reset} disabled={!!busy} className="h-9 px-3 rounded-[10px] border border-hairline bg-surface text-[12.5px] text-secondary">Cancel</button>
+              <button type="button" onClick={() => run(true)} disabled={!!busy || readOnly} className="inline-flex items-center gap-2 h-9 px-4 rounded-md bg-accent text-[12.5px] font-medium disabled:opacity-60" style={{ color: 'var(--accent-on)' }}>{busy === 'commit' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}Replace with this list</button>
+              <button type="button" onClick={reset} disabled={!!busy} className="h-9 px-3 rounded-md border border-hairline bg-surface text-[12.5px] text-secondary">Cancel</button>
             </div>
           </div>
         )}

@@ -81,7 +81,7 @@ export default async function FoundationsPage() {
       <div className="px-4 sm:px-6 md:px-8 py-6 max-w-7xl mx-auto space-y-6">
 
         {/* ── How this works ─────────────────────────────────── */}
-        <div className="bg-white rounded-xl border border-[#e2e8f0] shadow-card p-5">
+        <div className="bg-white rounded-md border border-[#e2e8f0] shadow-card p-5">
           <div className="flex items-start gap-3">
             <div className="w-8 h-8 rounded-[8px] flex items-center justify-center flex-shrink-0 mt-0.5"
               style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}>
@@ -133,7 +133,7 @@ export default async function FoundationsPage() {
         </div>
 
         {/* ── Intelligence note ──────────────────────────────── */}
-        <div className="rounded-xl border border-[#6366f1]/20 p-5"
+        <div className="rounded-md border border-[#6366f1]/20 p-5"
           style={{ background: 'linear-gradient(135deg, #faf5ff, #f5f3ff)' }}>
           <div className="flex items-start gap-3">
             <Sparkles className="w-5 h-5 text-[#6366f1] mt-0.5 flex-shrink-0" />

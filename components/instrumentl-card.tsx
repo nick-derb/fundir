@@ -32,7 +32,7 @@ export function InstrumentlCard({ readOnly }: { readOnly?: boolean }) {
   }
 
   return (
-    <div className="bg-surface border border-hairline rounded-[14px] overflow-hidden">
+    <div className="bg-surface border border-hairline rounded-md overflow-hidden">
       <div className="flex items-center gap-2.5 px-[18px] py-3.5 border-b border-hairline">
         <FileSpreadsheet className="w-[14px] h-[14px] text-accent flex-none" />
         <span className="fd-eyebrow text-secondary">Instrumentl export</span>
@@ -43,12 +43,12 @@ export function InstrumentlCard({ readOnly }: { readOnly?: boolean }) {
         <p className="text-[12.5px] leading-relaxed text-secondary mb-3">In Instrumentl, open your tracker, choose Export (.csv or .xlsx) and drop the file here. Fundir shows what would change before anything is written. Submitted applications and decisions already on file are always kept, even when the export leaves them out, so a filtered export is safe.</p>
         <div className="flex items-center gap-2 flex-wrap">
           <input ref={ref} type="file" accept=".xlsx,.xls,.csv" hidden onChange={e => { setFile(e.target.files?.[0] ?? null); setPreview(null); setDone(null); setError(''); setPrune(false); }} />
-          <button type="button" onClick={() => ref.current?.click()} disabled={readOnly || !!busy} className="inline-flex items-center gap-2 h-9 px-3.5 rounded-[10px] border border-hairline bg-surface text-[12.5px] text-primary hover:bg-elevated disabled:opacity-50"><Upload className="w-3.5 h-3.5" />{file ? file.name : 'Choose the export'}</button>
-          {file && !preview && <button type="button" onClick={() => run(false)} disabled={!!busy} className="inline-flex items-center gap-2 h-9 px-4 rounded-[10px] bg-accent text-[12.5px] font-medium disabled:opacity-60" style={{ color: 'var(--accent-on)' }}>{busy === 'preview' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}Preview changes</button>}
+          <button type="button" onClick={() => ref.current?.click()} disabled={readOnly || !!busy} className="inline-flex items-center gap-2 h-9 px-3.5 rounded-md border border-hairline bg-surface text-[12.5px] text-primary hover:bg-elevated disabled:opacity-50"><Upload className="w-3.5 h-3.5" />{file ? file.name : 'Choose the export'}</button>
+          {file && !preview && <button type="button" onClick={() => run(false)} disabled={!!busy} className="inline-flex items-center gap-2 h-9 px-4 rounded-md bg-accent text-[12.5px] font-medium disabled:opacity-60" style={{ color: 'var(--accent-on)' }}>{busy === 'preview' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}Preview changes</button>}
         </div>
         {error && <p className="mt-3 text-[12px] text-critical flex items-center gap-1.5"><AlertTriangle className="w-3.5 h-3.5" />{error}</p>}
         {preview && (
-          <div className="mt-4 rounded-[10px] border border-hairline bg-page p-3.5" style={{ animation: 'fd-fade .3s ease' }}>
+          <div className="mt-4 rounded-md border border-hairline bg-page p-3.5" style={{ animation: 'fd-fade .3s ease' }}>
             <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(4, minmax(0,1fr))' }}>
               <Stat label="New" value={preview.new} tone="var(--accent)" /><Stat label="Updated" value={preview.updated} tone="#9C7A2A" /><Stat label="Unchanged" value={preview.unchanged} /><Stat label="Not in file" value={preview.removed + preview.kept_history} />
             </div>
@@ -63,8 +63,8 @@ export function InstrumentlCard({ readOnly }: { readOnly?: boolean }) {
             )}
             {prune && preview.sample_removed.length > 0 && <ul className="mt-2 text-[11.5px] text-secondary space-y-0.5">{preview.sample_removed.map((s, i) => <li key={i}><span className="text-critical">remove</span> {s.opportunity} · {s.funder}{s.status ? ` (${s.status})` : ''}</li>)}</ul>}
             <div className="flex items-center gap-2 mt-3">
-              <button type="button" onClick={() => run(true)} disabled={!!busy || readOnly} className="inline-flex items-center gap-2 h-9 px-4 rounded-[10px] bg-accent text-[12.5px] font-medium disabled:opacity-60" style={{ color: 'var(--accent-on)' }}>{busy === 'commit' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}Replace with this export</button>
-              <button type="button" onClick={() => { setPreview(null); setFile(null); if (ref.current) ref.current.value = ''; }} disabled={!!busy} className="h-9 px-3 rounded-[10px] border border-hairline bg-surface text-[12.5px] text-secondary">Cancel</button>
+              <button type="button" onClick={() => run(true)} disabled={!!busy || readOnly} className="inline-flex items-center gap-2 h-9 px-4 rounded-md bg-accent text-[12.5px] font-medium disabled:opacity-60" style={{ color: 'var(--accent-on)' }}>{busy === 'commit' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}Replace with this export</button>
+              <button type="button" onClick={() => { setPreview(null); setFile(null); if (ref.current) ref.current.value = ''; }} disabled={!!busy} className="h-9 px-3 rounded-md border border-hairline bg-surface text-[12.5px] text-secondary">Cancel</button>
             </div>
           </div>
         )}

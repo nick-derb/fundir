@@ -153,7 +153,7 @@ export default async function SettingsPage() {
                     System Configuration
                   </span>
                 </div>
-                <h1 style={{ fontFamily: "'Instrument Serif',Palatino,Georgia,serif", fontWeight: 400, fontSize: 'clamp(1.9rem,3vw,2.5rem)', lineHeight: 1.04, letterSpacing: '-.018em', margin: 0, color: 'var(--text-primary)' }}>
+                <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 400, fontSize: 'clamp(1.9rem,3vw,2.5rem)', lineHeight: 1.04, letterSpacing: '-.018em', margin: 0, color: 'var(--text-primary)' }}>
                   Settings
                 </h1>
                 <p className="text-[13px] mt-2" style={{ color: 'var(--text-secondary)' }}>
@@ -186,7 +186,7 @@ export default async function SettingsPage() {
 
           {/* Degraded warning */}
           {!allConnected && (
-            <div className="bg-surface border border-hairline border-l-[3px] border-l-warning rounded-[10px] p-4 flex items-start gap-3">
+            <div className="bg-surface border border-hairline border-l-[3px] border-l-warning rounded-md p-4 flex items-start gap-3">
               <AlertTriangle className="w-4 h-4 text-warning flex-shrink-0 mt-0.5" />
               <div>
                 <p className="text-[13px] font-semibold text-warning">
@@ -480,7 +480,7 @@ interface SectionCardProps {
 
 function SectionCard({ eyebrow, sub, icon: Icon, right, children }: SectionCardProps) {
   return (
-    <section className="bg-surface border border-hairline rounded-[10px] overflow-hidden">
+    <section className="bg-surface border border-hairline rounded-md overflow-hidden">
       <header className="px-5 py-4 border-b border-hairline bg-elevated flex items-center gap-3 flex-wrap">
         <div className="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0 bg-accent-tint">
           <Icon className="w-3.5 h-3.5 text-accent" />

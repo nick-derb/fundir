@@ -73,10 +73,23 @@
   --selection-bg:   var(--accent-tint);
   --selection-fg:   var(--ink-900);
 
-  /* ── Shape / shadow ─────────────────────────────────────────────── */
-  --radius:         8px;
-  --radius-sm:      6px;
+  /* ── Type — three families, named once. Self-hosted via Fontsource. ─ */
+  --font-sans:    'Inter Variable', Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;
+  --font-mono:    'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-display: 'Instrument Serif', Palatino, Georgia, serif;
+  /* Old names some screens still read. */
+  --font-geist-sans: var(--font-sans);
+  --font-geist-mono: var(--font-mono);
+
+  /* ── Shape / shadow — one radius system ─────────────────────────── */
+  --radius:         8px;      /* containers, cards, tables, popovers */
+  --radius-sm:      6px;      /* controls: buttons, inputs, chips */
+  --radius-xs:      4px;      /* tags, tiny marks */
   --radius-pill:    9999px;   /* avatars + status dots only */
+  /* The console screens were ported with their own 12/14px radii under these
+     names; they now resolve to the one system without touching each file. */
+  --radius-kpi:     var(--radius);
+  --radius-console: var(--radius);
   --shadow-overlay: 0 1px 2px rgba(11, 18, 32, 0.06), 0 4px 12px rgba(11, 18, 32, 0.05);
 
   /* ── Motion ─────────────────────────────────────────────────────── */
@@ -269,13 +282,12 @@ html[data-theme="dark"] { color-scheme: dark; }
 body {
   background-color: var(--bg-page);
   color: var(--text-primary);
-  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system,
-               BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   font-size: 14px;
   line-height: 22px;
-  font-feature-settings: 'ss01', 'cv11';   /* Geist's stylistic refinements */
+  font-feature-settings: 'cv11', 'ss01';   /* Inter: single-storey a, open digits */
 }
 
 /* All numerals as tabular monospace by default — operations-console rule. */
@@ -283,7 +295,7 @@ body {
 .tabular-nums,
 .font-mono {
   font-variant-numeric: tabular-nums;
-  font-family: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: var(--font-mono);
 }
 
 /* Scrollbar */
@@ -302,6 +314,90 @@ body {
   outline-offset: 2px;
   border-radius: var(--radius-sm);
 }
+
+
+/* ════════════════════════════════════════════════════════════════════
+   CONSOLE LAYER — one copy of the typographic atoms and small controls
+   the console screens share. Each screen used to inline its own copy
+   (ten near-identical <style> blocks); they now read these.
+   ════════════════════════════════════════════════════════════════════ */
+
+.fd-eyebrow { font-size: 11px; line-height: 1.2; letter-spacing: .08em; font-weight: 600; text-transform: uppercase; }
+.fd-kpi     { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-weight: 600; letter-spacing: -.01em; }
+.fd-mono    { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.fd-caption { font-size: 12px; line-height: 1.5; }
+.fd-h2      { font-size: 15px; line-height: 1.4; font-weight: 600; letter-spacing: -.005em; }
+.fd-display { font-family: var(--font-display); font-weight: 400; letter-spacing: -.018em; line-height: 1.04; }
+
+/* Page title block: eyebrow · serif title · one quiet line. */
+.fd-page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; flex-wrap: wrap; margin-bottom: 18px; }
+.fd-page-head h1 { font-family: var(--font-display); font-weight: 400; font-size: clamp(1.7rem, 2.6vw, 2.15rem); line-height: 1.06; letter-spacing: -.018em; margin: 6px 0 0; }
+.fd-page-head .fd-lede { margin: 6px 0 0; font-size: 13px; line-height: 1.55; color: var(--text-secondary); max-width: 64ch; }
+
+/* Containers: hairline, one radius, no shadow. */
+.fd-card { background: var(--bg-surface); border: 1px solid var(--border-hairline); border-radius: var(--radius); }
+.fd-inset { background: var(--bg-page); border: 1px solid var(--border-hairline); border-radius: var(--radius-sm); }
+
+/* Section rule: label · hairline · optional right slot. */
+.fd-rule { display: flex; align-items: center; gap: 10px; margin: 18px 0 10px; }
+.fd-rule > .fd-rule-line { flex: 1; height: 1px; background: var(--border-hairline); }
+
+/* KPI strip: figures in one ruled row instead of a row of cards. */
+.fd-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); border-top: 1px solid var(--border-hairline); border-bottom: 1px solid var(--border-hairline); }
+.fd-stat  { padding: 12px 14px 12px 0; margin-right: 14px; min-width: 0; }
+.fd-stat + .fd-stat { border-left: 1px solid var(--border-hairline); padding-left: 14px; }
+.fd-stat .fd-eyebrow { color: var(--text-tertiary); display: block; margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fd-stat b { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-weight: 600; font-size: 20px; line-height: 1; letter-spacing: -.01em; display: block; }
+.fd-stat small { display: block; margin-top: 5px; font-size: 11px; line-height: 1.35; color: var(--text-tertiary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fd-stat[data-accent="true"] b, .fd-stat[data-accent="true"] .fd-eyebrow { color: var(--accent); }
+@media (max-width: 640px) { .fd-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } .fd-stat + .fd-stat { border-left: none; padding-left: 0; } .fd-stat:nth-child(even) { border-left: 1px solid var(--border-hairline); padding-left: 14px; } }
+
+/* Tag: uppercase mono, text-colour only, 4px corner. Never a pill. */
+.fd-tag { display: inline-flex; align-items: center; gap: 5px; font-family: var(--font-mono); font-size: 9.5px; line-height: 1.3; letter-spacing: .06em; text-transform: uppercase; padding: 2px 6px; border: 1px solid var(--border-hairline); border-radius: var(--radius-xs); color: var(--text-secondary); white-space: nowrap; font-style: normal; }
+.fd-tag[data-tone="accent"]   { color: var(--accent);   border-color: rgba(12,107,90,.30); }
+.fd-tag[data-tone="warning"]  { color: var(--warning);  border-color: rgba(192,133,43,.34); }
+.fd-tag[data-tone="info"]     { color: var(--info);     border-color: rgba(62,108,168,.32); }
+.fd-tag[data-tone="critical"] { color: var(--critical); border-color: rgba(194,78,62,.32); }
+.fd-tag[data-tone="slate"]    { color: #5B7383;         border-color: rgba(91,115,131,.30); }
+.fd-tag[data-fill="true"]     { background: color-mix(in srgb, currentColor 9%, transparent); }
+
+/* Segmented filter: one row of 28px controls, active = ink fill. */
+.fd-seg { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border-radius: var(--radius-sm); border: 1px solid var(--border-hairline); background: var(--bg-surface); color: var(--text-secondary); font: inherit; font-size: 11.5px; cursor: pointer; white-space: nowrap; transition: background var(--motion-fast), color var(--motion-fast), border-color var(--motion-fast); }
+.fd-seg:hover { background: var(--bg-elevated); color: var(--text-primary); }
+.fd-seg[aria-pressed="true"], .fd-seg[data-on="true"] { background: var(--text-primary); color: var(--bg-surface); border-color: var(--text-primary); }
+.fd-seg i { font-style: normal; font-family: var(--font-mono); font-size: 9.5px; opacity: .7; }
+
+/* Buttons: 32px controls, 6px corners. One primary per surface. */
+.fd-btn { display: inline-flex; align-items: center; gap: 7px; height: 32px; padding: 0 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-hairline); background: var(--bg-surface); color: var(--text-primary); font: inherit; font-size: 12.5px; cursor: pointer; white-space: nowrap; text-decoration: none; transition: background var(--motion-fast), border-color var(--motion-fast); }
+.fd-btn:hover { background: var(--bg-elevated); }
+.fd-btn:disabled { opacity: .5; cursor: default; }
+.fd-btn-primary { display: inline-flex; align-items: center; gap: 7px; height: 32px; padding: 0 14px; border-radius: var(--radius-sm); border: 1px solid transparent; background: var(--accent); color: var(--accent-on); font: inherit; font-size: 12.5px; font-weight: 500; cursor: pointer; white-space: nowrap; text-decoration: none; transition: background var(--motion-fast); }
+.fd-btn-primary:hover { background: var(--accent-hover); }
+.fd-btn-primary:disabled { opacity: .55; cursor: default; }
+.fd-input { height: 32px; padding: 0 10px; border-radius: var(--radius-sm); border: 1px solid var(--border-hairline); background: var(--bg-surface); font: inherit; font-size: 12.5px; color: var(--text-primary); outline: none; transition: border-color var(--motion-fast), box-shadow var(--motion-fast); }
+.fd-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-tint); }
+
+/* Data table: hairline rows, eyebrow header, mono figures right-aligned. */
+.fd-table { width: 100%; border-collapse: collapse; }
+.fd-table th { text-align: left; font-size: 11px; line-height: 1.2; letter-spacing: .08em; font-weight: 500; text-transform: uppercase; color: var(--text-tertiary); padding: 8px 12px; border-bottom: 1px solid var(--border-hairline); white-space: nowrap; }
+.fd-table td { padding: 10px 12px; border-bottom: 1px solid var(--border-hairline); font-size: 13px; vertical-align: middle; }
+.fd-table tr:last-child td { border-bottom: none; }
+.fd-table th.num, .fd-table td.num { text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.fd-table tbody tr { transition: background-color var(--motion-fast); }
+.fd-table tbody tr:hover { background: var(--bg-page); }
+
+/* Selectable row (rosters, lists): ink bar on the active item, no fill pill. */
+.fd-row { transition: background-color var(--motion-fast); cursor: pointer; outline: none; }
+.fd-row:hover { background: var(--bg-elevated); }
+.fd-row[data-on="true"], .fd-row[data-active="true"] { background: var(--bg-elevated); box-shadow: inset 2px 0 0 var(--accent); }
+.fd-row:focus-visible { box-shadow: inset 2px 0 0 var(--accent), inset 0 0 0 1px var(--accent-tint); }
+
+/* Thin track bar for any 0–100 signal. */
+.fd-bar { height: 4px; border-radius: 2px; background: var(--score-track); overflow: hidden; }
+.fd-bar > i { display: block; height: 100%; border-radius: 2px; background: var(--accent); }
+
+@keyframes fd-fade { from { opacity: 0 } to { opacity: 1 } }
+@keyframes fd-pulse { 0%, 100% { opacity: 1 } 50% { opacity: .3 } }
 
 /* ════════════════════════════════════════════════════════════════════
    SHELL UTILITY CLASSES

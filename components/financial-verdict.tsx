@@ -63,10 +63,10 @@ export function FinancialVerdict({ grantId }: { grantId: string }) {
   const blockers = data?.requirementChecks.filter(c => c.status === 'blocker').length ?? 0;
 
   return (
-    <div className="bg-white rounded-xl border border-[#e2e8f0] shadow-card overflow-hidden">
+    <div className="bg-white rounded-md border border-[#e2e8f0] shadow-card overflow-hidden">
       {/* Header */}
       <div className="px-5 py-3.5 border-b border-[#e2e8f0] bg-[#f8fafc] flex items-center gap-2">
-        <div className="w-6 h-6 rounded-[5px] flex items-center justify-center"
+        <div className="w-6 h-6 rounded-sm flex items-center justify-center"
           style={{ background: 'linear-gradient(135deg, #0d9488, #0891b2)' }}>
           <Sparkles className="w-3.5 h-3.5 text-white" />
         </div>
@@ -90,7 +90,7 @@ export function FinancialVerdict({ grantId }: { grantId: string }) {
         )}
 
         {error && !loading && (
-          <div className="flex items-start gap-2 p-3 rounded-lg bg-[#fef2f2] border border-[#fecaca]">
+          <div className="flex items-start gap-2 p-3 rounded-md bg-[#fef2f2] border border-[#fecaca]">
             <XCircle className="w-4 h-4 text-[#dc2626] flex-shrink-0 mt-0.5" />
             <p className="text-[12px] text-[#991b1b]">{error}</p>
           </div>
@@ -99,7 +99,7 @@ export function FinancialVerdict({ grantId }: { grantId: string }) {
         {data && !loading && (
           <>
             {data.message && (
-              <div className="flex items-start gap-2 p-3 rounded-lg bg-[#f8fafc] border border-[#e2e8f0]">
+              <div className="flex items-start gap-2 p-3 rounded-md bg-[#f8fafc] border border-[#e2e8f0]">
                 <Info className="w-4 h-4 text-[#64748b] flex-shrink-0 mt-0.5" />
                 <p className="text-[12px] text-[#475569]">{data.message}</p>
               </div>
@@ -107,7 +107,7 @@ export function FinancialVerdict({ grantId }: { grantId: string }) {
 
             {/* AI verdict */}
             {data.verdict && (
-              <div className="rounded-lg border border-[#0d9488]/25 overflow-hidden">
+              <div className="rounded-md border border-[#0d9488]/25 overflow-hidden">
                 <div className="px-4 py-3" style={{ background: 'linear-gradient(135deg, #f0fdfa, #ecfeff)' }}>
                   <p className="text-[10px] font-bold text-[#0d9488] uppercase tracking-widest mb-1">Bottom Line</p>
                   <p className="text-[12.5px] text-[#0f172a] leading-relaxed font-medium">{data.verdict.bottomLine}</p>
@@ -152,7 +152,7 @@ export function FinancialVerdict({ grantId }: { grantId: string }) {
                   {data.requirementChecks.map((c, i) => {
                     const cfg = CHECK_CFG[c.status];
                     return (
-                      <div key={i} className="rounded-lg border p-3" style={{ borderColor: cfg.border, background: cfg.bg }}>
+                      <div key={i} className="rounded-md border p-3" style={{ borderColor: cfg.border, background: cfg.bg }}>
                         <div className="flex items-start gap-2">
                           <cfg.Icon className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" style={{ color: cfg.color }} />
                           <div className="min-w-0">

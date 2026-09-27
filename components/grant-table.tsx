@@ -368,7 +368,7 @@ function GrantSidePanel({ match, onClose, stageOverrides, onStageChange }: Grant
           </div>
           <Link
             href={`/grant/${match.grant_id}`}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-[7px] text-[12px] font-bold text-white transition-opacity hover:opacity-90"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-sm text-[12px] font-bold text-white transition-opacity hover:opacity-90"
             style={{ background: 'linear-gradient(135deg, #0d9488, #0891b2)' }}
           >
             Full Analysis <ExternalLink className="w-3.5 h-3.5" />
@@ -503,7 +503,7 @@ export function GrantTable({ matches, emptyMessage = 'No grants found.' }: Grant
   );
 
   return (
-    <div className="bg-white rounded-xl border border-[#e2e8f0] overflow-hidden shadow-card">
+    <div className="bg-white rounded-md border border-[#e2e8f0] overflow-hidden shadow-card">
       {/* Toolbar */}
       <div className="px-4 py-3 border-b border-[#e2e8f0] bg-[#f8fafc]">
         <div className="flex items-center gap-3 flex-wrap">

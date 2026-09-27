@@ -20,7 +20,7 @@ import {
   Table2, Landmark, Users, BarChart3, AlertCircle, Loader2, Check, Plus, ExternalLink,
 } from 'lucide-react';
 
-const SERIF = "'Instrument Serif',Palatino,Georgia,serif";
+const SERIF = 'var(--font-display)';
 
 interface HubDoc {
   id: string; name: string; size: number;
@@ -245,7 +245,7 @@ export function DataHubView({ orgName, userEmail }: { orgName: string; userEmail
         <InstrumentlCard />
         <CultivationCard />
         <GrantCalendarCard />
-        <div className="bg-surface border border-hairline rounded-xl p-8 text-center">
+        <div className="bg-surface border border-hairline rounded-md p-8 text-center">
           <UploadCloud className="w-8 h-8 text-tertiary mx-auto mb-4" />
           <h2 className="text-[17px] font-semibold text-primary mb-2">Document storage needs Microsoft 365</h2>
           <p className="text-[13px] text-secondary mb-5">
@@ -278,7 +278,7 @@ export function DataHubView({ orgName, userEmail }: { orgName: string; userEmail
           </div>
           <button
             onClick={() => setUploadOpen(true)}
-            className="inline-flex items-center gap-2 h-10 px-4 rounded-xl bg-accent text-white text-[12.5px] font-medium hover:bg-accent-hover transition-colors"
+            className="inline-flex items-center gap-2 h-10 px-4 rounded-md bg-accent text-white text-[12.5px] font-medium hover:bg-accent-hover transition-colors"
           >
             <Upload className="w-3.5 h-3.5" />
             Upload files
@@ -287,7 +287,7 @@ export function DataHubView({ orgName, userEmail }: { orgName: string; userEmail
 
         {/* ── Toolbar ── */}
         <div className="flex items-center gap-2.5 mb-5 flex-wrap">
-          <label className="flex-1 min-w-0 max-w-[460px] flex items-center gap-2.5 bg-surface border border-hairline rounded-xl px-3 h-[38px]">
+          <label className="flex-1 min-w-0 max-w-[460px] flex items-center gap-2.5 bg-surface border border-hairline rounded-md px-3 h-[38px]">
             <Search className="w-3.5 h-3.5 text-tertiary flex-none" />
             <input
               value={query}
@@ -296,7 +296,7 @@ export function DataHubView({ orgName, userEmail }: { orgName: string; userEmail
               className="flex-1 min-w-0 border-none bg-transparent outline-none text-[13px] text-primary h-full"
             />
           </label>
-          <button className="inline-flex items-center gap-2 h-[38px] px-3.5 rounded-xl border border-hairline bg-surface text-secondary text-[12.5px] hover:bg-elevated transition-colors">
+          <button className="inline-flex items-center gap-2 h-[38px] px-3.5 rounded-md border border-hairline bg-surface text-secondary text-[12.5px] hover:bg-elevated transition-colors">
             <SlidersHorizontal className="w-3.5 h-3.5" />
             Filter
           </button>
@@ -319,7 +319,7 @@ export function DataHubView({ orgName, userEmail }: { orgName: string; userEmail
         </div>
 
         {error && (
-          <div className="mb-5 px-4 py-3 rounded-xl border border-hairline bg-surface text-[12.5px] text-critical">{error}</div>
+          <div className="mb-5 px-4 py-3 rounded-md border border-hairline bg-surface text-[12.5px] text-critical">{error}</div>
         )}
 
         <div data-hub-cols className="grid gap-5 items-start" style={{ gridTemplateColumns: 'minmax(0,1fr) 344px' }}>
@@ -335,9 +335,9 @@ export function DataHubView({ orgName, userEmail }: { orgName: string; userEmail
               </div>
               <div data-hub-folders className="grid gap-3" style={{ gridTemplateColumns: 'repeat(4,minmax(0,1fr))' }}>
                 {counts.map(c => (
-                  <div key={c.key} className="bg-surface border border-hairline rounded-[14px] p-[14px_15px]">
+                  <div key={c.key} className="bg-surface border border-hairline rounded-md p-[14px_15px]">
                     <div className="flex items-start justify-between mb-6">
-                      <span className="w-[30px] h-[30px] rounded-[7px] flex items-center justify-center" style={{ background: c.tint }}>
+                      <span className="w-[30px] h-[30px] rounded-sm flex items-center justify-center" style={{ background: c.tint }}>
                         <c.icon className="w-[15px] h-[15px]" style={{ color: c.color }} />
                       </span>
                     </div>
@@ -360,7 +360,7 @@ export function DataHubView({ orgName, userEmail }: { orgName: string; userEmail
 
             {/* ── Reading now (real upload + indexing) ── */}
             {queue.length > 0 && (
-              <div className="bg-surface border border-hairline rounded-[14px] overflow-hidden" style={{ animation: 'fd-fade .3s ease' }}>
+              <div className="bg-surface border border-hairline rounded-md overflow-hidden" style={{ animation: 'fd-fade .3s ease' }}>
                 <div className="flex items-center gap-2.5 px-[18px] py-3.5 border-b border-hairline">
                   <i className="w-[5px] h-[5px] rounded-full bg-accent flex-none" style={{ animation: 'fd-pulse 1.6s ease-in-out infinite' }} />
                   <span className="fd-eyebrow text-secondary">Reading now</span>
@@ -388,7 +388,7 @@ export function DataHubView({ orgName, userEmail }: { orgName: string; userEmail
                     {f.signals.length > 0 && (
                       <div className="flex flex-wrap gap-1.5 mt-2.5">
                         {f.signals.map((s, i) => (
-                          <span key={i} className="font-mono text-[9.5px] uppercase tracking-[.06em] text-accent border rounded-[3px] px-[7px] py-[3px]"
+                          <span key={i} className="font-mono text-[9.5px] uppercase tracking-[.06em] text-accent border rounded-xs px-[7px] py-[3px]"
                                 style={{ borderColor: 'rgba(12,107,90,.24)', animation: 'fd-fade .3s ease' }}>{s}</span>
                         ))}
                       </div>
@@ -399,7 +399,7 @@ export function DataHubView({ orgName, userEmail }: { orgName: string; userEmail
             )}
 
             {/* ── Recent documents ── */}
-            <div className="bg-surface border border-hairline rounded-[14px] pt-[18px] pb-1">
+            <div className="bg-surface border border-hairline rounded-md pt-[18px] pb-1">
               <div className="flex items-baseline justify-between gap-3 px-5 pb-3.5">
                 <div>
                   <h2 className="text-[17px] font-semibold text-primary">Recent documents</h2>
@@ -474,7 +474,7 @@ export function DataHubView({ orgName, userEmail }: { orgName: string; userEmail
           {/* ── Rail ── */}
           <div data-hub-rail className="sticky top-[68px] flex flex-col gap-5 min-w-0">
 
-            <div className="bg-surface border border-hairline rounded-[14px] p-[18px]">
+            <div className="bg-surface border border-hairline rounded-md p-[18px]">
               <div className="flex items-center gap-2.5 mb-1.5">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src="/fundir-mark.png" alt="" className="w-5 h-5 object-contain flex-none" />
@@ -485,7 +485,7 @@ export function DataHubView({ orgName, userEmail }: { orgName: string; userEmail
               <p className="mt-0 mb-4 text-[12.5px] leading-relaxed text-tertiary">
                 What Fundir has learned from the corpus. Every grant answer and metric suggestion draws on this.
               </p>
-              <div className="flex flex-col gap-px border border-hairline rounded-xl overflow-hidden mb-3.5" style={{ background: 'var(--border-hairline)' }}>
+              <div className="flex flex-col gap-px border border-hairline rounded-md overflow-hidden mb-3.5" style={{ background: 'var(--border-hairline)' }}>
                 <RailStat label="Documents read"   value={corpus.documents} />
                 <RailStat label="Passages indexed" value={corpus.chunks} />
                 <RailStat label="Metric entries"   value={rows.length} />
@@ -495,7 +495,7 @@ export function DataHubView({ orgName, userEmail }: { orgName: string; userEmail
               <a href="/org" className="fd-eyebrow text-accent no-underline">Open full profile →</a>
             </div>
 
-            <div className="bg-surface border border-hairline rounded-[14px] p-[18px]">
+            <div className="bg-surface border border-hairline rounded-md p-[18px]">
               <div className="flex items-center gap-2.5 mb-1.5">
                 <AlertCircle className="w-[15px] h-[15px] flex-none" style={{ color: '#9C7A2A' }} />
                 <span className="fd-eyebrow text-secondary">Gaps worth filling</span>
@@ -520,7 +520,7 @@ export function DataHubView({ orgName, userEmail }: { orgName: string; userEmail
               )}
             </div>
 
-            <div className="bg-surface border border-hairline rounded-[14px] p-[18px]">
+            <div className="bg-surface border border-hairline rounded-md p-[18px]">
               <span className="fd-eyebrow text-secondary block mb-3">Storage</span>
               <div className="flex items-baseline gap-2 mb-1">
                 <b className="font-mono text-[20px] font-semibold tabular-nums text-primary">{fmtSize(totalBytes)}</b>
@@ -538,7 +538,7 @@ export function DataHubView({ orgName, userEmail }: { orgName: string; userEmail
           <button aria-label="Close" onClick={() => setUploadOpen(false)}
                   className="absolute inset-0 bg-black/40 backdrop-blur-[3px]" style={{ animation: 'fd-fade .22s ease' }} />
           <div role="dialog" aria-modal="true" aria-label="Upload files"
-               className="relative w-full max-w-[540px] bg-surface border border-hairline rounded-[14px] max-h-[calc(100vh-48px)] overflow-y-auto"
+               className="relative w-full max-w-[540px] bg-surface border border-hairline rounded-md max-h-[calc(100vh-48px)] overflow-y-auto"
                style={{ boxShadow: '0 24px 60px rgba(16,25,23,.20)', animation: 'fd-rise .26s cubic-bezier(.2,.8,.3,1)' }}>
             <div className="flex items-start justify-between gap-4 px-[22px] pt-5">
               <div>
@@ -558,7 +558,7 @@ export function DataHubView({ orgName, userEmail }: { orgName: string; userEmail
               <label
                 onDragOver={e => e.preventDefault()}
                 onDrop={e => { e.preventDefault(); const f = [...e.dataTransfer.files]; if (f.length) uploadFiles(f); }}
-                className="block border border-dashed rounded-xl px-5 py-[30px] text-center cursor-pointer bg-page"
+                className="block border border-dashed rounded-md px-5 py-[30px] text-center cursor-pointer bg-page"
                 style={{ borderColor: 'var(--border-hairline)' }}
               >
                 <input ref={fileRef} type="file" multiple className="hidden"
@@ -580,11 +580,11 @@ export function DataHubView({ orgName, userEmail }: { orgName: string; userEmail
               <div className="flex items-center gap-2.5 mt-5">
                 <span className="flex-1" />
                 <button onClick={() => setUploadOpen(false)}
-                        className="h-[38px] px-4 rounded-xl border border-hairline bg-surface text-primary text-[12.5px] hover:bg-elevated transition-colors">
+                        className="h-[38px] px-4 rounded-md border border-hairline bg-surface text-primary text-[12.5px] hover:bg-elevated transition-colors">
                   Cancel
                 </button>
                 <button onClick={() => fileRef.current?.click()}
-                        className="h-[38px] px-[18px] rounded-xl bg-accent text-white text-[12.5px] font-medium hover:bg-accent-hover transition-colors">
+                        className="h-[38px] px-[18px] rounded-md bg-accent text-white text-[12.5px] font-medium hover:bg-accent-hover transition-colors">
                   Choose files
                 </button>
               </div>
@@ -636,7 +636,7 @@ function MetricForm({
   const input = 'w-full h-9 px-2.5 rounded-md border border-hairline bg-surface text-[13px] text-primary focus:outline-none focus:ring-2 focus:ring-accent/30';
 
   return (
-    <div className="bg-surface border border-hairline rounded-[14px] overflow-hidden">
+    <div className="bg-surface border border-hairline rounded-md overflow-hidden">
       <div className="flex items-center gap-3 px-5 py-4 border-b border-hairline">
         <div className="min-w-0 flex-1">
           <h2 className="text-[17px] font-semibold text-primary">Submit a metric</h2>
@@ -727,9 +727,8 @@ function Th({ children, hide, className = '' }: { children: React.ReactNode; hid
 }
 
 const CSS = `
-.dh-root{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif}
-.dh-root .fd-eyebrow{font-size:11px;line-height:1.2;letter-spacing:.08em;font-weight:600;text-transform:uppercase}
-@keyframes fd-pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.dh-root{font-family:var(--font-sans)}
+.dh-root @keyframes fd-pulse{0%,100%{opacity:1}50%{opacity:.3}}
 @keyframes fd-fade{from{opacity:0}to{opacity:1}}
 @keyframes fd-rise{from{opacity:0;transform:translateY(10px) scale(.99)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){.dh-root *{animation-duration:.01ms!important}}
