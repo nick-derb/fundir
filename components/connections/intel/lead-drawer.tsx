@@ -13,7 +13,7 @@ import { X, ChevronUp, ChevronDown, ExternalLink, Map as MapIcon, Sparkles, Shie
 import type { LeadDetail, PipelineState } from '@/lib/network/queries';
 import type { Explanation } from '@/lib/network/explain';
 import { PathRail } from './path-rail';
-import { GraphCanvas } from './graph-canvas';
+import { MapGraph } from './map-graph';
 import type { GraphPayload } from '@/lib/network/queries';
 import { SERIF, MONO, ScoreRing, ConfChip, TypeChip, StatusChip, Eyebrow, SectionRule, Skeleton, STATUS_LABEL, fmtDate, hueFor, typeLabel, initialsOf, AMBER } from './shared';
 import { ReasonDialog, type TeamMember } from './pipeline-view';
@@ -178,7 +178,7 @@ export function LeadDrawer({ leadId, onClose, onStep, onOpenMap, onChanged, read
               <>
                 <SectionRule label="Around this organization" right={lead.target && <button type="button" className="ni-ghost" style={{ height: 24, fontSize: 11, padding: '0 8px' }} onClick={() => onOpenMap?.({ kind: 'org', id: lead.target!.id })}><MapIcon style={{ width: 11, height: 11 }} />Open in map</button>} />
                 <div className="ni-card" style={{ overflow: 'hidden', borderRadius: 'var(--radius)' }}>
-                  <GraphCanvas data={graph} height={220} compact onActivate={n => n.rowId && onOpenMap?.({ kind: n.kind, id: n.rowId })} />
+                  <MapGraph data={graph} height={220} compact onActivate={n => n.rowId && onOpenMap?.({ kind: n.kind, id: n.rowId })} />
                 </div>
               </>
             )}
