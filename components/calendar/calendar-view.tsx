@@ -83,7 +83,8 @@ const pad = (n: number) => String(n).padStart(2, '0');
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const MON_ABBR = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const DOWS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-const MAXV = 2;
+const MAXV = 2;          // month cells
+const MAX_ALLDAY = 4;    // week all-day band, per day
 
 interface Cell {
   n: number; out: boolean; isToday: boolean;
@@ -390,20 +391,27 @@ function Schedule({ days, byDay, todayISO, keyOf, single, onPickDay }: {
           ))}
         </div>
       </div>
-      {/* all-day / deadline band */}
+      {/* all-day / deadline band — the week shows a few per day and hands the rest to Day view */}
       <div className="cv-sched">
         <div className="fd-eyebrow" style={{ padding: '8px 6px 0 0', textAlign: 'right', color: 'var(--text-tertiary)', fontSize: 8.5, borderBottom: '1px solid var(--border-hairline)' }}>All day</div>
         <div className="cv-allday" style={{ gridTemplateColumns: gridCols }}>
-          {cols.map(c => (
-            <div key={c.key}>
-              {c.untimed.map((e, j) => (
-                <div key={j} className="cv-ev" data-kind={e.kind} title={`${e.title} · ${e.time}`}>
-                  <b>{e.title}</b>
-                  <span>{e.time}{e.kind === 'grant' && !/due/i.test(e.time) ? ' · deadline' : ''}</span>
-                </div>
-              ))}
-            </div>
-          ))}
+          {cols.map(c => {
+            const shown = single ? c.untimed : c.untimed.slice(0, MAX_ALLDAY);
+            const more = c.untimed.length - shown.length;
+            return (
+              <div key={c.key}>
+                {shown.map((e, j) => (
+                  <div key={j} className="cv-ev" data-kind={e.kind} title={`${e.title} · ${e.time}`}>
+                    <b>{e.title}</b>
+                    <span>{e.time}{e.kind === 'grant' && !/due/i.test(e.time) ? ' · deadline' : ''}</span>
+                  </div>
+                ))}
+                {more > 0 && (
+                  <button type="button" onClick={() => onPickDay?.(c.d)} className="fd-mono" style={{ border: 'none', background: 'none', padding: '2px 0', fontSize: 9.5, color: 'var(--accent)', cursor: 'pointer', textAlign: 'left', font: 'inherit', fontFamily: 'var(--font-mono)' }}>{more} more…</button>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
       {/* hour grid */}

@@ -75,7 +75,7 @@ export function FinancialVerdict({ grantId }: { grantId: string }) {
           <p className="text-[10px] text-[#94a3b8]">Your 990 tested against this grant&apos;s financial bar</p>
         </div>
         {blockers > 0 && (
-          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#fef2f2] text-[#dc2626] border border-[#fecaca]">
+          <span className="text-[10px] font-bold px-2 py-0.5 rounded-sm bg-[#fef2f2] text-[#dc2626] border border-[#fecaca]">
             {blockers} blocker{blockers > 1 ? 's' : ''}
           </span>
         )}
@@ -158,7 +158,7 @@ export function FinancialVerdict({ grantId }: { grantId: string }) {
                           <div className="min-w-0">
                             <div className="flex items-center gap-2 flex-wrap mb-0.5">
                               <span className="text-[11.5px] font-bold text-[#0f172a]">{c.requirement}</span>
-                              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full"
+                              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-sm"
                                 style={{ color: cfg.color, background: '#ffffff', border: `1px solid ${cfg.border}` }}>
                                 {cfg.label}
                               </span>
