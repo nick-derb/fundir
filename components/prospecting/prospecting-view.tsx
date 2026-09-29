@@ -9,8 +9,6 @@ import { IrsReplaceModal } from '@/components/prospecting/irs-replace-modal';
 // / cyc_funder_prospects / cyc_peer_orgs / irs_bmf_il) and the real Instrumentl
 // win/loss history from cyc_grant_submissions.
 
-const SERIF = 'var(--font-display)';
-
 export interface Sheet {
   key: string; label: string; total: string; locked: boolean; note: string;
   cols: string[]; lock: number[] | 'all'; rows: string[][];
@@ -22,11 +20,21 @@ export interface InstrumentlSummary {
 
 const CSS = `
 .pr-root{color:var(--text-primary);background:var(--bg-page)}
-@keyframes pr-fade{from{opacity:0}to{opacity:1}}
-@keyframes pr-rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
-@keyframes pr-spin{to{transform:rotate(360deg)}}
-@media (max-width:1240px){.pr-root [data-pr-cols]{grid-template-columns:minmax(0,1fr)!important}}
-@media (max-width:820px){.pr-root [data-pr-meta]{display:none!important}}
+.pr-root .pr-tabs{display:flex;align-items:stretch;border-bottom:1px solid var(--border-hairline);overflow-x:auto;background:var(--bg-page)}
+.pr-root .pr-tab{flex:none;border:none;background:none;font:inherit;cursor:pointer;padding:0}
+.pr-root .pr-tab > span{display:flex;align-items:center;gap:7px;padding:10px 14px;white-space:nowrap;font-size:12.5px;border-bottom:2px solid transparent;color:var(--text-tertiary)}
+.pr-root .pr-tab[aria-selected="true"] > span{background:var(--bg-surface);border-bottom-color:var(--accent);color:var(--text-primary);font-weight:500}
+.pr-root .pr-tab i{font-style:normal;font-family:var(--font-mono);font-size:9.5px;color:var(--text-tertiary)}
+.pr-root .pr-grid th{position:sticky;top:0;z-index:2;text-align:left;font-weight:500;color:var(--text-secondary);background:var(--bg-elevated);border-right:1px solid var(--border-hairline);border-bottom:1px solid var(--border-hairline);padding:8px 10px;white-space:nowrap}
+.pr-root .pr-grid td{border-right:1px solid var(--border-hairline);border-bottom:1px solid var(--border-hairline);padding:7px 10px;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}
+.pr-root .pr-grid td[data-locked="true"]{font-family:var(--font-mono);font-variant-numeric:tabular-nums;font-size:11.5px;color:var(--text-secondary);background:var(--bg-page)}
+.pr-root .pr-grid .pr-n{position:sticky;left:0;z-index:1;width:44px;text-align:center;font-family:var(--font-mono);font-size:9.5px;color:var(--text-tertiary);background:var(--bg-elevated)}
+.pr-root .pr-grid thead .pr-n{z-index:3}
+.pr-root .pr-cols{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:16px;align-items:start}
+.pr-root .pr-step{display:grid;grid-template-columns:22px minmax(0,1fr);gap:8px;padding:9px 0;border-bottom:1px solid var(--border-hairline);font-size:12.5px;line-height:1.5;color:var(--text-secondary)}
+.pr-root .pr-step:last-child{border-bottom:none}
+@media (max-width:1240px){.pr-root .pr-cols{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:820px){.pr-root .pr-meta-note{display:none}}
 `;
 
 export function ProspectingView({ sheets, instrumentl, bmfTotal, rowLimit, canReplace }: {
@@ -35,98 +43,77 @@ export function ProspectingView({ sheets, instrumentl, bmfTotal, rowLimit, canRe
   const [active, setActive] = useState(sheets[0]?.key ?? 'cultivation');
   const [replaceOpen, setReplaceOpen] = useState(false);
 
-
   const sheet = sheets.find(s => s.key === active) ?? sheets[0];
   const lockAll = sheet.lock === 'all';
   const lockSet = lockAll ? null : new Set(sheet.lock as number[]);
   const shown = sheet.rows.length;
   const lockedSheets = sheets.filter(s => s.locked);
 
-  const card: React.CSSProperties = { background: 'var(--bg-surface)', border: '1px solid var(--border-hairline)', borderRadius: 'var(--radius-console)' };
-
   return (
-    <div className="pr-root" style={{ padding: '24px 26px 40px' }}>
+    <div className="pr-root" style={{ padding: '22px 24px 40px' }}>
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
 
       {/* header */}
-      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 24, flexWrap: 'wrap', marginBottom: 20 }}>
+      <div className="fd-page-head">
         <div style={{ minWidth: 0 }}>
-          <p className="fd-eyebrow" style={{ color: 'var(--text-tertiary)', margin: '0 0 9px' }}>Chicago Youth Centers</p>
-          <h1 style={{ fontFamily: SERIF, fontWeight: 400, fontSize: 'clamp(1.9rem,3vw,2.5rem)', lineHeight: 1.04, letterSpacing: '-.018em', margin: 0 }}>Prospecting</h1>
-          <p style={{ margin: '9px 0 0', fontSize: 13.5, lineHeight: 1.6, color: 'var(--text-secondary)', maxWidth: '62ch' }}>
-            One workbook, shared by everyone at CYC. The IRS sheets are replaced wholesale each release without touching your own columns.
-          </p>
+          <p className="fd-eyebrow" style={{ color: 'var(--text-tertiary)', margin: '0 0 8px' }}>Chicago Youth Centers</p>
+          <h1>Prospecting</h1>
+          <p className="fd-lede">One workbook, shared by everyone at CYC. IRS sheets are replaced each release; your own columns stay put.</p>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <button onClick={() => setReplaceOpen(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, height: 40, padding: '0 15px', borderRadius: 'var(--radius-kpi)', border: '1px solid var(--border-hairline)', background: 'var(--bg-surface)', color: 'var(--text-primary)', font: 'inherit', fontSize: 12.5, cursor: 'pointer', whiteSpace: 'nowrap' }}><RefreshCw style={{ width: 13, height: 13 }} />Replace IRS data</button>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, height: 40, padding: '0 18px', borderRadius: 'var(--radius-kpi)', background: 'var(--accent)', color: '#fff', fontSize: 12.5, fontWeight: 500, whiteSpace: 'nowrap', opacity: 0.9 }}><Download style={{ width: 13, height: 13 }} />Export .xlsx</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <button className="fd-btn" onClick={() => setReplaceOpen(true)}><RefreshCw style={{ width: 13, height: 13 }} />Replace IRS data</button>
+          <span className="fd-btn-primary" style={{ opacity: 0.9 }}><Download style={{ width: 13, height: 13 }} />Export .xlsx</span>
         </div>
       </div>
 
       {/* workbook */}
-      <div style={{ ...card, overflow: 'hidden', marginBottom: 20 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderBottom: '1px solid var(--border-hairline)', flexWrap: 'wrap' }}>
-          <Table2 style={{ width: 15, height: 15, color: 'var(--accent)', flex: 'none' }} />
+      <div className="fd-card" style={{ overflow: 'hidden', marginBottom: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px', borderBottom: '1px solid var(--border-hairline)', flexWrap: 'wrap' }}>
+          <Table2 style={{ width: 14, height: 14, color: 'var(--accent)', flex: 'none' }} />
           <b style={{ fontSize: 13.5, fontWeight: 500, letterSpacing: '-.005em' }}>Funder Prospecting Master File</b>
-          <span className="fd-mono" style={{ fontSize: 9.5, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--text-secondary)', border: '1px solid var(--border-hairline)', borderRadius: 3, padding: '3px 7px' }}>eo_il.xlsx</span>
+          <span className="fd-tag" data-tone="slate">eo_il.xlsx</span>
           <span style={{ flex: 1 }} />
           <span className="fd-mono" style={{ fontSize: 10.5, color: 'var(--text-tertiary)', whiteSpace: 'nowrap' }}>All changes saved</span>
           <span className="fd-eyebrow" style={{ color: 'var(--text-tertiary)', whiteSpace: 'nowrap' }}>Shared with everyone at CYC</span>
         </div>
 
         {/* tabs */}
-        <div style={{ display: 'flex', alignItems: 'stretch', borderBottom: '1px solid var(--border-hairline)', overflowX: 'auto', background: 'var(--bg-page)' }}>
-          {sheets.map(s => {
-            const on = s.key === active;
-            return (
-              <button key={s.key} onClick={() => setActive(s.key)} style={{ flex: 'none', border: 'none', background: 'none', font: 'inherit', cursor: 'pointer', padding: 0 }}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '10px 15px', whiteSpace: 'nowrap', fontSize: 12.5,
-                  ...(on ? { background: 'var(--bg-surface)', borderBottom: '2px solid var(--accent)', color: 'var(--text-primary)', fontWeight: 500 }
-                         : { borderBottom: '2px solid transparent', color: 'var(--text-tertiary)' }) }}>
-                  {s.label}<i className="fd-mono" style={{ fontStyle: 'normal', fontSize: 9, color: 'var(--text-tertiary)', opacity: on ? 1 : 0.7 }}>{s.total}</i>
-                </span>
-              </button>
-            );
-          })}
+        <div className="pr-tabs" role="tablist">
+          {sheets.map(s => (
+            <button key={s.key} role="tab" aria-selected={s.key === active} className="pr-tab" onClick={() => setActive(s.key)}>
+              <span>{s.label}<i>{s.total}</i></span>
+            </button>
+          ))}
         </div>
 
         {/* meta */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 16px', borderBottom: '1px solid var(--border-hairline)', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 14px', borderBottom: '1px solid var(--border-hairline)', flexWrap: 'wrap' }}>
           {sheet.locked
-            ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontFamily: 'var(--font-mono)', fontSize: 9.5, letterSpacing: '.06em', textTransform: 'uppercase', color: '#5B7383', border: '1px solid rgba(91,115,131,.3)', borderRadius: 3, padding: '3px 8px' }}><Lock style={{ width: 11, height: 11 }} />IRS source · replaced each release</span>
-            : <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontFamily: 'var(--font-mono)', fontSize: 9.5, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--accent)', border: '1px solid rgba(12,107,90,.26)', borderRadius: 3, padding: '3px 8px' }}><Pencil style={{ width: 11, height: 11 }} />Your columns · edit anytime</span>}
-          <span data-pr-meta className="fd-caption" style={{ color: 'var(--text-tertiary)' }}>{sheet.note}</span>
+            ? <span className="fd-tag" data-tone="slate"><Lock style={{ width: 10, height: 10 }} />IRS source · replaced each release</span>
+            : <span className="fd-tag" data-tone="accent"><Pencil style={{ width: 10, height: 10 }} />Your columns · edit anytime</span>}
+          <span className="pr-meta-note fd-caption" style={{ color: 'var(--text-tertiary)' }}>{sheet.note}</span>
           <span style={{ flex: 1 }} />
           <span className="fd-mono" style={{ fontSize: 10, color: 'var(--text-tertiary)', whiteSpace: 'nowrap' }}>{sheet.total} rows × {sheet.cols.length} cols</span>
         </div>
 
         {/* table */}
         <div style={{ overflow: 'auto', maxHeight: 460 }}>
-          <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 900 }}>
+          <table className="pr-grid" style={{ borderCollapse: 'collapse', width: '100%', minWidth: 900 }}>
             <thead>
               <tr>
-                <th style={{ position: 'sticky', top: 0, left: 0, zIndex: 3, width: 44, background: 'var(--bg-elevated)', borderRight: '1px solid var(--border-hairline)', borderBottom: '1px solid var(--border-hairline)' }} />
-                {sheet.cols.map((c, i) => (
-                  <th key={i} className="fd-eyebrow" style={{ position: 'sticky', top: 0, zIndex: 2, textAlign: 'left', fontWeight: 500, color: 'var(--text-secondary)', background: 'var(--bg-elevated)', borderRight: '1px solid var(--border-hairline)', borderBottom: '1px solid var(--border-hairline)', padding: '8px 10px', whiteSpace: 'nowrap' }}>{c}</th>
-                ))}
+                <th className="pr-n" />
+                {sheet.cols.map((c, i) => <th key={i} className="fd-eyebrow">{c}</th>)}
               </tr>
             </thead>
             <tbody>
               {shown === 0 ? (
-                <tr><td colSpan={sheet.cols.length + 1} style={{ padding: '18px 14px', color: 'var(--text-tertiary)', fontSize: 13, borderBottom: '1px solid var(--border-hairline)' }}>No rows loaded for this sheet.</td></tr>
+                <tr><td colSpan={sheet.cols.length + 1} style={{ padding: '18px 14px', color: 'var(--text-tertiary)', fontSize: 13, whiteSpace: 'normal', maxWidth: 'none' }}>No rows loaded for this sheet.</td></tr>
               ) : sheet.rows.map((cells, ri) => (
                 <tr key={ri}>
-                  <td className="fd-mono" style={{ position: 'sticky', left: 0, zIndex: 1, width: 44, textAlign: 'center', fontSize: 9.5, color: 'var(--text-tertiary)', background: 'var(--bg-elevated)', borderRight: '1px solid var(--border-hairline)', borderBottom: '1px solid var(--border-hairline)' }}>{ri + 1}</td>
+                  <td className="pr-n">{ri + 1}</td>
                   {cells.map((text, ci) => {
                     const locked = lockAll || (lockSet?.has(ci) ?? false);
-                    return (
-                      <td key={ci} className={locked ? 'fd-mono' : undefined} style={{
-                        fontSize: locked ? 11.5 : 12, color: locked ? 'var(--text-secondary)' : 'var(--text-primary)',
-                        borderRight: '1px solid var(--border-hairline)', borderBottom: '1px solid var(--border-hairline)',
-                        padding: '7px 10px', maxWidth: 240, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                        background: locked ? 'var(--bg-page)' : undefined,
-                      }} title={text}>{text}</td>
-                    );
+                    return <td key={ci} data-locked={locked ? 'true' : undefined} title={text}>{text}</td>;
                   })}
                 </tr>
               ))}
@@ -134,86 +121,79 @@ export function ProspectingView({ sheets, instrumentl, bmfTotal, rowLimit, canRe
           </table>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 16px', borderTop: '1px solid var(--border-hairline)', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', borderTop: '1px solid var(--border-hairline)', flexWrap: 'wrap' }}>
           <span className="fd-eyebrow" style={{ color: 'var(--text-tertiary)' }}>Showing {shown.toLocaleString('en-US')} of {sheet.total} rows{sheet.total !== shown.toLocaleString('en-US') ? ` · first ${rowLimit}` : ''}</span>
           <span style={{ flex: 1 }} />
           <a href="/data" className="fd-eyebrow" style={{ color: 'var(--accent)', textDecoration: 'none', whiteSpace: 'nowrap' }}>Open in data hub →</a>
         </div>
       </div>
 
-      <div data-pr-cols style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 340px', gap: 20, alignItems: 'start' }}>
+      <div className="pr-cols">
 
         {/* Instrumentl history (real) */}
-        <div style={{ ...card, padding: '18px 20px', minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 14, marginBottom: 16, flexWrap: 'wrap' }}>
-            <div>
-              <div style={{ fontSize: 17, fontWeight: 600, letterSpacing: '-.01em' }}>Instrumentl history</div>
-              <p className="fd-caption" style={{ color: 'var(--text-tertiary)', margin: '4px 0 0' }}>Your real exported opportunities, read for what converts</p>
+        <div className="fd-card" style={{ minWidth: 0, overflow: 'hidden' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 14, padding: '14px 16px 12px', flexWrap: 'wrap' }}>
+            <div style={{ minWidth: 0 }}>
+              <div className="fd-h2">Instrumentl history</div>
+              <p className="fd-caption" style={{ color: 'var(--text-tertiary)', margin: '3px 0 0' }}>Your real exported opportunities, read for what converts</p>
             </div>
             <a href="/org" className="fd-eyebrow" style={{ color: 'var(--accent)', textDecoration: 'none', whiteSpace: 'nowrap' }}>Pull into profile →</a>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(132px,1fr))', gap: 12, marginBottom: 16 }}>
-            {[['Awarded', instrumentl.awarded], ['Declined', instrumentl.declined], ['Win rate', `${instrumentl.winRate}%`], ['Still open', instrumentl.open]].map(([label, val]) => (
-              <div key={label} style={{ border: '1px solid var(--border-hairline)', borderRadius: 'var(--radius-kpi)', padding: '12px 13px' }}>
-                <p className="fd-eyebrow" style={{ color: 'var(--text-tertiary)', margin: '0 0 7px' }}>{label}</p>
-                <b className="fd-kpi" style={{ fontSize: 20 }}>{val}</b>
-              </div>
-            ))}
+          <div className="fd-stats" style={{ padding: '0 16px', borderBottom: 'none' }}>
+            <div className="fd-stat"><span className="fd-eyebrow">Awarded</span><b>{instrumentl.awarded}</b></div>
+            <div className="fd-stat"><span className="fd-eyebrow">Declined</span><b>{instrumentl.declined}</b></div>
+            <div className="fd-stat" data-accent="true"><span className="fd-eyebrow">Win rate</span><b>{instrumentl.winRate}%</b></div>
+            <div className="fd-stat"><span className="fd-eyebrow">Still open</span><b>{instrumentl.open}</b></div>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 1, background: 'var(--border-hairline)', border: '1px solid var(--border-hairline)', borderRadius: 'var(--radius-kpi)', overflow: 'hidden' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '9px 12px', background: 'var(--bg-page)' }}>
-              <span className="fd-eyebrow" style={{ flex: 1, color: 'var(--text-tertiary)' }}>Project</span>
-              <span className="fd-eyebrow" style={{ width: 58, textAlign: 'right', color: 'var(--text-tertiary)' }}>Sent</span>
-              <span className="fd-eyebrow" style={{ width: 58, textAlign: 'right', color: 'var(--text-tertiary)' }}>Won</span>
-              <span className="fd-eyebrow" style={{ width: 52, textAlign: 'right', color: 'var(--text-tertiary)' }}>Rate</span>
-            </div>
-            {instrumentl.projects.length === 0 ? (
-              <div style={{ padding: '10px 12px', background: 'var(--bg-surface)', fontSize: 12.5, color: 'var(--text-tertiary)' }}>No decided or open applications yet.</div>
-            ) : instrumentl.projects.map(p => (
-              <div key={p.project} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', background: 'var(--bg-surface)' }}>
-                <span style={{ flex: 1, fontSize: 12.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={p.project}>{p.project}</span>
-                <span className="fd-mono" style={{ width: 58, textAlign: 'right', fontSize: 11.5, color: 'var(--text-secondary)' }}>{p.sent}</span>
-                <span className="fd-mono" style={{ width: 58, textAlign: 'right', fontSize: 11.5, color: 'var(--text-secondary)' }}>{p.won}</span>
-                <span className="fd-mono" style={{ width: 52, textAlign: 'right', fontSize: 11.5, color: 'var(--accent)' }}>{p.rate}%</span>
-              </div>
-            ))}
-          </div>
-          <p className="fd-caption" style={{ color: 'var(--text-tertiary)', margin: '13px 0 0' }}>Fundir reads this history for what actually converts, then weights new matches by your real foundation win rate.</p>
+          <table className="fd-table">
+            <thead>
+              <tr><th style={{ paddingLeft: 16 }}>Project</th><th className="num">Sent</th><th className="num">Won</th><th className="num" style={{ paddingRight: 16 }}>Rate</th></tr>
+            </thead>
+            <tbody>
+              {instrumentl.projects.length === 0 ? (
+                <tr><td colSpan={4} style={{ paddingLeft: 16, color: 'var(--text-tertiary)' }}>No decided or open applications yet.</td></tr>
+              ) : instrumentl.projects.map(p => (
+                <tr key={p.project}>
+                  <td style={{ paddingLeft: 16, maxWidth: 320, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={p.project}>{p.project}</td>
+                  <td className="num" style={{ color: 'var(--text-secondary)' }}>{p.sent}</td>
+                  <td className="num" style={{ color: 'var(--text-secondary)' }}>{p.won}</td>
+                  <td className="num" style={{ paddingRight: 16, color: 'var(--accent)' }}>{p.rate}%</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p className="fd-caption" style={{ color: 'var(--text-tertiary)', margin: 0, padding: '12px 16px', borderTop: '1px solid var(--border-hairline)' }}>Fundir reads this history for what actually converts, then weights new matches by your real foundation win rate.</p>
         </div>
 
-        {/* right column */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 20, minWidth: 0 }}>
-          <div style={{ ...card, padding: 18 }}>
-            <span className="fd-eyebrow" style={{ color: 'var(--text-secondary)', display: 'block', marginBottom: 12 }}>How replacement works</span>
-            {[
-              'A new BMF or 990 release drops. Fundir parses and cleans it into the same column shape.',
-              'Locked sheets are swapped wholesale. Nothing you typed lives on them.',
-              'Your sheets rejoin on EIN, so owners, notes and outreach status stay attached.',
-              'You see a diff first: rows added, assets changed, organizations that disappeared.',
-            ].map((t, i) => (
-              <div key={i} style={{ display: 'flex', gap: 11, paddingBottom: i < 3 ? 12 : 0 }}>
-                <span className="fd-mono" style={{ fontSize: 9.5, color: 'var(--accent)', flex: 'none', paddingTop: 2 }}>{String(i + 1).padStart(2, '0')}</span>
-                <span style={{ fontSize: 12.5, lineHeight: 1.55, color: 'var(--text-secondary)' }}>{t}</span>
-              </div>
-            ))}
+        {/* right column: how replacement works + source, one card, two ruled sections */}
+        <div className="fd-card" style={{ minWidth: 0, padding: '14px 16px' }}>
+          <span className="fd-eyebrow" style={{ color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>How replacement works</span>
+          {[
+            'A new BMF or 990 release drops. Fundir parses and cleans it into the same column shape.',
+            'Locked sheets are swapped wholesale. Nothing you typed lives on them.',
+            'Your sheets rejoin on EIN, so owners, notes and outreach status stay attached.',
+            'You see a diff first: rows added, assets changed, organizations that disappeared.',
+          ].map((t, i) => (
+            <div key={i} className="pr-step">
+              <span className="fd-mono" style={{ fontSize: 9.5, color: 'var(--accent)', paddingTop: 3 }}>{String(i + 1).padStart(2, '0')}</span>
+              <span>{t}</span>
+            </div>
+          ))}
+          <span className="fd-eyebrow" style={{ color: 'var(--text-secondary)', display: 'block', margin: '18px 0 4px' }}>Source</span>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, padding: '9px 0', borderBottom: '1px solid var(--border-hairline)' }}>
+            <span className="fd-mono" style={{ fontSize: 10, color: 'var(--accent)', flex: 'none', width: 28 }}>BMF</span>
+            <span style={{ flex: 1, fontSize: 12.5, color: 'var(--text-secondary)' }}>IRS Illinois exempt-org file · {bmfTotal} rows</span>
+            <span className="fd-tag" data-tone="accent">Loaded</span>
           </div>
-          <div style={{ ...card, padding: 18 }}>
-            <span className="fd-eyebrow" style={{ color: 'var(--text-secondary)', display: 'block', marginBottom: 12 }}>Source</span>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, padding: '8px 0', borderBottom: '1px solid var(--border-hairline)' }}>
-              <span className="fd-mono" style={{ fontSize: 10, color: 'var(--accent)', flex: 'none' }}>BMF</span>
-              <span style={{ flex: 1, fontSize: 12, color: 'var(--text-secondary)' }}>IRS Illinois exempt-org file · {bmfTotal} rows</span>
-              <span className="fd-mono" style={{ fontSize: 9.5, color: 'var(--text-tertiary)' }}>Loaded</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, padding: '8px 0' }}>
-              <span className="fd-mono" style={{ fontSize: 10, color: 'var(--text-tertiary)', flex: 'none' }}>CYC</span>
-              <span style={{ flex: 1, fontSize: 12, color: 'var(--text-secondary)' }}>Cultivation, board and research columns · your own work</span>
-              <span className="fd-mono" style={{ fontSize: 9.5, color: 'var(--text-tertiary)' }}>Live</span>
-            </div>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, padding: '9px 0' }}>
+            <span className="fd-mono" style={{ fontSize: 10, color: 'var(--text-tertiary)', flex: 'none', width: 28 }}>CYC</span>
+            <span style={{ flex: 1, fontSize: 12.5, color: 'var(--text-secondary)' }}>Cultivation, board and research columns · your own work</span>
+            <span className="fd-tag">Live</span>
           </div>
         </div>
       </div>
 
-      <p className="fd-eyebrow" style={{ color: 'var(--text-tertiary)', margin: '22px 0 0' }}>Live workspace · your loaded data</p>
+      <p className="fd-caption" style={{ color: 'var(--text-tertiary)', margin: '18px 0 0' }}>Live workspace · your loaded data</p>
 
       <IrsReplaceModal open={replaceOpen} onClose={() => setReplaceOpen(false)} lockedSheets={lockedSheets} canReplace={canReplace} />
     </div>
