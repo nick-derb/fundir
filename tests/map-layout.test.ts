@@ -95,3 +95,14 @@ describe('map layout: white space never shortcuts a real path', () => {
     expect(lay.byId.get('other')!.depth).toBe(1);
   });
 });
+
+describe('strongest path prefers a live lead', () => {
+  it('skips a higher-scoring lead that is already closed', () => {
+    const data: GraphPayload = {
+      mode: 'overview', focus: null,
+      nodes: [node('cyc', { focus: true, own: true }), node('phil', { kind: 'person', own: true }), node('closed', { lead_id: 'a', score: 100, status: 'NOT_A_FIT' }), node('live', { lead_id: 'b', score: 62, status: 'NEW' })],
+      links: [link('cyc', 'phil'), link('phil', 'closed'), link('phil', 'live')],
+    };
+    expect(strongestPath(buildLayout(data, new Set(), false))!.target.id).toBe('live');
+  });
+});

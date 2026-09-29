@@ -197,11 +197,14 @@ export function buildLayout(data: GraphPayload, expanded: Set<string>, compact: 
 }
 
 /** The best-scoring lead reachable through a real path, and the chain of node ids from the root to it. */
+const CLOSED = new Set(['NOT_A_FIT', 'LOST', 'WON', 'DEFERRED']);
 export function strongestPath(lay: Layout): { ids: string[]; target: GraphNode } | null {
+  // Live leads first (there is still something to push); closed ones only when nothing else has a path.
+  const rank = (n: GraphNode) => (CLOSED.has(n.status ?? '') ? 0 : 1000) + (n.score ?? 0);
   let best: Placed | null = null;
   for (const p of lay.placed) {
     if (!p.node || p.node.score === null || !p.node.lead_id || p.depth < 2) continue;
-    if (!best || p.node.score > best.node!.score!) best = p;
+    if (!best || rank(p.node) > rank(best.node!)) best = p;
   }
   if (!best) return null;
   const ids: string[] = []; let cur: string | undefined = best.id;
