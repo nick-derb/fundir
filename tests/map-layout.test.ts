@@ -78,3 +78,20 @@ describe('map layout: white space and the strongest path', () => {
     expect(best.ids).toEqual(['cyc', 'phil', 'room', 'funderB']);
   });
 });
+
+describe('map layout: white space never shortcuts a real path', () => {
+  it('hangs a funder at the end of its warm path even when CYC also links to it as white space', () => {
+    const data: GraphPayload = {
+      mode: 'overview', focus: null,
+      nodes: [node('cyc', { focus: true, own: true }), node('phil', { kind: 'person', own: true }), node('mcc', { lead_id: 'l1', score: 100 }), node('other', { lead_id: 'l2', score: 40 })],
+      links: [link('cyc', 'phil', { type: 'membership' }), link('phil', 'mcc', { type: 'seat' }), link('cyc', 'mcc', { type: 'white_space' }), link('cyc', 'other', { type: 'white_space' })],
+    };
+    const lay = buildLayout(data, new Set(), false);
+    expect(lay.byId.get('mcc')!.depth).toBe(2);
+    expect(lay.parentOf.get('mcc')).toBe('phil');
+    expect(strongestPath(lay)!.ids).toEqual(['cyc', 'phil', 'mcc']);
+    // the direct white-space link survives as a cross link, and a lone white-space funder is not grouped
+    expect(lay.cross.some(l => l.type === 'white_space')).toBe(true);
+    expect(lay.byId.get('other')!.depth).toBe(1);
+  });
+});

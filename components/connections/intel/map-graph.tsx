@@ -57,6 +57,7 @@ const CSS = `
 .mg-card:hover{border-color:var(--border-strong)}
 .mg-card[data-path="true"]{border-color:rgba(12,107,90,.45)}
 .mg-card[data-on="true"],.mg-card:focus-visible{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-tint)}
+.mg-card[data-dim="hover"]{opacity:.55}
 .mg-card[data-dim="true"]{opacity:.32}
 .mg-card[data-root="true"]{border-color:var(--accent)}
 .mg-head{display:flex;align-items:center;gap:9px;padding:9px 10px 8px;min-width:0;flex:1}
@@ -89,6 +90,7 @@ const CSS = `
 .mg-legend{position:absolute;bottom:10px;display:flex;gap:12px;flex-wrap:wrap;padding:5px 9px;border-radius:var(--radius-sm);background:color-mix(in srgb,var(--bg-surface) 90%,transparent);border:1px solid var(--border-hairline);font-size:10.5px;color:var(--text-secondary)}
 .mg-legend span{display:inline-flex;align-items:center;gap:5px}
 .mg-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--text-tertiary);font-size:12.5px}
+@media (max-width:700px){.mg-legend{display:none}}
 @media (prefers-reduced-motion:reduce){.mg-card{transition:none}}
 `;
 
@@ -116,23 +118,32 @@ export function buildLayout(data: GraphPayload, expanded: Set<string>, compact: 
   const linkRank = (l: GraphLink) => VER_RANK[l.verification] * 1000 - l.strength;
   for (const list of adj.values()) list.sort((a, b) => linkRank(a.link) - linkRank(b.link));
 
-  // BFS forest: the focused node first, then whatever is left, biggest hub first.
+  // BFS forest: the focused node first, then whatever is left, biggest hub
+  // first. Real relationships are walked before white-space links, so a funder
+  // that is both "gives to CYC's peers" and reachable through a board member
+  // hangs at the end of its warm path, not directly under CYC.
   const depth = new Map<string, number>(); const parent = new Map<string, { id: string; link: GraphLink } | null>();
   const children = new Map<string, string[]>();
   const roots: string[] = [];
+  const attach = (cur: string, id: string, link: GraphLink) => { depth.set(id, depth.get(cur)! + 1); parent.set(id, { id: cur, link }); (children.get(cur) ?? children.set(cur, []).get(cur)!).push(id); };
+  const walk = (start: string, allowWhiteSpace: boolean) => {
+    const q = [start];
+    while (q.length) {
+      const cur = q.shift()!;
+      for (const { id, link } of adj.get(cur) ?? []) {
+        if (depth.has(id) || (!allowWhiteSpace && link.type === 'white_space')) continue;
+        attach(cur, id, link); q.push(id);
+      }
+    }
+  };
   const order = [...nodes].sort((a, b) => (b.focus ? 1 : 0) - (a.focus ? 1 : 0) || degree(b.id) - degree(a.id));
   for (const start of order) {
     if (depth.has(start.id)) continue;
     roots.push(start.id); depth.set(start.id, 0); parent.set(start.id, null);
-    const q = [start.id];
-    while (q.length) {
-      const cur = q.shift()!; const d = depth.get(cur)!;
-      for (const { id, link } of adj.get(cur) ?? []) {
-        if (depth.has(id)) continue;
-        depth.set(id, d + 1); parent.set(id, { id: cur, link });
-        (children.get(cur) ?? children.set(cur, []).get(cur)!).push(id); q.push(id);
-      }
-    }
+    walk(start.id, false);
+    // anything still unreached from this tree hangs off its white-space links
+    const reached = [...depth.keys()];
+    for (const cur of reached) for (const { id, link } of adj.get(cur) ?? []) if (!depth.has(id) && link.type === 'white_space') { attach(cur, id, link); walk(id, false); }
   }
   const childRank = (id: string) => { const n = byNode.get(id)!; const p = parent.get(id)!; return -(n.score ?? -1) * 10 + VER_RANK[p.link.verification]; };
   for (const kids of children.values()) kids.sort((a, b) => childRank(a) - childRank(b) || byNode.get(a)!.label.localeCompare(byNode.get(b)!.label));
@@ -337,10 +348,10 @@ export function MapGraph({ data, height = 520, maxHeight = 720, selectedId, onSe
               <Plus style={{ width: 12, height: 12 }} />{p.stub.count} more<i>· show all</i>
             </button>
           ) : p.group ? (
-            <GroupCard key={p.id} p={p} S={S} dim={!!lit} onExpand={() => setExpanded(s => new Set(s).add(`ws:${p.group!.parent}`))} onOpenLead={onOpenLead} />
+            <GroupCard key={p.id} p={p} S={S} dim={lit ? (hover && !selectedId ? 'hover' : 'true') : undefined} onExpand={() => setExpanded(s => new Set(s).add(`ws:${p.group!.parent}`))} onOpenLead={onOpenLead} />
           ) : (
             <Card key={p.id} p={p} S={S} compact={!!compact} degree={adj.get(p.id)?.size ?? 0}
-              on={selectedId === p.id} dim={!!lit && !lit.has(p.id)} onPath={!activeId && bestIds.has(p.id)}
+              on={selectedId === p.id} dim={lit && !lit.has(p.id) ? (hover && !selectedId ? 'hover' : 'true') : undefined} onPath={!activeId && bestIds.has(p.id)}
               onHover={h => setHover(h ? p.id : null)}
               onSelect={() => onSelect?.(p.node)} onActivate={() => p.node && onActivate?.(p.node)}
               onOpenLead={onOpenLead} />
@@ -380,7 +391,7 @@ export function MapGraph({ data, height = 520, maxHeight = 720, selectedId, onSe
 const statusTone = (s: string | null): string | undefined => (!s ? undefined : s === 'WON' ? 'accent' : s === 'LOST' || s === 'NOT_A_FIT' || s === 'DEFERRED' ? undefined : s === 'NEW' ? 'slate' : 'warning');
 
 function Card({ p, S, compact, degree, on, dim, onPath, onHover, onSelect, onActivate, onOpenLead }: {
-  p: Placed; S: typeof SIZES.full; compact: boolean; degree: number; on: boolean; dim: boolean; onPath: boolean;
+  p: Placed; S: typeof SIZES.full; compact: boolean; degree: number; on: boolean; dim?: 'hover' | 'true'; onPath: boolean;
   onHover: (h: boolean) => void; onSelect: () => void; onActivate: () => void; onOpenLead?: (id: string) => void;
 }) {
   const n = p.node!;
@@ -391,7 +402,7 @@ function Card({ p, S, compact, degree, on, dim, onPath, onHover, onSelect, onAct
   const status = n.status ? (STATUS_LABEL[n.status as PipelineState] ?? n.status) : null;
   return (
     <div data-mg-card className="mg-card" role="button" tabIndex={0} aria-pressed={on} aria-label={`${n.label}, ${sub}`} title={`${n.label} · ${sub}${n.score !== null ? ` · score ${n.score}` : ''} · double-click to focus`}
-      data-on={on ? 'true' : undefined} data-dim={dim ? 'true' : undefined} data-root={n.focus ? 'true' : undefined} data-path={onPath ? 'true' : undefined}
+      data-on={on ? 'true' : undefined} data-dim={dim} data-root={n.focus ? 'true' : undefined} data-path={onPath ? 'true' : undefined}
       style={{ left: p.x, top: p.y, width: S.W, height: S.H }}
       onMouseEnter={() => onHover(true)} onMouseLeave={() => onHover(false)}
       onClick={e => { e.stopPropagation(); onSelect(); }} onDoubleClick={e => { e.stopPropagation(); onActivate(); }}
@@ -421,13 +432,13 @@ function Card({ p, S, compact, degree, on, dim, onPath, onHover, onSelect, onAct
   );
 }
 
-function GroupCard({ p, S, dim, onExpand, onOpenLead }: { p: Placed; S: typeof SIZES.full; dim: boolean; onExpand: () => void; onOpenLead?: (id: string) => void }) {
+function GroupCard({ p, S, dim, onExpand, onOpenLead }: { p: Placed; S: typeof SIZES.full; dim?: 'hover' | 'true'; onExpand: () => void; onOpenLead?: (id: string) => void }) {
   const members = [...p.group!.members].sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
   const preview = members.slice(0, GROUP_PREVIEW);
   const h = S.H + 14 * preview.length;
   return (
     <div data-mg-card className="mg-card mg-group" role="button" tabIndex={0} aria-label={`${members.length} funders with no path yet`} title="Funders that give to CYC's peers but have no documented path yet · click to unfold"
-      data-dim={dim ? 'true' : undefined} style={{ left: p.x, top: p.y, width: S.W, height: h }}
+      data-dim={dim} style={{ left: p.x, top: p.y, width: S.W, height: h }}
       onClick={e => { e.stopPropagation(); onExpand(); }} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onExpand(); } }}>
       <div className="mg-head" style={{ flex: 'none', paddingBottom: 4 }}>
         <span className="mg-mark" data-tone="warning" style={{ width: 30, height: 30 }}><i /></span>
