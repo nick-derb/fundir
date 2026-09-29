@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { buildLayout } from '@/components/connections/intel/map-graph';
+import { buildLayout, strongestPath } from '@/components/connections/intel/map-graph';
 import type { GraphPayload, GraphNode, GraphLink } from '@/lib/network/queries';
 
-const node = (id: string, over: Partial<GraphNode> = {}): GraphNode => ({ id, kind: 'org', label: id, sub: null, own: false, orgType: null, focus: false, lead_id: null, score: null, rowId: id, ...over });
+const node = (id: string, over: Partial<GraphNode> = {}): GraphNode => ({ id, kind: 'org', label: id, sub: null, own: false, orgType: null, focus: false, lead_id: null, score: null, status: null, rowId: id, ...over });
 const link = (a: string, b: string, over: Partial<GraphLink> = {}): GraphLink => ({ source: a, target: b, type: 'seat', verification: 'verified', strength: 50, label: null, ...over });
 
 describe('map layout', () => {
@@ -48,5 +48,33 @@ describe('map layout', () => {
     const lay = buildLayout(data, new Set(), false);
     expect(lay.byId.get('island')!.depth).toBe(0);
     expect(lay.byId.get('island')!.x).toBeGreaterThan(lay.byId.get('cyc')!.x);
+  });
+});
+
+describe('map layout: white space and the strongest path', () => {
+  it('folds white-space funders under a parent into one group card', () => {
+    const ws = ['f1', 'f2', 'f3', 'f4'].map(id => node(id, { lead_id: `lead-${id}`, score: 50 }));
+    const data: GraphPayload = { mode: 'overview', focus: null, nodes: [node('cyc', { focus: true }), node('a'), ...ws], links: [link('cyc', 'a'), ...ws.map(w => link('cyc', w.id, { type: 'white_space' }))] };
+    const lay = buildLayout(data, new Set(), false);
+    const group = lay.placed.find(p => p.group);
+    expect(group).toBeTruthy();
+    expect(group!.group!.members).toHaveLength(4);
+    expect(lay.placed.filter(p => p.node).map(p => p.id).sort()).toEqual(['a', 'cyc']);
+    const open = buildLayout(data, new Set(['ws:cyc']), false);
+    expect(open.placed.find(p => p.group)).toBeUndefined();
+    expect(open.placed.filter(p => p.node)).toHaveLength(6);
+  });
+
+  it('names lanes by what sits in them and finds the strongest real path', () => {
+    const data: GraphPayload = {
+      mode: 'overview', focus: null,
+      nodes: [node('cyc', { focus: true, own: true }), node('phil', { kind: 'person', own: true }), node('room'), node('funderA', { lead_id: 'la', score: 61 }), node('funderB', { lead_id: 'lb', score: 88 }), node('ws1', { lead_id: 'lw', score: 95 })],
+      links: [link('cyc', 'phil', { type: 'membership' }), link('phil', 'room', { type: 'employment' }), link('room', 'funderA', { type: 'seat' }), link('room', 'funderB', { type: 'seat' }), link('cyc', 'ws1', { type: 'white_space' })],
+    };
+    const lay = buildLayout(data, new Set(), false);
+    expect(lay.lanes.map(l => l.label)).toEqual(['CYC', 'Board & staff · Funders', 'Shared rooms', 'Funders']);
+    const best = strongestPath(lay)!;
+    expect(best.target.id).toBe('funderB');       // the white-space lead scores higher but has no path
+    expect(best.ids).toEqual(['cyc', 'phil', 'room', 'funderB']);
   });
 });

@@ -6,11 +6,12 @@
 // so you can walk back. A side card describes the selected node and offers
 // the lead behind it.
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Search, Home, ChevronRight, Loader2, Maximize2 } from 'lucide-react';
 import type { GraphPayload, GraphNode } from '@/lib/network/queries';
-import { MapGraph } from './map-graph';
-import { typeLabel, relLabel } from './shared';
+import { MapGraph, buildLayout, strongestPath } from './map-graph';
+import { typeLabel, relLabel, STATUS_LABEL } from './shared';
+import type { PipelineState } from '@/lib/network/queries';
 
 export interface MapFocus { kind: 'person' | 'org'; id: string }
 
@@ -30,7 +31,7 @@ export function MapView({ focus, onFocus, onOpenLead }: { focus: MapFocus | null
       const b = await fetch(`/api/network/graph?${sp}`).then(r => r.json());
       if (b.error) { setError(b.error); return; }
       const p = b as GraphPayload;
-      setData(p); setSelected(p.nodes.find(n => n.focus) ?? null);
+      setData(p); setSelected(null);
       const fx = p.focus ? { kind: p.focus.kind, id: p.focus.id } : null;
       setTrail(t => { const label = p.focus?.label ?? 'Overview'; const idx = t.findIndex(x => (x.focus?.id ?? null) === (fx?.id ?? null)); return idx >= 0 ? t.slice(0, idx + 1) : [...t, { label, focus: fx }].slice(-6); });
       if ((fx?.id ?? null) !== (f?.id ?? null)) onFocus(fx);
@@ -40,6 +41,7 @@ export function MapView({ focus, onFocus, onOpenLead }: { focus: MapFocus | null
 
   useEffect(() => { load(focus); }, [focus?.id, focus?.kind]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const best = useMemo(() => { if (!data) return null; const lay = buildLayout(data, new Set(), false); const sp = strongestPath(lay); if (!sp) return null; const byId = new Map(data.nodes.map(n => [n.id, n])); return { ...sp, chain: sp.ids.map(id => byId.get(id)).filter(Boolean) as GraphNode[] }; }, [data]);
   const degree = selected ? (data?.links.filter(l => l.source === selected.id || l.target === selected.id).length ?? 0) : 0;
   const neighbours = selected ? (data?.links.filter(l => l.source === selected.id || l.target === selected.id).map(l => ({ link: l, other: data!.nodes.find(n => n.id === (l.source === selected.id ? l.target : l.source)) })).filter(x => x.other).slice(0, 12) ?? []) : [];
 
@@ -75,7 +77,7 @@ export function MapView({ focus, onFocus, onOpenLead }: { focus: MapFocus | null
             <button type="button" className="fd-btn" style={{ height: 24, padding: '0 8px', fontSize: 11 }} onClick={() => setFull(f => !f)} aria-pressed={full}><Maximize2 style={{ width: 11, height: 11 }} />{full ? 'Show panel' : 'Wide'}</button>
           </div>
           {error ? <p className="fd-caption" style={{ padding: 20, color: 'var(--warning)' }}>{error}</p> : (
-            <MapGraph data={data} height={full ? 680 : 560} selectedId={selected?.id ?? null} onSelect={n => setSelected(n ?? data?.nodes.find(x => x.focus) ?? null)} onActivate={n => { if (n.rowId) load({ kind: n.kind, id: n.rowId }); }} />
+            <MapGraph data={data} height="auto" maxHeight={full ? 820 : 720} selectedId={selected?.id ?? null} onSelect={n => setSelected(n)} onActivate={n => { if (n.rowId) load({ kind: n.kind, id: n.rowId }); }} onOpenLead={onOpenLead} />
           )}
         </div>
 
@@ -109,12 +111,31 @@ export function MapView({ focus, onFocus, onOpenLead }: { focus: MapFocus | null
                   {degree > neighbours.length && <li className="fd-caption" style={{ color: 'var(--text-tertiary)' }}>and {degree - neighbours.length} more — focus here to see them all</li>}
                 </ul>
               </div>
+            ) : best ? (
+              <div>
+                <span className="fd-eyebrow" style={{ display: 'block', color: 'var(--accent)', marginBottom: 6 }}>Strongest path</span>
+                <h2 className="fd-display" style={{ fontSize: '1.3rem', lineHeight: 1.15, margin: '0 0 4px' }}>{best.target.label}</h2>
+                <p className="fd-caption" style={{ margin: 0, color: 'var(--text-secondary)' }}>score {best.target.score}{best.target.status ? ` · ${(STATUS_LABEL[best.target.status as PipelineState] ?? best.target.status).toLowerCase()}` : ''}</p>
+                <ol style={{ margin: '12px 0 0', padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  {best.chain.map((n, i) => (
+                    <li key={n.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span className="fd-mono" style={{ width: 14, fontSize: 9.5, color: 'var(--text-tertiary)' }}>{i + 1}</span>
+                      <button type="button" onClick={() => setSelected(n)} style={{ border: 'none', background: 'none', padding: 0, font: 'inherit', fontSize: 12.5, fontWeight: 500, color: 'var(--text-primary)', cursor: 'pointer', textAlign: 'left', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{n.label}</button>
+                    </li>
+                  ))}
+                </ol>
+                <div style={{ display: 'flex', gap: 6, marginTop: 12, flexWrap: 'wrap' }}>
+                  {best.target.lead_id && <button type="button" className="fd-btn-primary" style={{ height: 28 }} onClick={() => onOpenLead(best.target.lead_id!)}>Open lead</button>}
+                  {best.target.rowId && <button type="button" className="fd-btn" style={{ height: 28 }} onClick={() => load({ kind: best.target.kind, id: best.target.rowId! })}>Focus here</button>}
+                </div>
+                <p className="fd-caption" style={{ color: 'var(--text-tertiary)', margin: '14px 0 0' }}>Click a card to read about it; double-click to make it the centre.</p>
+              </div>
             ) : (
               <p className="fd-caption" style={{ color: 'var(--text-tertiary)', margin: 0 }}>Click a card to read about it; double-click to make it the centre.</p>
             )}
             <div style={{ marginTop: 'auto', paddingTop: 12, borderTop: '1px solid var(--border-hairline)' }}>
               <span className="fd-eyebrow" style={{ display: 'block', marginBottom: 6, color: 'var(--text-tertiary)' }}>Reading the map</span>
-              <p className="fd-caption" style={{ margin: 0, color: 'var(--text-tertiary)', fontSize: 11.5 }}>Each card hangs under the node it was reached through, so a path reads top to bottom. The dot on a card is its evidence grade; ◆ means a lead is attached. Solid lines are dated, dashed undated, dotted inferred; <span style={{ color: 'var(--warning)' }}>amber</span> is white space. Faint curves are extra links between branches. Drag to pan, scroll to move, ⌘ + scroll to zoom, “+N more” unfolds a wide branch.</p>
+              <p className="fd-caption" style={{ margin: 0, color: 'var(--text-tertiary)', fontSize: 11.5 }}>Each card hangs under the node it was reached through, so a path reads top to bottom, lane by lane. With nothing selected the strongest path is lit. The dot on a card is its evidence grade; ◆ opens the lead. Funders with no path yet sit folded in one card. Solid lines are dated, dashed undated, dotted inferred; <span style={{ color: 'var(--warning)' }}>amber</span> is white space. Faint curves are extra links between branches. Drag to pan, scroll to move, ⌘ + scroll to zoom, “+N more” unfolds a wide branch.</p>
             </div>
           </div>
         )}

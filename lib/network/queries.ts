@@ -198,7 +198,7 @@ export async function listRelationships(db: Db, orgId: string, f: { type?: strin
 }
 
 // ── Graph ───────────────────────────────────────────────────────────────────
-export interface GraphNode { id: string; kind: 'person' | 'org'; label: string; sub: string | null; own: boolean; orgType: string | null; focus: boolean; lead_id: string | null; score: number | null; rowId: string | null }
+export interface GraphNode { id: string; kind: 'person' | 'org'; label: string; sub: string | null; own: boolean; orgType: string | null; focus: boolean; lead_id: string | null; score: number | null; status: string | null; rowId: string | null }
 export interface GraphLink { source: string; target: string; type: string; verification: 'verified' | 'probable' | 'inferred'; strength: number; label: string | null }
 export interface GraphPayload { mode: 'overview' | 'focus'; focus: { kind: 'person' | 'org'; id: string; label: string } | null; nodes: GraphNode[]; links: GraphLink[] }
 
@@ -215,7 +215,7 @@ export async function graphOverview(db: Db, orgId: string, topN = 24): Promise<G
     const id = nid(p.kind, p.id, p.label);
     const lead = p.kind === 'org' && p.id ? leadByOrg.get(p.id) ?? null : null;
     const cur = nodes.get(id);
-    if (!cur) nodes.set(id, { id, kind: p.kind, label: p.label, sub: p.sub ?? null, own: !!p.own, orgType: p.kind === 'org' && l.target && p.id === l.target.id ? l.target.type : null, focus: p.label === 'CYC', lead_id: lead?.id ?? null, score: lead?.score ?? null, rowId: p.id });
+    if (!cur) nodes.set(id, { id, kind: p.kind, label: p.label, sub: p.sub ?? null, own: !!p.own, orgType: p.kind === 'org' && l.target && p.id === l.target.id ? l.target.type : null, focus: p.label === 'CYC', lead_id: lead?.id ?? null, score: lead?.score ?? null, status: lead?.pipeline_status ?? null, rowId: p.id });
     return id;
   };
   for (const l of leads) {
@@ -272,16 +272,16 @@ export async function graphNeighborhood(db: Db, orgId: string, focus: { kind: 'p
   const people = new Map<string, { name: string; kind: string; title: string | null; org: string | null }>(), orgs = new Map<string, { name: string; type: string | null; city: string | null }>();
   for (const c of chunks(pIds, 200)) { const { data } = await db.from('network_people').select('id, name, kind, current_title, current_org').in('id', c); for (const p of data ?? []) people.set(p.id as string, { name: p.name as string, kind: p.kind as string, title: p.current_title as string | null, org: p.current_org as string | null }); }
   for (const c of chunks(oIds, 200)) { const { data } = await db.from('network_organizations').select('id, name, organization_type, city').in('id', c); for (const o of data ?? []) orgs.set(o.id as string, { name: o.name as string, type: o.organization_type as string | null, city: o.city as string | null }); }
-  const { data: leadRows } = oIds.length ? await db.from('network_leads').select('id, target_org_id, opportunity_score').eq('org_id', orgId).in('target_org_id', oIds).order('opportunity_score', { ascending: false }) : { data: [] };
-  const leadOf = new Map<string, { id: string; score: number }>();
-  for (const l of leadRows ?? []) if (!leadOf.has(l.target_org_id as string)) leadOf.set(l.target_org_id as string, { id: l.id as string, score: Math.round(Number(l.opportunity_score ?? 0)) });
+  const { data: leadRows } = oIds.length ? await db.from('network_leads').select('id, target_org_id, opportunity_score, pipeline_status').eq('org_id', orgId).in('target_org_id', oIds).order('opportunity_score', { ascending: false }) : { data: [] };
+  const leadOf = new Map<string, { id: string; score: number; status: string | null }>();
+  for (const l of leadRows ?? []) if (!leadOf.has(l.target_org_id as string)) leadOf.set(l.target_org_id as string, { id: l.id as string, score: Math.round(Number(l.opportunity_score ?? 0)), status: (l.pipeline_status as string | null) ?? null });
 
   const nodes = new Map<string, GraphNode>();
   const mk = (kind: 'person' | 'org', id: string, isFocus: boolean) => {
     const key = nid(kind, id, '');
     if (nodes.has(key)) return key;
-    if (kind === 'person') { const p = people.get(id); if (!p) return null; nodes.set(key, { id: key, kind, label: p.name, sub: [p.title, p.org].filter(Boolean).join(', ') || (p.kind === 'trustee' ? 'trustee' : p.kind), own: OWN_KINDS.has(p.kind), orgType: null, focus: isFocus, lead_id: null, score: null, rowId: id }); }
-    else { const o = orgs.get(id); if (!o) return null; const l = leadOf.get(id); nodes.set(key, { id: key, kind, label: o.name, sub: [o.type?.replace(/_/g, ' '), o.city].filter(Boolean).join(' · ') || null, own: false, orgType: o.type, focus: isFocus, lead_id: l?.id ?? null, score: l?.score ?? null, rowId: id }); }
+    if (kind === 'person') { const p = people.get(id); if (!p) return null; nodes.set(key, { id: key, kind, label: p.name, sub: [p.title, p.org].filter(Boolean).join(', ') || (p.kind === 'trustee' ? 'trustee' : p.kind), own: OWN_KINDS.has(p.kind), orgType: null, focus: isFocus, lead_id: null, score: null, status: null, rowId: id }); }
+    else { const o = orgs.get(id); if (!o) return null; const l = leadOf.get(id); nodes.set(key, { id: key, kind, label: o.name, sub: [o.type?.replace(/_/g, ' '), o.city].filter(Boolean).join(' · ') || null, own: false, orgType: o.type, focus: isFocus, lead_id: l?.id ?? null, score: l?.score ?? null, status: l?.status ?? null, rowId: id }); }
     return key;
   };
   const focusKey = mk(focus.kind, focus.id, true);
