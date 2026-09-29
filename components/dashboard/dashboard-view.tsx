@@ -50,7 +50,7 @@ const CSS = `
 .dv-root [data-kind="internal"]{border-left-color:#5B7383!important;background:rgba(91,115,131,.08)}
 .dv-root [data-kind="site"]{border-left-color:var(--critical)!important;background:rgba(194,78,62,.07)}
 .dv-root .dv-section{background:var(--bg-surface);border:1px solid var(--border-hairline);border-radius:var(--radius)}
-.dv-root .dv-section-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:14px 18px 12px}
+.dv-root .dv-section-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:14px 18px 12px;flex-wrap:wrap}.dv-root .dv-section-head > div:first-child{flex:1 1 200px}
 .dv-root .dv-section-head p{margin:3px 0 0}
 .dv-root .dv-week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border-top:1px solid var(--border-hairline)}
 .dv-root .dv-week-scroll{overflow-x:auto}

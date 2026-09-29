@@ -372,7 +372,7 @@ export function AppShell({
       </aside>
 
       {/* ── Content area — offset by the sidebar width on desktop; full width on mobile ── */}
-      <div className={`flex-1 flex flex-col min-h-screen w-full transition-[margin] duration-200 ease-out ${collapsed ? 'md:ml-14' : 'md:ml-56'}`}>
+      <div className={`flex-1 min-w-0 flex flex-col min-h-screen w-full transition-[margin] duration-200 ease-out ${collapsed ? 'md:ml-14' : 'md:ml-56'}`}>
         {/* Top bar — quiet, hairline-bottom, grid-aligned. */}
         <header className="sticky top-0 z-40 h-12 flex items-center px-4 md:px-6 gap-3 md:gap-4 bg-surface border-b border-hairline">
           {/* Mobile hamburger — opens the sidebar drawer */}
