@@ -57,7 +57,8 @@ export function MapView({ focus, onFocus, onOpenLead }: { focus: MapFocus | null
         </form>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: full ? '1fr' : 'minmax(0,1fr) 300px', gap: 14, alignItems: 'stretch' }}>
+      <style>{`.mv-cols{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:14px;align-items:stretch}.mv-cols[data-full="true"]{grid-template-columns:minmax(0,1fr)}@media (max-width:900px){.mv-cols{grid-template-columns:minmax(0,1fr)}}`}</style>
+      <div className="mv-cols" data-full={full ? 'true' : undefined}>
         <div className="fd-card" style={{ overflow: 'hidden', position: 'relative', minHeight: 560, display: 'flex', flexDirection: 'column' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', borderBottom: '1px solid var(--border-hairline)', background: 'var(--bg-surface)', flexWrap: 'wrap' }}>
             {trail.map((t, i) => (

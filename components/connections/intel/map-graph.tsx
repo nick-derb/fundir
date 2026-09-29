@@ -25,10 +25,10 @@ interface Props {
 
 interface Placed { id: string; node: GraphNode | null; x: number; y: number; depth: number; stub?: { parent: string; count: number }; ver: GraphLink['verification'] | null }
 interface TreeEdge { from: string; to: string; link: GraphLink | null }
-interface Layout { placed: Placed[]; byId: Map<string, Placed>; edges: TreeEdge[]; cross: GraphLink[]; w: number; h: number }
+interface Layout { placed: Placed[]; byId: Map<string, Placed>; edges: TreeEdge[]; cross: GraphLink[]; w: number; h: number; cardW: number }
 
 const SIZES = {
-  full: { W: 236, H: 84, GX: 18, GY: 60, MAX: 6, PAD: 24 },
+  full: { W: 224, H: 84, GX: 16, GY: 56, MAX: 6, PAD: 24 },
   compact: { W: 168, H: 52, GX: 12, GY: 36, MAX: 4, PAD: 12 },
 };
 const VER_RANK: Record<string, number> = { verified: 0, probable: 1, inferred: 2 };
@@ -140,13 +140,17 @@ export function buildLayout(data: GraphPayload, expanded: Set<string>, compact: 
   const cross = data.links.filter(l => byId.has(l.source) && byId.has(l.target) && !tree.has([l.source, l.target].sort().join('|')));
   const w = Math.max(...placed.map(p => p.x + S.W), 0) + S.PAD;
   const h = Math.max(...placed.map(p => p.y + S.H), 0) + S.PAD;
-  return { placed, byId, edges, cross, w, h };
+  return { placed, byId, edges, cross, w, h, cardW: S.W };
 }
 
-function fitView(lay: Layout, sz: { w: number; h: number }) {
+// Fit keeps cards legible: never below 0.7×. A tree wider than the viewport is
+// centred on its root instead of shrunk, and the user pans along the layer.
+function fitView(lay: Layout, sz: { w: number; h: number }, minK = 0.7) {
   if (!lay.placed.length) return { x: 0, y: 0, k: 1 };
-  const k = Math.max(0.3, Math.min(1, (sz.w - 24) / lay.w, (sz.h - 24) / lay.h));
-  const x = Math.max(12, (sz.w - lay.w * k) / 2);
+  const k = Math.max(minK, Math.min(1, (sz.w - 24) / lay.w, (sz.h - 24) / lay.h));
+  const root = lay.placed.find(p => p.depth === 0) ?? lay.placed[0];
+  const rootCx = root.x + lay.cardW / 2;
+  const x = lay.w * k <= sz.w - 24 ? (sz.w - lay.w * k) / 2 : sz.w / 2 - rootCx * k;
   const y = lay.h * k < sz.h - 24 ? (sz.h - lay.h * k) / 2 : 12;
   return { x, y, k };
 }
@@ -175,13 +179,13 @@ export function MapGraph({ data, height = 520, selectedId, onSelect, onActivate,
     const ro = new ResizeObserver(() => {
       const sz = { w: el.clientWidth, h: el.clientHeight };
       setSize(sz);
-      if (layoutRef.current) setView(fitView(layoutRef.current, sz));
+      if (layoutRef.current) setView(fitView(layoutRef.current, sz, compact ? 0.5 : 0.7));
     });
     ro.observe(el);
     return () => ro.disconnect();
-  }, []);
+  }, [compact]);
 
-  const fit = useCallback((lay: Layout | null) => { if (lay) setView(fitView(lay, size)); }, [size]);
+  const fit = useCallback((lay: Layout | null) => { if (lay) setView(fitView(lay, size, compact ? 0.5 : 0.7)); }, [size, compact]);
 
   // New payload: reset folds and fit (state adjusted during render, not in an effect). Fold changes keep the view.
   const dataKey = data ? `${data.mode}:${data.focus?.id ?? 'root'}:${data.nodes.length}` : '';
@@ -189,7 +193,7 @@ export function MapGraph({ data, height = 520, selectedId, onSelect, onActivate,
   if (dataKey !== seenKey) {
     setSeenKey(dataKey);
     setExpanded(new Set());
-    if (data) setView(fitView(buildLayout(data, new Set(), !!compact), size));
+    if (data) setView(fitView(buildLayout(data, new Set(), !!compact), size, compact ? 0.5 : 0.7));
   }
 
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
