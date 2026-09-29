@@ -145,17 +145,17 @@ export function IrsReplaceModal({ open, onClose, lockedSheets, canReplace }: {
 
   if (!open) return null;
 
-  const card: React.CSSProperties = { background: 'var(--bg-surface)', border: '1px solid var(--border-hairline)', borderRadius: 'var(--radius-console)' };
+  const card: React.CSSProperties = { background: 'var(--bg-surface)', border: '1px solid var(--border-hairline)', borderRadius: 'var(--radius)' };
   const busy = phase === 'parsing' || phase === 'staging' || phase === 'applying';
   const btn = (primary: boolean): React.CSSProperties => ({
-    height: 38, padding: primary ? '0 18px' : '0 16px', borderRadius: 'var(--radius-kpi)', font: 'inherit', fontSize: 12.5, cursor: 'pointer',
+    height: 32, padding: primary ? '0 14px' : '0 12px', borderRadius: 'var(--radius-sm)', font: 'inherit', fontSize: 12.5, cursor: 'pointer',
     border: primary ? 'none' : '1px solid var(--border-hairline)', background: primary ? 'var(--accent)' : 'var(--bg-surface)', color: primary ? '#fff' : 'var(--text-primary)', fontWeight: primary ? 500 : 400,
   });
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 80, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-      <div onClick={close} style={{ position: 'absolute', inset: 0, background: 'rgba(16,25,23,.42)', backdropFilter: 'blur(3px)', animation: 'pr-fade .22s ease' }} />
-      <div role="dialog" aria-modal="true" aria-label="Replace IRS data" style={{ position: 'relative', width: 'min(600px,100%)', ...card, boxShadow: '0 24px 60px rgba(16,25,23,.20)', animation: 'pr-rise .26s cubic-bezier(.2,.8,.3,1)', maxHeight: 'calc(100vh - 48px)', overflowY: 'auto' }}>
+      <div onClick={close} style={{ position: 'absolute', inset: 0, background: 'rgba(16,25,23,.42)', animation: 'fd-fade .18s ease' }} />
+      <div role="dialog" aria-modal="true" aria-label="Replace IRS data" style={{ position: 'relative', width: 'min(600px,100%)', ...card, boxShadow: '0 24px 60px rgba(16,25,23,.20)', animation: 'fd-fade .18s ease', maxHeight: 'calc(100vh - 48px)', overflowY: 'auto' }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, padding: '20px 22px 0' }}>
           <div>
             <h2 style={{ fontFamily: SERIF, fontWeight: 400, fontSize: '1.6rem', lineHeight: 1.1, letterSpacing: '-.015em', margin: '0 0 6px' }}>
@@ -180,7 +180,7 @@ export function IrsReplaceModal({ open, onClose, lockedSheets, canReplace }: {
                 onDragOver={e => { e.preventDefault(); if (canReplace && !busy) setHover(true); }}
                 onDragLeave={() => setHover(false)}
                 onDrop={e => { e.preventDefault(); setHover(false); const f = e.dataTransfer.files?.[0]; if (f && canReplace && !busy) handleFile(f); }}
-                style={{ border: `1px dashed ${hover ? 'var(--accent)' : 'var(--border-hairline)'}`, borderRadius: 'var(--radius-kpi)', padding: '26px 20px', textAlign: 'center', background: hover ? 'rgba(12,107,90,.05)' : 'var(--bg-page)', cursor: canReplace && !busy ? 'pointer' : 'default', opacity: canReplace ? 1 : .6, transition: 'border-color .15s ease, background-color .15s ease', outline: 'none' }}
+                style={{ border: `1px dashed ${hover ? 'var(--accent)' : 'var(--border-hairline)'}`, borderRadius: 'var(--radius-sm)', padding: '26px 20px', textAlign: 'center', background: hover ? 'rgba(12,107,90,.05)' : 'var(--bg-page)', cursor: canReplace && !busy ? 'pointer' : 'default', opacity: canReplace ? 1 : .6, transition: 'border-color .15s ease, background-color .15s ease', outline: 'none' }}
               >
                 {busy
                   ? <Loader2 style={{ width: 20, height: 20, color: 'var(--accent)', animation: 'pr-spin 1s linear infinite' }} />
@@ -204,12 +204,12 @@ export function IrsReplaceModal({ open, onClose, lockedSheets, canReplace }: {
                 </>}
               </div>
               {phase === 'error' && error && (
-                <div role="alert" style={{ marginTop: 12, display: 'flex', gap: 9, alignItems: 'flex-start', border: '1px solid rgba(162,90,68,.35)', background: 'rgba(162,90,68,.06)', borderRadius: 'var(--radius-kpi)', padding: '11px 13px' }}>
+                <div role="alert" style={{ marginTop: 12, display: 'flex', gap: 9, alignItems: 'flex-start', border: '1px solid rgba(162,90,68,.35)', background: 'rgba(162,90,68,.06)', borderRadius: 'var(--radius-sm)', padding: '11px 13px' }}>
                   <AlertTriangle style={{ width: 14, height: 14, color: '#A25A44', flex: 'none', marginTop: 1 }} />
                   <span style={{ fontSize: 12.5, lineHeight: 1.55, color: 'var(--text-secondary)' }}>{error}</span>
                 </div>
               )}
-              <div style={{ marginTop: 18, border: '1px solid var(--border-hairline)', borderRadius: 'var(--radius-kpi)', overflow: 'hidden' }}>
+              <div style={{ marginTop: 18, border: '1px solid var(--border-hairline)', borderRadius: 'var(--radius-sm)', overflow: 'hidden' }}>
                 <div style={{ padding: '10px 13px', borderBottom: '1px solid var(--border-hairline)', background: 'var(--bg-page)' }}><span className="fd-eyebrow" style={{ color: 'var(--text-secondary)' }}>Sheets that will be replaced</span></div>
                 {lockedSheets.map((s, i) => (
                   <div key={s.key} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '9px 13px', borderBottom: i < lockedSheets.length - 1 ? '1px solid var(--border-hairline)' : 'none' }}>
@@ -219,7 +219,7 @@ export function IrsReplaceModal({ open, onClose, lockedSheets, canReplace }: {
                   </div>
                 ))}
               </div>
-              <div style={{ marginTop: 14, border: '1px solid rgba(12,107,90,.24)', borderRadius: 'var(--radius-kpi)', padding: '12px 13px', background: 'rgba(12,107,90,.04)' }}>
+              <div style={{ marginTop: 14, border: '1px solid rgba(12,107,90,.24)', borderRadius: 'var(--radius-sm)', padding: '12px 13px', background: 'rgba(12,107,90,.04)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}><ShieldCheck style={{ width: 13, height: 13, color: 'var(--accent)', flex: 'none' }} /><span className="fd-eyebrow" style={{ color: 'var(--accent)' }}>Kept intact</span></div>
                 <p style={{ margin: 0, fontSize: 12, lineHeight: 1.55, color: 'var(--text-secondary)' }}>Cultivation List, Board Members and Research Queue keep every value you have entered. They rejoin the new source on EIN.</p>
               </div>
@@ -244,7 +244,7 @@ export function IrsReplaceModal({ open, onClose, lockedSheets, canReplace }: {
                   { label: 'Assets changed', n: diff.changed, tone: '#3E6CA8' },
                   { label: 'Disappeared', n: diff.removed, tone: diff.removed ? '#9C7A2A' : 'var(--text-secondary)' },
                 ].map(t => (
-                  <div key={t.label} style={{ border: '1px solid var(--border-hairline)', borderRadius: 'var(--radius-kpi)', padding: '12px 13px', background: 'var(--bg-page)' }}>
+                  <div key={t.label} style={{ border: '1px solid var(--border-hairline)', borderRadius: 'var(--radius-sm)', padding: '12px 13px', background: 'var(--bg-page)' }}>
                     <span className="fd-eyebrow" style={{ color: 'var(--text-tertiary)', display: 'block', marginBottom: 6 }}>{t.label}</span>
                     <span className="fd-kpi" style={{ fontSize: 22, color: t.tone }}>{fmt(t.n)}</span>
                   </div>
@@ -258,13 +258,13 @@ export function IrsReplaceModal({ open, onClose, lockedSheets, canReplace }: {
               </p>
 
               {!diff.canApply && (
-                <div role="alert" style={{ marginTop: 12, display: 'flex', gap: 9, alignItems: 'flex-start', border: '1px solid rgba(162,90,68,.35)', background: 'rgba(162,90,68,.06)', borderRadius: 'var(--radius-kpi)', padding: '11px 13px' }}>
+                <div role="alert" style={{ marginTop: 12, display: 'flex', gap: 9, alignItems: 'flex-start', border: '1px solid rgba(162,90,68,.35)', background: 'rgba(162,90,68,.06)', borderRadius: 'var(--radius-sm)', padding: '11px 13px' }}>
                   <AlertTriangle style={{ width: 14, height: 14, color: '#A25A44', flex: 'none', marginTop: 1 }} />
                   <span style={{ fontSize: 12.5, lineHeight: 1.55, color: 'var(--text-secondary)' }}>This file would remove more than half of the current sheet, so Fundir will not apply it. Check that you dropped the full Illinois file, not a filtered extract.</span>
                 </div>
               )}
               {diff.canApply && diff.trackedRemoved > 0 && (
-                <div style={{ marginTop: 12, display: 'flex', gap: 9, alignItems: 'flex-start', border: '1px solid rgba(156,122,42,.3)', background: 'rgba(156,122,42,.06)', borderRadius: 'var(--radius-kpi)', padding: '11px 13px' }}>
+                <div style={{ marginTop: 12, display: 'flex', gap: 9, alignItems: 'flex-start', border: '1px solid rgba(156,122,42,.3)', background: 'rgba(156,122,42,.06)', borderRadius: 'var(--radius-sm)', padding: '11px 13px' }}>
                   <AlertTriangle style={{ width: 14, height: 14, color: '#9C7A2A', flex: 'none', marginTop: 1 }} />
                   <span style={{ fontSize: 12.5, lineHeight: 1.55, color: 'var(--text-secondary)' }}>{fmt(diff.trackedRemoved)} of the organizations that disappeared are on a CYC sheet. Their rows stay put with the values you last saw; the Cultivation List marks them as dropped from the IRS file.</span>
                 </div>
@@ -275,7 +275,7 @@ export function IrsReplaceModal({ open, onClose, lockedSheets, canReplace }: {
                 { title: 'Biggest asset changes', rows: diff.changedSample, kind: 'changed' },
                 { title: 'Disappeared', rows: diff.removedSample, kind: 'removed' },
               ] as const).filter(g => g.rows.length).map(g => (
-                <div key={g.kind} style={{ marginTop: 14, border: '1px solid var(--border-hairline)', borderRadius: 'var(--radius-kpi)', overflow: 'hidden' }}>
+                <div key={g.kind} style={{ marginTop: 14, border: '1px solid var(--border-hairline)', borderRadius: 'var(--radius-sm)', overflow: 'hidden' }}>
                   <div style={{ padding: '9px 13px', borderBottom: '1px solid var(--border-hairline)', background: 'var(--bg-page)' }}><span className="fd-eyebrow" style={{ color: 'var(--text-secondary)' }}>{g.title}</span></div>
                   {g.rows.map((r, i) => (
                     <div key={r.ein} style={{ display: 'flex', alignItems: 'baseline', gap: 9, padding: '8px 13px', borderBottom: i < g.rows.length - 1 ? '1px solid var(--border-hairline)' : 'none' }}>
@@ -290,7 +290,7 @@ export function IrsReplaceModal({ open, onClose, lockedSheets, canReplace }: {
               ))}
 
               {error && (
-                <div role="alert" style={{ marginTop: 12, display: 'flex', gap: 9, alignItems: 'flex-start', border: '1px solid rgba(162,90,68,.35)', background: 'rgba(162,90,68,.06)', borderRadius: 'var(--radius-kpi)', padding: '11px 13px' }}>
+                <div role="alert" style={{ marginTop: 12, display: 'flex', gap: 9, alignItems: 'flex-start', border: '1px solid rgba(162,90,68,.35)', background: 'rgba(162,90,68,.06)', borderRadius: 'var(--radius-sm)', padding: '11px 13px' }}>
                   <AlertTriangle style={{ width: 14, height: 14, color: '#A25A44', flex: 'none', marginTop: 1 }} />
                   <span style={{ fontSize: 12.5, lineHeight: 1.55, color: 'var(--text-secondary)' }}>{error}</span>
                 </div>
@@ -310,13 +310,13 @@ export function IrsReplaceModal({ open, onClose, lockedSheets, canReplace }: {
           {/* ── Done ── */}
           {phase === 'done' && applied && diff && (
             <>
-              <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', border: '1px solid rgba(12,107,90,.24)', borderRadius: 'var(--radius-kpi)', padding: '12px 13px', background: 'rgba(12,107,90,.04)' }}>
+              <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', border: '1px solid rgba(12,107,90,.24)', borderRadius: 'var(--radius-sm)', padding: '12px 13px', background: 'rgba(12,107,90,.04)' }}>
                 <CheckCircle2 style={{ width: 15, height: 15, color: 'var(--accent)', flex: 'none', marginTop: 1 }} />
                 <div style={{ fontSize: 12.5, lineHeight: 1.6, color: 'var(--text-secondary)' }}>
                   <b style={{ color: 'var(--text-primary)', fontWeight: 500 }}>eo_il now holds {fmt(diff.staged)} rows.</b> {fmt(diff.added)} added, {fmt(diff.changed)} asset updates, {fmt(applied.deleted)} removed.
                 </div>
               </div>
-              <div style={{ marginTop: 14, border: '1px solid var(--border-hairline)', borderRadius: 'var(--radius-kpi)', overflow: 'hidden' }}>
+              <div style={{ marginTop: 14, border: '1px solid var(--border-hairline)', borderRadius: 'var(--radius-sm)', overflow: 'hidden' }}>
                 <div style={{ padding: '9px 13px', borderBottom: '1px solid var(--border-hairline)', background: 'var(--bg-page)' }}><span className="fd-eyebrow" style={{ color: 'var(--text-secondary)' }}>Rejoined on EIN</span></div>
                 {[
                   ['Chicago Metro Funders + Funder Prospects', applied.prospects, 'name, address, NTEE, assets, income, 990-PF flag'],

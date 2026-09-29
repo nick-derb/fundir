@@ -27,7 +27,7 @@ export function ScoreBreakdownChart({ score }: ScoreBreakdownProps) {
       {/* Composite score */}
       <div className="flex items-center gap-4 mb-6 p-4 rounded-md border" style={{ background: scoreBg, borderColor: scoreBorder }}>
         <div
-          className="w-16 h-16 rounded-full flex items-center justify-center text-[22px] font-bold flex-shrink-0 border-2"
+          className="w-16 h-16 rounded-md flex items-center justify-center text-[22px] font-semibold flex-shrink-0 border-2"
           style={{ color: scoreColor, borderColor: scoreBorder, background: '#ffffff' }}
         >
           {score.composite.toFixed(0)}
@@ -58,9 +58,9 @@ export function ScoreBreakdownChart({ score }: ScoreBreakdownProps) {
                   {value}
                 </span>
               </div>
-              <div className="h-1.5 bg-[#f1f5f9] rounded-full overflow-hidden">
+              <div className="h-1.5 bg-[#f1f5f9] rounded-[2px] overflow-hidden">
                 <div
-                  className="h-full rounded-full transition-all duration-500"
+                  className="h-full rounded-[2px] transition-all duration-500"
                   style={{ width: `${value}%`, background: value >= 40 ? factor.color : '#fca5a5' }}
                 />
               </div>

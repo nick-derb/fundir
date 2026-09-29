@@ -14,7 +14,7 @@ import { createServerClient } from '@/lib/supabase';
 import { AppShell } from '@/components/app-shell';
 import { redirect } from 'next/navigation';
 import {
-  CheckCircle, Settings as SettingsIcon, Database, Cpu,
+  CheckCircle, Database, Cpu,
   RefreshCw, Building2, AlertTriangle,
   Info, Zap, Activity, Sparkles, CalendarDays,
 } from 'lucide-react';
@@ -140,53 +140,43 @@ export default async function SettingsPage() {
       availableOrgs={ctx.availableOrgs}
       currentOrgCode={ctx.orgCode}
     >
-      <div className="bg-page min-h-screen">
+      <div className="bg-page min-h-screen px-4 sm:px-6 pt-[22px] pb-10">
 
-        {/* ── Header — the console treatment used across the app (light, serif title, hairline) ── */}
-        <div className="border-b" style={{ background: 'var(--bg-surface)', borderColor: 'var(--border-hairline)' }}>
-          <div className="px-8 pt-6 pb-5 max-w-7xl mx-auto">
-            <div className="flex items-end justify-between gap-6 flex-wrap">
-              <div className="min-w-0">
-                <div className="flex items-center gap-2 mb-2">
-                  <SettingsIcon className="w-3.5 h-3.5" style={{ color: 'var(--accent)' }} />
-                  <span className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.12em]" style={{ color: 'var(--text-tertiary)' }}>
-                    System Configuration
-                  </span>
-                </div>
-                <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 400, fontSize: 'clamp(1.9rem,3vw,2.5rem)', lineHeight: 1.04, letterSpacing: '-.018em', margin: 0, color: 'var(--text-primary)' }}>
-                  Settings
-                </h1>
-                <p className="text-[13px] mt-2" style={{ color: 'var(--text-secondary)' }}>
-                  Fundir · <span className="font-mono" style={{ color: 'var(--text-primary)' }}>{ctx.orgName}</span> ·{' '}
-                  <span className="font-mono tabular-nums" style={{ color: 'var(--text-primary)' }}>v2.0</span>
-                </p>
-              </div>
-              <div className="flex flex-col items-end gap-2 flex-shrink-0">
-                <span className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.08em] inline-flex items-center gap-2" style={{ color: 'var(--text-secondary)' }}>
-                  <span className={`w-[7px] h-[7px] rounded-full ${allConnected ? 'bg-success' : 'bg-warning'}`} />
-                  <span className="tabular-nums">{connectedCount} / {totalServices}</span> services online
-                </span>
-                <span className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.08em] inline-flex items-center gap-2" style={{ color: 'var(--text-secondary)' }}>
-                  <span className={`w-[7px] h-[7px] rounded-full ${storageConnected > 0 ? 'bg-accent' : 'bg-ink-300'}`} />
-                  <span className="tabular-nums">{storageConnected} / 2</span> storage connected
-                </span>
-                {lastSyncLabel && (
-                  <span className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.08em] inline-flex items-center gap-2" style={{ color: 'var(--text-secondary)' }}>
-                    <span className="w-[7px] h-[7px] rounded-full bg-info" />
-                    Last sync · <span className="tabular-nums">{lastSyncLabel}</span>
-                  </span>
-                )}
-              </div>
-            </div>
+        {/* ── Header ── */}
+        <div className="fd-page-head">
+          <div className="min-w-0">
+            <p className="fd-eyebrow" style={{ color: 'var(--text-tertiary)', margin: '0 0 8px' }}>
+              {ctx.orgName} · System configuration
+            </p>
+            <h1>Settings</h1>
+            <p className="fd-lede">Connections, sync and matching rules for Fundir <span className="font-mono">v2.0</span>.</p>
+          </div>
+        </div>
+
+        <div className="fd-stats max-w-4xl mb-5">
+          <div className="fd-stat" data-accent={allConnected ? 'true' : undefined}>
+            <span className="fd-eyebrow">Services online</span>
+            <b>{connectedCount} / {totalServices}</b>
+            <small>{allConnected ? 'all configured' : 'some not configured'}</small>
+          </div>
+          <div className="fd-stat">
+            <span className="fd-eyebrow">Storage connected</span>
+            <b>{storageConnected} / 2</b>
+            <small>Google Drive, OneDrive</small>
+          </div>
+          <div className="fd-stat">
+            <span className="fd-eyebrow">Last 990 sync</span>
+            <b style={{ fontSize: 15, paddingTop: 3 }}>{lastSyncLabel ?? 'Never'}</b>
+            <small>ProPublica, by EIN</small>
           </div>
         </div>
 
         {/* ── Body ────────────────────────────────────────────────────── */}
-        <div className="px-4 sm:px-6 md:px-8 py-7 max-w-5xl mx-auto space-y-5">
+        <div className="max-w-4xl space-y-4">
 
           {/* Degraded warning */}
           {!allConnected && (
-            <div className="bg-surface border border-hairline border-l-[3px] border-l-warning rounded-md p-4 flex items-start gap-3">
+            <div className="bg-surface border border-hairline border-l-[2px] border-l-warning rounded-md p-4 flex items-start gap-3">
               <AlertTriangle className="w-4 h-4 text-warning flex-shrink-0 mt-0.5" />
               <div>
                 <p className="text-[13px] font-semibold text-warning">
@@ -256,11 +246,8 @@ export default async function SettingsPage() {
             icon={Activity}
             right={
               <div className="flex items-center gap-3 flex-shrink-0">
-                <div className="h-1.5 w-32 bg-ink-100 rounded-md overflow-hidden">
-                  <div
-                    className="h-full bg-accent rounded-md transition-all"
-                    style={{ width: `${(connectedCount / totalServices) * 100}%` }}
-                  />
+                <div className="fd-bar w-32">
+                  <i style={{ width: `${(connectedCount / totalServices) * 100}%` }} />
                 </div>
                 <span className="font-mono text-[10.5px] tabular-nums text-secondary">
                   {connectedCount}/{totalServices}
@@ -309,7 +296,7 @@ export default async function SettingsPage() {
             }
           >
             <div className="p-5 space-y-5">
-              <div className="bg-surface border border-hairline border-l-[3px] border-l-info rounded-[8px] p-3 flex items-start gap-3">
+              <div className="bg-surface border border-hairline border-l-[2px] border-l-info rounded-md p-3 flex items-start gap-3">
                 <Info className="w-3.5 h-3.5 text-info flex-shrink-0 mt-0.5" />
                 <p className="text-[12px] text-muted leading-relaxed">
                   Sync pulls the latest IRS Form 990 data for your organization from ProPublica. This powers the
@@ -384,7 +371,7 @@ export default async function SettingsPage() {
                 </span>
               }
             >
-              <div className="p-5 grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="fd-stats px-5" style={{ borderTop: 'none', borderBottom: 'none' }}>
                 {([
                   { label: 'Grants scanned', value: lastRun.grants_discovered, tone: 'neutral'  as const },
                   { label: 'New stored',     value: lastRun.grants_new,        tone: 'accent'   as const },
@@ -480,13 +467,11 @@ interface SectionCardProps {
 
 function SectionCard({ eyebrow, sub, icon: Icon, right, children }: SectionCardProps) {
   return (
-    <section className="bg-surface border border-hairline rounded-md overflow-hidden">
-      <header className="px-5 py-4 border-b border-hairline bg-elevated flex items-center gap-3 flex-wrap">
-        <div className="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0 bg-accent-tint">
-          <Icon className="w-3.5 h-3.5 text-accent" />
-        </div>
+    <section className="fd-card overflow-hidden">
+      <header className="px-5 py-3.5 border-b border-hairline flex items-center gap-3 flex-wrap">
+        <Icon className="w-3.5 h-3.5 text-accent flex-shrink-0" />
         <div className="min-w-0 flex-1">
-          <p className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.1em] text-secondary">
+          <p className="fd-eyebrow text-secondary">
             {eyebrow}
           </p>
           {sub && (
@@ -535,20 +520,16 @@ interface KpiCardProps {
   tone:  'neutral' | 'accent' | 'success' | 'warning' | 'critical';
 }
 function KpiCard({ label, value, tone }: KpiCardProps) {
-  const border =
-    tone === 'accent'   ? 'border-l-accent'   :
-    tone === 'success'  ? 'border-l-success'  :
-    tone === 'warning'  ? 'border-l-warning'  :
-    tone === 'critical' ? 'border-l-critical' :
-                          'border-l-ink-300';
+  const color =
+    tone === 'accent'   ? 'var(--accent)'   :
+    tone === 'success'  ? 'var(--success)'  :
+    tone === 'warning'  ? 'var(--warning)'  :
+    tone === 'critical' ? 'var(--critical)' :
+                          undefined;
   return (
-    <div className={`bg-surface border border-hairline border-l-[3px] ${border} rounded-sm px-4 py-3`}>
-      <p className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.08em] text-secondary">
-        {label}
-      </p>
-      <p className="font-mono text-kpi tabular-nums text-primary mt-1.5 leading-none">
-        {value ?? 0}
-      </p>
+    <div className="fd-stat">
+      <span className="fd-eyebrow">{label}</span>
+      <b style={{ color }}>{value ?? 0}</b>
     </div>
   );
 }

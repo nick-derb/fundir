@@ -80,8 +80,8 @@ function SignalWeightBar({ weight }: { weight?: number }) {
   if (!weight) return null;
   return (
     <div className="flex items-center gap-1.5 mt-1">
-      <div className="h-1 w-16 bg-canvas-2 rounded-full overflow-hidden">
-        <div className="h-full rounded-full bg-action" style={{ width: `${weight * 100}%` }} />
+      <div className="h-1 w-16 bg-canvas-2 rounded-[2px] overflow-hidden">
+        <div className="h-full rounded-[2px] bg-action" style={{ width: `${weight * 100}%` }} />
       </div>
       <span className="text-eyebrow text-ink-3 font-medium">{Math.round(weight * 100)}% weight</span>
     </div>
@@ -112,7 +112,7 @@ function FinancialAssessment({ signals, score }: { signals: EligibilitySignal[];
   const mismatchCount = signals.filter(s => s.status === 'mismatch').length;
 
   return (
-    <div className="bg-canvas-1 rounded-md shadow-flat overflow-hidden">
+    <div className="fd-card overflow-hidden">
       {/* Header */}
       <div className="px-5 py-4 border-b border-canvas-3">
         <div className="flex items-center justify-between mb-2">
@@ -132,7 +132,7 @@ function FinancialAssessment({ signals, score }: { signals: EligibilitySignal[];
 
         {/* Mini signal summary */}
         <div className="flex items-center gap-3 mt-2">
-          <div className="flex gap-0.5 h-1.5 flex-1 rounded-full overflow-hidden bg-canvas-2">
+          <div className="flex gap-0.5 h-1.5 flex-1 rounded-[2px] overflow-hidden bg-canvas-2">
             <div className="bg-signal-pursue" style={{ width: `${(matchCount    / signals.length) * 100}%` }} />
             <div className="bg-signal-maybe"  style={{ width: `${(likelyCount   / signals.length) * 100}%` }} />
             <div className="bg-signal-skip"   style={{ width: `${(mismatchCount / signals.length) * 100}%` }} />
@@ -197,20 +197,19 @@ function FinancialAssessment({ signals, score }: { signals: EligibilitySignal[];
 
 // ── Stage badge ───────────────────────────────────────────────────────────────
 
-const STAGE_STYLE: Record<string, string> = {
-  discovered: 'bg-canvas-2          text-ink-1',
-  reviewing:  'bg-action-soft       text-action',
-  preparing:  'bg-signal-maybe-soft text-signal-maybe',
-  drafting:   'bg-signal-maybe-soft text-signal-maybe',
-  submitted:  'bg-signal-pursue-soft text-signal-pursue',
-  awarded:    'bg-signal-pursue-soft text-signal-pursue',
-  rejected:   'bg-signal-skip-soft  text-signal-skip',
+const STAGE_TONE: Record<string, string | undefined> = {
+  discovered: undefined,
+  reviewing:  'info',
+  preparing:  'warning',
+  drafting:   'warning',
+  submitted:  'accent',
+  awarded:    'accent',
+  rejected:   'critical',
 };
 
 function StageBadge({ stage }: { stage: string }) {
-  const cls = STAGE_STYLE[stage] ?? STAGE_STYLE.discovered;
   return (
-    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-sm text-caption font-semibold capitalize ring-1 ring-canvas-3 ${cls}`}>
+    <span className="fd-tag" data-tone={STAGE_TONE[stage]} data-fill="true">
       <span className="w-1.5 h-1.5 rounded-full bg-current opacity-70" />
       {stage}
     </span>
@@ -345,8 +344,8 @@ export default async function GrantDetailPage({
   return (
     <AppShell orgName={ctx.orgName} orgId={ctx.orgId} userEmail={ctx.email} userName={ctx.displayName} userAvatar={ctx.avatarUrl} isAdmin={ctx.isAdmin} availableOrgs={ctx.availableOrgs} currentOrgCode={ctx.orgCode}>
       {/* ── Light hero on canvas ─────────────────────────────────── */}
-      <div className="bg-canvas-0 border-b border-canvas-3">
-        <div className="px-4 sm:px-6 md:px-8 py-5 max-w-7xl mx-auto">
+      <div className="bg-surface border-b border-hairline">
+        <div className="px-4 sm:px-6 py-5 max-w-7xl">
           <Link href="/dashboard"
             className="inline-flex items-center gap-1.5 text-caption text-ink-2 hover:text-ink-0 mb-4 transition-colors">
             <ArrowLeft className="w-3.5 h-3.5" /> Dashboard
@@ -359,7 +358,7 @@ export default async function GrantDetailPage({
 
             <div className="flex-1 min-w-0">
               <div className="flex flex-wrap items-start justify-between gap-2 mb-1.5">
-                <h1 className="text-h1 font-semibold text-ink-0 leading-tight flex-1 min-w-0 break-words">
+                <h1 className="fd-display text-ink-0 flex-1 min-w-0 break-words" style={{ fontSize: 'clamp(1.5rem, 2.4vw, 2rem)' }}>
                   {grant?.title}
                 </h1>
                 <div className="shrink-0">
@@ -411,7 +410,7 @@ export default async function GrantDetailPage({
         </div>
       </div>
 
-      <div className="px-4 sm:px-6 md:px-8 py-5 max-w-7xl mx-auto">
+      <div className="px-4 sm:px-6 py-5 max-w-7xl">
         {/* ── Tab bar — light, design-token-aligned ── */}
         <div className="flex items-center gap-1 mb-5 border-b border-canvas-3" role="tablist">
           {TABS.map(({ key, label, icon: Icon }) => {
@@ -445,7 +444,7 @@ export default async function GrantDetailPage({
             <>
               {/* "Why it's a match" — THE prominent panel */}
               {reasonItems.length > 0 && (
-                <div className="bg-canvas-1 rounded-md shadow-flat p-5">
+                <div className="fd-card p-5">
                   <div className="flex items-center justify-between gap-2 mb-3">
                     <div className="flex items-center gap-2">
                       <div className="w-6 h-6 rounded-sm flex items-center justify-center bg-action-soft text-action">
@@ -474,7 +473,7 @@ export default async function GrantDetailPage({
 
               {/* Synopsis */}
               {grant?.synopsis && (
-                <div className="bg-canvas-1 rounded-md shadow-flat p-5">
+                <div className="fd-card p-5">
                   <p className="text-eyebrow font-semibold text-ink-2 uppercase tracking-wider mb-3">Synopsis</p>
                   <p className="text-body text-ink-0 leading-relaxed">{grant.synopsis}</p>
                 </div>
@@ -499,7 +498,7 @@ export default async function GrantDetailPage({
 
               {/* Key requirements (when extracted) */}
               {fields.key_requirements?.length > 0 && (
-                <div className="bg-canvas-1 rounded-md shadow-flat p-5">
+                <div className="fd-card p-5">
                   <p className="text-eyebrow font-semibold text-ink-2 uppercase tracking-wider mb-3">Key requirements</p>
                   <ul className="space-y-2.5">
                     {fields.key_requirements.map((req: string, i: number) => (
@@ -519,7 +518,7 @@ export default async function GrantDetailPage({
              ════════════════════════════════════════════════════════════ */}
           {tab === 'funder' && (
             <>
-              <div className="bg-canvas-1 rounded-md shadow-flat overflow-hidden">
+              <div className="fd-card overflow-hidden">
                 <div className="px-5 py-4 border-b border-canvas-3">
                   <h2 className="text-h2 font-semibold text-ink-0">Match score breakdown</h2>
                   <p className="text-caption text-ink-2 mt-0.5">6-factor composite</p>
@@ -542,7 +541,7 @@ export default async function GrantDetailPage({
               WORKSPACE TAB — inner nav over Draft / Tasks / Notes / Documents
              ════════════════════════════════════════════════════════════ */}
           {tab === 'workspace' && (
-            <div className="bg-canvas-1 rounded-md shadow-flat overflow-hidden">
+            <div className="fd-card overflow-hidden">
               {/* Inner-nav pill row */}
               <div className="flex items-center gap-1 px-3 pt-3 pb-0 border-b border-canvas-3 overflow-x-auto">
                 {WORKSPACE_SECTIONS.map(({ key, label, icon: Icon }) => {
@@ -650,7 +649,7 @@ function MetadataBlock({ fields }: { fields: Record<string, unknown> }) {
   if (rows.length === 0) return null;
 
   return (
-    <div className="bg-canvas-1 rounded-md shadow-flat p-5">
+    <div className="fd-card p-5">
       <p className="text-eyebrow font-semibold text-ink-2 uppercase tracking-wider mb-4">Details</p>
       <dl className="space-y-3">
         {rows.map(r => (
@@ -666,15 +665,15 @@ function MetadataBlock({ fields }: { fields: Record<string, unknown> }) {
 
 // Chip array used inside the MetadataBlock value column.
 function ChipRow({ items, tone }: { items: string[]; tone: 'eligibility' | 'pursue' | 'strategic' | 'neutral' }) {
-  const cls =
-      tone === 'pursue'      ? 'bg-signal-pursue-soft text-signal-pursue'
-    : tone === 'eligibility' ? 'bg-action-soft        text-action'
-    : tone === 'strategic'   ? 'bg-signal-maybe-soft  text-signal-maybe'
-                             : 'bg-canvas-2           text-ink-1';
+  const dataTone =
+      tone === 'pursue'      ? 'accent'
+    : tone === 'eligibility' ? 'info'
+    : tone === 'strategic'   ? 'warning'
+                             : undefined;
   return (
     <div className="flex flex-wrap gap-1.5">
       {items.map(x => (
-        <span key={x} className={`inline-flex items-center px-2 py-0.5 rounded-sm text-caption font-medium ${cls}`}>
+        <span key={x} className="fd-tag" data-tone={dataTone}>
           {x}
         </span>
       ))}

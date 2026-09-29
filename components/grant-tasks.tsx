@@ -89,7 +89,7 @@ export function GrantTasks({ grantId, initialTasks }: GrantTasksProps) {
             {task.title}
           </p>
           <div className="flex items-center gap-2 mt-0.5">
-            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full" style={{ background: cfg.bg, color: cfg.color, border: `1px solid ${cfg.border}` }}>
+            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-sm" style={{ background: cfg.bg, color: cfg.color, border: `1px solid ${cfg.border}` }}>
               {cfg.label}
             </span>
             {task.due_date && (

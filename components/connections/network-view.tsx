@@ -2,7 +2,7 @@
 
 // CYC network — the board's LinkedIn footprint and the second-order warm paths
 // inferred from it. Sibling of connections-view.tsx: same officer-trail design
-// language (serif openers, hairline cards, mono chips, 352px roster + detail).
+// language (serif openers, hairline cards, mono tags, roster + detail).
 //
 // LinkedIn exposes nobody's connection list; what it does expose is careers.
 // A board member's prior employers are rooms they were in — the people working
@@ -13,10 +13,6 @@ import { useCallback, useState } from 'react';
 import {
   Radar, RefreshCw, UserPlus, ExternalLink, Check, X, Loader2, Link2, Briefcase, Download,
 } from 'lucide-react';
-
-const SERIF = 'var(--font-display)';
-const AMBER = '#9C7A2A';
-const SLATE = '#5B7383';
 
 export interface NwEmployment { org_name: string; title: string | null; started: string | null; ended: string | null; is_current: boolean }
 export interface NwPerson {
@@ -41,31 +37,19 @@ export interface NwState {
 
 const CSS = `
 .nw-root{color:var(--text-primary);background:var(--bg-page)}
-@keyframes nw-rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
-.nw-root [data-nw-person]{transition:background .14s}
-@media (max-width:1180px){.nw-root [data-nw-cols]{grid-template-columns:minmax(0,1fr)!important}.nw-root [data-nw-list]{max-height:none!important}}
+.nw-root .nw-cols{display:grid;grid-template-columns:340px minmax(0,1fr);gap:16px;align-items:start}
+.nw-root .nw-list{max-height:620px;overflow-y:auto}
+.nw-root .nw-person{display:flex;gap:11px;padding:11px 14px;border-bottom:1px solid var(--border-hairline)}
+.nw-root .nw-av{width:28px;height:28px;flex:none;border-radius:50%;background:var(--bg-elevated);color:var(--text-secondary);display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:10px;font-weight:500}
+.nw-root .fd-row[data-on="true"] .nw-av{background:var(--accent);color:var(--accent-on)}
+.nw-root h2{font-family:var(--font-display);font-weight:400;letter-spacing:-.015em}
+.nw-root .nw-opening{font-family:var(--font-display);font-weight:400;font-size:clamp(1.2rem,1.9vw,1.45rem);line-height:1.3;letter-spacing:-.012em;margin:0}
+.nw-root .nw-section{display:flex;align-items:center;gap:10px;padding:11px 16px;border-bottom:1px solid var(--border-hairline)}
+@media (max-width:1180px){.nw-root .nw-cols{grid-template-columns:minmax(0,1fr)}.nw-root .nw-list{max-height:none}.nw-root .nw-roster{position:static!important}}
 `;
 
 const initialsOf = (name: string) =>
   name.trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase() || '?';
-
-function Chip({ text, color, border }: { text: string; color: string; border: string }) {
-  return <i className="fd-mono" style={{ fontStyle: 'normal', fontSize: 8.5, letterSpacing: '.07em', textTransform: 'uppercase', color, border: `1px solid ${border}`, borderRadius: 2, padding: '2px 5px', whiteSpace: 'nowrap' }}>{text}</i>;
-}
-function KpiCard({ label, value, sub, accent }: { label: string; value: string; sub?: string; accent?: boolean }) {
-  return (
-    <div style={{ background: 'var(--bg-surface)', border: `1px solid ${accent ? 'rgba(12,107,90,.28)' : 'var(--border-hairline)'}`, borderRadius: 'var(--radius-kpi)', padding: '14px 15px' }}>
-      <p className="fd-eyebrow" style={{ color: accent ? 'var(--accent)' : 'var(--text-tertiary)', margin: '0 0 8px' }}>{label}</p>
-      <b className="fd-kpi" style={{ fontSize: 22, color: accent ? 'var(--accent)' : undefined }}>{value}</b>
-      {sub && <p className="fd-caption" style={{ color: 'var(--text-tertiary)', margin: '4px 0 0' }}>{sub}</p>}
-    </div>
-  );
-}
-
-const card: React.CSSProperties = { background: 'var(--bg-surface)', border: '1px solid var(--border-hairline)', borderRadius: 'var(--radius-console)' };
-const btnGhost: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 8, height: 40, padding: '0 15px', borderRadius: 'var(--radius-kpi)', border: '1px solid var(--border-hairline)', background: 'var(--bg-surface)', color: 'var(--text-primary)', font: 'inherit', fontSize: 12.5, cursor: 'pointer', whiteSpace: 'nowrap' };
-const btnAccent: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 8, height: 40, padding: '0 18px', borderRadius: 'var(--radius-kpi)', border: 'none', background: 'var(--accent)', color: '#fff', font: 'inherit', fontSize: 12.5, fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap' };
-const inputCss: React.CSSProperties = { width: '100%', height: 36, padding: '0 10px', borderRadius: 'var(--radius-kpi)', border: '1px solid var(--border-hairline)', background: 'var(--bg-surface)', font: 'inherit', fontSize: 12.5, color: 'var(--text-primary)' };
 
 export function NetworkView({ initial }: { initial: NwState }) {
   const [state, setState] = useState<NwState>(initial);
@@ -138,24 +122,22 @@ export function NetworkView({ initial }: { initial: NwState }) {
         : `${person.name}'s career runs through ${person.employments.length || 'their'} organization${person.employments.length === 1 ? '' : 's'} — ${paths.length ? `${paths.length} ${paths.length === 1 ? 'person' : 'people'} at those orgs look reachable through them.` : 'employer scans will surface who they can still call there.'}`;
 
   return (
-    <div className="nw-root" style={{ padding: '24px 26px 40px' }}>
+    <div className="nw-root" style={{ padding: '22px 24px 40px' }}>
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
 
       {/* header */}
-      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 24, flexWrap: 'wrap', marginBottom: 20 }}>
+      <div className="fd-page-head">
         <div style={{ minWidth: 0 }}>
-          <p className="fd-eyebrow" style={{ color: 'var(--text-tertiary)', margin: '0 0 9px' }}>Chicago Youth Centers</p>
-          <h1 style={{ fontFamily: SERIF, fontWeight: 400, fontSize: 'clamp(1.9rem,3vw,2.5rem)', lineHeight: 1.04, letterSpacing: '-.018em', margin: 0 }}>Network</h1>
-          <p style={{ margin: '9px 0 0', fontSize: 13.5, lineHeight: 1.6, color: 'var(--text-secondary)', maxWidth: '64ch' }}>
-            The board&rsquo;s LinkedIn footprint, mapped. Each member&rsquo;s career history names the rooms they were in — and the fundraising and leadership people in those rooms today are who they can still call for CYC.
-          </p>
+          <p className="fd-eyebrow" style={{ color: 'var(--text-tertiary)', margin: '0 0 8px' }}>Chicago Youth Centers</p>
+          <h1>Network</h1>
+          <p className="fd-lede">The board&rsquo;s LinkedIn footprint, mapped: each career names the rooms a member was in, and who in those rooms they can still call for CYC.</p>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <a href="/api/network/export" download style={{ ...btnGhost, textDecoration: 'none' }} title="Download the full network as a dated Excel workbook">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <a href="/api/network/export" download className="fd-btn" style={{ textDecoration: 'none' }} title="Download the full network as a dated Excel workbook">
             <Download style={{ width: 13, height: 13 }} />Export .xlsx
           </a>
-          <button onClick={() => setAddOpen(true)} style={btnGhost}><UserPlus style={{ width: 13, height: 13 }} />Add person</button>
-          <button onClick={runRefreshStep} disabled={refreshing || !state.configured} style={{ ...btnAccent, opacity: refreshing || !state.configured ? 0.6 : 1 }}>
+          <button className="fd-btn" onClick={() => setAddOpen(true)}><UserPlus style={{ width: 13, height: 13 }} />Add person</button>
+          <button className="fd-btn-primary" onClick={runRefreshStep} disabled={refreshing || !state.configured}>
             {refreshing ? <Loader2 style={{ width: 13, height: 13 }} className="animate-spin" /> : <RefreshCw style={{ width: 13, height: 13 }} />}
             {refreshing ? 'Reading…' : refreshDone ? 'Refresh network' : 'Continue refresh'}
           </button>
@@ -164,17 +146,17 @@ export function NetworkView({ initial }: { initial: NwState }) {
 
       {/* configuration / progress strip */}
       {!state.configured && (
-        <div style={{ ...card, display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px', marginBottom: 16 }}>
-          <Link2 style={{ width: 14, height: 14, color: AMBER, flex: 'none' }} />
+        <div className="fd-card" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', marginBottom: 14 }}>
+          <Link2 style={{ width: 14, height: 14, color: 'var(--warning)', flex: 'none' }} />
           <span style={{ fontSize: 12.5, color: 'var(--text-secondary)' }}>
             RapidAPI isn&rsquo;t connected — add <b className="fd-mono" style={{ fontSize: 11.5 }}>RAPIDAPI_KEY</b> to the environment to enable profile reads. The roster and any mapped data still work.
           </span>
         </div>
       )}
       {(refreshMsg || error) && (
-        <div style={{ ...card, display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px', marginBottom: 16, borderColor: error ? 'rgba(156,122,42,.4)' : 'rgba(12,107,90,.3)' }}>
+        <div className="fd-card" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', marginBottom: 14, borderLeft: `2px solid ${error ? 'var(--warning)' : 'var(--accent)'}` }}>
           {error
-            ? <span style={{ fontSize: 12.5, color: AMBER }}>{error}</span>
+            ? <span style={{ fontSize: 12.5, color: 'var(--warning)' }}>{error}</span>
             : <span style={{ fontSize: 12.5, color: 'var(--text-secondary)' }}>
                 <Check style={{ width: 13, height: 13, color: 'var(--accent)', display: 'inline', verticalAlign: '-2px', marginRight: 6 }} />
                 {refreshMsg}{!refreshDone && ' — more pending, click Continue refresh.'}
@@ -183,45 +165,44 @@ export function NetworkView({ initial }: { initial: NwState }) {
       )}
 
       {/* KPIs */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(168px,1fr))', gap: 12, marginBottom: 20 }}>
-        <KpiCard label="Board mapped" value={`${state.totals.boardMapped} / ${state.totals.boardTotal}`} sub="profiles read" />
-        <KpiCard label="Employers discovered" value={String(state.totals.employers)} sub="from career histories" />
-        <KpiCard label="Warm paths" value={String(state.totals.leads)} accent sub="second-order people" />
-        <KpiCard label="Last refresh" value={lastRunLabel} sub="on demand · quarterly is plenty" />
+      <div className="fd-stats" style={{ marginBottom: 18 }}>
+        <div className="fd-stat"><span className="fd-eyebrow">Board mapped</span><b>{state.totals.boardMapped} / {state.totals.boardTotal}</b><small>profiles read</small></div>
+        <div className="fd-stat"><span className="fd-eyebrow">Employers discovered</span><b>{state.totals.employers}</b><small>from career histories</small></div>
+        <div className="fd-stat" data-accent="true"><span className="fd-eyebrow">Warm paths</span><b>{state.totals.leads}</b><small>second-order people</small></div>
+        <div className="fd-stat"><span className="fd-eyebrow">Last refresh</span><b style={{ fontSize: 15, paddingTop: 3 }}>{lastRunLabel}</b><small>on demand · quarterly is plenty</small></div>
       </div>
 
-      <div data-nw-cols style={{ display: 'grid', gridTemplateColumns: '352px minmax(0,1fr)', gap: 20, alignItems: 'start' }}>
+      <div className="nw-cols">
 
         {/* roster */}
-        <div style={{ ...card, overflow: 'hidden', position: 'sticky', top: 68 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '14px 16px 12px', borderBottom: '1px solid var(--border-hairline)' }}>
+        <div className="fd-card nw-roster" style={{ overflow: 'hidden', position: 'sticky', top: 64 }}>
+          <div className="nw-section">
             <span className="fd-eyebrow" style={{ color: 'var(--text-secondary)' }}>CYC board &amp; staff</span>
+            <span style={{ flex: 1 }} />
             <span className="fd-mono" style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>{state.people.length}</span>
           </div>
-          <div data-nw-list style={{ maxHeight: 620, overflowY: 'auto' }}>
+          <div className="nw-list">
             {state.people.length === 0 && (
-              <p className="fd-caption" style={{ color: 'var(--text-tertiary)', padding: '16px' }}>No one on the roster yet — add your board members with their LinkedIn URLs.</p>
+              <p className="fd-caption" style={{ color: 'var(--text-tertiary)', padding: '14px', margin: 0 }}>No one on the roster yet — add your board members with their LinkedIn URLs.</p>
             )}
             {state.people.map(p => {
               const on = p.id === person?.id;
               return (
-                <div key={p.id} data-nw-person onClick={() => setSelected(p.id)} style={{ borderBottom: '1px solid var(--border-hairline)', cursor: 'pointer', background: on ? 'var(--bg-page)' : undefined }}>
-                  <div style={{ display: 'flex', gap: 11, padding: '13px 16px', ...(on ? { boxShadow: 'inset 2px 0 0 var(--accent)' } : {}) }}>
-                    <b style={{ width: 30, height: 30, flex: 'none', borderRadius: '50%', background: on ? 'var(--accent)' : 'var(--bg-elevated)', color: on ? '#fff' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 500 }}>{initialsOf(p.name)}</b>
-                    <div style={{ minWidth: 0, flex: 1 }}>
-                      <b style={{ display: 'block', fontSize: 13, fontWeight: 500, letterSpacing: '-.005em', marginBottom: 2 }}>{p.name}</b>
-                      <span style={{ display: 'block', fontSize: 11.5, lineHeight: 1.45, color: on ? 'var(--text-secondary)' : 'var(--text-tertiary)', marginBottom: 6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {[p.current_title, p.current_org].filter(Boolean).join(', ') || 'Role unknown'}
-                      </span>
-                      <span style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
-                        {p.kind === 'staff' && <Chip text="Staff" color={SLATE} border="rgba(91,115,131,.3)" />}
-                        {p.enriched_at
-                          ? <Chip text="Mapped" color="var(--accent)" border="rgba(12,107,90,.3)" />
-                          : p.linkedin_url
-                            ? <Chip text="Queued" color={SLATE} border="rgba(91,115,131,.3)" />
-                            : <Chip text="Needs URL" color={AMBER} border="rgba(156,122,42,.32)" />}
-                      </span>
-                    </div>
+                <div key={p.id} className="fd-row nw-person" data-on={on ? 'true' : undefined} role="button" tabIndex={0} onClick={() => setSelected(p.id)} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelected(p.id); } }}>
+                  <b className="nw-av">{initialsOf(p.name)}</b>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <b style={{ display: 'block', fontSize: 13, fontWeight: 500, letterSpacing: '-.005em', marginBottom: 2 }}>{p.name}</b>
+                    <span style={{ display: 'block', fontSize: 11.5, lineHeight: 1.45, color: 'var(--text-tertiary)', marginBottom: 6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {[p.current_title, p.current_org].filter(Boolean).join(', ') || 'Role unknown'}
+                    </span>
+                    <span style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+                      {p.kind === 'staff' && <i className="fd-tag" data-tone="slate">Staff</i>}
+                      {p.enriched_at
+                        ? <i className="fd-tag" data-tone="accent">Mapped</i>
+                        : p.linkedin_url
+                          ? <i className="fd-tag" data-tone="slate">Queued</i>
+                          : <i className="fd-tag" data-tone="warning">Needs URL</i>}
+                    </span>
                   </div>
                 </div>
               );
@@ -231,11 +212,11 @@ export function NetworkView({ initial }: { initial: NwState }) {
 
         {/* detail */}
         {person && (
-          <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 20 }}>
+          <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 16 }}>
 
             {/* the network opener */}
-            <div key={person.id} style={{ ...card, border: '1px solid rgba(12,107,90,.3)', overflow: 'hidden', animation: 'nw-rise .3s cubic-bezier(.2,.8,.3,1)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '11px 20px', background: 'rgba(12,107,90,.05)', borderBottom: '1px solid rgba(12,107,90,.18)' }}>
+            <div key={person.id} className="fd-card" style={{ overflow: 'hidden' }}>
+              <div className="nw-section">
                 <Radar style={{ width: 13, height: 13, color: 'var(--accent)', flex: 'none' }} />
                 <span className="fd-eyebrow" style={{ color: 'var(--accent)' }}>The network</span>
                 <span style={{ flex: 1 }} />
@@ -245,47 +226,47 @@ export function NetworkView({ initial }: { initial: NwState }) {
                   </a>
                 )}
               </div>
-              <div style={{ padding: '18px 20px 20px' }}>
-                <p style={{ fontFamily: SERIF, fontWeight: 400, fontSize: 'clamp(1.25rem,2.1vw,1.6rem)', lineHeight: 1.28, letterSpacing: '-.012em', margin: 0 }}>{opening}</p>
+              <div style={{ padding: '16px 16px 18px' }}>
+                <p className="nw-opening">{opening}</p>
                 {!person.linkedin_url && <UrlEditor personId={person.id} onSaved={reload} />}
-                {person.headline && <p className="fd-caption" style={{ color: 'var(--text-tertiary)', margin: '14px 0 0' }}>{person.headline}{person.location ? ` · ${person.location}` : ''}</p>}
+                {person.headline && <p className="fd-caption" style={{ color: 'var(--text-tertiary)', margin: '12px 0 0' }}>{person.headline}{person.location ? ` · ${person.location}` : ''}</p>}
               </div>
             </div>
 
             {/* career history */}
-            <div style={{ ...card, overflow: 'hidden' }}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, padding: '18px 20px', borderBottom: '1px solid var(--border-hairline)', flexWrap: 'wrap' }}>
-                <b style={{ width: 44, height: 44, flex: 'none', borderRadius: '50%', background: 'var(--accent)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 500 }}>{initialsOf(person.name)}</b>
+            <div className="fd-card" style={{ overflow: 'hidden' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '14px 16px', borderBottom: '1px solid var(--border-hairline)', flexWrap: 'wrap' }}>
+                <b className="nw-av" style={{ width: 38, height: 38, fontSize: 12, background: 'var(--accent)', color: 'var(--accent-on)' }}>{initialsOf(person.name)}</b>
                 <div style={{ minWidth: 0, flex: 1 }}>
-                  <h2 style={{ fontFamily: SERIF, fontWeight: 400, fontSize: '1.55rem', lineHeight: 1.12, letterSpacing: '-.015em', margin: '0 0 4px' }}>{person.name}</h2>
+                  <h2 style={{ fontSize: '1.4rem', lineHeight: 1.12, margin: '0 0 3px' }}>{person.name}</h2>
                   <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)' }}>{[person.current_title, person.current_org].filter(Boolean).join(', ') || 'Current role appears after the first refresh'}</p>
                 </div>
                 {person.enriched_at && (
-                  <span className="fd-mono" style={{ flex: 'none', fontSize: 9, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--text-tertiary)', whiteSpace: 'nowrap', paddingTop: 6 }}>
+                  <span className="fd-tag" style={{ flex: 'none', marginTop: 4 }}>
                     Read {new Date(person.enriched_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                   </span>
                 )}
               </div>
-              <div style={{ padding: '20px 20px 8px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+              <div style={{ padding: '16px 16px 6px' }}>
+                <div className="fd-rule" style={{ margin: '0 0 14px' }}>
                   <span className="fd-eyebrow" style={{ color: 'var(--text-secondary)' }}>Career history</span>
-                  <span style={{ flex: 1, height: 1, background: 'var(--border-hairline)' }} />
-                  <span className="fd-mono" style={{ fontSize: 9, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--text-tertiary)' }}>From LinkedIn</span>
+                  <span className="fd-rule-line" />
+                  <span className="fd-tag">From LinkedIn</span>
                 </div>
                 {person.employments.length === 0 ? (
-                  <p className="fd-caption" style={{ color: 'var(--text-tertiary)', margin: '0 0 14px' }}>
+                  <p className="fd-caption" style={{ color: 'var(--text-tertiary)', margin: '0 0 12px' }}>
                     {person.linkedin_url ? 'Nothing read yet — run a refresh.' : 'Add their LinkedIn URL above, then refresh.'}
                   </p>
                 ) : person.employments.map((e, i) => (
-                  <div key={i} style={{ display: 'flex', gap: 14 }}>
-                    <div style={{ width: 26, flex: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                      <span style={{ width: 12, height: 12, borderRadius: '50%', flex: 'none', marginTop: 4, ...(e.is_current ? { background: 'var(--accent)' } : { background: 'var(--bg-surface)', boxShadow: '0 0 0 2px var(--border-hairline)' }) }} />
+                  <div key={i} style={{ display: 'flex', gap: 12 }}>
+                    <div style={{ width: 22, flex: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                      <span style={{ width: 10, height: 10, borderRadius: '50%', flex: 'none', marginTop: 5, ...(e.is_current ? { background: 'var(--accent)' } : { background: 'var(--bg-surface)', boxShadow: '0 0 0 1.5px var(--border-strong)' }) }} />
                       {i < person.employments.length - 1 && <span style={{ flex: 1, width: 1, background: 'var(--border-hairline)', margin: '4px 0' }} />}
                     </div>
-                    <div style={{ flex: 1, minWidth: 0, paddingBottom: 18 }}>
-                      <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap', marginBottom: 2 }}>
-                        <b style={{ fontSize: 14, fontWeight: 600, letterSpacing: '-.008em' }}>{e.org_name}</b>
-                        {e.is_current && <i className="fd-mono" style={{ fontStyle: 'normal', fontSize: 8.5, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--accent)', border: '1px solid rgba(12,107,90,.3)', borderRadius: 2, padding: '2px 6px' }}>Current</i>}
+                    <div style={{ flex: 1, minWidth: 0, paddingBottom: 16 }}>
+                      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap', marginBottom: 2 }}>
+                        <b style={{ fontSize: 13.5, fontWeight: 600, letterSpacing: '-.008em' }}>{e.org_name}</b>
+                        {e.is_current && <i className="fd-tag" data-tone="accent">Current</i>}
                         <span style={{ flex: 1 }} />
                         {(e.started || e.ended) && <span className="fd-mono" style={{ fontSize: 10, color: 'var(--text-tertiary)', whiteSpace: 'nowrap' }}>{[e.started, e.is_current ? 'now' : e.ended].filter(Boolean).join(' – ')}</span>}
                       </div>
@@ -297,19 +278,19 @@ export function NetworkView({ initial }: { initial: NwState }) {
             </div>
 
             {/* warm paths */}
-            <div style={{ ...card, overflow: 'hidden' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 20px', borderBottom: '1px solid var(--border-hairline)' }}>
+            <div className="fd-card" style={{ overflow: 'hidden' }}>
+              <div className="nw-section">
                 <span className="fd-eyebrow" style={{ color: 'var(--text-secondary)' }}>Warm paths through {person.name.split(' ')[0]}</span>
                 <span style={{ flex: 1 }} />
                 <span className="fd-mono" style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>{paths.length}</span>
               </div>
               {paths.length === 0 ? (
-                <p className="fd-caption" style={{ color: 'var(--text-tertiary)', padding: '16px 20px' }}>
+                <p className="fd-caption" style={{ color: 'var(--text-tertiary)', padding: '14px 16px', margin: 0 }}>
                   No paths yet{person.enriched_at ? ' — employer scans surface them on the next refresh steps.' : ' — map their profile first.'}
                 </p>
               ) : paths.map(l => (
-                <div key={l.id} style={{ display: 'flex', gap: 12, padding: '13px 20px', borderBottom: '1px solid var(--border-hairline)', alignItems: 'flex-start' }}>
-                  <b style={{ width: 30, height: 30, flex: 'none', borderRadius: '50%', background: 'var(--bg-elevated)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 500 }}>{initialsOf(l.person.name)}</b>
+                <div key={l.id} style={{ display: 'flex', gap: 11, padding: '12px 16px', borderBottom: '1px solid var(--border-hairline)', alignItems: 'flex-start' }}>
+                  <b className="nw-av">{initialsOf(l.person.name)}</b>
                   <div style={{ minWidth: 0, flex: 1 }}>
                     <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap', marginBottom: 2 }}>
                       <b style={{ fontSize: 13, fontWeight: 500, letterSpacing: '-.005em' }}>{l.person.name}</b>
@@ -321,15 +302,15 @@ export function NetworkView({ initial }: { initial: NwState }) {
                       {[l.person.current_title, l.person.current_org].filter(Boolean).join(' · ') || l.person.headline || '—'}
                     </span>
                     <span style={{ display: 'flex', gap: 5, flexWrap: 'wrap', alignItems: 'center' }}>
-                      <Chip text={`via ${l.via_org}`} color={SLATE} border="rgba(91,115,131,.3)" />
-                      {/chicago|illinois|\bil\b/i.test(l.person.location ?? '') && <Chip text="Chicago" color="var(--accent)" border="rgba(12,107,90,.3)" />}
+                      <i className="fd-tag" data-tone="slate">via {l.via_org}</i>
+                      {/chicago|illinois|\bil\b/i.test(l.person.location ?? '') && <i className="fd-tag" data-tone="accent">Chicago</i>}
                     </span>
                   </div>
                   <div style={{ flex: 'none', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
                     <b className="fd-mono" style={{ fontSize: 13, fontWeight: 600, color: l.score >= 60 ? 'var(--accent)' : 'var(--text-secondary)' }}>{Math.round(l.score)}</b>
                     <span style={{ display: 'flex', gap: 6 }}>
-                      <button onClick={() => setLeadStatus(l.person.id, 'added')} title="Add to network pipeline" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, height: 26, padding: '0 9px', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(12,107,90,.3)', background: 'var(--bg-surface)', color: 'var(--accent)', font: 'inherit', fontSize: 10.5, fontWeight: 500, cursor: 'pointer' }}><Check style={{ width: 11, height: 11 }} />Add</button>
-                      <button onClick={() => setLeadStatus(l.person.id, 'dismissed')} title="Dismiss" style={{ display: 'inline-flex', alignItems: 'center', height: 26, padding: '0 7px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-hairline)', background: 'var(--bg-surface)', color: 'var(--text-tertiary)', font: 'inherit', cursor: 'pointer' }}><X style={{ width: 11, height: 11 }} /></button>
+                      <button className="fd-btn" style={{ height: 26, padding: '0 9px', fontSize: 11, color: 'var(--accent)' }} onClick={() => setLeadStatus(l.person.id, 'added')} title="Add to network pipeline"><Check style={{ width: 11, height: 11 }} />Add</button>
+                      <button className="fd-btn" style={{ height: 26, padding: '0 7px', color: 'var(--text-tertiary)' }} onClick={() => setLeadStatus(l.person.id, 'dismissed')} title="Dismiss" aria-label="Dismiss"><X style={{ width: 11, height: 11 }} /></button>
                     </span>
                   </div>
                 </div>
@@ -338,28 +319,28 @@ export function NetworkView({ initial }: { initial: NwState }) {
 
             {/* pipeline */}
             {state.pipeline.length > 0 && (
-              <div style={{ ...card, overflow: 'hidden' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 20px', borderBottom: '1px solid var(--border-hairline)' }}>
+              <div className="fd-card" style={{ overflow: 'hidden' }}>
+                <div className="nw-section">
                   <Briefcase style={{ width: 13, height: 13, color: 'var(--accent)', flex: 'none' }} />
                   <span className="fd-eyebrow" style={{ color: 'var(--text-secondary)' }}>Network pipeline</span>
                   <span style={{ flex: 1 }} />
                   <span className="fd-mono" style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>{state.pipeline.length}</span>
                 </div>
                 {state.pipeline.map(l => (
-                  <div key={l.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 20px', borderBottom: '1px solid var(--border-hairline)' }}>
-                    <b style={{ width: 26, height: 26, flex: 'none', borderRadius: '50%', background: 'rgba(12,107,90,.1)', color: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-mono)', fontSize: 9, fontWeight: 500 }}>{initialsOf(l.person.name)}</b>
+                  <div key={l.id} style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '10px 16px', borderBottom: '1px solid var(--border-hairline)' }}>
+                    <b className="nw-av" style={{ width: 24, height: 24, fontSize: 9, background: 'var(--accent-tint)', color: 'var(--accent)' }}>{initialsOf(l.person.name)}</b>
                     <div style={{ minWidth: 0, flex: 1 }}>
                       <b style={{ display: 'block', fontSize: 12.5, fontWeight: 500 }}>{l.person.name}</b>
                       <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{[l.person.current_title, l.person.current_org].filter(Boolean).join(' · ')} · via {l.viaPerson?.name ?? l.via_org}</span>
                     </div>
                     {l.person.linkedin_url && <a href={l.person.linkedin_url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text-tertiary)', lineHeight: 0 }}><ExternalLink style={{ width: 12, height: 12 }} /></a>}
-                    <button onClick={() => setLeadStatus(l.person.id, 'new')} title="Move back to leads" style={{ border: 'none', background: 'none', color: 'var(--text-tertiary)', font: 'inherit', fontSize: 10.5, cursor: 'pointer', padding: 0 }}>Undo</button>
+                    <button onClick={() => setLeadStatus(l.person.id, 'new')} title="Move back to leads" style={{ border: 'none', background: 'none', color: 'var(--text-tertiary)', font: 'inherit', fontSize: 11, cursor: 'pointer', padding: 0 }}>Undo</button>
                   </div>
                 ))}
               </div>
             )}
 
-            <p className="fd-eyebrow" style={{ color: 'var(--text-tertiary)', margin: 0 }}>Live workspace · profile reads on demand, spend recorded per run</p>
+            <p className="fd-caption" style={{ color: 'var(--text-tertiary)', margin: 0 }}>Live workspace · profile reads on demand, spend recorded per run</p>
           </div>
         )}
       </div>
@@ -385,14 +366,14 @@ function UrlEditor({ personId, onSaved }: { personId: string; onSaved: () => Pro
     finally { setBusy(false); }
   }
   return (
-    <div style={{ marginTop: 16 }}>
+    <div style={{ marginTop: 14 }}>
       <div style={{ display: 'flex', gap: 8, maxWidth: 480 }}>
-        <input value={url} onChange={e => setUrl(e.target.value)} placeholder="https://www.linkedin.com/in/…" style={inputCss} />
-        <button onClick={save} disabled={busy || !url.trim()} style={{ ...btnAccent, height: 36, padding: '0 14px', opacity: busy || !url.trim() ? 0.6 : 1 }}>
+        <input className="fd-input" style={{ flex: 1 }} value={url} onChange={e => setUrl(e.target.value)} placeholder="https://www.linkedin.com/in/…" />
+        <button className="fd-btn-primary" onClick={save} disabled={busy || !url.trim()}>
           {busy ? <Loader2 style={{ width: 12, height: 12 }} className="animate-spin" /> : 'Save'}
         </button>
       </div>
-      {err && <p className="fd-caption" style={{ color: AMBER, margin: '8px 0 0' }}>{err}</p>}
+      {err && <p className="fd-caption" style={{ color: 'var(--warning)', margin: '8px 0 0' }}>{err}</p>}
     </div>
   );
 }
@@ -419,44 +400,43 @@ function AddPersonModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
 
   const field = (label: string, node: React.ReactNode) => (
     <label style={{ display: 'block' }}>
-      <span className="fd-eyebrow" style={{ display: 'block', color: 'var(--text-tertiary)', marginBottom: 6 }}>{label}</span>
+      <span className="fd-eyebrow" style={{ display: 'block', color: 'var(--text-tertiary)', marginBottom: 5 }}>{label}</span>
       {node}
     </label>
   );
+  const input: React.CSSProperties = { width: '100%' };
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 80, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-      <button aria-label="Close" onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(16,25,23,.42)', backdropFilter: 'blur(3px)', border: 'none', cursor: 'default' }} />
-      <div role="dialog" aria-modal="true" aria-label="Add person" style={{ position: 'relative', width: 'min(460px,100%)', background: 'var(--bg-surface)', border: '1px solid var(--border-hairline)', borderRadius: 'var(--radius-console)', boxShadow: '0 24px 60px rgba(16,25,23,.20)', animation: 'nw-rise .26s cubic-bezier(.2,.8,.3,1)' }}>
-        <div style={{ padding: '20px 22px 0' }}>
-          <h2 style={{ fontFamily: SERIF, fontWeight: 400, fontSize: '1.6rem', lineHeight: 1.1, letterSpacing: '-.015em', margin: '0 0 6px' }}>Add to the roster</h2>
-          <p style={{ margin: 0, fontSize: 13, lineHeight: 1.6, color: 'var(--text-secondary)' }}>
+      <button aria-label="Close" onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(16,25,23,.42)', border: 'none', cursor: 'default' }} />
+      <div role="dialog" aria-modal="true" aria-label="Add person" className="fd-card" style={{ position: 'relative', width: 'min(460px,100%)', boxShadow: 'var(--shadow-overlay, 0 24px 60px rgba(16,25,23,.20))', animation: 'fd-fade .18s ease-out' }}>
+        <div style={{ padding: '18px 20px 0' }}>
+          <h2 style={{ fontSize: '1.45rem', lineHeight: 1.1, margin: '0 0 6px' }}>Add to the roster</h2>
+          <p className="fd-caption" style={{ margin: 0, color: 'var(--text-secondary)' }}>
             Their LinkedIn URL is what unlocks the mapping — pasted straight from the browser, it&rsquo;s exact and spends nothing on name lookups.
           </p>
         </div>
-        <div style={{ padding: '18px 22px 22px', display: 'flex', flexDirection: 'column', gap: 13 }}>
-          {field('Name', <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Phil Doherty" style={inputCss} />)}
-          {field('LinkedIn URL', <input value={url} onChange={e => setUrl(e.target.value)} placeholder="https://www.linkedin.com/in/…" style={inputCss} />)}
+        <div style={{ padding: '16px 20px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {field('Name', <input className="fd-input" style={input} value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Phil Doherty" />)}
+          {field('LinkedIn URL', <input className="fd-input" style={input} value={url} onChange={e => setUrl(e.target.value)} placeholder="https://www.linkedin.com/in/…" />)}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            {field('Title', <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Board Chair" style={inputCss} />)}
-            {field('Organization', <input value={org} onChange={e => setOrg(e.target.value)} placeholder="Their employer" style={inputCss} />)}
+            {field('Title', <input className="fd-input" style={input} value={title} onChange={e => setTitle(e.target.value)} placeholder="Board Chair" />)}
+            {field('Organization', <input className="fd-input" style={input} value={org} onChange={e => setOrg(e.target.value)} placeholder="Their employer" />)}
           </div>
           {field('Kind', (
-            <div style={{ display: 'flex', gap: 6 }}>
+            <div style={{ display: 'flex', gap: 4 }}>
               {(['board', 'staff'] as const).map(k => (
-                <button key={k} onClick={() => setKind(k)} style={{ border: 'none', background: 'none', padding: 0, font: 'inherit', cursor: 'pointer' }}>
-                  <span className="fd-mono" style={{ display: 'block', fontSize: 9.5, letterSpacing: '.06em', textTransform: 'uppercase', padding: '6px 11px', borderRadius: 3, ...(kind === k ? { background: 'var(--accent)', color: '#fff' } : { border: '1px solid var(--border-hairline)', color: 'var(--text-tertiary)', background: 'var(--bg-surface)' }) }}>
-                    {k === 'board' ? 'Board member' : 'Staff'}
-                  </span>
+                <button key={k} type="button" className="fd-seg" aria-pressed={kind === k} onClick={() => setKind(k)}>
+                  {k === 'board' ? 'Board member' : 'Staff'}
                 </button>
               ))}
             </div>
           ))}
-          {err && <p className="fd-caption" style={{ color: AMBER, margin: 0 }}>{err}</p>}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 4 }}>
+          {err && <p className="fd-caption" style={{ color: 'var(--warning)', margin: 0 }}>{err}</p>}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
             <span style={{ flex: 1 }} />
-            <button onClick={onClose} style={{ ...btnGhost, height: 38 }}>Cancel</button>
-            <button onClick={save} disabled={busy || !name.trim()} style={{ ...btnAccent, height: 38, opacity: busy || !name.trim() ? 0.6 : 1 }}>
+            <button className="fd-btn" onClick={onClose}>Cancel</button>
+            <button className="fd-btn-primary" onClick={save} disabled={busy || !name.trim()}>
               {busy ? <Loader2 style={{ width: 12, height: 12 }} className="animate-spin" /> : <UserPlus style={{ width: 13, height: 13 }} />}
               Add person
             </button>
