@@ -143,9 +143,9 @@ export function buildLayout(data: GraphPayload, expanded: Set<string>, compact: 
   return { placed, byId, edges, cross, w, h, cardW: S.W };
 }
 
-// Fit keeps cards legible: never below 0.7×. A tree wider than the viewport is
+// Fit keeps cards legible: never below 0.8×. A tree wider than the viewport is
 // centred on its root instead of shrunk, and the user pans along the layer.
-function fitView(lay: Layout, sz: { w: number; h: number }, minK = 0.7) {
+function fitView(lay: Layout, sz: { w: number; h: number }, minK = 0.8) {
   if (!lay.placed.length) return { x: 0, y: 0, k: 1 };
   const k = Math.max(minK, Math.min(1, (sz.w - 24) / lay.w, (sz.h - 24) / lay.h));
   const root = lay.placed.find(p => p.depth === 0) ?? lay.placed[0];
@@ -179,13 +179,13 @@ export function MapGraph({ data, height = 520, selectedId, onSelect, onActivate,
     const ro = new ResizeObserver(() => {
       const sz = { w: el.clientWidth, h: el.clientHeight };
       setSize(sz);
-      if (layoutRef.current) setView(fitView(layoutRef.current, sz, compact ? 0.5 : 0.7));
+      if (layoutRef.current) setView(fitView(layoutRef.current, sz, compact ? 0.5 : 0.8));
     });
     ro.observe(el);
     return () => ro.disconnect();
   }, [compact]);
 
-  const fit = useCallback((lay: Layout | null) => { if (lay) setView(fitView(lay, size, compact ? 0.5 : 0.7)); }, [size, compact]);
+  const fit = useCallback((lay: Layout | null) => { if (lay) setView(fitView(lay, size, compact ? 0.5 : 0.8)); }, [size, compact]);
 
   // New payload: reset folds and fit (state adjusted during render, not in an effect). Fold changes keep the view.
   const dataKey = data ? `${data.mode}:${data.focus?.id ?? 'root'}:${data.nodes.length}` : '';
@@ -193,7 +193,7 @@ export function MapGraph({ data, height = 520, selectedId, onSelect, onActivate,
   if (dataKey !== seenKey) {
     setSeenKey(dataKey);
     setExpanded(new Set());
-    if (data) setView(fitView(buildLayout(data, new Set(), !!compact), size, compact ? 0.5 : 0.7));
+    if (data) setView(fitView(buildLayout(data, new Set(), !!compact), size, compact ? 0.5 : 0.8));
   }
 
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
