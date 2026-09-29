@@ -9,12 +9,12 @@
 // in those rooms today are who they can still call. Refresh is on-demand and
 // bounded (quarterly is plenty); every run's API spend is recorded.
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import {
   Radar, RefreshCw, UserPlus, ExternalLink, Check, X, Loader2, Link2, Briefcase, Download,
 } from 'lucide-react';
 
-const SERIF = "'Instrument Serif',Palatino,Georgia,serif";
+const SERIF = 'var(--font-display)';
 const AMBER = '#9C7A2A';
 const SLATE = '#5B7383';
 
@@ -40,11 +40,7 @@ export interface NwState {
 }
 
 const CSS = `
-.nw-root{--radius-kpi:12px;--radius-console:14px;font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;color:var(--text-primary);background:var(--bg-page)}
-.nw-root .fd-eyebrow{font-size:11px;line-height:1.2;letter-spacing:.08em;font-weight:600;text-transform:uppercase}
-.nw-root .fd-kpi{font-family:'JetBrains Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums;font-weight:600;letter-spacing:-.01em}
-.nw-root .fd-mono{font-family:'JetBrains Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
-.nw-root .fd-caption{font-size:12px;line-height:1.5}
+.nw-root{color:var(--text-primary);background:var(--bg-page)}
 @keyframes nw-rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 .nw-root [data-nw-person]{transition:background .14s}
 @media (max-width:1180px){.nw-root [data-nw-cols]{grid-template-columns:minmax(0,1fr)!important}.nw-root [data-nw-list]{max-height:none!important}}
@@ -211,7 +207,7 @@ export function NetworkView({ initial }: { initial: NwState }) {
               return (
                 <div key={p.id} data-nw-person onClick={() => setSelected(p.id)} style={{ borderBottom: '1px solid var(--border-hairline)', cursor: 'pointer', background: on ? 'var(--bg-page)' : undefined }}>
                   <div style={{ display: 'flex', gap: 11, padding: '13px 16px', ...(on ? { boxShadow: 'inset 2px 0 0 var(--accent)' } : {}) }}>
-                    <b style={{ width: 30, height: 30, flex: 'none', borderRadius: '50%', background: on ? 'var(--accent)' : 'var(--bg-elevated)', color: on ? '#fff' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'JetBrains Mono',monospace", fontSize: 10, fontWeight: 500 }}>{initialsOf(p.name)}</b>
+                    <b style={{ width: 30, height: 30, flex: 'none', borderRadius: '50%', background: on ? 'var(--accent)' : 'var(--bg-elevated)', color: on ? '#fff' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 500 }}>{initialsOf(p.name)}</b>
                     <div style={{ minWidth: 0, flex: 1 }}>
                       <b style={{ display: 'block', fontSize: 13, fontWeight: 500, letterSpacing: '-.005em', marginBottom: 2 }}>{p.name}</b>
                       <span style={{ display: 'block', fontSize: 11.5, lineHeight: 1.45, color: on ? 'var(--text-secondary)' : 'var(--text-tertiary)', marginBottom: 6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -259,7 +255,7 @@ export function NetworkView({ initial }: { initial: NwState }) {
             {/* career history */}
             <div style={{ ...card, overflow: 'hidden' }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, padding: '18px 20px', borderBottom: '1px solid var(--border-hairline)', flexWrap: 'wrap' }}>
-                <b style={{ width: 44, height: 44, flex: 'none', borderRadius: '50%', background: 'var(--accent)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'JetBrains Mono',monospace", fontSize: 13, fontWeight: 500 }}>{initialsOf(person.name)}</b>
+                <b style={{ width: 44, height: 44, flex: 'none', borderRadius: '50%', background: 'var(--accent)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 500 }}>{initialsOf(person.name)}</b>
                 <div style={{ minWidth: 0, flex: 1 }}>
                   <h2 style={{ fontFamily: SERIF, fontWeight: 400, fontSize: '1.55rem', lineHeight: 1.12, letterSpacing: '-.015em', margin: '0 0 4px' }}>{person.name}</h2>
                   <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)' }}>{[person.current_title, person.current_org].filter(Boolean).join(', ') || 'Current role appears after the first refresh'}</p>
@@ -313,7 +309,7 @@ export function NetworkView({ initial }: { initial: NwState }) {
                 </p>
               ) : paths.map(l => (
                 <div key={l.id} style={{ display: 'flex', gap: 12, padding: '13px 20px', borderBottom: '1px solid var(--border-hairline)', alignItems: 'flex-start' }}>
-                  <b style={{ width: 30, height: 30, flex: 'none', borderRadius: '50%', background: 'var(--bg-elevated)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'JetBrains Mono',monospace", fontSize: 10, fontWeight: 500 }}>{initialsOf(l.person.name)}</b>
+                  <b style={{ width: 30, height: 30, flex: 'none', borderRadius: '50%', background: 'var(--bg-elevated)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 500 }}>{initialsOf(l.person.name)}</b>
                   <div style={{ minWidth: 0, flex: 1 }}>
                     <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap', marginBottom: 2 }}>
                       <b style={{ fontSize: 13, fontWeight: 500, letterSpacing: '-.005em' }}>{l.person.name}</b>
@@ -351,7 +347,7 @@ export function NetworkView({ initial }: { initial: NwState }) {
                 </div>
                 {state.pipeline.map(l => (
                   <div key={l.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 20px', borderBottom: '1px solid var(--border-hairline)' }}>
-                    <b style={{ width: 26, height: 26, flex: 'none', borderRadius: '50%', background: 'rgba(12,107,90,.1)', color: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'JetBrains Mono',monospace", fontSize: 9, fontWeight: 500 }}>{initialsOf(l.person.name)}</b>
+                    <b style={{ width: 26, height: 26, flex: 'none', borderRadius: '50%', background: 'rgba(12,107,90,.1)', color: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-mono)', fontSize: 9, fontWeight: 500 }}>{initialsOf(l.person.name)}</b>
                     <div style={{ minWidth: 0, flex: 1 }}>
                       <b style={{ display: 'block', fontSize: 12.5, fontWeight: 500 }}>{l.person.name}</b>
                       <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{[l.person.current_title, l.person.current_org].filter(Boolean).join(' · ')} · via {l.viaPerson?.name ?? l.via_org}</span>

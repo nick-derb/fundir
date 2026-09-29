@@ -11,7 +11,7 @@ import { parseCsv, rowsToRecords, detectBmfFormat, normalizeBmfRows, type BmfRow
 // streamed to /api/prospecting/irs-replace in batches; the diff and the
 // swap run as single SQL calls on the server.
 
-const SERIF = "'Instrument Serif',Palatino,Georgia,serif";
+const SERIF = 'var(--font-display)';
 const BATCH = 2000;
 const STATE = 'IL';
 

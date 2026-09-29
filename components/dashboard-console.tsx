@@ -87,7 +87,7 @@ export function DashboardConsole({ cra, deadlines, funders }: DashboardConsolePr
         .dc-fig h2{font-size:17.5px;font-weight:700;margin:0;color:var(--text-primary)}
         .dc-fm{margin-left:auto;font-family:var(--dc-mono);font-size:10.5px;color:var(--text-tertiary);text-align:right}
 
-        .dc-card{background:var(--bg-surface);border:1px solid var(--border-hairline);border-radius:14px;padding:18px 20px;position:relative}
+        .dc-card{background:var(--bg-surface);border:1px solid var(--border-hairline);border-radius:var(--radius);padding:18px 20px;position:relative}
         .dc-card::before,.dc-card::after{content:"";position:absolute;width:11px;height:11px;border:1.6px solid transparent;transition:border-color .25s;pointer-events:none}
         .dc-card::before{left:-1px;top:-1px;border-right:none;border-bottom:none;border-radius:4px 0 0 0}
         .dc-card::after{right:-1px;bottom:-1px;border-left:none;border-top:none;border-radius:0 0 4px 0}

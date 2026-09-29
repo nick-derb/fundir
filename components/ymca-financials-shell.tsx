@@ -164,7 +164,7 @@ function OverviewTab() {
           <Card key={label} className="p-4">
             <div className="flex items-center justify-between mb-3">
               <span className="text-[10px] font-bold text-secondary uppercase tracking-wide">{label}</span>
-              <div className="w-6 h-6 rounded-[5px] flex items-center justify-center" style={{ background: bg }}>
+              <div className="w-6 h-6 rounded-sm flex items-center justify-center" style={{ background: bg }}>
                 <Icon className="w-3.5 h-3.5" style={{ color }} />
               </div>
             </div>
@@ -204,7 +204,7 @@ function OverviewTab() {
       </div>
 
       {/* CTA */}
-      <div className="flex items-center gap-3 py-3.5 px-5 rounded-xl border"
+      <div className="flex items-center gap-3 py-3.5 px-5 rounded-md border"
         style={{ background: 'var(--accent-tint)', borderColor: 'var(--accent)' }}>
         <Zap className="w-4 h-4 text-accent flex-shrink-0" />
         <p className="text-secondary text-[12px]">
@@ -315,7 +315,7 @@ function CompensationTab() {
         </table>
       </Card>
 
-      <div className="rounded-xl border p-4 flex items-start gap-3"
+      <div className="rounded-md border p-4 flex items-start gap-3"
         style={{ background: 'var(--warning-tint)', borderColor: 'var(--warning)' }}>
         <AlertTriangle className="w-4 h-4 text-warning flex-shrink-0 mt-0.5" />
         <p className="text-[12px] text-warning leading-relaxed">
@@ -413,7 +413,7 @@ function ContractorsTab() {
       </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="rounded-xl border p-4" style={{ background: 'var(--warning-tint)', borderColor: 'var(--warning)' }}>
+        <div className="rounded-md border p-4" style={{ background: 'var(--warning-tint)', borderColor: 'var(--warning)' }}>
           <div className="flex items-start gap-2 mb-2">
             <AlertTriangle className="w-3.5 h-3.5 text-warning flex-shrink-0 mt-0.5" />
             <p className="text-[12px] font-bold text-warning">High Contractor Turnover Signal</p>
@@ -423,7 +423,7 @@ function ContractorsTab() {
             P4 Security dropped 36.4%, replaced by Stanton Mechanical ($1.9M) and Rmb Interiors ($676K) — indicating capital investment in facilities.
           </p>
         </div>
-        <div className="rounded-xl border p-4" style={{ background: 'var(--accent-tint)', borderColor: 'var(--accent)' }}>
+        <div className="rounded-md border p-4" style={{ background: 'var(--accent-tint)', borderColor: 'var(--accent)' }}>
           <div className="flex items-start gap-2 mb-2">
             <Zap className="w-3.5 h-3.5 text-accent flex-shrink-0 mt-0.5" />
             <p className="text-[12px] font-bold text-accent">Grant Opportunity: Child Care Staffing</p>

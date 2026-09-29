@@ -191,11 +191,11 @@ export function ConversationalOnboarding() {
 
         {/* ── Chat (3/5) ── */}
         <div className="lg:col-span-3">
-          <div className="bg-white rounded-2xl border border-[#e2e8f0] shadow-sm flex flex-col" style={{ height: 'calc(100vh - 180px)' }}>
+          <div className="bg-white rounded-md border border-[#e2e8f0] shadow-sm flex flex-col" style={{ height: 'calc(100vh - 180px)' }}>
 
             {/* Chat header */}
             <div className="px-5 py-3.5 border-b border-[#e2e8f0] flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-lg flex items-center justify-center"
+              <div className="w-7 h-7 rounded-md flex items-center justify-center"
                 style={{ background: 'linear-gradient(135deg, #0d9488, #0891b2)' }}>
                 <Sparkles className="w-3.5 h-3.5 text-white" />
               </div>
@@ -210,7 +210,7 @@ export function ConversationalOnboarding() {
               {messages.map((m, i) => (
                 <div key={i}>
                   <div className={m.role === 'user' ? 'flex justify-end' : 'flex justify-start'}>
-                    <div className={`max-w-[85%] text-[13px] leading-relaxed rounded-2xl px-4 py-2.5 ${
+                    <div className={`max-w-[85%] text-[13px] leading-relaxed rounded-md px-4 py-2.5 ${
                       m.role === 'user' ? 'text-white' : 'bg-[#f1f5f9] text-[#0f172a]'
                     }`}
                     style={m.role === 'user'
@@ -237,7 +237,7 @@ export function ConversationalOnboarding() {
 
               {loading && (
                 <div className="flex justify-start">
-                  <div className="bg-[#f1f5f9] text-[#0f172a] rounded-2xl px-4 py-3 flex items-center gap-1.5">
+                  <div className="bg-[#f1f5f9] text-[#0f172a] rounded-md px-4 py-3 flex items-center gap-1.5">
                     <Loader2 className="w-3.5 h-3.5 animate-spin text-[#0d9488]" />
                     <span className="text-[12px] text-[#64748b]">Thinking…</span>
                   </div>
@@ -246,7 +246,7 @@ export function ConversationalOnboarding() {
 
               {error && !loading && (
                 <div className="flex justify-center">
-                  <div className="text-[12px] text-[#dc2626] bg-[#fef2f2] border border-[#fecaca] rounded-lg px-3 py-2">
+                  <div className="text-[12px] text-[#dc2626] bg-[#fef2f2] border border-[#fecaca] rounded-md px-3 py-2">
                     {error}
                   </div>
                 </div>
@@ -268,7 +268,7 @@ export function ConversationalOnboarding() {
               </div>
             ) : (
               <div className="px-4 py-3 border-t border-[#e2e8f0] bg-white">
-                <div className="flex items-end gap-2 rounded-xl border border-[#e2e8f0] bg-white px-3 py-2">
+                <div className="flex items-end gap-2 rounded-md border border-[#e2e8f0] bg-white px-3 py-2">
                   <textarea
                     ref={inputRef}
                     value={input}
@@ -282,7 +282,7 @@ export function ConversationalOnboarding() {
                   <button
                     onClick={() => send(input)}
                     disabled={!input.trim() || loading}
-                    className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-opacity disabled:opacity-30"
+                    className="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0 transition-opacity disabled:opacity-30"
                     style={{ background: 'linear-gradient(135deg, #0d9488, #0891b2)' }}>
                     {loading
                       ? <Loader2 className="w-3.5 h-3.5 text-white animate-spin" />
@@ -296,7 +296,7 @@ export function ConversationalOnboarding() {
 
         {/* ── Profile sidebar (2/5) ── */}
         <div className="lg:col-span-2">
-          <div className="bg-white rounded-2xl border border-[#e2e8f0] shadow-sm sticky top-6">
+          <div className="bg-white rounded-md border border-[#e2e8f0] shadow-sm sticky top-6">
             <div className="px-4 py-3 border-b border-[#e2e8f0] bg-[#f8fafc] flex items-center gap-2">
               <Target className="w-3.5 h-3.5 text-[#0d9488]" />
               <div>

@@ -162,7 +162,7 @@ export function NLSearch() {
   }
 
   return (
-    <div className="bg-canvas-1 rounded-lg shadow-flat overflow-hidden">
+    <div className="bg-canvas-1 rounded-md shadow-flat overflow-hidden">
       {/* Search bar */}
       <div className="px-4 py-3 border-b border-canvas-3 flex items-center gap-2 bg-canvas-0">
         <Sparkles className="w-4 h-4 text-action flex-shrink-0" />

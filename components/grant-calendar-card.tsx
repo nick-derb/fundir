@@ -35,7 +35,7 @@ export function GrantCalendarCard({ readOnly }: { readOnly?: boolean }) {
   const fmt = (d: string) => new Date(d + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
   return (
-    <div className="bg-surface border border-hairline rounded-[14px] overflow-hidden">
+    <div className="bg-surface border border-hairline rounded-md overflow-hidden">
       <div className="flex items-center gap-2.5 px-[18px] py-3.5 border-b border-hairline">
         <CalendarDays className="w-[14px] h-[14px] text-accent flex-none" />
         <span className="fd-eyebrow text-secondary">Grant calendar workbook</span>
@@ -46,12 +46,12 @@ export function GrantCalendarCard({ readOnly }: { readOnly?: boolean }) {
         <p className="text-[12.5px] leading-relaxed text-secondary mb-3">Drop the FY grant calendar workbook here (the “FY27 Grant Calendar” sheet, plus “Considered &amp; Rejected” when present; working copies like “Sheet1” are ignored). Each fiscal year in the file replaces that year in Fundir, so upload the current workbook whenever it changes. Items whose due date is “Rolling” or “TBD” are kept with that wording.</p>
         <div className="flex items-center gap-2 flex-wrap">
           <input ref={ref} type="file" accept=".xlsx,.xls,.csv" hidden onChange={e => { setFile(e.target.files?.[0] ?? null); setPreview(null); setDone(null); setError(''); }} />
-          <button type="button" onClick={() => ref.current?.click()} disabled={readOnly || !!busy} className="inline-flex items-center gap-2 h-9 px-3.5 rounded-[10px] border border-hairline bg-surface text-[12.5px] text-primary hover:bg-elevated disabled:opacity-50"><Upload className="w-3.5 h-3.5" />{file ? file.name : 'Choose the workbook'}</button>
-          {file && !preview && <button type="button" onClick={() => run(false)} disabled={!!busy} className="inline-flex items-center gap-2 h-9 px-4 rounded-[10px] bg-accent text-[12.5px] font-medium disabled:opacity-60" style={{ color: 'var(--accent-on)' }}>{busy === 'preview' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}Preview changes</button>}
+          <button type="button" onClick={() => ref.current?.click()} disabled={readOnly || !!busy} className="inline-flex items-center gap-2 h-9 px-3.5 rounded-md border border-hairline bg-surface text-[12.5px] text-primary hover:bg-elevated disabled:opacity-50"><Upload className="w-3.5 h-3.5" />{file ? file.name : 'Choose the workbook'}</button>
+          {file && !preview && <button type="button" onClick={() => run(false)} disabled={!!busy} className="inline-flex items-center gap-2 h-9 px-4 rounded-md bg-accent text-[12.5px] font-medium disabled:opacity-60" style={{ color: 'var(--accent-on)' }}>{busy === 'preview' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}Preview changes</button>}
         </div>
         {error && <p className="mt-3 text-[12px] text-critical flex items-center gap-1.5"><AlertTriangle className="w-3.5 h-3.5" />{error}</p>}
         {preview && (
-          <div className="mt-4 rounded-[10px] border border-hairline bg-page p-3.5" style={{ animation: 'fd-fade .3s ease' }}>
+          <div className="mt-4 rounded-md border border-hairline bg-page p-3.5" style={{ animation: 'fd-fade .3s ease' }}>
             {preview.years.map(y => (
               <div key={y.fiscal_year} className="mb-3">
                 <span className="fd-eyebrow block text-tertiary mb-1.5" style={{ fontSize: 9.5 }}>{y.fiscal_year}{y.on_file_now ? ` · replaces ${y.on_file_now} rows on file` : ' · new'}</span>
@@ -64,8 +64,8 @@ export function GrantCalendarCard({ readOnly }: { readOnly?: boolean }) {
             <p className="font-mono text-[10.5px] text-tertiary">sheets read: {preview.sheets.map(s => `${s.name} (${s.rows})`).join(', ')}{preview.skipped.length ? ` · ignored: ${preview.skipped.join('; ')}` : ''}</p>
             {preview.sample.length > 0 && <p className="mt-2 text-[11.5px] text-secondary">Next up: {preview.sample.map(s => `${s.funder} ${s.item_type ?? ''} ${fmt(s.due)}`).join(' · ')}</p>}
             <div className="flex items-center gap-2 mt-3">
-              <button type="button" onClick={() => run(true)} disabled={!!busy || readOnly} className="inline-flex items-center gap-2 h-9 px-4 rounded-[10px] bg-accent text-[12.5px] font-medium disabled:opacity-60" style={{ color: 'var(--accent-on)' }}>{busy === 'commit' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}Replace {preview.years.map(y => y.fiscal_year).join(' and ')}</button>
-              <button type="button" onClick={reset} disabled={!!busy} className="h-9 px-3 rounded-[10px] border border-hairline bg-surface text-[12.5px] text-secondary">Cancel</button>
+              <button type="button" onClick={() => run(true)} disabled={!!busy || readOnly} className="inline-flex items-center gap-2 h-9 px-4 rounded-md bg-accent text-[12.5px] font-medium disabled:opacity-60" style={{ color: 'var(--accent-on)' }}>{busy === 'commit' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}Replace {preview.years.map(y => y.fiscal_year).join(' and ')}</button>
+              <button type="button" onClick={reset} disabled={!!busy} className="h-9 px-3 rounded-md border border-hairline bg-surface text-[12.5px] text-secondary">Cancel</button>
             </div>
           </div>
         )}

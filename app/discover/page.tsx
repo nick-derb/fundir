@@ -71,7 +71,7 @@ export default async function DiscoverPage() {
             </p>
           </div>
           <Link href="/foundations"
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-[7px] border border-[#e2e8f0] text-[13px] font-semibold text-[#374151] hover:bg-[#f9fafb] transition-all">
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-sm border border-[#e2e8f0] text-[13px] font-semibold text-[#374151] hover:bg-[#f9fafb] transition-all">
             <Landmark className="w-3.5 h-3.5 text-[#6b7280]" />
             Foundation Map
             <ChevronRight className="w-3 h-3 text-[#9ca3af]" />
@@ -91,7 +91,7 @@ export default async function DiscoverPage() {
 
             {/* Last run stats */}
             {lastRun && (
-              <div className="bg-white rounded-[10px] border border-[#e8ecf0] p-4">
+              <div className="bg-white rounded-md border border-[#e8ecf0] p-4">
                 <p className="text-[10px] font-bold text-[#9ca3af] uppercase tracking-widest mb-3">Last Discovery Run</p>
                 <div className="space-y-2">
                   {[
@@ -115,7 +115,7 @@ export default async function DiscoverPage() {
             )}
 
             {/* Foundation CTA */}
-            <div className="bg-white rounded-[10px] border border-[#e8ecf0] p-4">
+            <div className="bg-white rounded-md border border-[#e8ecf0] p-4">
               <div className="flex items-center gap-2 mb-2">
                 <Sparkles className="w-3.5 h-3.5 text-[#6366f1]" />
                 <span className="text-[11px] font-bold text-[#6366f1]">Pro Tip</span>

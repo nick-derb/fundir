@@ -40,7 +40,7 @@ export function PeerScanPanel({ status }: { status: PeerStaffStatus }) {
   }
 
   return (
-    <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-hairline)', borderRadius: 14, padding: '14px 16px', marginBottom: 18 }}>
+    <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-hairline)', borderRadius: 'var(--radius)', padding: '14px 16px', marginBottom: 18 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
         <div style={{ flex: 1, minWidth: 220 }}>
           <span className="fd-eyebrow" style={{ color: 'var(--text-tertiary)' }}>Admin · LinkedIn scan</span>
@@ -60,7 +60,7 @@ export function PeerScanPanel({ status }: { status: PeerStaffStatus }) {
           : <button type="button" onClick={() => run(false)} disabled={done || !status.configured} className="inline-flex items-center gap-2 h-8 px-3.5 rounded-[8px] bg-accent text-[12px] font-medium disabled:opacity-50" style={{ color: 'var(--accent-on)' }}><Play className="w-3.5 h-3.5" />{done ? 'Everything is scanned' : 'Run until done'}</button>}
       </div>
       {(log.length > 0 || spent > 0) && (
-        <ul style={{ margin: '10px 0 0', padding: 0, listStyle: 'none', fontFamily: "'JetBrains Mono',ui-monospace,monospace", fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.6, maxHeight: 160, overflowY: 'auto' }}>
+        <ul style={{ margin: '10px 0 0', padding: 0, listStyle: 'none', fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.6, maxHeight: 160, overflowY: 'auto' }}>
           {log.map((l, i) => <li key={i}>{l}</li>)}
           {running && <li>… {spent} credits this run</li>}
         </ul>

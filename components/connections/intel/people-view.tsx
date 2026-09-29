@@ -95,7 +95,7 @@ export function PeopleView({ selectedId, onOpen, onOpenLead, onFocus }: { select
         <select className="ni-select" value={sort} onChange={e => setSort(e.target.value as typeof sort)} aria-label="Sort"><option value="relevance">Most relevant</option><option value="name">Name</option><option value="org">Organization</option><option value="recent">Recently read</option></select>
       </div>
 
-      {rows === null && <div className="ni-card" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 14 }}>{Array.from({ length: 6 }).map((_, i) => <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'center' }}><Skeleton h={36} w={36} style={{ borderRadius: 18 }} /><div style={{ flex: 1 }}><Skeleton h={12} w={`${30 + (i * 11) % 30}%`} /><Skeleton h={10} w={`${50 + (i * 7) % 30}%`} style={{ marginTop: 6 }} /></div></div>)}</div>}
+      {rows === null && <div className="ni-card" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 14 }}>{Array.from({ length: 6 }).map((_, i) => <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'center' }}><Skeleton h={36} w={36} style={{ borderRadius: 'var(--radius)' }} /><div style={{ flex: 1 }}><Skeleton h={12} w={`${30 + (i * 11) % 30}%`} /><Skeleton h={10} w={`${50 + (i * 7) % 30}%`} style={{ marginTop: 6 }} /></div></div>)}</div>}
       {rows !== null && visible.length === 0 && <div className="ni-card" style={{ padding: '40px 20px', textAlign: 'center' }}><p style={{ fontFamily: SERIF, fontSize: '1.3rem', margin: '0 0 6px' }}>No one matches.</p><p className="fd-caption" style={{ color: 'var(--text-tertiary)', margin: 0 }}>Loosen a filter or search another name.</p></div>}
 
       {rows !== null && visible.length > 0 && mode === 'list' && (

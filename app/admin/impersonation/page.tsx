@@ -57,7 +57,7 @@ export default async function ImpersonationAuditPage() {
         {rows.length} event{rows.length === 1 ? '' : 's'} · {starts} session{starts === 1 ? '' : 's'} started · {distinctTargets} distinct {distinctTargets === 1 ? 'person' : 'people'} viewed
       </p>
 
-      <div style={{ border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, overflow: 'hidden', background: 'rgba(255,255,255,0.02)' }}>
+      <div style={{ border: '1px solid rgba(255,255,255,0.08)', borderRadius: 'var(--radius)', overflow: 'hidden', background: 'rgba(255,255,255,0.02)' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr>

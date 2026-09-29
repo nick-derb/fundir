@@ -8,12 +8,11 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useEffect } from 'react';
 import {
   SlidersHorizontal, Plus, ArrowLeft, ArrowRight, Link2,
 } from 'lucide-react';
 
-const SERIF = "'Instrument Serif',Palatino,Georgia,serif";
+const SERIF = 'var(--font-display)';
 const OUTLOOK_NEW = 'https://outlook.office.com/calendar/0/deeplink/compose';
 const OUTLOOK_CAL = 'https://outlook.office.com/calendar/';
 
@@ -28,10 +27,7 @@ export interface CalData {
 }
 
 const CSS = `
-.cv-root{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;color:var(--text-primary);--radius-kpi:12px;--radius-console:14px}
-.cv-root .fd-eyebrow{font-size:11px;line-height:1.2;letter-spacing:.08em;font-weight:600;text-transform:uppercase}
-.cv-root .fd-mono{font-family:'JetBrains Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
-.cv-root .fd-caption{font-size:12px;line-height:1.5}
+.cv-root{color:var(--text-primary);}
 .cv-root [data-kind="grant"]{border-left-color:#0C6B5A!important;background:#EDF4F0}
 .cv-root [data-kind="funder"]{border-left-color:#9C7A2A!important;background:#F7F2E6}
 .cv-root [data-kind="internal"]{border-left-color:#5B7383!important;background:#EEF2F4}
@@ -71,16 +67,6 @@ export function CalendarView({ data }: { data: CalData }) {
   // The cursor is a day; Month reads its month, Week its Monday-first week, Day the day itself.
   const [cursor, setCursor] = useState(() => new Date(ty, (tm || 1) - 1, td || 1));
   const [view, setView] = useState<'Month' | 'Week' | 'Day'>('Month');
-
-  // Load the design's font stack once (shared id with the dashboard port).
-  useEffect(() => {
-    if (!document.getElementById('dash-fonts')) {
-      const l = document.createElement('link');
-      l.id = 'dash-fonts'; l.rel = 'stylesheet';
-      l.href = 'https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap';
-      document.head.appendChild(l);
-    }
-  }, []);
 
   // day-key → events, built once from the flat event list.
   const byDay = useMemo(() => {

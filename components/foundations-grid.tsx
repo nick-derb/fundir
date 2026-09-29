@@ -57,7 +57,7 @@ function FoundationCard({ f, rank, onOpen }: { f: FoundationProfile; rank: numbe
   return (
     <button
       onClick={onOpen}
-      className={`text-left bg-white rounded-xl border shadow-card overflow-hidden transition-all hover:shadow-md hover:-translate-y-0.5 ${
+      className={`text-left bg-white rounded-md border shadow-card overflow-hidden transition-all hover:shadow-md hover:-translate-y-0.5 ${
         isTopMatch ? 'border-[#0d9488]/30' : 'border-[#e2e8f0]'
       }`}
     >
@@ -287,7 +287,7 @@ function FoundationDetailPanel({ f, onClose }: { f: FoundationProfile; onClose: 
               </div>
 
               {/* Deployment history */}
-              <div className="bg-canvas-1 rounded-lg ring-1 ring-canvas-3 p-4">
+              <div className="bg-canvas-1 rounded-md ring-1 ring-canvas-3 p-4">
                 <div className="flex items-baseline justify-between mb-3 gap-3 flex-wrap">
                   <div>
                     <p className="text-eyebrow font-semibold text-ink-2 uppercase tracking-wider">Annual deployment</p>

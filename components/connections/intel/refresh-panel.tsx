@@ -122,7 +122,7 @@ export function RefreshPanel({ open, onClose, onFinished, readOnly }: { open: bo
             {phase === 'snapshot' && <p className="fd-caption" style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-secondary)', margin: '14px 0 0' }}><Loader2 className="animate-spin" style={{ width: 13, height: 13 }} />Saving the run and writing the dated snapshot…</p>}
             {live.errors.length > 0 && <ul style={{ margin: '12px 0 0', padding: '10px 12px', listStyle: 'none', borderRadius: 10, border: '1px solid rgba(156,122,42,.36)', background: 'rgba(156,122,42,.08)', display: 'flex', flexDirection: 'column', gap: 4 }}>{live.errors.slice(0, 6).map((e, i) => <li key={i} className="fd-caption" style={{ color: 'var(--text-secondary)' }}>{e}</li>)}{live.errors.length > 6 && <li className="fd-caption" style={{ color: 'var(--text-tertiary)' }}>and {live.errors.length - 6} more</li>}</ul>}
             {phase === 'done' && (
-              <div style={{ marginTop: 16, border: '1px solid rgba(12,107,90,.3)', background: 'var(--accent-tint)', borderRadius: 12, padding: '12px 14px' }}>
+              <div style={{ marginTop: 16, border: '1px solid rgba(12,107,90,.3)', background: 'var(--accent-tint)', borderRadius: 'var(--radius)', padding: '12px 14px' }}>
                 <Eyebrow color="var(--accent)" style={{ display: 'block', marginBottom: 6 }}>At completion</Eyebrow>
                 <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 6, fontSize: 12.5 }}>
                   <li style={{ display: 'flex', gap: 8, alignItems: 'center' }}><Check style={{ width: 12, height: 12, color: 'var(--accent)' }} />Run saved to the refresh log with its spend.</li>

@@ -226,8 +226,8 @@ function Legend() {
   const row = (glyph: React.ReactNode, text: string) => <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 10.5, color: 'var(--text-secondary)' }}>{glyph}{text}</span>;
   return (
     <div style={{ position: 'absolute', left: 12, bottom: 10, display: 'flex', gap: 14, flexWrap: 'wrap', padding: '6px 10px', borderRadius: 8, background: 'color-mix(in srgb, var(--bg-surface) 88%, transparent)', border: '1px solid var(--border-hairline)' }}>
-      {row(<span style={{ width: 10, height: 10, borderRadius: 5, background: 'var(--accent)' }} />, 'CYC people')}
-      {row(<span style={{ width: 10, height: 10, borderRadius: 5, border: '1.5px solid var(--text-secondary)' }} />, 'Others')}
+      {row(<span style={{ width: 10, height: 10, borderRadius: 'var(--radius-sm)', background: 'var(--accent)' }} />, 'CYC people')}
+      {row(<span style={{ width: 10, height: 10, borderRadius: 'var(--radius-sm)', border: '1.5px solid var(--text-secondary)' }} />, 'Others')}
       {row(<span style={{ width: 10, height: 10, borderRadius: 3, border: '1.5px solid #9C7A2A' }} />, 'Funder with a lead')}
       {row(<span style={{ width: 10, height: 10, borderRadius: 3, border: '1.5px solid #3E6CA8' }} />, 'Corporation')}
       {row(<span style={{ width: 18, borderTop: '1.5px solid var(--text-secondary)' }} />, 'documented')}

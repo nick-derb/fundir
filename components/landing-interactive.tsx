@@ -296,7 +296,7 @@ export function ProductTabs({ products }: { products: Product[] }) {
           </div>
 
           {/* Preview */}
-          <div key={`preview-${active}`} className="rounded-xl overflow-hidden border border-white/10 bg-[#0f172a] animate-fade-in">
+          <div key={`preview-${active}`} className="rounded-md overflow-hidden border border-white/10 bg-[#0f172a] animate-fade-in">
             <div className="flex items-center gap-2 px-4 py-2.5 border-b border-white/10">
               <div className="w-2 h-2 rounded-full bg-[#ef4444]/50 hover:bg-[#ef4444]/80 transition-colors" />
               <div className="w-2 h-2 rounded-full bg-[#eab308]/50 hover:bg-[#eab308]/80 transition-colors" />

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Table2, RefreshCw, Download, Lock, Pencil } from 'lucide-react';
 import { IrsReplaceModal } from '@/components/prospecting/irs-replace-modal';
 
@@ -9,7 +9,7 @@ import { IrsReplaceModal } from '@/components/prospecting/irs-replace-modal';
 // / cyc_funder_prospects / cyc_peer_orgs / irs_bmf_il) and the real Instrumentl
 // win/loss history from cyc_grant_submissions.
 
-const SERIF = "'Instrument Serif',Palatino,Georgia,serif";
+const SERIF = 'var(--font-display)';
 
 export interface Sheet {
   key: string; label: string; total: string; locked: boolean; note: string;
@@ -21,11 +21,7 @@ export interface InstrumentlSummary {
 }
 
 const CSS = `
-.pr-root{--radius-kpi:12px;--radius-console:14px;font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;color:var(--text-primary);background:var(--bg-page)}
-.pr-root .fd-eyebrow{font-size:11px;line-height:1.2;letter-spacing:.08em;font-weight:600;text-transform:uppercase}
-.pr-root .fd-kpi{font-family:'JetBrains Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums;font-weight:600;letter-spacing:-.01em}
-.pr-root .fd-mono{font-family:'JetBrains Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
-.pr-root .fd-caption{font-size:12px;line-height:1.5}
+.pr-root{color:var(--text-primary);background:var(--bg-page)}
 @keyframes pr-fade{from{opacity:0}to{opacity:1}}
 @keyframes pr-rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 @keyframes pr-spin{to{transform:rotate(360deg)}}
@@ -39,13 +35,6 @@ export function ProspectingView({ sheets, instrumentl, bmfTotal, rowLimit, canRe
   const [active, setActive] = useState(sheets[0]?.key ?? 'cultivation');
   const [replaceOpen, setReplaceOpen] = useState(false);
 
-  useEffect(() => {
-    if (document.getElementById('pr-fonts')) return;
-    const l = document.createElement('link');
-    l.id = 'pr-fonts'; l.rel = 'stylesheet';
-    l.href = 'https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap';
-    document.head.appendChild(l);
-  }, []);
 
   const sheet = sheets.find(s => s.key === active) ?? sheets[0];
   const lockAll = sheet.lock === 'all';
@@ -104,8 +93,8 @@ export function ProspectingView({ sheets, instrumentl, bmfTotal, rowLimit, canRe
         {/* meta */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 16px', borderBottom: '1px solid var(--border-hairline)', flexWrap: 'wrap' }}>
           {sheet.locked
-            ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontFamily: "'JetBrains Mono',monospace", fontSize: 9.5, letterSpacing: '.06em', textTransform: 'uppercase', color: '#5B7383', border: '1px solid rgba(91,115,131,.3)', borderRadius: 3, padding: '3px 8px' }}><Lock style={{ width: 11, height: 11 }} />IRS source · replaced each release</span>
-            : <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontFamily: "'JetBrains Mono',monospace", fontSize: 9.5, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--accent)', border: '1px solid rgba(12,107,90,.26)', borderRadius: 3, padding: '3px 8px' }}><Pencil style={{ width: 11, height: 11 }} />Your columns · edit anytime</span>}
+            ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontFamily: 'var(--font-mono)', fontSize: 9.5, letterSpacing: '.06em', textTransform: 'uppercase', color: '#5B7383', border: '1px solid rgba(91,115,131,.3)', borderRadius: 3, padding: '3px 8px' }}><Lock style={{ width: 11, height: 11 }} />IRS source · replaced each release</span>
+            : <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontFamily: 'var(--font-mono)', fontSize: 9.5, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--accent)', border: '1px solid rgba(12,107,90,.26)', borderRadius: 3, padding: '3px 8px' }}><Pencil style={{ width: 11, height: 11 }} />Your columns · edit anytime</span>}
           <span data-pr-meta className="fd-caption" style={{ color: 'var(--text-tertiary)' }}>{sheet.note}</span>
           <span style={{ flex: 1 }} />
           <span className="fd-mono" style={{ fontSize: 10, color: 'var(--text-tertiary)', whiteSpace: 'nowrap' }}>{sheet.total} rows × {sheet.cols.length} cols</span>

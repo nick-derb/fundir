@@ -33,7 +33,7 @@ export function ViewAsButton({ userId }: { userId: string }) {
       disabled={busy}
       style={{
         fontSize: 11, fontWeight: 600, letterSpacing: '0.04em',
-        padding: '5px 11px', borderRadius: 7,
+        padding: '5px 11px', borderRadius: 'var(--radius-sm)',
         border: '1px solid rgba(255,255,255,0.14)', background: 'rgba(255,255,255,0.04)',
         color: busy ? '#64748b' : '#cbd5e1', cursor: busy ? 'default' : 'pointer', whiteSpace: 'nowrap',
       }}

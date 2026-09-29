@@ -155,7 +155,7 @@ export function GrantWorkspace({
   // ── Not connected ────────────────────────────────────────────────────────────
   if (!anyConnected) {
     return (
-      <div className="flex items-start gap-3 p-4 rounded-[10px] bg-[#f8fafc] border border-[#e2e8f0]">
+      <div className="flex items-start gap-3 p-4 rounded-md bg-[#f8fafc] border border-[#e2e8f0]">
         <AlertTriangle className="w-4 h-4 text-[#d97706] flex-shrink-0 mt-0.5" />
         <div>
           <p className="text-[13px] font-bold text-[#0f172a]">Connect cloud storage to use workspace</p>
@@ -178,7 +178,7 @@ export function GrantWorkspace({
             <button
               key={p}
               onClick={() => { setActiveProvider(p); setFolder(null); setFiles([]); }}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-[7px] text-[12px] font-semibold transition-all border ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-sm text-[12px] font-semibold transition-all border ${
                 activeProvider === p
                   ? 'border-[#0d9488] bg-[#f0fdfa] text-[#0d9488]'
                   : 'border-[#e2e8f0] bg-white text-[#64748b] hover:border-[#0d9488]'
@@ -208,8 +208,8 @@ export function GrantWorkspace({
 
       {/* No workspace yet */}
       {!loading && !folder && !error && (
-        <div className="flex flex-col items-center gap-4 py-8 border-2 border-dashed border-[#e2e8f0] rounded-[12px]">
-          <div className="w-12 h-12 rounded-xl bg-[#f0fdfa] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4 py-8 border-2 border-dashed border-[#e2e8f0] rounded-md">
+          <div className="w-12 h-12 rounded-md bg-[#f0fdfa] flex items-center justify-center">
             <FolderPlus className="w-5 h-5 text-[#0d9488]" />
           </div>
           <div className="text-center">
@@ -257,7 +257,7 @@ export function GrantWorkspace({
           </div>
 
           {/* Files list */}
-          <div className="bg-white rounded-[10px] border border-[#e2e8f0] overflow-hidden">
+          <div className="bg-white rounded-md border border-[#e2e8f0] overflow-hidden">
             {files.length === 0 ? (
               <div className="px-5 py-6 text-center">
                 <p className="text-[12px] text-[#94a3b8]">
@@ -270,7 +270,7 @@ export function GrantWorkspace({
                   const url = f.webViewLink ?? f.webUrl;
                   return (
                     <li key={f.id} className="flex items-center gap-3 px-5 py-3 hover:bg-[#f8fafc] transition-colors">
-                      <div className="w-6 h-6 rounded-[4px] bg-[#f1f5f9] flex items-center justify-center flex-shrink-0">
+                      <div className="w-6 h-6 rounded-xs bg-[#f1f5f9] flex items-center justify-center flex-shrink-0">
                         {fileIcon(f)}
                       </div>
                       <span className="text-[13px] text-[#0f172a] flex-1 min-w-0 truncate">
@@ -308,7 +308,7 @@ export function GrantWorkspace({
                   key={name}
                   onClick={() => createDoc(name, type as 'doc' | 'sheet')}
                   disabled={creating === name}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-[7px] text-[12px] font-medium border border-[#e2e8f0] hover:border-[#0d9488] hover:bg-[#f0fdfa] transition-all text-[#475569] hover:text-[#0d9488] disabled:opacity-50"
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-sm text-[12px] font-medium border border-[#e2e8f0] hover:border-[#0d9488] hover:bg-[#f0fdfa] transition-all text-[#475569] hover:text-[#0d9488] disabled:opacity-50"
                 >
                   {creating === name ? (
                     <Loader2 className="w-3 h-3 animate-spin" />
@@ -325,7 +325,7 @@ export function GrantWorkspace({
                   const n = window.prompt('Document name:');
                   if (n?.trim()) createDoc(n.trim(), 'doc');
                 }}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-[7px] text-[12px] font-medium border border-dashed border-[#e2e8f0] hover:border-[#0d9488] text-[#94a3b8] hover:text-[#0d9488] transition-all"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-sm text-[12px] font-medium border border-dashed border-[#e2e8f0] hover:border-[#0d9488] text-[#94a3b8] hover:text-[#0d9488] transition-all"
               >
                 <Plus className="w-3 h-3" />
                 Custom

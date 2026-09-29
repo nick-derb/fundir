@@ -91,7 +91,7 @@ function SignalWeightBar({ weight }: { weight?: number }) {
 function FinancialAssessment({ signals, score }: { signals: EligibilitySignal[]; score: number }) {
   if (!signals?.length) {
     return (
-      <div className="bg-canvas-1 rounded-lg ring-1 ring-dashed ring-canvas-3 p-6 text-center">
+      <div className="bg-canvas-1 rounded-md ring-1 ring-dashed ring-canvas-3 p-6 text-center">
         <Shield className="w-8 h-8 text-canvas-3 mx-auto mb-3" />
         <p className="text-body font-medium text-ink-1 mb-1">990 screening not available</p>
         <p className="text-caption text-ink-2">
@@ -112,7 +112,7 @@ function FinancialAssessment({ signals, score }: { signals: EligibilitySignal[];
   const mismatchCount = signals.filter(s => s.status === 'mismatch').length;
 
   return (
-    <div className="bg-canvas-1 rounded-lg shadow-flat overflow-hidden">
+    <div className="bg-canvas-1 rounded-md shadow-flat overflow-hidden">
       {/* Header */}
       <div className="px-5 py-4 border-b border-canvas-3">
         <div className="flex items-center justify-between mb-2">
@@ -445,7 +445,7 @@ export default async function GrantDetailPage({
             <>
               {/* "Why it's a match" — THE prominent panel */}
               {reasonItems.length > 0 && (
-                <div className="bg-canvas-1 rounded-lg shadow-flat p-5">
+                <div className="bg-canvas-1 rounded-md shadow-flat p-5">
                   <div className="flex items-center justify-between gap-2 mb-3">
                     <div className="flex items-center gap-2">
                       <div className="w-6 h-6 rounded-sm flex items-center justify-center bg-action-soft text-action">
@@ -474,7 +474,7 @@ export default async function GrantDetailPage({
 
               {/* Synopsis */}
               {grant?.synopsis && (
-                <div className="bg-canvas-1 rounded-lg shadow-flat p-5">
+                <div className="bg-canvas-1 rounded-md shadow-flat p-5">
                   <p className="text-eyebrow font-semibold text-ink-2 uppercase tracking-wider mb-3">Synopsis</p>
                   <p className="text-body text-ink-0 leading-relaxed">{grant.synopsis}</p>
                 </div>
@@ -482,7 +482,7 @@ export default async function GrantDetailPage({
 
               {/* Eligibility flags */}
               {match.eligibility_flags?.length > 0 && (
-                <div className="bg-signal-maybe-soft ring-1 ring-signal-maybe/20 rounded-lg p-5">
+                <div className="bg-signal-maybe-soft ring-1 ring-signal-maybe/20 rounded-md p-5">
                   <div className="flex items-center gap-2 mb-3">
                     <AlertCircle className="w-4 h-4 text-signal-maybe" />
                     <p className="text-eyebrow font-semibold text-signal-maybe uppercase tracking-wider">Eligibility notes</p>
@@ -499,7 +499,7 @@ export default async function GrantDetailPage({
 
               {/* Key requirements (when extracted) */}
               {fields.key_requirements?.length > 0 && (
-                <div className="bg-canvas-1 rounded-lg shadow-flat p-5">
+                <div className="bg-canvas-1 rounded-md shadow-flat p-5">
                   <p className="text-eyebrow font-semibold text-ink-2 uppercase tracking-wider mb-3">Key requirements</p>
                   <ul className="space-y-2.5">
                     {fields.key_requirements.map((req: string, i: number) => (
@@ -519,7 +519,7 @@ export default async function GrantDetailPage({
              ════════════════════════════════════════════════════════════ */}
           {tab === 'funder' && (
             <>
-              <div className="bg-canvas-1 rounded-lg shadow-flat overflow-hidden">
+              <div className="bg-canvas-1 rounded-md shadow-flat overflow-hidden">
                 <div className="px-5 py-4 border-b border-canvas-3">
                   <h2 className="text-h2 font-semibold text-ink-0">Match score breakdown</h2>
                   <p className="text-caption text-ink-2 mt-0.5">6-factor composite</p>
@@ -542,7 +542,7 @@ export default async function GrantDetailPage({
               WORKSPACE TAB — inner nav over Draft / Tasks / Notes / Documents
              ════════════════════════════════════════════════════════════ */}
           {tab === 'workspace' && (
-            <div className="bg-canvas-1 rounded-lg shadow-flat overflow-hidden">
+            <div className="bg-canvas-1 rounded-md shadow-flat overflow-hidden">
               {/* Inner-nav pill row */}
               <div className="flex items-center gap-1 px-3 pt-3 pb-0 border-b border-canvas-3 overflow-x-auto">
                 {WORKSPACE_SECTIONS.map(({ key, label, icon: Icon }) => {
@@ -650,7 +650,7 @@ function MetadataBlock({ fields }: { fields: Record<string, unknown> }) {
   if (rows.length === 0) return null;
 
   return (
-    <div className="bg-canvas-1 rounded-lg shadow-flat p-5">
+    <div className="bg-canvas-1 rounded-md shadow-flat p-5">
       <p className="text-eyebrow font-semibold text-ink-2 uppercase tracking-wider mb-4">Details</p>
       <dl className="space-y-3">
         {rows.map(r => (

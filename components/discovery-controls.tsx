@@ -51,7 +51,7 @@ export function DiscoveryControls({ onComplete, orgId }: { onComplete?: () => vo
   }
 
   return (
-    <div className="bg-white rounded-lg border border-[#e2e8f0] shadow-card overflow-hidden">
+    <div className="bg-white rounded-md border border-[#e2e8f0] shadow-card overflow-hidden">
       <div className="px-5 py-4 border-b border-[#e2e8f0]">
         <h2 className="font-semibold text-[#0f172a] text-[15px]">Run Discovery</h2>
         <p className="text-[12px] text-[#64748b] mt-0.5">Search Grants.gov and score results</p>

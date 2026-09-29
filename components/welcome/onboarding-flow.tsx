@@ -27,9 +27,9 @@ const FOCUS = [
   { id: 'know',      label: 'Finding what we already documented',  note: 'Past narratives, outcomes, board records' },
 ];
 
-const SERIF = "'Instrument Serif',Palatino,Georgia,serif";
-const MONO = "'JetBrains Mono',ui-monospace,monospace";
-const SANS = "'Inter',-apple-system,BlinkMacSystemFont,sans-serif";
+const SERIF = 'var(--font-display)';
+const MONO = 'var(--font-mono)';
+const SANS = 'var(--font-sans)';
 const INK = '#101917', SAGE = '#659A80', ACCENT = '#0C6B5A', FAINT = '#9AA7A1', RULE = '#DFE5E2';
 
 const lbl: React.CSSProperties = {
@@ -38,7 +38,7 @@ const lbl: React.CSSProperties = {
 };
 const input: React.CSSProperties = {
   width: '100%', padding: '12px 13px', fontSize: 14, background: '#fff',
-  border: `1px solid ${RULE}`, borderRadius: 5, transition: 'border-color .15s,box-shadow .15s',
+  border: `1px solid ${RULE}`, borderRadius: 'var(--radius-sm)', transition: 'border-color .15s,box-shadow .15s',
   fontFamily: SANS, color: INK, boxSizing: 'border-box',
 };
 const h1: React.CSSProperties = {
@@ -73,14 +73,8 @@ export function OnboardingFlow({
 
   const step: Step = STEPS[i];
 
-  // Google fonts + glyph-field aside (loaded once).
+  // Glyph-field aside (loaded once). Fonts are self-hosted via app/layout.tsx.
   useEffect(() => {
-    if (!document.getElementById('welcome-fonts')) {
-      const l = document.createElement('link');
-      l.id = 'welcome-fonts'; l.rel = 'stylesheet';
-      l.href = 'https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Inter:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap';
-      document.head.appendChild(l);
-    }
     const initField = () => { if (fieldRef.current && window.FundirField) window.FundirField.init(fieldRef.current); };
     if (window.FundirField) { initField(); return; }
     const s = document.createElement('script');
@@ -249,7 +243,7 @@ export function OnboardingFlow({
               <h1 style={h1}>Connect your calendar</h1>
               <p style={sub}>Fundir puts your week next to your deadlines. Connect the calendar you use for work — it stays connected.</p>
               {calendarConnected ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '15px 16px', border: `1px solid ${RULE}`, borderRadius: 7, background: '#fff', marginBottom: 16 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '15px 16px', border: `1px solid ${RULE}`, borderRadius: 'var(--radius-sm)', background: '#fff', marginBottom: 16 }}>
                   <i style={{ width: 5, height: 5, borderRadius: '50%', background: ACCENT, flex: 'none' }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <b style={{ display: 'block', fontSize: 13, fontWeight: 500 }}>Calendar connected</b>
@@ -284,7 +278,7 @@ export function OnboardingFlow({
                   return (
                     <button key={f.id} type="button" aria-pressed={sel}
                       onClick={() => setFocus(fs => fs.includes(f.id) ? fs.filter(x => x !== f.id) : [...fs, f.id])}
-                      style={{ display: 'flex', alignItems: 'flex-start', gap: 12, textAlign: 'left', padding: '13px 15px', borderRadius: 7, border: `1px solid ${sel ? ACCENT : RULE}`, background: sel ? '#F4F9F6' : '#fff', cursor: 'pointer', transition: 'border-color .18s,background .18s' }}>
+                      style={{ display: 'flex', alignItems: 'flex-start', gap: 12, textAlign: 'left', padding: '13px 15px', borderRadius: 'var(--radius-sm)', border: `1px solid ${sel ? ACCENT : RULE}`, background: sel ? '#F4F9F6' : '#fff', cursor: 'pointer', transition: 'border-color .18s,background .18s' }}>
                       <i style={{ width: 15, height: 15, flex: 'none', marginTop: 1, borderRadius: 4, border: `1px solid ${sel ? ACCENT : RULE}`, background: sel ? ACCENT : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 9 }}>{sel ? '✓' : ''}</i>
                       <span style={{ minWidth: 0 }}>
                         <b style={{ display: 'block', fontSize: 13.5, fontWeight: 500, marginBottom: 2 }}>{f.label}</b>
@@ -306,7 +300,7 @@ export function OnboardingFlow({
               </div>
               <h1 style={h1}>You are set up, {first || 'there'}.</h1>
               <p style={{ ...sub, marginBottom: 26 }}>Your workspace is Chicago Youth Centers. Everything the team has loaded is already there.</p>
-              <div style={{ border: `1px solid ${RULE}`, borderRadius: 7, background: '#fff', padding: '4px 16px', marginBottom: 26 }}>
+              <div style={{ border: `1px solid ${RULE}`, borderRadius: 'var(--radius-sm)', background: '#fff', padding: '4px 16px', marginBottom: 26 }}>
                 {[
                   ['Profile', display || `${first} ${last}`.trim() || 'Not set'],
                   ['Role', role || 'Not set'],

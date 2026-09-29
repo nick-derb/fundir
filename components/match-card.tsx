@@ -14,7 +14,7 @@ function ScoreBadge({ score }: { score: number }) {
     score >= 40 ? { bg: '#fffbeb', text: '#d97706', border: '#fde68a', label: 'Medium' } :
                   { bg: '#fef2f2', text: '#dc2626', border: '#fecaca', label: 'Low' };
   return (
-    <div className="flex flex-col items-center justify-center w-14 h-14 rounded-lg border flex-shrink-0"
+    <div className="flex flex-col items-center justify-center w-14 h-14 rounded-md border flex-shrink-0"
       style={{ background: config.bg, borderColor: config.border }}>
       <span className="text-[18px] font-bold leading-none" style={{ color: config.text }}>{score.toFixed(0)}</span>
       <span className="text-[9px] font-semibold mt-0.5" style={{ color: config.text }}>{config.label}</span>
@@ -35,7 +35,7 @@ export function MatchCard({ match, compact = false }: MatchCardProps) {
 
   return (
     <Link href={`/grant/${match.grant_id}`} className="block group">
-      <div className="bg-white rounded-lg border border-[#e2e8f0] p-4 hover:border-[#0d9488]/40 hover:shadow-card transition-all">
+      <div className="bg-white rounded-md border border-[#e2e8f0] p-4 hover:border-[#0d9488]/40 hover:shadow-card transition-all">
         <div className="flex items-start gap-3">
           <div className="flex-1 min-w-0">
             <h3 className="font-semibold text-[#0f172a] text-[13px] leading-snug group-hover:text-[#0d9488] transition-colors line-clamp-2">

@@ -57,7 +57,7 @@ export function PipelineView({ leads, team, selectedId, onOpen, onChanged, readO
           <h1 style={{ fontFamily: SERIF, fontWeight: 400, fontSize: 'clamp(1.9rem,3vw,2.5rem)', lineHeight: 1.04, letterSpacing: '-.018em', margin: 0 }}>Pipeline</h1>
           <p style={{ margin: '9px 0 0', fontSize: 13.5, lineHeight: 1.6, color: 'var(--text-secondary)', maxWidth: '62ch' }}>Drag a lead as the work moves. Closing one as &ldquo;not a fit&rdquo; asks why, and the reason lowers the score of the next lead of the same shape — the team&rsquo;s judgement, written into the number.</p>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(104px,1fr))', gap: 10, flex: '0 1 520px' }}>
+        <div className="ni-kpis" style={{ flex: '0 1 560px' }}>
           <Kpi label="In motion" value={inMotion} accent />
           <Kpi label="Due this week" value={due} />
           <Kpi label="Overdue" value={overdue} tone={overdue ? 'var(--critical)' : undefined} />
@@ -150,14 +150,14 @@ export function ReasonDialog({ lead, onCancel, onPick }: { lead: LeadRow; onCanc
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 80, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
       <button aria-label="Cancel" onClick={onCancel} style={{ position: 'absolute', inset: 0, background: 'rgba(11,18,32,.38)', backdropFilter: 'blur(2px)', border: 'none', cursor: 'default' }} />
-      <div role="dialog" aria-modal="true" aria-label="Why is this not a fit?" className="ni-rise" style={{ position: 'relative', width: 'min(440px,100%)', background: 'var(--bg-surface)', border: '1px solid var(--border-hairline)', borderRadius: 14, boxShadow: 'var(--shadow-overlay)', padding: '20px 22px', fontFamily: "'Inter',-apple-system,sans-serif" }}>
+      <div role="dialog" aria-modal="true" aria-label="Why is this not a fit?" className="ni-rise" style={{ position: 'relative', width: 'min(440px,100%)', background: 'var(--bg-surface)', border: '1px solid var(--border-hairline)', borderRadius: 'var(--radius)', boxShadow: 'var(--shadow-overlay)', padding: '20px 22px', fontFamily: 'var(--font-sans)' }}>
         <Eyebrow style={{ display: 'block', marginBottom: 8 }}>Not a fit</Eyebrow>
         <h2 style={{ fontFamily: SERIF, fontWeight: 400, fontSize: '1.4rem', lineHeight: 1.15, letterSpacing: '-.012em', margin: '0 0 6px' }}>Why is {lead.target?.name ?? 'this lead'} not a fit?</h2>
         <p className="fd-caption" style={{ margin: '0 0 14px', color: 'var(--text-secondary)' }}>The reason is recorded and shapes future scores: a funder closed for program fit will not resurface at the top of Discover.</p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           {DISMISSAL_REASONS.map(r => (
             <button key={r.id} type="button" onClick={() => setPick(r.id)} aria-pressed={pick === r.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 8, border: `1px solid ${pick === r.id ? 'var(--accent)' : 'var(--border-hairline)'}`, background: pick === r.id ? 'var(--accent-tint)' : 'var(--bg-surface)', font: 'inherit', fontSize: 12.5, cursor: 'pointer', color: 'inherit', textAlign: 'left' }}>
-              <span style={{ width: 14, height: 14, borderRadius: 7, border: `1.5px solid ${pick === r.id ? 'var(--accent)' : 'var(--border-strong)'}`, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>{pick === r.id && <Check style={{ width: 9, height: 9, color: 'var(--accent)' }} />}</span>
+              <span style={{ width: 14, height: 14, borderRadius: 'var(--radius-sm)', border: `1.5px solid ${pick === r.id ? 'var(--accent)' : 'var(--border-strong)'}`, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>{pick === r.id && <Check style={{ width: 9, height: 9, color: 'var(--accent)' }} />}</span>
               {r.label}
               {r.feeds && <span className="fd-mono" style={{ marginLeft: 'auto', fontSize: 9, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--text-tertiary)' }}>feeds score</span>}
             </button>
@@ -174,9 +174,9 @@ export function ReasonDialog({ lead, onCancel, onPick }: { lead: LeadRow; onCanc
 
 function Kpi({ label, value, accent, tone }: { label: string; value: number; accent?: boolean; tone?: string }) {
   return (
-    <div className="ni-kpi" style={accent ? { borderColor: 'rgba(12,107,90,.28)' } : undefined}>
-      <span className="fd-eyebrow" style={{ display: 'block', color: accent ? 'var(--accent)' : 'var(--text-tertiary)', marginBottom: 6, fontSize: 10 }}>{label}</span>
-      <b className="fd-kpi" style={{ fontSize: 22, color: tone ?? (accent ? 'var(--accent)' : undefined), fontFamily: MONO }}>{value}</b>
+    <div className="ni-kpi">
+      <span className="fd-eyebrow" style={{ display: 'block', color: accent ? 'var(--accent)' : 'var(--text-tertiary)', marginBottom: 6 }}>{label}</span>
+      <b className="fd-kpi" style={{ fontSize: 20, color: tone ?? (accent ? 'var(--accent)' : undefined), fontFamily: MONO }}>{value}</b>
     </div>
   );
 }

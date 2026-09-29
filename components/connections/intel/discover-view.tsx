@@ -74,7 +74,7 @@ export function DiscoverView({ leads, insights, filters, onFilters, selectedId, 
             Every opportunity Fundir can see in CYC&rsquo;s graph, scored the same way and explained from evidence: funders reachable through a board member, corporations a CYC person works at, and funders of CYC&rsquo;s peers that show no CYC relationship yet.
           </p>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(120px, 1fr))', gap: 10, flex: '0 1 460px' }}>
+        <div className="ni-kpis" style={{ flex: '0 1 480px' }}>
           <Kpi label="Open leads" value={leads.filter(l => OPEN.has(l.pipeline_status)).length} />
           <Kpi label="High confidence" value={high} accent />
           <Kpi label="Warm paths" value={withPath} sub={`${untapped} white space`} />
@@ -177,9 +177,9 @@ function NextDue({ lead }: { lead: LeadRow }) {
 
 function Kpi({ label, value, sub, accent }: { label: string; value: number; sub?: string; accent?: boolean }) {
   return (
-    <div className="ni-kpi" style={accent ? { borderColor: 'rgba(12,107,90,.28)' } : undefined}>
-      <span className="fd-eyebrow" style={{ display: 'block', color: accent ? 'var(--accent)' : 'var(--text-tertiary)', marginBottom: 6, fontSize: 10 }}>{label}</span>
-      <b className="fd-kpi" style={{ fontSize: 22, color: accent ? 'var(--accent)' : undefined, fontFamily: MONO }}>{value.toLocaleString('en-US')}</b>
+    <div className="ni-kpi">
+      <span className="fd-eyebrow" style={{ display: 'block', color: accent ? 'var(--accent)' : 'var(--text-tertiary)', marginBottom: 6 }}>{label}</span>
+      <b className="fd-kpi" style={{ fontSize: 20, color: accent ? 'var(--accent)' : undefined, fontFamily: MONO }}>{value.toLocaleString('en-US')}</b>
       {sub && <span className="fd-caption" style={{ display: 'block', color: 'var(--text-tertiary)', marginTop: 2, fontSize: 11 }}>{sub}</span>}
     </div>
   );

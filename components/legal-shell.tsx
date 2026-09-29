@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 
-const SERIF = "'Instrument Serif',Palatino,Georgia,serif";
+const SERIF = 'var(--font-display)';
 const INK = '#1A1F1D';
 const MUTE = '#5E6D67';
 const FAINT = '#8B968F';
@@ -18,10 +18,7 @@ export function LegalShell({
   title, updated, children,
 }: { title: string; updated: string; children: ReactNode }) {
   return (
-    <div style={{ minHeight: '100vh', background: PAPER, color: INK, fontFamily: 'var(--font-geist-sans),-apple-system,BlinkMacSystemFont,sans-serif' }}>
-      {/* Load Instrument Serif for the wordmark + heading, matching the app. */}
-      {/* eslint-disable-next-line @next/next/no-page-custom-font */}
-      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif&display=swap" />
+    <div style={{ minHeight: '100vh', background: PAPER, color: INK, fontFamily: 'var(--font-sans)' }}>
 
       <div style={{ maxWidth: 720, margin: '0 auto', padding: '0 24px' }}>
         {/* header */}

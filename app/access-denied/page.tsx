@@ -74,7 +74,7 @@ export default async function AccessDeniedPage({ searchParams }: PageProps) {
           <span className="font-semibold text-[18px] text-primary">Fundir</span>
         </div>
 
-        <div className="bg-surface rounded-[12px] border border-hairline overflow-hidden">
+        <div className="bg-surface rounded-md border border-hairline overflow-hidden">
 
           {/* Header — semantic left border to telegraph "blocked but not broken" */}
           <div className="border-b border-hairline border-l-[3px] border-l-warning px-6 py-5">

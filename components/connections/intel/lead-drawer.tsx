@@ -156,7 +156,7 @@ export function LeadDrawer({ leadId, onClose, onStep, onOpenMap, onChanged, read
                   ))}
                 </div>
                 {/* action */}
-                <div style={{ marginTop: 18, border: `1px solid ${hue.border}`, background: hue.tint, borderRadius: 12, padding: '12px 14px' }}>
+                <div style={{ marginTop: 18, border: `1px solid ${hue.border}`, background: hue.tint, borderRadius: 'var(--radius)', padding: '12px 14px' }}>
                   <Eyebrow color={hue.color} style={{ display: 'block', marginBottom: 6 }}>Recommended action</Eyebrow>
                   <p style={{ margin: 0, fontSize: 13.5, lineHeight: 1.55, color: 'var(--text-primary)' }}>{x.recommended_action.text}{x.recommended_action.evidence.map(id => <button key={id} type="button" className="ni-cite" data-on={hi === id} onClick={() => cite(id)}>{id}</button>)}</p>
                 </div>
@@ -177,7 +177,7 @@ export function LeadDrawer({ leadId, onClose, onStep, onOpenMap, onChanged, read
             {graph && graph.nodes.length > 1 && (
               <>
                 <SectionRule label="Around this organization" right={lead.target && <button type="button" className="ni-ghost" style={{ height: 24, fontSize: 11, padding: '0 8px' }} onClick={() => onOpenMap?.({ kind: 'org', id: lead.target!.id })}><MapIcon style={{ width: 11, height: 11 }} />Open in map</button>} />
-                <div className="ni-card" style={{ overflow: 'hidden', borderRadius: 12 }}>
+                <div className="ni-card" style={{ overflow: 'hidden', borderRadius: 'var(--radius)' }}>
                   <GraphCanvas data={graph} height={220} compact onActivate={n => n.rowId && onOpenMap?.({ kind: n.kind, id: n.rowId })} />
                 </div>
               </>

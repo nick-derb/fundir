@@ -130,7 +130,7 @@ export function DashboardHero({
 
         .dh2-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:22px}
         @media(max-width:900px){.dh2-kpis{grid-template-columns:repeat(2,1fr)}}
-        .dh2-kpi{border:1px solid var(--border-hairline);border-radius:12px;padding:13px 15px;background:var(--bg-surface);position:relative}
+        .dh2-kpi{border:1px solid var(--border-hairline);border-radius:var(--radius);padding:13px 15px;background:var(--bg-surface);position:relative}
         .dh2-kpi::before,.dh2-kpi::after{content:"";position:absolute;width:10px;height:10px;border:1.6px solid transparent;transition:border-color .25s}
         .dh2-kpi::before{left:-1px;top:-1px;border-right:none;border-bottom:none;border-radius:4px 0 0 0}
         .dh2-kpi::after{right:-1px;bottom:-1px;border-left:none;border-top:none;border-radius:0 0 4px 0}

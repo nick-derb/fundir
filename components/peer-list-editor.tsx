@@ -48,7 +48,7 @@ export function PeerListEditor({ initialRows }: Props) {
   return (
     <div className="space-y-5">
       {/* Current peers */}
-      <div className="bg-canvas-1 rounded-lg shadow-flat overflow-hidden">
+      <div className="bg-canvas-1 rounded-md shadow-flat overflow-hidden">
         <div className="px-5 py-4 border-b border-canvas-3">
           <p className="text-eyebrow font-semibold text-ink-2 uppercase tracking-wider">Your peer organizations</p>
           <p className="text-h2 font-semibold text-ink-0 mt-0.5">{rows.length} peer{rows.length === 1 ? '' : 's'}</p>
@@ -199,7 +199,7 @@ function AddPeerSearch() {
   };
 
   return (
-    <div className="bg-canvas-1 rounded-lg shadow-flat overflow-hidden">
+    <div className="bg-canvas-1 rounded-md shadow-flat overflow-hidden">
       <div className="px-5 py-4 border-b border-canvas-3">
         <div className="flex items-center gap-2 mb-1">
           <div className="w-6 h-6 rounded-sm bg-action-soft text-action flex items-center justify-center">

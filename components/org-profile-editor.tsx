@@ -110,7 +110,7 @@ function Section({ title, sub, icon: Icon, summary, defaultOpen = false, childre
   return (
     <section
       ref={ref}
-      className={`bg-surface border rounded-[10px] overflow-hidden transition-colors ${open ? 'border-ink-300' : 'border-hairline'}`}
+      className={`bg-surface border rounded-md overflow-hidden transition-colors ${open ? 'border-ink-300' : 'border-hairline'}`}
       style={revealStyle(seen, reduce)}
     >
       <button
@@ -538,7 +538,7 @@ export function OrgProfileEditor({
     <div className="space-y-4">
 
       {/* ── Sticky save bar ── */}
-      <div className="sticky top-12 z-30 bg-surface/95 backdrop-blur border border-hairline rounded-[10px] px-5 py-3 flex items-center justify-between gap-3 flex-wrap">
+      <div className="sticky top-12 z-30 bg-surface/95 backdrop-blur border border-hairline rounded-md px-5 py-3 flex items-center justify-between gap-3 flex-wrap">
         <div className="min-w-0">
           <p className="text-[13px] font-semibold text-primary truncate">{orgName}</p>
           <p className="font-mono text-[10.5px] text-tertiary tabular-nums">
@@ -581,7 +581,7 @@ export function OrgProfileEditor({
 
       {/* ── 990 vs Self-reported banner ── */}
       {fy990 && (
-        <div className="bg-surface border border-hairline border-l-[3px] border-l-warning rounded-[10px] px-4 py-3 flex items-start gap-3">
+        <div className="bg-surface border border-hairline border-l-[3px] border-l-warning rounded-md px-4 py-3 flex items-start gap-3">
           <AlertCircle className="w-4 h-4 text-warning mt-0.5 flex-shrink-0" />
           <div className="min-w-0">
             <p className="text-[12.5px] font-semibold text-warning">
@@ -824,7 +824,7 @@ export function OrgProfileEditor({
       </Section>
 
       {/* ── Data policy notice ── */}
-      <div className="bg-surface border border-hairline rounded-[10px] px-4 py-3 flex items-start gap-3">
+      <div className="bg-surface border border-hairline rounded-md px-4 py-3 flex items-start gap-3">
         <FileText className="w-4 h-4 text-tertiary mt-0.5 flex-shrink-0" />
         <div>
           <p className="text-[12px] font-semibold text-muted">Data security & privacy</p>

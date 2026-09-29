@@ -27,13 +27,13 @@ export function ConnectionsTabs({
             <button key={t.key} onClick={() => setTab(t.key)} style={{ flex: 'none', border: 'none', background: 'none', font: 'inherit', cursor: 'pointer', padding: 0 }}>
               <span style={{
                 display: 'flex', alignItems: 'center', gap: 7, padding: '11px 15px', whiteSpace: 'nowrap', fontSize: 12.5,
-                fontFamily: "'Inter',-apple-system,BlinkMacSystemFont,sans-serif",
+                fontFamily: 'var(--font-sans)',
                 ...(on
                   ? { borderBottom: '2px solid var(--accent)', color: 'var(--text-primary)', fontWeight: 500 }
                   : { borderBottom: '2px solid transparent', color: 'var(--text-tertiary)' }),
               }}>
                 {t.label}
-                <i style={{ fontStyle: 'normal', fontFamily: "'JetBrains Mono',monospace", fontSize: 9, color: 'var(--text-tertiary)', opacity: on ? 1 : 0.7 }}>{t.count}</i>
+                <i style={{ fontStyle: 'normal', fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-tertiary)', opacity: on ? 1 : 0.7 }}>{t.count}</i>
               </span>
             </button>
           );

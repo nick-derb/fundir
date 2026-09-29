@@ -53,7 +53,7 @@ export function GrantCard({
     <Link
       href={href}
       className={clsx(
-        'group block bg-canvas-1 rounded-lg p-5 shadow-flat transition-shadow duration-fast',
+        'group block bg-canvas-1 rounded-md p-5 shadow-flat transition-shadow duration-fast',
         'hover:shadow-lift focus:outline-none focus:ring-2 focus:ring-focus focus:ring-offset-2 focus:ring-offset-canvas-0',
       )}
     >

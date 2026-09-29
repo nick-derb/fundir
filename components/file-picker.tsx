@@ -109,7 +109,7 @@ export function FilePicker({ provider, orgCode, onSelect, onClose }: FilePickerP
         onClick={onClose}
       />
 
-      <div className="relative w-full max-w-[640px] bg-white rounded-2xl shadow-2xl border border-[#e2e8f0] overflow-hidden flex flex-col max-h-[70vh]">
+      <div className="relative w-full max-w-[640px] bg-white rounded-md shadow-2xl border border-[#e2e8f0] overflow-hidden flex flex-col max-h-[70vh]">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-[#f1f5f9] bg-[#f8fafc] flex-shrink-0">
           <div>

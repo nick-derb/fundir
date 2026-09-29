@@ -223,7 +223,7 @@ function FinancialDoneView({ a, savedId, onReset }: { a: FinancialAnalysis; save
         </div>
       </div>
 
-      <div className="p-4 rounded-[10px] text-[12px] text-slate-400 leading-relaxed border"
+      <div className="p-4 rounded-md text-[12px] text-slate-400 leading-relaxed border"
         style={{ background: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.07)' }}>
         {a.summary}
       </div>
@@ -235,7 +235,7 @@ function FinancialDoneView({ a, savedId, onReset }: { a: FinancialAnalysis; save
           { label: 'Net Assets',        value: formatCurrency(a.balance_sheet.net_assets),         icon: BarChart3, color: '#818cf8' },
           { label: 'Months Reserves',   value: a.liquidity.months_of_reserves != null ? `${a.liquidity.months_of_reserves.toFixed(1)} mo` : '—', icon: CheckCircle, color: (a.liquidity.months_of_reserves ?? 0) >= 3 ? '#22c55e' : '#f59e0b' },
         ].map(({ label, value, icon: Icon, color }) => (
-          <div key={label} className="p-4 rounded-[10px] border"
+          <div key={label} className="p-4 rounded-md border"
             style={{ background: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.08)' }}>
             <div className="flex items-center justify-between mb-2">
               <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">{label}</span>
@@ -246,7 +246,7 @@ function FinancialDoneView({ a, savedId, onReset }: { a: FinancialAnalysis; save
         ))}
       </div>
 
-      <div className="rounded-[10px] border p-5 flex items-start gap-5"
+      <div className="rounded-md border p-5 flex items-start gap-5"
         style={{ background: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.08)' }}>
         <GaugeArc score={a.grant_readiness.score} />
         <div className="flex-1">
@@ -266,7 +266,7 @@ function FinancialDoneView({ a, savedId, onReset }: { a: FinancialAnalysis; save
         </div>
       </div>
 
-      <div className="rounded-[10px] border overflow-hidden"
+      <div className="rounded-md border overflow-hidden"
         style={{ background: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.08)' }}>
         <button onClick={() => setShowIncome(v => !v)}
           className="w-full flex items-center justify-between px-5 py-3.5 border-b hover:bg-white/[0.02] transition-colors"
@@ -312,7 +312,7 @@ function FinancialDoneView({ a, savedId, onReset }: { a: FinancialAnalysis; save
         )}
       </div>
 
-      <div className="rounded-[10px] border overflow-hidden"
+      <div className="rounded-md border overflow-hidden"
         style={{ background: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.08)' }}>
         <div className="px-5 py-3.5 border-b" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
           <p className="text-[13px] font-bold text-slate-200">3-Year Revenue Projections</p>
@@ -342,7 +342,7 @@ function FinancialDoneView({ a, savedId, onReset }: { a: FinancialAnalysis; save
       </div>
 
       {a.recommendations.length > 0 && (
-        <div className="rounded-[10px] border overflow-hidden"
+        <div className="rounded-md border overflow-hidden"
           style={{ background: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.08)' }}>
           <div className="px-5 py-3.5 border-b" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
             <p className="text-[13px] font-bold text-slate-200">Recommendations</p>
@@ -399,13 +399,13 @@ function GeneralDoneView({ a, savedId, onReset }: { a: GeneralAnalysis; savedId:
         </div>
       </div>
 
-      <div className="p-4 rounded-[10px] text-[12px] text-slate-400 leading-relaxed border"
+      <div className="p-4 rounded-md text-[12px] text-slate-400 leading-relaxed border"
         style={{ background: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.07)' }}>
         {a.summary}
       </div>
 
       {a.sections.map((section, si) => (
-        <div key={si} className="rounded-[10px] border overflow-hidden"
+        <div key={si} className="rounded-md border overflow-hidden"
           style={{ background: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.08)' }}>
           <div className="px-5 py-3 border-b" style={{ borderColor: 'rgba(255,255,255,0.06)', background: 'rgba(255,255,255,0.02)' }}>
             <p className="text-[12px] font-bold text-slate-200">{section.title}</p>
@@ -426,7 +426,7 @@ function GeneralDoneView({ a, savedId, onReset }: { a: GeneralAnalysis; savedId:
       ))}
 
       {a.grant_alignment.length > 0 && (
-        <div className="rounded-[10px] border overflow-hidden"
+        <div className="rounded-md border overflow-hidden"
           style={{ background: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.08)' }}>
           <div className="px-5 py-3.5 border-b flex items-center gap-2" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
             <Lightbulb className="w-3.5 h-3.5 text-teal-400" />
@@ -450,7 +450,7 @@ function GeneralDoneView({ a, savedId, onReset }: { a: GeneralAnalysis; savedId:
       )}
 
       {a.action_items.length > 0 && (
-        <div className="rounded-[10px] border overflow-hidden"
+        <div className="rounded-md border overflow-hidden"
           style={{ background: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.08)' }}>
           <div className="px-5 py-3.5 border-b" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
             <p className="text-[13px] font-bold text-slate-200">Action Items</p>
@@ -513,7 +513,7 @@ function RecentAnalyses({ orgCode, onLoad }: {
             <button key={item.id} onClick={() => handleClick(item)}
               className="w-full flex items-start gap-3 px-4 py-3 rounded-[8px] border text-left hover:border-teal-500/30 hover:bg-teal-500/[0.04] transition-all"
               style={{ borderColor: 'rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.02)' }}>
-              <div className="w-7 h-7 rounded-[5px] flex items-center justify-center flex-shrink-0 mt-0.5"
+              <div className="w-7 h-7 rounded-sm flex items-center justify-center flex-shrink-0 mt-0.5"
                 style={{ background: badge.bg }}>
                 <FileText className="w-3.5 h-3.5" style={{ color: badge.text }} />
               </div>
@@ -663,7 +663,7 @@ export function FinancialAnalyzer({
     return (
       <div className="flex flex-col items-center gap-5 py-10">
         <div className="relative">
-          <div className="w-14 h-14 rounded-2xl flex items-center justify-center"
+          <div className="w-14 h-14 rounded-md flex items-center justify-center"
             style={{ background: isAnalyzing ? 'rgba(99,102,241,0.15)' : 'rgba(13,148,136,0.15)' }}>
             {isAnalyzing
               ? <Sparkles className="w-6 h-6 text-indigo-400" />
@@ -705,7 +705,7 @@ export function FinancialAnalyzer({
   if (phase === 'error') {
     return (
       <div className="flex flex-col items-center gap-4 py-8">
-        <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: 'rgba(239,68,68,0.1)' }}>
+        <div className="w-12 h-12 rounded-md flex items-center justify-center" style={{ background: 'rgba(239,68,68,0.1)' }}>
           <AlertTriangle className="w-5 h-5 text-red-400" />
         </div>
         <div className="text-center">
@@ -747,7 +747,7 @@ export function FinancialAnalyzer({
         <div className="flex flex-col md:flex-row gap-3">
           {microsoftConnected && (
             <button onClick={() => setPhase('picking_microsoft')}
-              className="flex-1 flex items-center justify-center gap-2.5 py-3.5 rounded-[10px] text-[13px] font-bold text-white transition-all hover:opacity-90"
+              className="flex-1 flex items-center justify-center gap-2.5 py-3.5 rounded-md text-[13px] font-bold text-white transition-all hover:opacity-90"
               style={{ background: '#0d9488' }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                 <rect x="1"  y="1"  width="10" height="10" fill="#F25022"/>
@@ -760,7 +760,7 @@ export function FinancialAnalyzer({
           )}
           {googleConnected && (
             <button onClick={() => setPhase('picking_google')}
-              className={`${microsoftConnected ? 'md:w-52' : 'flex-1'} flex items-center justify-center gap-2 py-3.5 rounded-[10px] border text-[12px] font-semibold text-slate-300 hover:border-blue-400/30 hover:text-white transition-all`}
+              className={`${microsoftConnected ? 'md:w-52' : 'flex-1'} flex items-center justify-center gap-2 py-3.5 rounded-md border text-[12px] font-semibold text-slate-300 hover:border-blue-400/30 hover:text-white transition-all`}
               style={{ borderColor: 'rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)' }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
                 <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
@@ -788,12 +788,12 @@ export function FinancialAnalyzer({
         onDragLeave={() => setDragging(false)}
         onDrop={handleDrop}
         onClick={() => fileInputRef.current?.click()}
-        className="relative flex flex-col items-center justify-center gap-4 py-8 px-6 rounded-xl border-2 border-dashed cursor-pointer transition-all"
+        className="relative flex flex-col items-center justify-center gap-4 py-8 px-6 rounded-md border-2 border-dashed cursor-pointer transition-all"
         style={{
           borderColor: dragging ? '#0d9488' : 'rgba(255,255,255,0.12)',
           background:  dragging ? 'rgba(13,148,136,0.06)' : 'rgba(255,255,255,0.02)',
         }}>
-        <div className="w-12 h-12 rounded-2xl flex items-center justify-center transition-all"
+        <div className="w-12 h-12 rounded-md flex items-center justify-center transition-all"
           style={{ background: dragging ? 'rgba(13,148,136,0.2)' : 'rgba(255,255,255,0.05)' }}>
           <CloudUpload className="w-6 h-6 transition-colors" style={{ color: dragging ? '#0d9488' : '#475569' }} />
         </div>
