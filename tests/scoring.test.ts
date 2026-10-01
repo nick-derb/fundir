@@ -80,3 +80,15 @@ describe('describeUntapped', () => {
     expect(w).toContain('Potential path: an introduction through Phil Doherty; no personal relationship is asserted.');
   });
 });
+
+describe('scanned giving contacts', () => {
+  it('open a door into a company that has no CYC path, growing a little with each contact', () => {
+    const none = scoreLead(base);
+    const one = scoreLead({ ...base, access: { ...noAccess, givingContacts: 1 } });
+    const four = scoreLead({ ...base, access: { ...noAccess, givingContacts: 4 } });
+    expect(one.breakdown.accessibility.find(c => c.key === 'giving_contacts')?.points).toBe(9);
+    expect(four.breakdown.accessibility.find(c => c.key === 'giving_contacts')?.points).toBe(15);
+    expect(one.opportunity_score).toBeGreaterThan(none.opportunity_score);
+    expect(four.opportunity_score).toBeGreaterThan(one.opportunity_score);
+  });
+});

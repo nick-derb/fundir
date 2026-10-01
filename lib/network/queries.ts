@@ -308,9 +308,9 @@ export async function graphNeighborhood(db: Db, orgId: string, focus: { kind: 'p
   const people = new Map<string, { name: string; kind: string; title: string | null; org: string | null }>(), orgs = new Map<string, { name: string; type: string | null; city: string | null }>();
   for (const c of chunks(pIds, 200)) { const { data } = await db.from('network_people').select('id, name, kind, current_title, current_org').in('id', c); for (const p of data ?? []) people.set(p.id as string, { name: p.name as string, kind: p.kind as string, title: p.current_title as string | null, org: p.current_org as string | null }); }
   for (const c of chunks(oIds, 200)) { const { data } = await db.from('network_organizations').select('id, name, organization_type, city').in('id', c); for (const o of data ?? []) orgs.set(o.id as string, { name: o.name as string, type: o.organization_type as string | null, city: o.city as string | null }); }
-  const { data: leadRows } = oIds.length ? await db.from('network_leads').select('id, target_org_id, opportunity_score, pipeline_status').eq('org_id', orgId).in('target_org_id', oIds).order('opportunity_score', { ascending: false }) : { data: [] };
+  const { data: leadRows } = oIds.length ? await db.from('network_leads').select('id, target_org_id, opportunity_score, score, pipeline_status').eq('org_id', orgId).in('target_org_id', oIds).order('opportunity_score', { ascending: false, nullsFirst: false }) : { data: [] };
   const leadOf = new Map<string, { id: string; score: number; status: string | null }>();
-  for (const l of leadRows ?? []) if (!leadOf.has(l.target_org_id as string)) leadOf.set(l.target_org_id as string, { id: l.id as string, score: Math.round(Number(l.opportunity_score ?? 0)), status: (l.pipeline_status as string | null) ?? null });
+  for (const l of leadRows ?? []) if (!leadOf.has(l.target_org_id as string)) leadOf.set(l.target_org_id as string, { id: l.id as string, score: Math.round(Number(l.opportunity_score ?? l.score ?? 0)), status: (l.pipeline_status as string | null) ?? null });
 
   const nodes = new Map<string, GraphNode>();
   const mk = (kind: 'person' | 'org', id: string, isFocus: boolean) => {
@@ -364,8 +364,8 @@ export async function listPeople(db: Db, orgId: string): Promise<PersonRow[]> {
     for (const e of emps ?? []) empCount.set(e.person_id as string, (empCount.get(e.person_id as string) ?? 0) + 1);
     for (const s of (brd ?? []) as unknown as Array<{ person_id: string; title: string | null; org: { id: string; name: string } | null }>) { if (!s.org) continue; const a = seats.get(s.person_id) ?? []; if (!a.some(x => x.id === s.org!.id)) a.push({ id: s.org.id, name: s.org.name, title: s.title }); seats.set(s.person_id, a); }
   }
-  const { data: leads } = await db.from('network_leads').select('id, via_person_id, person_id, target_org_id, insight_type, opportunity_score, pipeline_status, target:network_organizations!network_leads_target_org_id_fkey(name)').eq('org_id', orgId).not('pipeline_status', 'in', '("NOT_A_FIT","LOST")');
-  const leadRows = (leads ?? []) as unknown as Array<{ id: string; via_person_id: string | null; person_id: string | null; target_org_id: string | null; insight_type: string | null; opportunity_score: number | null; target: { name: string } | null }>;
+  const { data: leads } = await db.from('network_leads').select('id, via_person_id, person_id, target_org_id, insight_type, opportunity_score, score, pipeline_status, target:network_organizations!network_leads_target_org_id_fkey(name)').eq('org_id', orgId).not('pipeline_status', 'in', '("NOT_A_FIT","LOST")');
+  const leadRows = (leads ?? []) as unknown as Array<{ id: string; via_person_id: string | null; person_id: string | null; target_org_id: string | null; insight_type: string | null; opportunity_score: number | null; score: number | null; target: { name: string } | null }>;
   for (const l of leadRows) {
     for (const pid of [l.via_person_id, l.person_id]) {
       if (!pid) continue;
@@ -383,7 +383,7 @@ export async function listPeople(db: Db, orgId: string): Promise<PersonRow[]> {
     const corpLead = new Map<string, { id: string; score: number; target: string }>();
     for (const l of leadRows) {
       if (l.insight_type !== 'Corporate Giving Opportunity' || !l.target_org_id) continue;
-      const s = Math.round(Number(l.opportunity_score ?? 0));
+      const s = Math.round(Number(l.opportunity_score ?? l.score ?? 0));
       if (!corpLead.has(l.target_org_id) || corpLead.get(l.target_org_id)!.score < s) corpLead.set(l.target_org_id, { id: l.id, score: s, target: l.target?.name ?? '' });
     }
     for (const p of contacts) {

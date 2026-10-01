@@ -255,8 +255,8 @@ export async function targetStatus(orgId: string): Promise<TargetStatus> {
   const orgIds = targets.map(t => t.organizationId).filter((x): x is string => !!x);
   const leadOf = new Map<string, { id: string; score: number }>();
   for (let i = 0; i < orgIds.length; i += 300) {
-    const { data: ls } = await db.from('network_leads').select('id, target_org_id, opportunity_score').eq('org_id', orgId).eq('insight_type', 'Corporate Giving Opportunity').in('target_org_id', orgIds.slice(i, i + 300));
-    for (const l of ls ?? []) { const s = Math.round(Number(l.opportunity_score ?? 0)); const cur = leadOf.get(l.target_org_id as string); if (!cur || cur.score < s) leadOf.set(l.target_org_id as string, { id: l.id as string, score: s }); }
+    const { data: ls } = await db.from('network_leads').select('id, target_org_id, opportunity_score, score').eq('org_id', orgId).eq('insight_type', 'Corporate Giving Opportunity').in('target_org_id', orgIds.slice(i, i + 300));
+    for (const l of ls ?? []) { const s = Math.round(Number(l.opportunity_score ?? l.score ?? 0)); const cur = leadOf.get(l.target_org_id as string); if (!cur || cur.score < s) leadOf.set(l.target_org_id as string, { id: l.id as string, score: s }); }
   }
   let withPath = 0;
   if (ids.length) {

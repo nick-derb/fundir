@@ -271,7 +271,7 @@ export async function computeCorporateLeads(db: Db, orgId: string, corporations:
     const { data: existing } = await db.from('network_leads').select('id').eq('org_id', orgId).eq('via_org', c.name.slice(0, 120)).is('person_id', null).eq('target_org_id', c.id).maybeSingle();
     const row = {
       org_id: orgId, lead_type: 'organization', person_id: null, via_person_id: via?.id ?? null, target_org_id: c.id, via_org: c.name.slice(0, 120),
-      reason: wording, score: r.score, evidence_confidence: confidence, insight_type: 'Corporate Giving Opportunity',
+      reason: wording, score: r.score, opportunity_score: r.score, evidence_confidence: confidence, insight_type: 'Corporate Giving Opportunity',
       score_breakdown: { generator: GENERATOR, relationship: r.score - r.fit - r.access, fit: r.fit, access: r.access, reasons: r.reasons, foundation_id: fId, peer_events: signals.peerEvents },
       updated_at: new Date().toISOString(),
     };
