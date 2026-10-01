@@ -96,6 +96,75 @@ export function pickContacts<T extends ScoredTargetHit>(hits: T[], keep = KEEP_P
 
 export const tierLabel = (tier: ScoredTargetHit['tier']) => (tier === 'giving' ? 'Community / giving staff' : tier === 'executive' ? 'Senior leadership' : 'Local operations leader');
 
+// ── Verification after the profile is read ──────────────────────────────────
+// The employee search returns a title and a company as LinkedIn last indexed
+// them; the full profile is current. A contact is kept only if the profile
+// still puts them at the target company in a role worth approaching —
+// otherwise the row is pruned and the credit it cost is the price of knowing.
+const TITLE_HARD_NOISE = /\b(executive|administrative|personal) assistant\b|\bassistant to\b|\bcontroller\b|chief (technology|information|financial|technical|accounting) officer|\bc[tfi]o\b|\bjournalist\b|\bbroadcast|box office|leasing agent|\bbarista\b|\bsales\b(?![^]*?(community|giving|foundation|philanthrop))/i;
+const ORG_STOP = /\b(the|inc|llc|llp|ltd|corp|corporation|company|co|companies|wholesale|international|usa|stores|group|holdings|brands|foundation|plc|ag|sa)\b/g;
+const normOrg = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/&/g, ' and ').replace(ORG_STOP, ' ').replace(/[^a-z0-9]+/g, '');
+
+/** Same company by name: "The Kraft Heinz Company" ≈ "Kraft Heinz", "Target" ≈ "Target Corporation", "ALDI USA" ≈ "ALDI". */
+export function sameCompany(a: string, b: string): boolean {
+  const x = normOrg(a), y = normOrg(b);
+  if (x.length < 3 || y.length < 3) return false;
+  return x.includes(y) || y.includes(x);
+}
+
+export interface ContactFacts {
+  title: string | null; headline: string | null; location?: string | null;
+  /** The employer the profile names now, plus any employment marked current. */
+  currentOrg: string | null; currentOrgs?: string[];
+}
+
+export type ContactVerdict = { keep: true } | { keep: false; reason: string };
+
+/** Decide, from the read profile, whether a scanned contact is still worth keeping for `targetName`. Thin profiles (no employer at all) are kept — absence of data is not evidence. */
+export function contactVerdict(f: ContactFacts, targetName: string, searchName?: string | null): ContactVerdict {
+  const t = `${f.title ?? ''} ${f.headline ?? ''}`.trim();
+  const shown = f.title ?? f.headline ?? 'no title';
+  if (TITLE_HARD_NOISE.test(t)) return { keep: false, reason: `role is support, finance, technology or sales (${shown})` };
+  if (!scoreTargetHit({ url: '', name: null, headline: f.headline, title: f.title, location: f.location ?? null })) {
+    return { keep: false, reason: `role no longer reads as giving, leadership or local operations (${shown})` };
+  }
+  const names = [targetName, searchName ?? ''].filter(Boolean);
+  const atTarget = (s: string | null | undefined) => !!s && names.some(n => sameCompany(s, n));
+  const orgs = [f.currentOrg, ...(f.currentOrgs ?? [])].filter((s): s is string => !!s && s.trim().length > 0);
+  if (orgs.length && !orgs.some(atTarget) && !atTarget(f.headline)) return { keep: false, reason: `now at ${orgs[0]}, not ${targetName}` };
+  return { keep: true };
+}
+
+/**
+ * Re-check every read corporate contact against its target company and delete
+ * the ones that no longer belong (moved on, or a support role the search
+ * title hid). Costs no credits. Returns the names removed.
+ */
+export async function pruneContacts(db: Db, orgId: string): Promise<string[]> {
+  const targets = await listTargets(db, orgId);
+  const byOrg = new Map<string, TargetRow>();
+  for (const t of targets) if (t.organizationId) byOrg.set(t.organizationId, t);
+  const { data: people } = await db.from('network_people').select('id, name, current_title, headline, current_org, location, organization_id')
+    .eq('org_id', orgId).eq('kind', CORPORATE_CONTACT_KIND).not('enriched_at', 'is', null);
+  const rows = (people ?? []).filter(p => p.organization_id && byOrg.has(p.organization_id as string));
+  if (!rows.length) return [];
+  const current = new Map<string, string[]>();
+  const ids = rows.map(p => p.id as string);
+  for (let i = 0; i < ids.length; i += 200) {
+    const { data: emps } = await db.from('network_employments').select('person_id, org_name').in('person_id', ids.slice(i, i + 200)).eq('is_current', true);
+    for (const e of emps ?? []) if (e.org_name) (current.get(e.person_id as string) ?? current.set(e.person_id as string, []).get(e.person_id as string)!).push(e.org_name as string);
+  }
+  const pruned: string[] = [];
+  for (const p of rows) {
+    const t = byOrg.get(p.organization_id as string)!;
+    const v = contactVerdict({ title: p.current_title as string | null, headline: p.headline as string | null, location: p.location as string | null, currentOrg: p.current_org as string | null, currentOrgs: current.get(p.id as string) ?? [] }, t.name, t.searchName);
+    if (v.keep) continue;
+    const { error } = await db.from('network_people').delete().eq('id', p.id);   // employments, educations and relationships cascade
+    if (!error) pruned.push(`${p.name} (${v.reason})`);
+  }
+  return pruned;
+}
+
 // ── Targets ─────────────────────────────────────────────────────────────────
 
 export interface TargetRow {
@@ -197,6 +266,8 @@ export async function targetStatus(orgId: string): Promise<TargetStatus> {
 export interface TargetStepResult {
   scanned: { target: string; hits: number; kept: number; searches: Array<{ keyword: string; hits: number; kept: number }> } | null;
   enriched: string[];
+  /** Contacts removed after their profile showed they moved on or hold an unrelated role. */
+  pruned: string[];
   apiCalls: number; credits: number;
   relationshipsFound: number; leadsWritten: number;
   pendingScans: number; pendingEnrich: number;
@@ -225,13 +296,26 @@ export async function runTargetStep(orgId: string, opts: { maxEnrich?: number; c
 
   // ── 1. Read unread contacts first (career + education = the edges; quick and cheap) ──
   const enriched: string[] = [];
-  const { data: unread } = await db.from('network_people').select('id, name, linkedin_url').eq('org_id', orgId).eq('kind', CORPORATE_CONTACT_KIND).is('enriched_at', null).not('linkedin_url', 'is', null).order('created_at').limit(maxEnrich);
+  const pruned: string[] = [];
+  const targetNames = new Map((await listTargets(db, orgId)).filter(t => t.organizationId).map(t => [t.organizationId as string, t]));
+  const { data: unread } = await db.from('network_people').select('id, name, linkedin_url, current_org, organization_id').eq('org_id', orgId).eq('kind', CORPORATE_CONTACT_KIND).is('enriched_at', null).not('linkedin_url', 'is', null).order('created_at').limit(maxEnrich);
   for (const p of unread ?? []) {
     if (timeLeft() < 95_000) { errors.push('step time budget reached — remaining profiles are read next step'); break; }
     try {
       const prof = await enrichProfile(p.linkedin_url as string, budget);
       await applyProfile(db, p.id as string, prof, sourceId, { verification: 'verified', ...(prof.name ? { name: prof.name } : {}) });
-      enriched.push((prof.name ?? p.name) as string);
+      const name = (prof.name ?? p.name) as string;
+      enriched.push(name);
+      // The search row named the target as the employer; the profile says where they are now.
+      const target = targetNames.get((p.organization_id as string | null) ?? '');
+      const targetName = target?.name ?? (p.current_org as string | null);
+      if (targetName) {
+        const v = contactVerdict({ title: prof.currentTitle, headline: prof.headline, location: prof.location, currentOrg: prof.currentOrg, currentOrgs: prof.experiences.filter(e => e.isCurrent).map(e => e.org).filter((o): o is string => !!o) }, targetName, target?.searchName);
+        if (!v.keep) {
+          const { error } = await db.from('network_people').delete().eq('id', p.id);
+          if (!error) pruned.push(`${name} (${v.reason})`);
+        }
+      }
     } catch (e) {
       errors.push(`${p.name}: ${e instanceof Error ? e.message : 'enrich failed'}`);
       if (/budget exhausted/i.test(String(e))) break;
@@ -308,6 +392,7 @@ export async function runTargetStep(orgId: string, opts: { maxEnrich?: number; c
       await resolveEmployers(db, orgId);
       if (lastStep || opts.derive) {
         if (timeLeft() > 90_000) {
+          pruned.push(...await pruneContacts(db, orgId));
           relationshipsFound = (await deriveRelationships(orgId)).written;
           leadsWritten = await recomputeTargetLeads(db, orgId, after);
         } else errors.push('graph derivation deferred — run a step with { derive: true }');
@@ -322,7 +407,7 @@ export async function runTargetStep(orgId: string, opts: { maxEnrich?: number; c
       status: errors.length && !enriched.length && !scanned ? 'error' : 'done', notes: errors.slice(0, 5).join(' | ') || null,
     }).eq('id', runId);
   }
-  return { scanned, enriched, apiCalls: budget.used, credits, relationshipsFound, leadsWritten, pendingScans, pendingEnrich: pendingEnrich ?? 0, done: lastStep, errors };
+  return { scanned, enriched, pruned, apiCalls: budget.used, credits, relationshipsFound, leadsWritten, pendingScans, pendingEnrich: pendingEnrich ?? 0, done: lastStep, errors };
 }
 
 /**
@@ -331,12 +416,13 @@ export async function runTargetStep(orgId: string, opts: { maxEnrich?: number; c
  * panel calls this when a run stops at its credit cap, so partial runs still
  * surface on the Map and Discover.
  */
-export async function finalizeTargets(orgId: string): Promise<{ relationshipsFound: number; leadsWritten: number }> {
+export async function finalizeTargets(orgId: string): Promise<{ relationshipsFound: number; leadsWritten: number; pruned: string[] }> {
   const db = createServerClient();
+  const pruned = await pruneContacts(db, orgId);
   await resolveEmployers(db, orgId);
   const relationshipsFound = (await deriveRelationships(orgId)).written;
   const leadsWritten = await recomputeTargetLeads(db, orgId);
-  return { relationshipsFound, leadsWritten };
+  return { relationshipsFound, leadsWritten, pruned };
 }
 
 /** Corporate leads over the full corporate universe plus every target company, so a target with contacts but no board history still surfaces. */
