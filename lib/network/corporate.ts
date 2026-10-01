@@ -166,8 +166,10 @@ export async function harvestGivingProgram(db: Db, corp: CorpRow, url: string): 
 
 // ── Scoring + leads ─────────────────────────────────────────────────────────
 
+export interface CorpContact { id: string; name: string; title: string | null; pathTo: string | null }   // a community / giving / local contact found by the target scan; pathTo = the CYC person they share history with
 export interface CorpSignals {
   people: Array<{ id: string; name: string; board_role: string | null; current: boolean }>;   // CYC people at the company
+  contacts?: CorpContact[];                                                                    // target-scan contacts at the company
   foundation: { id: string; name: string } | null;
   peerEvents: number;              // the foundation's cited grants to CYC peers
   fundedCyc: boolean;              // CYC has an award / relationship on record
@@ -190,6 +192,13 @@ export function scoreCorporate(s: CorpSignals): { score: number; fit: number; ac
   let rel = 0;
   if (cur.length) { rel += 25; reasons.push(`${cur.map(p => p.name).slice(0, 3).join(', ')} currently at the company`); }
   if (past.length) { rel += 15; reasons.push(`${past.map(p => p.name).slice(0, 3).join(', ')} formerly at the company`); }
+  const contacts = s.contacts ?? [];
+  if (contacts.length) {
+    access += Math.min(12, 6 + contacts.length * 2);
+    reasons.push(`${contacts.length} community / giving contact${contacts.length === 1 ? '' : 's'} identified (LinkedIn)`);
+    const bridged = contacts.filter(c => c.pathTo);
+    if (bridged.length) { rel += 20; reasons.push(`${bridged.slice(0, 2).map(c => `${c.name} shares history with ${c.pathTo}`).join('; ')}`); }
+  }
   const score = Math.min(100, rel + fit + access);
   return { score, fit, access, reasons };
 }
@@ -199,7 +208,11 @@ export function describeCorporate(name: string, s: CorpSignals, r: ReturnType<ty
   const path = who ? ` CYC ${who.board_role ? who.board_role.toLowerCase() : 'board member'} ${who.name} ${who.current ? 'currently works' : 'previously worked'} at ${name}${s.people.length > 1 ? ` (${s.people.length} CYC people in total)` : ''}.` : '';
   const why = r.reasons.filter(x => !x.includes('at the company')).slice(0, 3).join('; ');
   const fund = s.fundedCyc ? '' : ' No CYC funding relationship from the company is identified in available data.';
-  return `${name} appears relevant${why ? ` because: ${why}` : ''}.${path}${fund} Potential path: ask ${who ? who.name : 'the connected CYC person'} about the company's community giving; no personal relationship with its philanthropy staff is asserted.`;
+  const contacts = s.contacts ?? [];
+  const bridged = contacts.find(c => c.pathTo);
+  const contactNote = contacts.length ? ` ${contacts.length} community / giving contact${contacts.length === 1 ? '' : 's'} at the company ${contacts.length === 1 ? 'is' : 'are'} on file${bridged ? `; ${bridged.name}${bridged.title ? ` (${bridged.title})` : ''} shares career history with CYC's ${bridged.pathTo}` : ''}.` : '';
+  const ask = who ? `ask ${who.name} about the company's community giving` : bridged ? `ask ${bridged.pathTo} for an introduction to ${bridged.name}` : contacts[0] ? `approach ${contacts[0].name}${contacts[0].title ? ` (${contacts[0].title})` : ''} cold, citing the company's local giving` : 'approach the company\'s community-affairs team';
+  return `${name} appears relevant${why ? ` because: ${why}` : ''}.${path}${contactNote}${fund} Potential path: ${ask}; no personal relationship with its philanthropy staff is asserted.`;
 }
 
 export interface CorporateReport { corporations: number; withPeople: number; withFoundation: number; leads: number; insights: number; top: Array<{ name: string; score: number; confidence: string; wording: string }> }
@@ -225,6 +238,30 @@ export async function computeCorporateLeads(db: Db, orgId: string, corporations:
   const fIds = [...new Set(foundationOf.values())];
   for (let i = 0; i < fIds.length; i += 300) { const { data } = await db.from('network_organizations').select('id, name').in('id', fIds.slice(i, i + 300)); for (const o of data ?? []) fNames.set(o.id as string, o.name as string); }
 
+  // Target-scan contacts at these companies, and the CYC person each shares history with (derived person↔person edges).
+  const corpIds = corporations.map(c => c.id);
+  const contactsByOrg = new Map<string, CorpContact[]>();
+  if (corpIds.length) {
+    const rows: Array<{ id: string; name: string; current_title: string | null; organization_id: string }> = [];
+    for (let i = 0; i < corpIds.length; i += 300) {
+      const { data } = await db.from('network_people').select('id, name, current_title, organization_id').eq('org_id', orgId).eq('kind', 'corporate_contact').in('organization_id', corpIds.slice(i, i + 300));
+      for (const r of data ?? []) rows.push({ id: r.id as string, name: r.name as string, current_title: (r.current_title as string | null) ?? null, organization_id: r.organization_id as string });
+    }
+    const ownName = new Map(ownPeople.map(p => [p.id as string, p.name as string]));
+    const pathTo = new Map<string, string>();
+    const cIds = rows.map(r => r.id);
+    for (let i = 0; i < cIds.length; i += 200) {
+      const c = cIds.slice(i, i + 200);
+      const [{ data: a }, { data: b }] = await Promise.all([
+        db.from('network_relationships').select('source_person_id, target_person_id').eq('org_id', orgId).in('source_person_id', c).not('target_person_id', 'is', null),
+        db.from('network_relationships').select('source_person_id, target_person_id').eq('org_id', orgId).in('target_person_id', c).not('source_person_id', 'is', null),
+      ]);
+      for (const e of a ?? []) { const n = ownName.get(e.target_person_id as string); if (n && !pathTo.has(e.source_person_id as string)) pathTo.set(e.source_person_id as string, n); }
+      for (const e of b ?? []) { const n = ownName.get(e.source_person_id as string); if (n && !pathTo.has(e.target_person_id as string)) pathTo.set(e.target_person_id as string, n); }
+    }
+    for (const r of rows) (contactsByOrg.get(r.organization_id) ?? contactsByOrg.set(r.organization_id, []).get(r.organization_id)!).push({ id: r.id, name: r.name, title: r.current_title, pathTo: pathTo.get(r.id) ?? null });
+  }
+
   await db.from('network_insights').delete().eq('org_id', orgId).filter('evidence->>generator', 'eq', GENERATOR);
   let leads = 0, insights = 0, withPeople = 0, withFoundation = 0;
   const top: CorporateReport['top'] = [];
@@ -241,14 +278,16 @@ export async function computeCorporateLeads(db: Db, orgId: string, corporations:
       people: [...people.values()], foundation: fId ? { id: fId, name: fNames.get(fId) ?? 'its foundation' } : null,
       peerEvents: fId ? (peerEvents.get(fId) ?? 0) : 0, fundedCyc: funded.has(c.id) || (!!fId && funded.has(fId)), craOverlap: cra.has(c.id),
       program: (c.metadata.philanthropy as GivingProgram | undefined) ?? null,
+      contacts: contactsByOrg.get(c.id) ?? [],
     };
     if (signals.people.length) withPeople++;
     if (fId) withFoundation++;
     const r = scoreCorporate(signals);
-    if (r.score < 20 || (!signals.people.length && signals.peerEvents === 0 && !signals.fundedCyc)) continue;   // nothing actionable
-    const confidence = signals.people.some(p => p.current) && (signals.peerEvents > 0 || signals.program) ? 'High' : signals.people.length || signals.peerEvents > 0 ? 'Medium' : 'Low';
+    const contacts = signals.contacts ?? [];
+    if (r.score < 20 || (!signals.people.length && signals.peerEvents === 0 && !signals.fundedCyc && !contacts.length)) continue;   // nothing actionable
+    const confidence = signals.people.some(p => p.current) && (signals.peerEvents > 0 || signals.program) ? 'High' : signals.people.length || signals.peerEvents > 0 || contacts.some(x => x.pathTo) ? 'Medium' : 'Low';
     const wording = describeCorporate(c.name, signals, r);
-    const via = signals.people[0];
+    const via = signals.people[0] ?? (contacts.find(x => x.pathTo) ? ownPeople.find(p => p.name === contacts.find(x => x.pathTo)!.pathTo) : undefined);
     const { data: existing } = await db.from('network_leads').select('id').eq('org_id', orgId).eq('via_org', c.name.slice(0, 120)).is('person_id', null).eq('target_org_id', c.id).maybeSingle();
     const row = {
       org_id: orgId, lead_type: 'organization', person_id: null, via_person_id: via?.id ?? null, target_org_id: c.id, via_org: c.name.slice(0, 120),
