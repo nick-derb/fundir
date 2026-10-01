@@ -26,7 +26,7 @@ export function applyFilters(leads: LeadRow[], f: DiscoverFilters): LeadRow[] {
     if (f.types.length && !f.types.includes(l.insight_type ?? '')) return false;
     if (f.conf.length && !f.conf.includes(l.confidence ?? '')) return false;
     if (l.score < f.min) return false;
-    if (q && !`${l.target?.name ?? ''} ${l.via?.name ?? ''} ${l.trustee?.name ?? ''} ${l.via_org ?? ''} ${l.thesis}`.toLowerCase().includes(q)) return false;
+    if (q && !`${l.target?.name ?? ''} ${l.via?.name ?? ''} ${l.trustee?.name ?? ''} ${l.via_org ?? ''} ${l.thesis} ${l.contacts?.top ?? ''}`.toLowerCase().includes(q)) return false;
     return true;
   });
   out.sort((a, b) => f.sort === 'name' ? (a.target?.name ?? '').localeCompare(b.target?.name ?? '') : f.sort === 'updated' ? b.updated_at.localeCompare(a.updated_at) : f.sort === 'confidence' ? (CONF_RANK[b.confidence ?? ''] ?? 0) - (CONF_RANK[a.confidence ?? ''] ?? 0) || b.score - a.score : b.score - a.score);
@@ -42,6 +42,8 @@ export function DiscoverView({ leads, insights, filters, onFilters, selectedId, 
   const high = leads.filter(l => l.confidence === 'High' && OPEN.has(l.pipeline_status)).length;
   const untapped = leads.filter(l => l.insight_type === 'Untapped Funder' && OPEN.has(l.pipeline_status)).length;
   const withPath = leads.filter(l => l.via && OPEN.has(l.pipeline_status)).length;
+  const doors = leads.filter(l => l.contacts && OPEN.has(l.pipeline_status));
+  const doorContacts = doors.reduce((n, l) => n + (l.contacts?.count ?? 0), 0);
   const listRef = useRef<HTMLDivElement>(null);
   const [focusIdx, setFocusIdx] = useState(-1);
 
@@ -74,10 +76,11 @@ export function DiscoverView({ leads, insights, filters, onFilters, selectedId, 
             Every opportunity Fundir can see in CYC&rsquo;s graph, scored the same way and explained from evidence: funders reachable through a board member, corporations a CYC person works at, and funders of CYC&rsquo;s peers that show no CYC relationship yet.
           </p>
         </div>
-        <div className="ni-kpis" style={{ flex: '0 1 480px' }}>
+        <div className="ni-kpis" style={{ flex: '0 1 620px' }}>
           <Kpi label="Open leads" value={leads.filter(l => OPEN.has(l.pipeline_status)).length} />
           <Kpi label="High confidence" value={high} accent />
           <Kpi label="Warm paths" value={withPath} sub={`${untapped} white space`} />
+          {doors.length > 0 && <Kpi label="Corporate doors" value={doors.length} sub={`${doorContacts} named contacts`} />}
         </div>
       </div>
 
@@ -147,6 +150,11 @@ export function DiscoverView({ leads, insights, filters, onFilters, selectedId, 
                 <TypeChip type={l.insight_type} />
               </div>
               <PathRail path={l.path.slice(1)} confidence={l.confidence} compact />
+              {l.contacts && (
+                <span className="fd-caption" title={l.contacts.top ?? undefined} style={{ display: 'block', marginTop: 4, fontSize: 11, color: l.contacts.bridged ? 'var(--accent)' : 'var(--text-tertiary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {l.contacts.count} giving contact{l.contacts.count === 1 ? '' : 's'}{l.contacts.bridged ? ` · ${l.contacts.bridged} with a CYC path` : ''}{l.contacts.top ? ` — ${l.contacts.top}` : ''}
+                </span>
+              )}
             </div>
             <p data-ni-hide-md style={{ margin: 0, fontSize: 12.5, lineHeight: 1.5, color: 'var(--text-secondary)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{l.thesis}</p>
             <ConfChip confidence={l.confidence} />

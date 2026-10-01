@@ -40,6 +40,7 @@ export interface AccessSignal {
   localPresence: boolean;       // Chicago / Illinois address
   publicContact: boolean;       // public philanthropy contact or application path
   corporateLeadership: boolean; // community-affairs leadership named
+  givingContacts?: number;      // named giving / community-affairs staff found by a target-company scan
 }
 
 export interface LeadSignals {
@@ -149,6 +150,8 @@ function accessSection(a: AccessSignal): ScoreComponent[] {
   if (a.localPresence) out.push({ key: 'local_presence', label: 'Chicago / Illinois presence', points: 8 });
   if (a.publicContact) out.push({ key: 'public_contact', label: 'Public philanthropy contact or application path', points: 7 });
   if (a.corporateLeadership) out.push({ key: 'corporate_leadership', label: 'Relevant corporate / community leadership identified', points: 5 });
+  // Scanned giving staff are a door into the company even without a CYC path: a first contact opens it, each further one adds a little.
+  if (a.givingContacts && a.givingContacts > 0) out.push({ key: 'giving_contacts', label: `${a.givingContacts} named giving / community contact${a.givingContacts === 1 ? '' : 's'} on file`, points: Math.min(15, 6 + a.givingContacts * 3) });
   return out;
 }
 
@@ -157,7 +160,7 @@ function penaltySection(s: LeadSignals, fundingPts: number): ScoreComponent[] {
   const rels = s.relationships;
   if (rels.length && rels.every(r => r.verification === 'inferred')) out.push({ key: 'inferred_only', label: 'Every relationship link is inferred, none documented', points: -5 });
   if (!s.funding.cited && fundingPts > 0) out.push({ key: 'uncited_funding', label: 'Funding evidence is uncited (hand-curated seed), discounted', points: -round(fundingPts * (1 - UNCITED_FUNDING_FACTOR)) });
-  if (!rels.length && s.funding.peerGrants === 0 && !s.funding.fundedCyc) out.push({ key: 'no_evidence', label: 'No relationship and no funding evidence', points: -10 });
+  if (!rels.length && s.funding.peerGrants === 0 && !s.funding.fundedCyc && !(s.access.givingContacts && s.access.givingContacts > 0)) out.push({ key: 'no_evidence', label: 'No relationship and no funding evidence', points: -10 });
   return out;
 }
 

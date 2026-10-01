@@ -53,6 +53,7 @@ export interface TargetContext {
   edges: EdgeRow[];                            // person↔person edges between CYC's people and the target's people, plus org-level CYC↔target edges
   currentPersonIds: Set<string>;               // target people with a current tie to a CYC person's employer
   ownTies: Array<{ personId: string; current: boolean; sourceId: string | null }>; // CYC's own people employed at the target (a corporate lead's whole case)
+  contactCount: number;                        // giving / community-affairs staff a target-company scan found at the target
 }
 
 export interface SignalContext {
@@ -111,6 +112,7 @@ export async function loadSignalContext(db: Db, orgId: string, targetIds: string
   const seatTitles = new Map<string, string[]>();
   const currentOf = new Map<string, Set<string>>();
   const ownTiesOf = new Map<string, Array<{ personId: string; current: boolean; sourceId: string | null }>>();
+  const contactsOf = new Map<string, number>();
   const add = (t: string, p: string) => { const s = peopleOf.get(t) ?? new Set<string>(); s.add(p); peopleOf.set(t, s); };
   const tie = (t: string, personId: string, current: boolean, sourceId: string | null) => { const arr = ownTiesOf.get(t) ?? []; arr.push({ personId, current, sourceId }); ownTiesOf.set(t, arr); };
   const idSet = new Set(ids);
@@ -124,7 +126,11 @@ export async function loadSignalContext(db: Db, orgId: string, targetIds: string
       add(e.organization_id, e.person_id); if (e.is_current) { const s = currentOf.get(e.organization_id) ?? new Set<string>(); s.add(e.person_id); currentOf.set(e.organization_id, s); }
     }
     const { data: ppl } = await withRetry(() => db.from('network_people').select('id, organization_id, kind').eq('org_id', orgId).in('organization_id', c));
-    for (const p of ppl ?? []) if (!OWN_KINDS.has(p.kind as string) && p.organization_id) add(p.organization_id as string, p.id as string);
+    for (const p of ppl ?? []) {
+      if (OWN_KINDS.has(p.kind as string) || !p.organization_id) continue;
+      add(p.organization_id as string, p.id as string);
+      if (p.kind === 'corporate_contact') contactsOf.set(p.organization_id as string, (contactsOf.get(p.organization_id as string) ?? 0) + 1);
+    }
   }
 
   // Person↔person edges that touch one of CYC's own people, in two indexed passes.
@@ -176,6 +182,7 @@ export async function loadSignalContext(db: Db, orgId: string, targetIds: string
       peopleIds: people, seatTitles: [...(seatTitles.get(id) ?? []), ...(fId ? seatTitles.get(fId) ?? [] : [])],
       edges: orgEdges, currentPersonIds: new Set([...(currentOf.get(id) ?? []), ...(fId ? currentOf.get(fId) ?? [] : [])]),
       ownTies: ownTiesOf.get(id) ?? [],
+      contactCount: (contactsOf.get(id) ?? 0) + (fId ? contactsOf.get(fId) ?? 0 : 0),
     });
   }
   return { cycOrgId, ownIds, ownNames, peerSim, peerNames, sourceTypes, targets, asOfYear: new Date().getFullYear() };
@@ -211,6 +218,7 @@ export function accessSignal(t: TargetContext): AccessSignal {
     localPresence: (t.org.state ?? '').toUpperCase() === 'IL' || /chicago/i.test(t.org.city ?? ''),
     publicContact: !!(phil?.contact || phil?.application_path),
     corporateLeadership: Array.isArray(phil?.leadership) && phil!.leadership!.length > 0,
+    givingContacts: t.contactCount,
   };
 }
 

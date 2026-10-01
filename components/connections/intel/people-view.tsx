@@ -26,14 +26,32 @@ const PAGE = 25;
 /** The dot next to the name: what the graph knows about this person, at a glance. */
 function statusOf(p: PersonRow): { tone: string; label: string } {
   if (p.own) return p.enriched_at ? { tone: 'var(--accent)', label: `Profile read ${fmtDate(p.enriched_at)}` } : p.linkedin_url ? { tone: SLATE, label: 'LinkedIn URL on file, not read yet' } : { tone: AMBER, label: 'No LinkedIn URL yet' };
+  if (p.kind === 'corporate_contact') return p.enriched_at ? { tone: 'var(--accent)', label: `Profile read ${fmtDate(p.enriched_at)} and verified` } : { tone: SLATE, label: 'Found by the target scan, profile not read yet' };
   return p.verification === 'verified' ? { tone: 'var(--accent)', label: 'Documented in a filing or roster' } : p.verification === 'inferred' ? { tone: AMBER, label: 'Inferred' } : { tone: SLATE, label: 'On a roster' };
 }
 const roleLine = (p: PersonRow) => [p.title ?? (p.own && p.board_role ? `CYC ${p.board_role}` : null), p.org, p.location].filter(Boolean).join(' · ');
 
-export function PeopleView({ selectedId, onOpen, onOpenLead, onFocus }: { selectedId: string | null; onOpen: (id: string) => void; onOpenLead: (id: string) => void; onFocus: (f: { kind: 'person' | 'org'; id: string }) => void }) {
+/** The chips a row wears: who they are to CYC, and the warm path when there is one. */
+function PersonChips({ p, compact }: { p: PersonRow; compact?: boolean }) {
+  if (p.own) return <Chip text={compact ? (p.kind === 'board' ? 'CYC board' : p.kind) : p.kind === 'staff' ? 'CYC staff' : p.kind === 'board' ? `CYC board${p.board_role ? ` · ${p.board_role}` : ''}` : p.kind === 'auxiliary' ? 'Auxiliary board' : 'Council'} color="var(--accent)" border="rgba(12,107,90,.32)" />;
+  if (p.kind === 'corporate_contact') return (
+    <>
+      <Chip text={compact ? 'Corporate contact' : `Corporate contact · ${p.org ?? 'target company'}`} color={INFO} border="rgba(62,108,168,.34)" />
+      {p.path_to && <Chip text={compact ? `via ${p.path_to}` : `shares history with ${p.path_to}`} color="var(--accent)" border="rgba(12,107,90,.32)" />}
+    </>
+  );
+  return (
+    <>
+      {p.boards.slice(0, compact ? 1 : 2).map(b => <Chip key={b.id} text={`${b.title ?? 'Trustee'} · ${b.name}`} color={SLATE} border="rgba(91,115,131,.34)" />)}
+      {p.paths > 0 && <Chip text={compact ? `${p.paths} path${p.paths === 1 ? '' : 's'}` : `${p.paths} warm path${p.paths === 1 ? '' : 's'}`} color={AMBER} border="rgba(156,122,42,.36)" />}
+    </>
+  );
+}
+
+export function PeopleView({ selectedId, onOpen, onOpenLead, onFocus, initialQ, initialKinds }: { selectedId: string | null; onOpen: (id: string) => void; onOpenLead: (id: string) => void; onFocus: (f: { kind: 'person' | 'org'; id: string }) => void; initialQ?: string; initialKinds?: string[] }) {
   const [rows, setRows] = useState<PersonRow[] | null>(null);
-  const [q, setQ] = useState('');
-  const [kinds, setKinds] = useState<string[]>([]);
+  const [q, setQ] = useState(initialQ ?? '');
+  const [kinds, setKinds] = useState<string[]>(initialKinds ?? []);
   const [only, setOnly] = useState<'all' | 'paths' | 'mapped' | 'needs_url'>('all');
   const [sort, setSort] = useState<'relevance' | 'name' | 'org' | 'recent'>('relevance');
   const [mode, setMode] = useState<'list' | 'grid'>('list');
@@ -75,7 +93,7 @@ export function PeopleView({ selectedId, onOpen, onOpenLead, onFocus }: { select
         <div>
           <Eyebrow style={{ display: 'block', margin: '0 0 9px' }}>Chicago Youth Centers · Network intelligence</Eyebrow>
           <h1 style={{ fontFamily: SERIF, fontWeight: 400, fontSize: 'clamp(1.9rem,3vw,2.5rem)', lineHeight: 1.04, letterSpacing: '-.018em', margin: 0 }}>People</h1>
-          <p style={{ margin: '9px 0 0', fontSize: 13.5, lineHeight: 1.6, color: 'var(--text-secondary)', maxWidth: '64ch' }}>Everyone the graph knows — CYC&rsquo;s own people and the trustees and executives of the funders around them. No photos are stored; every fact traces to a filing, a roster, a public bio or a profile CYC pasted.</p>
+          <p style={{ margin: '9px 0 0', fontSize: 13.5, lineHeight: 1.6, color: 'var(--text-secondary)', maxWidth: '64ch' }}>Everyone the graph knows — CYC&rsquo;s own people, the trustees and executives of the funders around them, and the community-giving contacts found at target companies. No photos are stored; every fact traces to a filing, a roster, a public bio or a LinkedIn profile.</p>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           {picked.size > 0 && <button type="button" className="ni-primary" onClick={exportCsv}><Download style={{ width: 12, height: 12 }} />Export {picked.size} selected</button>}
@@ -131,16 +149,14 @@ function PersonRowItem({ p, i, active, picked, onPick, onOpen, onOpenLead, onFoc
       <div style={{ minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, flexWrap: 'wrap' }}>
           <b style={{ fontSize: 14, fontWeight: 500, letterSpacing: '-.006em' }}>{p.name}</b>
-          {p.own && <Chip text={p.kind === 'staff' ? 'CYC staff' : p.kind === 'board' ? `CYC board${p.board_role ? ` · ${p.board_role}` : ''}` : p.kind === 'auxiliary' ? 'Auxiliary board' : 'Council'} color="var(--accent)" border="rgba(12,107,90,.32)" />}
-          {!p.own && p.boards.slice(0, 2).map(b => <Chip key={b.id} text={`${b.title ?? 'Trustee'} · ${b.name}`} color={SLATE} border="rgba(91,115,131,.34)" />)}
-          {p.paths > 0 && <Chip text={`${p.paths} warm path${p.paths === 1 ? '' : 's'}`} color={AMBER} border="rgba(156,122,42,.36)" />}
+          <PersonChips p={p} />
         </div>
         <span style={{ display: 'block', fontSize: 12.5, color: 'var(--text-secondary)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{roleLine(p) || p.headline || '—'}</span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 7, flexWrap: 'wrap' }}>
           <Meta icon={<Clock />} text={p.enriched_at ? `read ${fmtDate(p.enriched_at)}` : p.own ? 'not read yet' : 'from filings'} />
           {p.employers > 0 && <Meta icon={<Briefcase />} text={`${p.employers} employer${p.employers === 1 ? '' : 's'}`} />}
           {p.boards.length > 0 && <Meta icon={<Landmark />} text={`${p.boards.length} board${p.boards.length === 1 ? '' : 's'}`} />}
-          {p.best_lead && <Meta icon={<Route />} text={`best lead ${p.best_lead.score} · ${p.best_lead.target}`} tone={p.best_lead.score >= 70 ? 'var(--accent)' : undefined} />}
+          {p.best_lead && <Meta icon={<Route />} text={p.kind === 'corporate_contact' ? `company lead ${p.best_lead.score}` : `best lead ${p.best_lead.score} · ${p.best_lead.target}`} tone={p.best_lead.score >= 70 ? 'var(--accent)' : undefined} />}
           {p.source_type && <Meta icon={<Link2 />} text={p.source_type.replace(/_/g, ' ')} />}
         </div>
       </div>
@@ -166,9 +182,7 @@ function PersonCard({ p, i, active, picked, onPick, onOpen }: { p: PersonRow; i:
         <span onClick={e => e.stopPropagation()}><Checkbox checked={picked} onChange={onPick} label={`Select ${p.name}`} /></span>
       </div>
       <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', minHeight: 18 }}>
-        {p.own && <Chip text={p.kind === 'board' ? `CYC board` : p.kind} color="var(--accent)" border="rgba(12,107,90,.32)" />}
-        {!p.own && p.boards.slice(0, 1).map(b => <Chip key={b.id} text={`${b.title ?? 'Trustee'} · ${b.name}`} color={SLATE} border="rgba(91,115,131,.34)" />)}
-        {p.paths > 0 && <Chip text={`${p.paths} path${p.paths === 1 ? '' : 's'}`} color={AMBER} border="rgba(156,122,42,.36)" />}
+        <PersonChips p={p} compact />
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 'auto' }}>
         <Meta icon={<Briefcase />} text={`${p.employers}`} />

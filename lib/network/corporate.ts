@@ -239,31 +239,11 @@ export async function computeCorporateLeads(db: Db, orgId: string, corporations:
   for (let i = 0; i < fIds.length; i += 300) { const { data } = await db.from('network_organizations').select('id, name').in('id', fIds.slice(i, i + 300)); for (const o of data ?? []) fNames.set(o.id as string, o.name as string); }
 
   // Target-scan contacts at these companies, and the CYC person each shares history with (derived person↔person edges).
-  const corpIds = corporations.map(c => c.id);
-  const contactsByOrg = new Map<string, CorpContact[]>();
-  if (corpIds.length) {
-    const rows: Array<{ id: string; name: string; current_title: string | null; organization_id: string }> = [];
-    for (let i = 0; i < corpIds.length; i += 300) {
-      const { data } = await db.from('network_people').select('id, name, current_title, organization_id').eq('org_id', orgId).eq('kind', 'corporate_contact').in('organization_id', corpIds.slice(i, i + 300));
-      for (const r of data ?? []) rows.push({ id: r.id as string, name: r.name as string, current_title: (r.current_title as string | null) ?? null, organization_id: r.organization_id as string });
-    }
-    const ownName = new Map(ownPeople.map(p => [p.id as string, p.name as string]));
-    const pathTo = new Map<string, string>();
-    const cIds = rows.map(r => r.id);
-    for (let i = 0; i < cIds.length; i += 200) {
-      const c = cIds.slice(i, i + 200);
-      const [{ data: a }, { data: b }] = await Promise.all([
-        db.from('network_relationships').select('source_person_id, target_person_id').eq('org_id', orgId).in('source_person_id', c).not('target_person_id', 'is', null),
-        db.from('network_relationships').select('source_person_id, target_person_id').eq('org_id', orgId).in('target_person_id', c).not('source_person_id', 'is', null),
-      ]);
-      for (const e of a ?? []) { const n = ownName.get(e.target_person_id as string); if (n && !pathTo.has(e.source_person_id as string)) pathTo.set(e.source_person_id as string, n); }
-      for (const e of b ?? []) { const n = ownName.get(e.source_person_id as string); if (n && !pathTo.has(e.target_person_id as string)) pathTo.set(e.target_person_id as string, n); }
-    }
-    for (const r of rows) (contactsByOrg.get(r.organization_id) ?? contactsByOrg.set(r.organization_id, []).get(r.organization_id)!).push({ id: r.id, name: r.name, title: r.current_title, pathTo: pathTo.get(r.id) ?? null });
-  }
+  const contactsByOrg = await loadCorpContacts(db, orgId, corporations.map(c => c.id));
 
   await db.from('network_insights').delete().eq('org_id', orgId).filter('evidence->>generator', 'eq', GENERATOR);
   let leads = 0, insights = 0, withPeople = 0, withFoundation = 0;
+  const written = new Set<string>();
   const top: CorporateReport['top'] = [];
   for (const c of corporations) {
     const people = new Map<string, { id: string; name: string; board_role: string | null; current: boolean }>();
@@ -291,14 +271,14 @@ export async function computeCorporateLeads(db: Db, orgId: string, corporations:
     const { data: existing } = await db.from('network_leads').select('id').eq('org_id', orgId).eq('via_org', c.name.slice(0, 120)).is('person_id', null).eq('target_org_id', c.id).maybeSingle();
     const row = {
       org_id: orgId, lead_type: 'organization', person_id: null, via_person_id: via?.id ?? null, target_org_id: c.id, via_org: c.name.slice(0, 120),
-      reason: wording, score: r.score, evidence_confidence: confidence, insight_type: 'Corporate Giving Opportunity',
+      reason: wording, score: r.score, opportunity_score: r.score, evidence_confidence: confidence, insight_type: 'Corporate Giving Opportunity',
       score_breakdown: { generator: GENERATOR, relationship: r.score - r.fit - r.access, fit: r.fit, access: r.access, reasons: r.reasons, foundation_id: fId, peer_events: signals.peerEvents },
       updated_at: new Date().toISOString(),
     };
     let leadId = existing?.id as string | undefined;
     if (leadId) await db.from('network_leads').update(row).eq('id', leadId);
     else { const { data: ins } = await db.from('network_leads').insert(row).select('id').single(); leadId = ins?.id as string | undefined; }
-    if (leadId) leads++;
+    if (leadId) { leads++; written.add(c.id); }
     const { error } = await db.from('network_insights').insert({
       org_id: orgId, insight_type: 'Corporate Giving Opportunity', title: `${c.name}: corporate giving opportunity`, summary: wording,
       path: [{ kind: 'org', id: null, label: 'CYC' }, ...(via ? [{ kind: 'person', id: via.id, label: via.name }] : []), { kind: 'org', id: c.id, label: c.name }, ...(fId ? [{ kind: 'org', id: fId, label: fNames.get(fId) ?? 'foundation' }] : [])],
@@ -307,6 +287,46 @@ export async function computeCorporateLeads(db: Db, orgId: string, corporations:
     if (!error) insights++;
     top.push({ name: c.name, score: r.score, confidence, wording });
   }
+  // A corporate lead nobody has touched whose company was considered this run but no longer carries a signal
+  // (its scanned contacts were pruned, say) is withdrawn together with its pattern card.
+  const considered = new Set(corporations.map(c => c.id));
+  const { data: stale } = await db.from('network_leads').select('id, target_org_id').eq('org_id', orgId).eq('insight_type', 'Corporate Giving Opportunity').eq('pipeline_status', 'NEW');
+  const staleIds = (stale ?? []).filter(l => l.target_org_id && considered.has(l.target_org_id as string) && !written.has(l.target_org_id as string)).map(l => l.id as string);
+  if (staleIds.length) {
+    await db.from('network_insights').delete().eq('org_id', orgId).in('lead_id', staleIds);
+    await db.from('network_leads').delete().eq('org_id', orgId).in('id', staleIds);
+  }
   top.sort((a, b) => b.score - a.score);
   return { corporations: corporations.length, withPeople, withFoundation, leads, insights, top: top.slice(0, 15) };
+}
+
+/**
+ * Target-scan contacts at these companies, each with the CYC person they share
+ * history with (derived person↔person edges). Bridged contacts come first.
+ */
+export async function loadCorpContacts(db: Db, orgId: string, orgIds: string[]): Promise<Map<string, CorpContact[]>> {
+  const out = new Map<string, CorpContact[]>();
+  if (!orgIds.length) return out;
+  const rows: Array<{ id: string; name: string; current_title: string | null; organization_id: string }> = [];
+  for (let i = 0; i < orgIds.length; i += 300) {
+    const { data } = await db.from('network_people').select('id, name, current_title, organization_id').eq('org_id', orgId).eq('kind', 'corporate_contact').in('organization_id', orgIds.slice(i, i + 300));
+    for (const r of data ?? []) rows.push({ id: r.id as string, name: r.name as string, current_title: (r.current_title as string | null) ?? null, organization_id: r.organization_id as string });
+  }
+  if (!rows.length) return out;
+  const { data: own } = await db.from('network_people').select('id, name').eq('org_id', orgId).in('kind', [...OWN_KINDS]);
+  const ownName = new Map((own ?? []).map(p => [p.id as string, p.name as string]));
+  const pathTo = new Map<string, string>();
+  const cIds = rows.map(r => r.id);
+  for (let i = 0; i < cIds.length; i += 200) {
+    const c = cIds.slice(i, i + 200);
+    const [{ data: a }, { data: b }] = await Promise.all([
+      db.from('network_relationships').select('source_person_id, target_person_id').eq('org_id', orgId).in('source_person_id', c).not('target_person_id', 'is', null),
+      db.from('network_relationships').select('source_person_id, target_person_id').eq('org_id', orgId).in('target_person_id', c).not('source_person_id', 'is', null),
+    ]);
+    for (const e of a ?? []) { const n = ownName.get(e.target_person_id as string); if (n && !pathTo.has(e.source_person_id as string)) pathTo.set(e.source_person_id as string, n); }
+    for (const e of b ?? []) { const n = ownName.get(e.source_person_id as string); if (n && !pathTo.has(e.target_person_id as string)) pathTo.set(e.target_person_id as string, n); }
+  }
+  for (const r of rows) (out.get(r.organization_id) ?? out.set(r.organization_id, []).get(r.organization_id)!).push({ id: r.id, name: r.name, title: r.current_title, pathTo: pathTo.get(r.id) ?? null });
+  for (const list of out.values()) list.sort((a, b) => Number(!!b.pathTo) - Number(!!a.pathTo) || a.name.localeCompare(b.name));
+  return out;
 }

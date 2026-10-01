@@ -42,7 +42,7 @@ function PersonPeekInner({ personId, onClose, onOpenLead, onOpenMap, onSaveUrl, 
     window.addEventListener('keydown', onKey); return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
-  const kindLabel = p ? (p.own ? (p.kind === 'board' ? `CYC board${p.board_role ? ` · ${p.board_role}` : ''}` : p.kind === 'staff' ? 'CYC staff' : p.kind === 'auxiliary' ? 'CYC auxiliary board' : 'CYC council') : p.kind === 'trustee' ? 'Funder trustee' : 'Funder executive') : '';
+  const kindLabel = p ? (p.own ? (p.kind === 'board' ? `CYC board${p.board_role ? ` · ${p.board_role}` : ''}` : p.kind === 'staff' ? 'CYC staff' : p.kind === 'auxiliary' ? 'CYC auxiliary board' : 'CYC council') : p.kind === 'trustee' ? 'Funder trustee' : p.kind === 'corporate_contact' ? `Corporate contact${p.org ? ` · ${p.org}` : ''}` : 'Funder executive') : '';
   const fact = (label: string, value: React.ReactNode) => (value ? [<span key={`${label}-l`} className="fd-caption" style={{ color: 'var(--text-tertiary)', fontSize: 11.5 }}>{label}</span>, <span key={`${label}-v`} style={{ fontSize: 12.5, color: 'var(--text-primary)', minWidth: 0, overflowWrap: 'anywhere' }}>{value}</span>] : null);
 
   return (
@@ -92,6 +92,15 @@ function PersonPeekInner({ personId, onClose, onOpenLead, onOpenMap, onSaveUrl, 
                     {fact('Verification', p.verification)}
                     {fact('Source', src(p.source_type))}
                   </div>
+                  {p.kind === 'corporate_contact' && (
+                    <div style={{ marginTop: 18, border: `1px solid ${p.path_to ? 'rgba(12,107,90,.32)' : 'var(--border-hairline)'}`, background: p.path_to ? 'rgba(12,107,90,.07)' : 'var(--bg-page)', borderRadius: 10, padding: '12px 14px' }}>
+                      <Eyebrow color={p.path_to ? 'var(--accent)' : 'var(--text-secondary)'} style={{ display: 'block', marginBottom: 6 }}>{p.path_to ? 'Warm path' : 'How to approach'}</Eyebrow>
+                      <p className="fd-caption" style={{ margin: 0, color: 'var(--text-secondary)', fontSize: 12.5 }}>
+                        {p.path_to ? `Ask ${p.path_to} for an introduction — the two share career history.` : `No CYC connection found yet, so this is a cold approach: cite the company's community giving and CYC's programs.`}
+                        {p.best_lead && <> <button type="button" onClick={() => onOpenLead(p.best_lead!.id)} style={{ border: 'none', background: 'none', padding: 0, font: 'inherit', fontSize: 12.5, color: 'var(--accent)', cursor: 'pointer' }}>Open the {p.org ?? 'company'} lead ›</button></>}
+                      </p>
+                    </div>
+                  )}
                   {p.summary && <><Eyebrow color="var(--text-secondary)" style={{ display: 'block', margin: '18px 0 8px' }}>About</Eyebrow><p style={{ margin: 0, fontSize: 13, lineHeight: 1.6, color: 'var(--text-muted)' }}>{p.summary}</p></>}
                   {p.own && !p.linkedin_url && onSaveUrl && !readOnly && (
                     <div style={{ marginTop: 18, border: `1px solid rgba(156,122,42,.36)`, background: 'rgba(156,122,42,.08)', borderRadius: 10, padding: '12px 14px' }}>

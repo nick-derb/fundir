@@ -9,6 +9,8 @@ import { createServerClient } from '@/lib/supabase';
 import { OWN_KINDS } from '@/lib/network/edges';
 import { normalizeOrgName } from '@/lib/network/normalize';
 import type { Explanation } from '@/lib/network/explain';
+import { loadCorpContacts } from '@/lib/network/corporate';
+import { contactTier } from '@/lib/network/targets';
 
 type Db = ReturnType<typeof createServerClient>;
 const CYC_EIN = '362344429';
@@ -41,6 +43,8 @@ export interface LeadRow {
   method: 'model' | 'deterministic' | null; claims: { kept: number; total: number } | null; evidence_count: number;
   owner: string | null; next_action: string | null; next_action_date: string | null; outcome: string | null; dismissal_reason: string | null;
   updated_at: string; path: PathNode[];
+  /** Corporate Giving Opportunity only: the scanned contacts at the company — how many, how many share history with a CYC person, and the one to name first. */
+  contacts: { count: number; bridged: number; top: string | null } | null;
 }
 
 const LEAD_SELECT = 'id, lead_type, insight_type, pipeline_status, opportunity_score, evidence_confidence, score_breakdown, explanation, via_org, owner, next_action, next_action_date, outcome, dismissal_reason, updated_at, reason, target:network_organizations!network_leads_target_org_id_fkey(id, name, organization_type, city, state, website, metadata), via:network_people!network_leads_via_person_id_fkey(id, name, board_role, kind), person:network_people!network_leads_person_id_fkey(id, name, current_title, current_org, kind)';
@@ -85,18 +89,47 @@ function shapeLead(l: RawLead): LeadRow {
     method: x?.method ?? null, claims: x ? { kept: x.validation.bullets_kept, total: x.validation.bullets_total } : null, evidence_count: x?.sources?.length ?? 0,
     owner: (l.owner as string | null) ?? null, next_action: (l.next_action as string | null) ?? null, next_action_date: (l.next_action_date as string | null) ?? null,
     outcome: (l.outcome as string | null) ?? null, dismissal_reason: (l.dismissal_reason as string | null) ?? null,
-    updated_at: String(l.updated_at ?? ''), path,
+    updated_at: String(l.updated_at ?? ''), path, contacts: null,
   };
+}
+
+/** Corporate Giving Opportunity rows carry the scanned contacts at the company, so a row can say who the door is before it is opened. */
+async function attachContacts(db: Db, orgId: string, rows: LeadRow[]): Promise<void> {
+  const ids = [...new Set(rows.filter(l => l.insight_type === 'Corporate Giving Opportunity' && l.target).map(l => l.target!.id))];
+  if (!ids.length) return;
+  const byOrg = await loadCorpContacts(db, orgId, ids);
+  for (const l of rows) {
+    const cs = l.target ? byOrg.get(l.target.id) : undefined;
+    if (!cs?.length) continue;
+    const top = cs[0];
+    l.contacts = { count: cs.length, bridged: cs.filter(c => c.pathTo).length, top: `${top.name}${top.title ? `, ${top.title}` : ''}${top.pathTo ? ` · via ${top.pathTo}` : ''}` };
+  }
 }
 
 export async function listLeads(db: Db, orgId: string): Promise<LeadRow[]> {
   const { data, error } = await db.from('network_leads').select(LEAD_SELECT).eq('org_id', orgId).order('opportunity_score', { ascending: false, nullsFirst: false }).limit(500);
   if (error) throw new Error(`leads: ${error.message}`);
-  return ((data ?? []) as unknown as RawLead[]).map(shapeLead);
+  const rows = ((data ?? []) as unknown as RawLead[]).map(shapeLead);
+  await attachContacts(db, orgId, rows);
+  return rows;
+}
+
+export interface LeadContact { id: string; name: string; title: string | null; location: string | null; linkedin_url: string | null; tier: 'giving' | 'executive' | 'local' | null; pathTo: string | null }
+
+/** Everyone the target scan kept at this company, bridged contacts first, with the tier their title reads as. */
+async function leadContacts(db: Db, orgId: string, targetId: string | null): Promise<LeadContact[]> {
+  if (!targetId) return [];
+  const cs = (await loadCorpContacts(db, orgId, [targetId])).get(targetId) ?? [];
+  if (!cs.length) return [];
+  const { data } = await db.from('network_people').select('id, headline, location, linkedin_url').in('id', cs.map(c => c.id));
+  const extra = new Map((data ?? []).map(p => [p.id as string, p]));
+  return cs.map(c => { const e = extra.get(c.id); return { id: c.id, name: c.name, title: c.title, location: (e?.location as string | null) ?? null, linkedin_url: (e?.linkedin_url as string | null) ?? null, tier: contactTier(c.title, (e?.headline as string | null) ?? null), pathTo: c.pathTo }; });
 }
 
 export interface LeadDetail extends LeadRow {
   explanation: Explanation | null;
+  /** Corporate Giving Opportunity: the people to approach at the company. */
+  contact_list: LeadContact[];
   target_profile: { website: string | null; philanthropy: Record<string, unknown> | null } | null;
   actions: Array<{ id: string; action: string; status: string | null; notes: string | null; actor: string | null; created_at: string }>;
   insights: Array<{ id: string; insight_type: string; title: string; summary: string | null; score: number; confidence: string }>;
@@ -108,12 +141,14 @@ export async function getLeadDetail(db: Db, orgId: string, id: string): Promise<
   if (!data) return null;
   const raw = data as unknown as RawLead;
   const row = shapeLead(raw);
+  await attachContacts(db, orgId, [row]);
   const INS = 'id, insight_type, title, summary, score, confidence, lead_id';
-  const [{ data: actions }, { data: byLead }, { data: byPath }] = await Promise.all([
+  const [{ data: actions }, { data: byLead }, { data: byPath }, contact_list] = await Promise.all([
     db.from('network_actions').select('id, action, status, notes, actor, created_at').eq('lead_id', id).order('created_at', { ascending: false }).limit(50),
     db.from('network_insights').select(INS).eq('org_id', orgId).eq('lead_id', id).is('dismissed_at', null).order('score', { ascending: false }).limit(6),
     // jsonb containment: supabase-js serialises an array argument as a Postgres array literal, so pass the JSON text to `cs` directly.
     raw.target ? db.from('network_insights').select(INS).eq('org_id', orgId).filter('path', 'cs', JSON.stringify([{ id: raw.target.id }])).is('dismissed_at', null).order('score', { ascending: false }).limit(8) : Promise.resolve({ data: [] as Array<Record<string, unknown>> }),
+    row.insight_type === 'Corporate Giving Opportunity' ? leadContacts(db, orgId, raw.target?.id ?? null) : Promise.resolve([] as LeadContact[]),
   ]);
   // Patterns that name this target, minus the one that IS this lead (its wording is already the thesis).
   const seen = new Set<string>();
@@ -121,6 +156,7 @@ export async function getLeadDetail(db: Db, orgId: string, id: string): Promise<
   return {
     ...row,
     explanation: (raw.explanation ?? null) as Explanation | null,
+    contact_list,
     target_profile: raw.target ? { website: raw.target.website ?? null, philanthropy: (raw.target.metadata?.philanthropy as Record<string, unknown> | undefined) ?? null } : null,
     actions: (actions ?? []) as LeadDetail['actions'],
     insights: insights.map(i => ({ id: i.id as string, insight_type: i.insight_type as string, title: i.title as string, summary: (i.summary as string | null) ?? null, score: Number(i.score), confidence: i.confidence as string })),
@@ -272,9 +308,9 @@ export async function graphNeighborhood(db: Db, orgId: string, focus: { kind: 'p
   const people = new Map<string, { name: string; kind: string; title: string | null; org: string | null }>(), orgs = new Map<string, { name: string; type: string | null; city: string | null }>();
   for (const c of chunks(pIds, 200)) { const { data } = await db.from('network_people').select('id, name, kind, current_title, current_org').in('id', c); for (const p of data ?? []) people.set(p.id as string, { name: p.name as string, kind: p.kind as string, title: p.current_title as string | null, org: p.current_org as string | null }); }
   for (const c of chunks(oIds, 200)) { const { data } = await db.from('network_organizations').select('id, name, organization_type, city').in('id', c); for (const o of data ?? []) orgs.set(o.id as string, { name: o.name as string, type: o.organization_type as string | null, city: o.city as string | null }); }
-  const { data: leadRows } = oIds.length ? await db.from('network_leads').select('id, target_org_id, opportunity_score, pipeline_status').eq('org_id', orgId).in('target_org_id', oIds).order('opportunity_score', { ascending: false }) : { data: [] };
+  const { data: leadRows } = oIds.length ? await db.from('network_leads').select('id, target_org_id, opportunity_score, score, pipeline_status').eq('org_id', orgId).in('target_org_id', oIds).order('opportunity_score', { ascending: false, nullsFirst: false }) : { data: [] };
   const leadOf = new Map<string, { id: string; score: number; status: string | null }>();
-  for (const l of leadRows ?? []) if (!leadOf.has(l.target_org_id as string)) leadOf.set(l.target_org_id as string, { id: l.id as string, score: Math.round(Number(l.opportunity_score ?? 0)), status: (l.pipeline_status as string | null) ?? null });
+  for (const l of leadRows ?? []) if (!leadOf.has(l.target_org_id as string)) leadOf.set(l.target_org_id as string, { id: l.id as string, score: Math.round(Number(l.opportunity_score ?? l.score ?? 0)), status: (l.pipeline_status as string | null) ?? null });
 
   const nodes = new Map<string, GraphNode>();
   const mk = (kind: 'person' | 'org', id: string, isFocus: boolean) => {
@@ -312,6 +348,8 @@ export interface PersonRow {
   id: string; kind: string; name: string; board_role: string | null; title: string | null; org: string | null; org_id: string | null; location: string | null; headline: string | null;
   linkedin_url: string | null; enriched_at: string | null; verification: string | null; source_type: string | null;
   own: boolean; employers: number; boards: Array<{ id: string; name: string; title: string | null }>; paths: number; best_lead: { id: string; score: number; target: string } | null;
+  /** Corporate contacts only: the CYC person they share career history with, when the graph found one. */
+  path_to: string | null;
 }
 export async function listPeople(db: Db, orgId: string): Promise<PersonRow[]> {
   // Peer-organization staff have their own page (Peer Network); they are not CYC contacts.
@@ -326,13 +364,32 @@ export async function listPeople(db: Db, orgId: string): Promise<PersonRow[]> {
     for (const e of emps ?? []) empCount.set(e.person_id as string, (empCount.get(e.person_id as string) ?? 0) + 1);
     for (const s of (brd ?? []) as unknown as Array<{ person_id: string; title: string | null; org: { id: string; name: string } | null }>) { if (!s.org) continue; const a = seats.get(s.person_id) ?? []; if (!a.some(x => x.id === s.org!.id)) a.push({ id: s.org.id, name: s.org.name, title: s.title }); seats.set(s.person_id, a); }
   }
-  const { data: leads } = await db.from('network_leads').select('id, via_person_id, person_id, opportunity_score, pipeline_status, target:network_organizations!network_leads_target_org_id_fkey(name)').eq('org_id', orgId).not('pipeline_status', 'in', '("NOT_A_FIT","LOST")');
-  for (const l of (leads ?? []) as unknown as Array<{ id: string; via_person_id: string | null; person_id: string | null; opportunity_score: number | null; target: { name: string } | null }>) {
+  const { data: leads } = await db.from('network_leads').select('id, via_person_id, person_id, target_org_id, insight_type, opportunity_score, score, pipeline_status, target:network_organizations!network_leads_target_org_id_fkey(name)').eq('org_id', orgId).not('pipeline_status', 'in', '("NOT_A_FIT","LOST")');
+  const leadRows = (leads ?? []) as unknown as Array<{ id: string; via_person_id: string | null; person_id: string | null; target_org_id: string | null; insight_type: string | null; opportunity_score: number | null; score: number | null; target: { name: string } | null }>;
+  for (const l of leadRows) {
     for (const pid of [l.via_person_id, l.person_id]) {
       if (!pid) continue;
       paths.set(pid, (paths.get(pid) ?? 0) + 1);
       const s = Math.round(Number(l.opportunity_score ?? 0));
       if (!best.has(pid) || best.get(pid)!.score < s) best.set(pid, { id: l.id, score: s, target: l.target?.name ?? '' });
+    }
+  }
+  // Corporate contacts: the company's own lead is their lead, and the CYC person they share history with is their warm path.
+  const pathTo = new Map<string, string>();
+  const contacts = people.filter(p => p.kind === 'corporate_contact' && p.organization_id);
+  if (contacts.length) {
+    const byOrg = await loadCorpContacts(db, orgId, [...new Set(contacts.map(p => p.organization_id as string))]);
+    for (const list of byOrg.values()) for (const c of list) if (c.pathTo) pathTo.set(c.id, c.pathTo);
+    const corpLead = new Map<string, { id: string; score: number; target: string }>();
+    for (const l of leadRows) {
+      if (l.insight_type !== 'Corporate Giving Opportunity' || !l.target_org_id) continue;
+      const s = Math.round(Number(l.opportunity_score ?? l.score ?? 0));
+      if (!corpLead.has(l.target_org_id) || corpLead.get(l.target_org_id)!.score < s) corpLead.set(l.target_org_id, { id: l.id, score: s, target: l.target?.name ?? '' });
+    }
+    for (const p of contacts) {
+      const cl = corpLead.get(p.organization_id as string);
+      if (cl && !best.has(p.id)) best.set(p.id, cl);
+      if (pathTo.has(p.id)) paths.set(p.id, (paths.get(p.id) ?? 0) + 1);
     }
   }
   const srcIds = [...new Set(people.map(p => p.source_id).filter(Boolean))] as string[];
@@ -342,6 +399,7 @@ export async function listPeople(db: Db, orgId: string): Promise<PersonRow[]> {
     id: p.id, kind: p.kind, name: p.name, board_role: p.board_role, title: p.current_title, org: p.current_org, org_id: p.organization_id, location: p.location, headline: p.headline,
     linkedin_url: p.linkedin_url, enriched_at: p.enriched_at, verification: p.verification, source_type: p.source_id ? srcType.get(p.source_id) ?? null : null,
     own: OWN_KINDS.has(p.kind), employers: empCount.get(p.id) ?? 0, boards: seats.get(p.id) ?? [], paths: paths.get(p.id) ?? 0, best_lead: best.get(p.id) ?? null,
+    path_to: pathTo.get(p.id) ?? null,
   })).sort((a, b) => Number(b.own) - Number(a.own) || b.paths - a.paths || a.name.localeCompare(b.name));
 }
 
@@ -378,6 +436,10 @@ export async function getPersonDetail(db: Db, orgId: string, id: string): Promis
     db.from('network_relationships').select('id, relationship_type, verification, relationship_strength, evidence, source_person_id, target_person_id, source_organization_id, target_organization_id').eq('org_id', orgId).eq('source_person_id', id).order('relationship_strength', { ascending: false }).limit(40),
     db.from('network_relationships').select('id, relationship_type, verification, relationship_strength, evidence, source_person_id, target_person_id, source_organization_id, target_organization_id').eq('org_id', orgId).eq('target_person_id', id).order('relationship_strength', { ascending: false }).limit(40),
   ]);
+  // A corporate contact's lead is the company's Corporate Giving Opportunity.
+  const { data: l3 } = base.kind === 'corporate_contact' && base.org_id
+    ? await db.from('network_leads').select('id, opportunity_score, evidence_confidence, insight_type, pipeline_status, target:network_organizations!network_leads_target_org_id_fkey(name)').eq('org_id', orgId).eq('target_org_id', base.org_id).eq('insight_type', 'Corporate Giving Opportunity')
+    : { data: [] as Array<Record<string, unknown>> };
   type Src = { source_type: string; source_url: string | null } | null;
   const edges = [...(e1 ?? []), ...(e2 ?? [])] as unknown as Array<{ id: string; relationship_type: string; verification: string; relationship_strength: number; evidence: { summary?: string } | null; source_person_id: string | null; target_person_id: string | null; source_organization_id: string | null; target_organization_id: string | null }>;
   const otherP = new Set<string>(), otherO = new Set<string>();
@@ -401,7 +463,7 @@ export async function getPersonDetail(db: Db, orgId: string, id: string): Promis
     ...base, summary: (p?.summary as string | null) ?? null, note: (p?.note as string | null) ?? null, status: (p?.status as string | null) ?? null,
     employments, educations: (edus ?? []).map(e => ({ school: e.school_name as string, degree: e.degree as string | null, field: e.field as string | null, start_year: e.start_year as number | null, end_year: e.end_year as number | null })),
     seats: seatRows,
-    leads: [...((l1 ?? []) as unknown as Parameters<ReturnType<typeof leadRow>>[0][]).map(leadRow('via')), ...((l2 ?? []) as unknown as Parameters<ReturnType<typeof leadRow>>[0][]).map(leadRow('target'))].sort((a, b) => b.score - a.score),
+    leads: [...((l1 ?? []) as unknown as Parameters<ReturnType<typeof leadRow>>[0][]).map(leadRow('via')), ...([...(l2 ?? []), ...(l3 ?? [])] as unknown as Parameters<ReturnType<typeof leadRow>>[0][]).map(leadRow('target'))].sort((a, b) => b.score - a.score),
     links, sources: [...sources.values()],
   };
 }
