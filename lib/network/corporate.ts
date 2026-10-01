@@ -194,7 +194,7 @@ export function scoreCorporate(s: CorpSignals): { score: number; fit: number; ac
   if (past.length) { rel += 15; reasons.push(`${past.map(p => p.name).slice(0, 3).join(', ')} formerly at the company`); }
   const contacts = s.contacts ?? [];
   if (contacts.length) {
-    access += Math.min(12, 6 + contacts.length * 2);
+    access += Math.min(18, 8 + contacts.length * 3);   // a named community-giving contact is the access path itself
     reasons.push(`${contacts.length} community / giving contact${contacts.length === 1 ? '' : 's'} identified (LinkedIn)`);
     const bridged = contacts.filter(c => c.pathTo);
     if (bridged.length) { rel += 20; reasons.push(`${bridged.slice(0, 2).map(c => `${c.name} shares history with ${c.pathTo}`).join('; ')}`); }
@@ -284,7 +284,7 @@ export async function computeCorporateLeads(db: Db, orgId: string, corporations:
     if (fId) withFoundation++;
     const r = scoreCorporate(signals);
     const contacts = signals.contacts ?? [];
-    if (r.score < 20 || (!signals.people.length && signals.peerEvents === 0 && !signals.fundedCyc && !contacts.length)) continue;   // nothing actionable
+    if ((r.score < 20 && !contacts.length) || (!signals.people.length && signals.peerEvents === 0 && !signals.fundedCyc && !contacts.length)) continue;   // nothing actionable (a scanned giving contact is always actionable)
     const confidence = signals.people.some(p => p.current) && (signals.peerEvents > 0 || signals.program) ? 'High' : signals.people.length || signals.peerEvents > 0 || contacts.some(x => x.pathTo) ? 'Medium' : 'Low';
     const wording = describeCorporate(c.name, signals, r);
     const via = signals.people[0] ?? (contacts.find(x => x.pathTo) ? ownPeople.find(p => p.name === contacts.find(x => x.pathTo)!.pathTo) : undefined);

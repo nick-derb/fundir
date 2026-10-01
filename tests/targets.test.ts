@@ -58,3 +58,14 @@ describe('corporate scoring with target contacts', () => {
     expect(text).toContain('no personal relationship');
   });
 });
+
+describe('contacts-only corporate leads', () => {
+  const base: CorpSignals = { people: [], foundation: null, peerEvents: 0, fundedCyc: false, craOverlap: false, program: null };
+  it('a company with named giving contacts and no other signal still scores as actionable', () => {
+    const one = scoreCorporate({ ...base, contacts: [{ id: '1', name: 'Ana Ruiz', title: 'Community Affairs Manager', pathTo: null }] });
+    const four = scoreCorporate({ ...base, contacts: [1, 2, 3, 4].map(i => ({ id: String(i), name: `Contact ${i}`, title: 'Community Giving', pathTo: null })) });
+    expect(one.score).toBeGreaterThanOrEqual(10);
+    expect(four.score).toBeGreaterThan(one.score);
+    expect(four.score).toBeLessThanOrEqual(20);
+  });
+});
