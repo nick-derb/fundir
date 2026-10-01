@@ -119,3 +119,16 @@ describe('scan hygiene', () => {
     expect(scoreTargetHit(hit('C', 'Vice President of Operations'))!.tier).toBe('executive');
   });
 });
+
+describe('interns, trainees and people outside the US', () => {
+  const hit = (title: string, location: string): EmployeeHit => ({ url: 'https://www.linkedin.com/in/z', name: 'Z', headline: null, title, location });
+  it('drops them at search time and at the post-read verdict', () => {
+    expect(scoreTargetHit(hit('Corporate Community Impact Intern', 'Chicago, Illinois'))).toBeNull();
+    expect(scoreTargetHit(hit('Senior Director, Community Investment', 'Tonbridge, England, United Kingdom'))).toBeNull();
+    expect(contactVerdict({ title: 'Foundation Trainee Pharmacist', headline: null, location: 'Tonbridge, England, United Kingdom', currentOrg: 'Boots UK' }, 'Walgreens Boots Alliance').keep).toBe(false);
+    expect(contactVerdict({ title: 'Head of Executive Talent Acquisition', headline: null, location: 'Nottinghamshire, England', currentOrg: 'Walgreens Boots Alliance' }, 'Walgreens Boots Alliance').keep).toBe(false);
+    expect(contactVerdict({ title: 'Senior Director, Transformation & Integration (Healthcare M&A)', headline: null, location: 'United States', currentOrg: 'Walgreens Boots Alliance' }, 'Walgreens Boots Alliance').keep).toBe(false);
+    expect(contactVerdict({ title: 'Corporate Community Impact Intern', headline: null, location: 'Chicago, Illinois', currentOrg: 'ComEd' }, 'ComEd').keep).toBe(false);
+    expect(contactVerdict({ title: 'Manager, Corporate Community Impact', headline: null, location: 'Greater Chicago Area', currentOrg: 'ComEd' }, 'ComEd').keep).toBe(true);
+  });
+});

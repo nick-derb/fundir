@@ -74,6 +74,8 @@ export interface ScoredTargetHit { hit: EmployeeHit; score: number; tier: 'givin
 export function scoreTargetHit(hit: EmployeeHit): ScoredTargetHit | null {
   const t = `${hit.title ?? ''} ${hit.headline ?? ''}`;
   if (TITLE_NOISE.test(t) && !TITLE_GIVING.test(t)) return null;
+  if (TITLE_HARD_NOISE.test(t)) return null;   // never worth a credit, whatever else the title says
+  if (OUTSIDE_US.test(hit.location ?? '')) return null;
   let score = 0; let tier: ScoredTargetHit['tier'] | null = null;
   if (TITLE_GIVING.test(t)) { score += 50; tier = 'giving'; }
   if (TITLE_EXEC.test(t)) { score += tier ? 15 : 25; tier = tier ?? 'executive'; }
@@ -105,7 +107,9 @@ export const tierLabel = (tier: ScoredTargetHit['tier']) => (tier === 'giving' ?
 // them; the full profile is current. A contact is kept only if the profile
 // still puts them at the target company in a role worth approaching —
 // otherwise the row is pruned and the credit it cost is the price of knowing.
-const TITLE_HARD_NOISE = /\b(executive|administrative|personal) assistant\b|\bassistant to\b|\bcontroller\b|chief (technology|information|financial|technical|accounting) officer|\bc[tfi]o\b|\bjournalist\b|\bbroadcast|box office|leasing agent|\bbarista\b|cybersecurity|information security|security risk|risk (&|and) (response|compliance)|product delivery|\bsales\b(?![^]*?(community|giving|foundation|philanthrop))/i;
+const TITLE_HARD_NOISE = /\b(executive|administrative|personal) assistant\b|\bassistant to\b|\bcontroller\b|chief (technology|information|financial|technical|accounting) officer|\bc[tfi]o\b|\bjournalist\b|\bbroadcast|box office|leasing agent|\bbarista\b|\bintern\b|\btrainee\b|pharmacist|talent acquisition|\bm&a\b|mergers|value realization|transformation (&|and) integration|cybersecurity|information security|security risk|risk (&|and) (response|compliance)|product delivery|\bsales\b(?![^]*?(community|giving|foundation|philanthrop))/i;
+// Scans are for CYC's own market: a contact the profile places outside the United States is not an approach path, however good the title.
+const OUTSIDE_US = /united kingdom|\bu\.?k\.?\b|england|scotland|wales|ireland|canada|ontario|toronto|vancouver|india|australia|germany|france|mexico|brazil|singapore|netherlands|spain|italy|japan|china|philippines|south africa|poland|switzerland|sweden|argentina|colombia/i;
 const ORG_STOP = /\b(the|inc|llc|llp|ltd|corp|corporation|company|co|companies|wholesale|international|usa|stores|group|holdings|brands|foundation|plc|ag|sa)\b/g;
 const normOrg = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/&/g, ' and ').replace(ORG_STOP, ' ').replace(/[^a-z0-9]+/g, '');
 
@@ -129,6 +133,7 @@ export function contactVerdict(f: ContactFacts, targetName: string, searchName?:
   const t = `${f.title ?? ''} ${f.headline ?? ''}`.trim();
   const shown = f.title ?? f.headline ?? 'no title';
   if (TITLE_HARD_NOISE.test(t)) return { keep: false, reason: `role is support, finance, technology or sales (${shown})` };
+  if (OUTSIDE_US.test(f.location ?? '')) return { keep: false, reason: `based outside the United States (${f.location})` };
   if (!scoreTargetHit({ url: '', name: null, headline: f.headline, title: f.title, location: f.location ?? null })) {
     return { keep: false, reason: `role no longer reads as giving, leadership or local operations (${shown})` };
   }
