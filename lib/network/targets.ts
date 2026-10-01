@@ -440,13 +440,16 @@ export async function runTargetStep(orgId: string, opts: { maxEnrich?: number; c
  * panel calls this when a run stops at its credit cap, so partial runs still
  * surface on the Map and Discover.
  */
-export async function finalizeTargets(orgId: string): Promise<{ relationshipsFound: number; leadsWritten: number; pruned: string[] }> {
+export async function finalizeTargets(orgId: string): Promise<{ relationshipsFound: number; leadsWritten: number; pruned: string[]; rescored: number }> {
   const db = createServerClient();
   const pruned = await pruneContacts(db, orgId);
   await resolveEmployers(db, orgId);
   const relationshipsFound = (await deriveRelationships(orgId)).written;
   const leadsWritten = await recomputeTargetLeads(db, orgId);
-  return { relationshipsFound, leadsWritten, pruned };
+  // New contacts and edges change scores: every lead is re-scored with the one rubric, as a credit-spending refresh does.
+  const { rescoreLeads } = await import('@/lib/network/opportunity');
+  const { scored } = await rescoreLeads(db, orgId);
+  return { relationshipsFound, leadsWritten, pruned, rescored: scored };
 }
 
 /** Corporate leads over the full corporate universe plus every target company, so a target with contacts but no board history still surfaces. */
