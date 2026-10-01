@@ -66,7 +66,7 @@ export const CHICAGO_STARTER: Array<{ name: string; searchName?: string; categor
 const TITLE_GIVING = /community (affairs|relations|investment|impact|engagement|partnerships?|giving|outreach|development)|corporate (social responsibility|citizenship|responsibility|affairs|giving|philanthropy)|\bcsr\b|philanthrop|foundation|charitable|giving|social impact|public affairs|government (affairs|relations)|external (affairs|relations)|sustainability|\besg\b|diversity|inclusion|\bdei\b/i;
 const TITLE_EXEC = /chief|\bceo\b|president|executive director|managing director|\bvp\b|vice president|head of|senior director/i;
 const TITLE_LOCAL = /district (manager|director)|store director|store manager|regional (manager|director|vice president)|market (director|manager|leader)|area (manager|director)|division (president|manager)/i;
-const TITLE_NOISE = /software|engineer|intern\b|cashier|clerk|stocker|associate\b|driver|warehouse|forklift|student|barista|cook\b|server|crew|customer service rep|sales associate|pharmacy technician|loss prevention|assistant\b|\bsafety\b|merchandis|supply chain|logistic|procurement|pricing|category manager|real estate|\btax\b|payroll|accounting|\bit\b|information technology|data (analyst|scientist)|human resources|\bhr\b|recruit|legal counsel|paralegal/i;
+const TITLE_NOISE = /software|engineer|intern\b|cashier|clerk|stocker|associate\b|driver|warehouse|forklift|student|barista|cook\b|server|crew|customer service rep|sales associate|pharmacy technician|loss prevention|assistant\b|\bsafety\b|merchandis|supply chain|logistic|procurement|pricing|category manager|real estate|\btax\b|payroll|accounting|\bit\b|information technology|data (analyst|scientist)|human resources|\bhr\b|recruit|legal counsel|paralegal|cybersecurity|information security|security risk|product delivery|\bfleet\b/i;
 const CHICAGO = /chicago|illinois|\bil\b|naperville|evanston|oak (park|brook)|schaumburg|skokie|cicero|joliet|aurora|rosemont|bolingbrook|deerfield|northbrook|lake forest|itasca|melrose park/i;
 
 export interface ScoredTargetHit { hit: EmployeeHit; score: number; tier: 'giving' | 'executive' | 'local' }
@@ -87,8 +87,12 @@ export function scoreTargetHit(hit: EmployeeHit): ScoredTargetHit | null {
 /** Top contacts for a company: best score first, at most two local-operations people so store directors never crowd out giving staff. */
 export function pickContacts<T extends ScoredTargetHit>(hits: T[], keep = KEEP_PER_TARGET, maxLocal = 2): T[] {
   const out: T[] = []; let local = 0;
+  const seen = new Set<string>();   // the same person often appears under two profile URLs
   for (const h of [...hits].sort((a, b) => b.score - a.score)) {
+    const who = (h.hit.name ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (who && seen.has(who)) continue;
     if (h.tier === 'local') { if (local >= maxLocal) continue; local++; }
+    if (who) seen.add(who);
     out.push(h); if (out.length >= keep) break;
   }
   return out;
@@ -101,7 +105,7 @@ export const tierLabel = (tier: ScoredTargetHit['tier']) => (tier === 'giving' ?
 // them; the full profile is current. A contact is kept only if the profile
 // still puts them at the target company in a role worth approaching —
 // otherwise the row is pruned and the credit it cost is the price of knowing.
-const TITLE_HARD_NOISE = /\b(executive|administrative|personal) assistant\b|\bassistant to\b|\bcontroller\b|chief (technology|information|financial|technical|accounting) officer|\bc[tfi]o\b|\bjournalist\b|\bbroadcast|box office|leasing agent|\bbarista\b|\bsales\b(?![^]*?(community|giving|foundation|philanthrop))/i;
+const TITLE_HARD_NOISE = /\b(executive|administrative|personal) assistant\b|\bassistant to\b|\bcontroller\b|chief (technology|information|financial|technical|accounting) officer|\bc[tfi]o\b|\bjournalist\b|\bbroadcast|box office|leasing agent|\bbarista\b|cybersecurity|information security|security risk|risk (&|and) (response|compliance)|product delivery|\bsales\b(?![^]*?(community|giving|foundation|philanthrop))/i;
 const ORG_STOP = /\b(the|inc|llc|llp|ltd|corp|corporation|company|co|companies|wholesale|international|usa|stores|group|holdings|brands|foundation|plc|ag|sa)\b/g;
 const normOrg = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/&/g, ' and ').replace(ORG_STOP, ' ').replace(/[^a-z0-9]+/g, '');
 
