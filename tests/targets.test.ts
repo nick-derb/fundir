@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { scoreTargetHit, pickContacts, CHICAGO_STARTER } from '@/lib/network/targets';
+import { scoreTargetHit, pickContacts, CHICAGO_STARTER, contactVerdict, sameCompany } from '@/lib/network/targets';
 import { scoreCorporate, describeCorporate, type CorpSignals } from '@/lib/network/corporate';
 
 const hit = (title: string, location = 'Chicago, Illinois') => ({ url: 'https://www.linkedin.com/in/x', name: 'X', headline: null, title, location });
@@ -67,5 +67,39 @@ describe('contacts-only corporate leads', () => {
     expect(one.score).toBeGreaterThanOrEqual(10);
     expect(four.score).toBeGreaterThan(one.score);
     expect(four.score).toBeLessThanOrEqual(20);
+  });
+});
+
+describe('contact verification after the profile is read', () => {
+  it('matches company names across legal suffixes, articles and accents', () => {
+    expect(sameCompany('The Kraft Heinz Company', 'Kraft Heinz')).toBe(true);
+    expect(sameCompany('Target Corporation', 'Target')).toBe(true);
+    expect(sameCompany('ALDI USA', 'ALDI')).toBe(true);
+    expect(sameCompany('Mondelēz International', 'Mondelez International')).toBe(true);
+    expect(sameCompany('The Home Depot Foundation', 'The Home Depot')).toBe(true);
+    expect(sameCompany('CBS Radio 780 Chicago', 'Jewel-Osco')).toBe(false);
+    expect(sameCompany('Chick-fil-A Corporate Support Center', 'Mariano\'s')).toBe(false);
+  });
+  it('keeps a giving contact who is still at the company, including when only the headline names it', () => {
+    expect(contactVerdict({ title: 'Senior Director, Philanthropy & Community Giving', headline: null, currentOrg: 'Walgreens', currentOrgs: ['Walgreens'] }, 'Walgreens').keep).toBe(true);
+    expect(contactVerdict({ title: 'Community Giving Manager', headline: 'Community Giving Manager at ALDI USA', currentOrg: null, currentOrgs: [] }, 'ALDI USA').keep).toBe(true);
+    expect(contactVerdict({ title: 'Director, Community Partnerships & Giving', headline: null, currentOrg: 'Meijer', currentOrgs: ['Meijer Inc.'] }, 'Meijer').keep).toBe(true);
+  });
+  it('drops a contact whose profile shows they moved to another company', () => {
+    const v = contactVerdict({ title: 'Broadcast Journalist', headline: 'Broadcast Journalist at CBS Radio', currentOrg: 'CBS Radio 780 Chicago', currentOrgs: ['CBS Radio 780 Chicago'] }, 'Jewel-Osco');
+    expect(v.keep).toBe(false);
+    const moved = contactVerdict({ title: 'Director of Community Affairs', headline: null, currentOrg: 'Chick-fil-A', currentOrgs: ['Chick-fil-A'] }, 'Mariano\'s');
+    expect(moved.keep).toBe(false);
+    if (!moved.keep) expect(moved.reason).toMatch(/now at Chick-fil-A/);
+  });
+  it('drops support, finance, technology and sales roles the search title hid', () => {
+    expect(contactVerdict({ title: 'Executive Assistant - Diversity & Inclusion, Employee Development & Community Relations', headline: null, currentOrg: 'Costco Wholesale' }, 'Costco Wholesale').keep).toBe(false);
+    expect(contactVerdict({ title: 'Chief Technology Officer', headline: null, currentOrg: 'Costco Wholesale' }, 'Costco Wholesale').keep).toBe(false);
+    expect(contactVerdict({ title: 'Financial Controller', headline: null, currentOrg: 'Kraft Heinz' }, 'The Kraft Heinz Company').keep).toBe(false);
+    expect(contactVerdict({ title: 'EIT Food & Beverage Sales', headline: null, currentOrg: 'Target' }, 'Target').keep).toBe(false);
+    expect(contactVerdict({ title: 'Vice President of Merchandising - Beauty', headline: null, currentOrg: 'Walgreens' }, 'Walgreens').keep).toBe(false);
+  });
+  it('keeps a thin profile with no employer rather than treating missing data as evidence', () => {
+    expect(contactVerdict({ title: 'Community Relations Manager', headline: null, currentOrg: null, currentOrgs: [] }, 'Portillo\'s').keep).toBe(true);
   });
 });

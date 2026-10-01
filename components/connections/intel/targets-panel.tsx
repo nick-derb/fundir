@@ -52,6 +52,7 @@ export function TargetsPanel({ onClose, onFinished, readOnly }: { onClose: () =>
         const line = [
           b.scanned ? `${b.scanned.target}: ${b.scanned.hits} hits, ${b.scanned.kept} kept` : null,
           b.enriched.length ? `read ${b.enriched.length} profile${b.enriched.length === 1 ? '' : 's'}` : null,
+          b.pruned?.length ? `dropped ${b.pruned.length} who moved on or hold unrelated roles` : null,
           b.relationshipsFound ? `${b.relationshipsFound} relationships in graph` : null,
           b.leadsWritten ? `${b.leadsWritten} corporate leads` : null,
           ...b.errors.slice(0, 2),
@@ -66,7 +67,7 @@ export function TargetsPanel({ onClose, onFinished, readOnly }: { onClose: () =>
       }
       // A run that stopped early still gets its edges and leads, at no credit cost.
       if (!finished && credits > 0) {
-        try { const f = await post({ action: 'finalize' }) as { relationshipsFound: number; leadsWritten: number }; setLog(l => [...l, `Folded into the graph: ${f.relationshipsFound} relationships, ${f.leadsWritten} corporate leads.`]); await load(); }
+        try { const f = await post({ action: 'finalize' }) as { relationshipsFound: number; leadsWritten: number; pruned?: string[] }; setLog(l => [...l, `Folded into the graph: ${f.relationshipsFound} relationships, ${f.leadsWritten} corporate leads${f.pruned?.length ? `, ${f.pruned.length} contact${f.pruned.length === 1 ? '' : 's'} dropped after reading` : ''}.`]); await load(); }
         catch (e) { setLog(l => [...l, `Could not fold results into the graph: ${e instanceof Error ? e.message : 'failed'}`]); }
       }
     } finally { setRunning(false); onFinished(); }
