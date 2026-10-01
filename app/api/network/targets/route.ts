@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthContext } from '@/lib/auth-context';
 import { createServerClient } from '@/lib/supabase';
 import { isLinkedInConfigured } from '@/lib/network/linkedin';
-import { targetStatus, runTargetStep, addTarget, removeTarget, seedStarter, listTargets, CHICAGO_STARTER } from '@/lib/network/targets';
+import { targetStatus, runTargetStep, addTarget, removeTarget, seedStarter, listTargets, finalizeTargets, CHICAGO_STARTER } from '@/lib/network/targets';
 
 // Target companies: the list CYC wants community-affairs and giving contacts
 // at, and the bounded LinkedIn scan that finds them. GET returns the list and
@@ -45,6 +45,11 @@ export async function POST(req: NextRequest) {
           return NextResponse.json({ error: 'RapidAPI is not configured. Add RAPIDAPI_KEY to the environment (Vercel → Settings → Environment Variables) and redeploy.', notConfigured: true }, { status: 409 });
         }
         const result = await runTargetStep(ctx.orgId, { derive: body.derive === true, createdBy: ctx.email ?? null });
+        return NextResponse.json({ ok: true, ...result });
+      }
+      case 'finalize': {
+        // No credits: derive edges and recompute leads from what is already read.
+        const result = await finalizeTargets(ctx.orgId);
         return NextResponse.json({ ok: true, ...result });
       }
       default:

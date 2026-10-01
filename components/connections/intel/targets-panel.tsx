@@ -42,7 +42,7 @@ export function TargetsPanel({ onClose, onFinished, readOnly }: { onClose: () =>
 
   async function run(oneStep: boolean) {
     setRunning(true); stopRef.current = false; setLog([]); setSpent(0); setError('');
-    let credits = 0;
+    let credits = 0; let finished = false;
     try {
       for (let i = 1; i <= 80; i++) {
         let b: TargetStepResult;
@@ -58,10 +58,16 @@ export function TargetsPanel({ onClose, onFinished, readOnly }: { onClose: () =>
         ].filter(Boolean).join(' · ');
         setLog(l => [...l, `Step ${i} (${b.credits} credits): ${line || 'nothing left to do'}`]);
         await load();
-        if (b.done || oneStep) break;
+        if (b.done) { finished = true; break; }
+        if (oneStep) break;
         if (credits >= cap) { setLog(l => [...l, `Credit cap of ${cap} reached. Run again to continue.`]); break; }
         if (!b.scanned && !b.enriched.length) { setLog(l => [...l, 'No progress this step; stopping to protect the budget.']); break; }
         if (stopRef.current) break;
+      }
+      // A run that stopped early still gets its edges and leads, at no credit cost.
+      if (!finished && credits > 0) {
+        try { const f = await post({ action: 'finalize' }) as { relationshipsFound: number; leadsWritten: number }; setLog(l => [...l, `Folded into the graph: ${f.relationshipsFound} relationships, ${f.leadsWritten} corporate leads.`]); await load(); }
+        catch (e) { setLog(l => [...l, `Could not fold results into the graph: ${e instanceof Error ? e.message : 'failed'}`]); }
       }
     } finally { setRunning(false); onFinished(); }
   }

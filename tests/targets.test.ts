@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { scoreTargetHit, CHICAGO_STARTER } from '@/lib/network/targets';
+import { scoreTargetHit, pickContacts, CHICAGO_STARTER } from '@/lib/network/targets';
 import { scoreCorporate, describeCorporate, type CorpSignals } from '@/lib/network/corporate';
 
 const hit = (title: string, location = 'Chicago, Illinois') => ({ url: 'https://www.linkedin.com/in/x', name: 'X', headline: null, title, location });
@@ -15,6 +15,18 @@ describe('target company hit scoring', () => {
     expect(scoreTargetHit(hit('District Manager'))!.tier).toBe('local');
     expect(scoreTargetHit(hit('Vice President, Marketing'))!.tier).toBe('executive');
     expect(scoreTargetHit(hit('VP Corporate Social Responsibility'))!.tier).toBe('giving');
+  });
+  it('drops back-office, assistant and floor titles that cannot move giving', () => {
+    expect(scoreTargetHit(hit('Director of Safety & Food Safety'))).toBeNull();
+    expect(scoreTargetHit(hit('Assistant Store Director'))).toBeNull();
+    expect(scoreTargetHit(hit('Vice President of Marketing & Merchandising'))).toBeNull();
+    expect(scoreTargetHit(hit('Director Communications, Public Affairs & Government Relations'))!.tier).toBe('giving');
+  });
+  it('keeps at most two local-operations people per company', () => {
+    const hits = [hit('Store Director'), hit('Store Director'), hit('Store Manager'), hit('District Manager'), hit('Community Relations Manager')].map(h => scoreTargetHit(h)!);
+    const picked = pickContacts(hits, 4);
+    expect(picked.filter(p => p.tier === 'local')).toHaveLength(2);
+    expect(picked[0].tier).toBe('giving');
   });
   it('drops store-floor and technical titles', () => {
     expect(scoreTargetHit(hit('Cashier'))).toBeNull();

@@ -30,7 +30,7 @@ export type TargetCategory = typeof TARGET_CATEGORIES[number];
 
 const SEARCH_KEYWORDS = ['community', 'foundation'];   // plain words; title filtering is local, so a bad filter can never empty a scan
 const KEEP_PER_TARGET = 4;
-const RESULTS_PER_SEARCH = 25;
+const RESULTS_PER_SEARCH = 15;   // one result page per search keeps a scan near 15 calls
 const SCAN_STALE_DAYS = 180;
 const DEFAULT_CALL_CAP = 60;
 
@@ -64,9 +64,9 @@ export const CHICAGO_STARTER: Array<{ name: string; searchName?: string; categor
 // sponsor them, then the local operators (district managers, store directors)
 // who approve in-kind and neighbourhood support.
 const TITLE_GIVING = /community (affairs|relations|investment|impact|engagement|partnerships?|giving|outreach|development)|corporate (social responsibility|citizenship|responsibility|affairs|giving|philanthropy)|\bcsr\b|philanthrop|foundation|charitable|giving|social impact|public affairs|government (affairs|relations)|external (affairs|relations)|sustainability|\besg\b|diversity|inclusion|\bdei\b/i;
-const TITLE_EXEC = /chief|ceo|president|executive director|managing director|founder|\bvp\b|vice president|head of|senior director|director of|general manager/i;
-const TITLE_LOCAL = /district manager|store director|store manager|regional (manager|director|vice president)|market (director|manager|leader)|area (manager|director)|division (president|manager)/i;
-const TITLE_NOISE = /software|engineer|intern\b|cashier|clerk|stocker|associate\b|driver|warehouse|forklift|student|barista|cook\b|server|crew|customer service rep|sales associate|pharmacy technician|loss prevention/i;
+const TITLE_EXEC = /chief|\bceo\b|president|executive director|managing director|\bvp\b|vice president|head of|senior director/i;
+const TITLE_LOCAL = /district (manager|director)|store director|store manager|regional (manager|director|vice president)|market (director|manager|leader)|area (manager|director)|division (president|manager)/i;
+const TITLE_NOISE = /software|engineer|intern\b|cashier|clerk|stocker|associate\b|driver|warehouse|forklift|student|barista|cook\b|server|crew|customer service rep|sales associate|pharmacy technician|loss prevention|assistant\b|\bsafety\b|merchandis|supply chain|logistic|procurement|pricing|category manager|real estate|\btax\b|payroll|accounting|\bit\b|information technology|data (analyst|scientist)|human resources|\bhr\b|recruit|legal counsel|paralegal/i;
 const CHICAGO = /chicago|illinois|\bil\b|naperville|evanston|oak (park|brook)|schaumburg|skokie|cicero|joliet|aurora|rosemont|bolingbrook|deerfield|northbrook|lake forest|itasca|melrose park/i;
 
 export interface ScoredTargetHit { hit: EmployeeHit; score: number; tier: 'giving' | 'executive' | 'local' }
@@ -82,6 +82,16 @@ export function scoreTargetHit(hit: EmployeeHit): ScoredTargetHit | null {
   if (CHICAGO.test(hit.location ?? '')) score += 20;
   if (/chief|president|\bvp\b|vice president|head of/i.test(t) && tier === 'giving') score += 10;
   return { hit, score: Math.min(100, score), tier };
+}
+
+/** Top contacts for a company: best score first, at most two local-operations people so store directors never crowd out giving staff. */
+export function pickContacts<T extends ScoredTargetHit>(hits: T[], keep = KEEP_PER_TARGET, maxLocal = 2): T[] {
+  const out: T[] = []; let local = 0;
+  for (const h of [...hits].sort((a, b) => b.score - a.score)) {
+    if (h.tier === 'local') { if (local >= maxLocal) continue; local++; }
+    out.push(h); if (out.length >= keep) break;
+  }
+  return out;
 }
 
 export const tierLabel = (tier: ScoredTargetHit['tier']) => (tier === 'giving' ? 'Community / giving staff' : tier === 'executive' ? 'Senior leadership' : 'Local operations leader');
@@ -213,10 +223,27 @@ export async function runTargetStep(orgId: string, opts: { maxEnrich?: number; c
   const runId = runRow?.id as string | undefined;
   const sourceId = await linkedinSource(db);
 
-  // ── 1. One target scan ──
+  // ── 1. Read unread contacts first (career + education = the edges; quick and cheap) ──
+  const enriched: string[] = [];
+  const { data: unread } = await db.from('network_people').select('id, name, linkedin_url').eq('org_id', orgId).eq('kind', CORPORATE_CONTACT_KIND).is('enriched_at', null).not('linkedin_url', 'is', null).order('created_at').limit(maxEnrich);
+  for (const p of unread ?? []) {
+    if (timeLeft() < 95_000) { errors.push('step time budget reached — remaining profiles are read next step'); break; }
+    try {
+      const prof = await enrichProfile(p.linkedin_url as string, budget);
+      await applyProfile(db, p.id as string, prof, sourceId, { verification: 'verified', ...(prof.name ? { name: prof.name } : {}) });
+      enriched.push((prof.name ?? p.name) as string);
+    } catch (e) {
+      errors.push(`${p.name}: ${e instanceof Error ? e.message : 'enrich failed'}`);
+      if (/budget exhausted/i.test(String(e))) break;
+      if (/404|not found|no data/i.test(String(e))) await db.from('network_people').update({ enriched_at: new Date().toISOString(), note: 'LinkedIn profile could not be read.' }).eq('id', p.id);
+    }
+  }
+
+  // ── 2. One target scan (two async searches can take two minutes, so only when the clock allows) ──
   let scanned: TargetStepResult['scanned'] = null;
   const targets = await listTargets(db, orgId);
-  const next = opts.scan === false ? undefined : targets.find(isPending);
+  const next = opts.scan === false || timeLeft() < 150_000 ? undefined : targets.find(isPending);
+  if (opts.scan !== false && !next && targets.some(isPending)) errors.push('scan deferred to the next step — this one spent its time reading profiles');
   if (next) {
     const stamp = { scanned_at: new Date().toISOString() };
     try {
@@ -245,7 +272,7 @@ export async function runTargetStep(orgId: string, opts: { maxEnrich?: number; c
           }
           searches.push({ keyword, hits: hits.length, kept });
         }
-        const chosen = [...byUrl.values()].sort((a, b) => b.score - a.score).slice(0, KEEP_PER_TARGET);
+        const chosen = pickContacts([...byUrl.values()]);
         let inserted = 0;
         for (const c of chosen) {
           if (known.has(c.hit.url)) continue;   // already in the graph under another kind
@@ -266,22 +293,6 @@ export async function runTargetStep(orgId: string, opts: { maxEnrich?: number; c
       if (!/budget exhausted/i.test(String(e))) {
         await db.from('network_target_companies').update({ ...stamp, status: 'error', note: String(e instanceof Error ? e.message : e).slice(0, 300), hits: 0, kept: 0, searches: [] }).eq('id', next.id);
       }
-    }
-  }
-
-  // ── 2. Read unread contacts (career + education = the edges) ──
-  const enriched: string[] = [];
-  const { data: unread } = await db.from('network_people').select('id, name, linkedin_url').eq('org_id', orgId).eq('kind', CORPORATE_CONTACT_KIND).is('enriched_at', null).not('linkedin_url', 'is', null).order('created_at').limit(maxEnrich);
-  for (const p of unread ?? []) {
-    if (timeLeft() < 95_000) { errors.push('step time budget reached — remaining profiles are read next step'); break; }
-    try {
-      const prof = await enrichProfile(p.linkedin_url as string, budget);
-      await applyProfile(db, p.id as string, prof, sourceId, { verification: 'verified', ...(prof.name ? { name: prof.name } : {}) });
-      enriched.push((prof.name ?? p.name) as string);
-    } catch (e) {
-      errors.push(`${p.name}: ${e instanceof Error ? e.message : 'enrich failed'}`);
-      if (/budget exhausted/i.test(String(e))) break;
-      if (/404|not found|no data/i.test(String(e))) await db.from('network_people').update({ enriched_at: new Date().toISOString(), note: 'LinkedIn profile could not be read.' }).eq('id', p.id);
     }
   }
 
@@ -312,6 +323,20 @@ export async function runTargetStep(orgId: string, opts: { maxEnrich?: number; c
     }).eq('id', runId);
   }
   return { scanned, enriched, apiCalls: budget.used, credits, relationshipsFound, leadsWritten, pendingScans, pendingEnrich: pendingEnrich ?? 0, done: lastStep, errors };
+}
+
+/**
+ * Fold what has been read so far into the graph without spending a credit:
+ * resolve employers, derive relationships, recompute corporate leads. The
+ * panel calls this when a run stops at its credit cap, so partial runs still
+ * surface on the Map and Discover.
+ */
+export async function finalizeTargets(orgId: string): Promise<{ relationshipsFound: number; leadsWritten: number }> {
+  const db = createServerClient();
+  await resolveEmployers(db, orgId);
+  const relationshipsFound = (await deriveRelationships(orgId)).written;
+  const leadsWritten = await recomputeTargetLeads(db, orgId);
+  return { relationshipsFound, leadsWritten };
 }
 
 /** Corporate leads over the full corporate universe plus every target company, so a target with contacts but no board history still surfaces. */
