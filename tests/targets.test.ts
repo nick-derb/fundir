@@ -1,8 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { scoreTargetHit, pickContacts, CHICAGO_STARTER, contactVerdict, sameCompany } from '@/lib/network/targets';
 import { scoreCorporate, describeCorporate, type CorpSignals } from '@/lib/network/corporate';
+import type { EmployeeHit } from '@/lib/network/linkedin';
 
-const hit = (title: string, location = 'Chicago, Illinois') => ({ url: 'https://www.linkedin.com/in/x', name: 'X', headline: null, title, location });
+let n = 0;
+const hit = (title: string, location = 'Chicago, Illinois'): EmployeeHit => { n++; return { url: `https://www.linkedin.com/in/x${n}`, name: `Person ${n}`, headline: null, title, location }; };
 
 describe('target company hit scoring', () => {
   it('keeps community-affairs and giving staff, ranks Chicago-area people higher', () => {
@@ -101,5 +103,19 @@ describe('contact verification after the profile is read', () => {
   });
   it('keeps a thin profile with no employer rather than treating missing data as evidence', () => {
     expect(contactVerdict({ title: 'Community Relations Manager', headline: null, currentOrg: null, currentOrgs: [] }, 'Portillo\'s').keep).toBe(true);
+  });
+});
+
+describe('scan hygiene', () => {
+  const hit = (name: string, title: string): EmployeeHit => ({ url: `https://www.linkedin.com/in/${name.toLowerCase().replace(/\s+/g, '-')}-${Math.random().toString(36).slice(2, 6)}`, name, headline: null, title, location: 'Chicago, Illinois' });
+  it('keeps one row per person when the same name comes back under two profile URLs', () => {
+    const scored = [hit('Yvette Pittman', 'Government and Community Relations'), hit('Yvette Pittman', 'Government & Community Relations'), hit('Vanessa Hall', 'Manager, Community Partnerships')].map(h => scoreTargetHit(h)!);
+    expect(pickContacts(scored).map(s => s.hit.name)).toEqual(['Yvette Pittman', 'Vanessa Hall']);
+  });
+  it('does not keep technology or security executives on the strength of their rank', () => {
+    expect(scoreTargetHit(hit('A', 'Vice President, Cybersecurity Risk & Response'))).toBeNull();
+    expect(scoreTargetHit(hit('B', 'Senior Director, Retail Product Delivery Lead'))).toBeNull();
+    expect(contactVerdict({ title: 'Vice President, Cybersecurity Risk & Response', headline: null, currentOrg: 'US Foods' }, 'US Foods').keep).toBe(false);
+    expect(scoreTargetHit(hit('C', 'Vice President of Operations'))!.tier).toBe('executive');
   });
 });
