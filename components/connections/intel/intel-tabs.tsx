@@ -20,7 +20,8 @@ import { PipelineView, type TeamMember } from './pipeline-view';
 import { PeopleView } from './people-view';
 import { PersonPeek } from './person-peek';
 import { RefreshPanel } from './refresh-panel';
-import { RefreshCw, Download } from 'lucide-react';
+import { TargetsPanel } from './targets-panel';
+import { RefreshCw, Download, Building2 } from 'lucide-react';
 
 type TabKey = 'discover' | 'pipeline' | 'paths' | 'people' | 'map' | 'organizations' | 'relationships' | 'network' | 'funders';
 const TABS: Array<{ key: TabKey; label: string }> = [
@@ -41,6 +42,7 @@ function IntelInner({ people, kpis, network, leads: initialLeads, insights: init
   const leadId = sp.get('lead');
   const personId = sp.get('person');
   const refreshOpen = sp.get('refresh') === '1';
+  const targetsOpen = sp.get('targets') === '1';
   const focusParam = sp.get('focus');
   const focus: MapFocus | null = useMemo(() => { const m = focusParam?.match(/^(person|org):(.+)$/); return m ? { kind: m[1] as 'person' | 'org', id: m[2] } : null; }, [focusParam]);
 
@@ -99,6 +101,7 @@ function IntelInner({ people, kpis, network, leads: initialLeads, insights: init
         <span style={{ flex: 1 }} />
         <span style={{ display: 'flex', alignItems: 'center', gap: 6, paddingLeft: 12, flex: 'none' }}>
           <a href="/api/network/export" className="ni-ghost" style={{ height: 28, fontSize: 11.5, textDecoration: 'none' }} title="Download today's 13-sheet snapshot (.xlsx)"><Download style={{ width: 12, height: 12 }} /><span data-ni-hide-sm>Snapshot</span></a>
+          <button type="button" className="ni-ghost" style={{ height: 28, fontSize: 11.5 }} onClick={() => setParams({ targets: '1', lead: null, person: null })} title="Companies to find community and giving contacts at"><Building2 style={{ width: 12, height: 12 }} /><span data-ni-hide-sm>Targets</span></button>
           <button type="button" className="ni-primary" style={{ height: 28, fontSize: 11.5 }} onClick={() => setParams({ refresh: '1', lead: null, person: null })}><RefreshCw style={{ width: 12, height: 12 }} /><span data-ni-hide-sm>Refresh</span></button>
         </span>
       </div>
@@ -116,6 +119,7 @@ function IntelInner({ people, kpis, network, leads: initialLeads, insights: init
       <LeadDrawer leadId={leadId} onClose={() => setParams({ lead: null })} onStep={step} onOpenMap={openMap} onChanged={reload} readOnly={readOnly} position={position} />
       <PersonPeek personId={personId} onClose={() => setParams({ person: null })} onOpenLead={openLead} onOpenMap={openMap} onSaveUrl={saveUrl} readOnly={readOnly} />
       <RefreshPanel open={refreshOpen} onClose={() => setParams({ refresh: null })} onFinished={reload} readOnly={readOnly} />
+      {targetsOpen && <TargetsPanel onClose={() => setParams({ targets: null })} onFinished={reload} readOnly={readOnly} />}
     </div>
   );
 }

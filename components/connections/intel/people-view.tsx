@@ -19,6 +19,7 @@ const KINDS: Array<{ key: string; label: string; match: (p: PersonRow) => boolea
   { key: 'staff', label: 'Staff', match: p => p.kind === 'staff' },
   { key: 'trustee', label: 'Funder trustees', match: p => p.kind === 'trustee' },
   { key: 'executive', label: 'Funder executives', match: p => p.kind === 'executive' },
+  { key: 'corporate_contact', label: 'Corporate contacts', match: p => p.kind === 'corporate_contact' },
 ];
 const PAGE = 25;
 
