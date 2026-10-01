@@ -6,7 +6,7 @@
 // it lands; nothing runs on a schedule.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { X, Building2, Plus, Trash2, Loader2, Play, Square, RefreshCw, Sparkles } from 'lucide-react';
+import { X, Building2, Plus, Trash2, Loader2, Play, Square, RefreshCw, Sparkles, Users } from 'lucide-react';
 import type { TargetStatus, TargetStepResult, TargetRow } from '@/lib/network/targets';
 
 type Status = TargetStatus & { starter: Array<{ name: string; category: string }> };
@@ -14,7 +14,7 @@ type Status = TargetStatus & { starter: Array<{ name: string; category: string }
 const STATUS_TONE: Record<string, string | undefined> = { done: 'accent', pending: undefined, no_company: 'warning', error: 'critical' };
 const STATUS_LABEL: Record<string, string> = { done: 'scanned', pending: 'pending', no_company: 'not on LinkedIn', error: 'error' };
 
-export function TargetsPanel({ onClose, onFinished, readOnly }: { onClose: () => void; onFinished: () => void; readOnly?: boolean }) {
+export function TargetsPanel({ onClose, onFinished, onOpenPeople, onOpenLead, readOnly }: { onClose: () => void; onFinished: () => void; onOpenPeople?: (company: string) => void; onOpenLead?: (id: string) => void; readOnly?: boolean }) {
   const [status, setStatus] = useState<Status | null>(null);
   const [error, setError] = useState('');
   const [name, setName] = useState('');
@@ -146,12 +146,14 @@ export function TargetsPanel({ onClose, onFinished, readOnly }: { onClose: () =>
                   {t.category}{t.status === 'done' ? ` · ${t.hits} hits, ${t.kept} kept` : ''}{t.note ? ` · ${t.note}` : ''}
                 </span>
               </div>
+              {!!t.contacts && <button type="button" className="fd-btn" style={{ height: 24, fontSize: 11, padding: '0 8px' }} title={`See the ${t.contacts} contact${t.contacts === 1 ? '' : 's'} under People`} onClick={() => onOpenPeople?.(t.name)}><Users style={{ width: 11, height: 11 }} />{t.contacts}</button>}
+              {t.leadId && <button type="button" className="fd-btn" style={{ height: 24, fontSize: 11, padding: '0 8px', color: 'var(--accent)' }} title="Open the Corporate Giving Opportunity lead" onClick={() => onOpenLead?.(t.leadId!)}><Sparkles style={{ width: 11, height: 11 }} />{t.leadScore ?? 'Lead'}</button>}
               <span className="fd-tag" data-tone={STATUS_TONE[t.status]}>{STATUS_LABEL[t.status] ?? t.status}</span>
               <button type="button" className="fd-btn" style={{ height: 24, width: 24, padding: 0, justifyContent: 'center', color: 'var(--text-tertiary)' }} aria-label={`Remove ${t.name}`} title="Remove" onClick={() => act({ action: 'remove', id: t.id })} disabled={readOnly || running || busy}><Trash2 style={{ width: 11, height: 11 }} /></button>
             </div>
           ))}
         </div>
-        <p className="fd-caption" style={{ color: 'var(--text-tertiary)', margin: '12px 0 0' }}>Rough cost: about 15 credits to search a company plus 2 per contact read. A company already scanned is not re-spent for 180 days. Found people appear under People → Corporate contacts and on the Map; leads appear on Discover as Corporate Giving Opportunity.</p>
+        <p className="fd-caption" style={{ color: 'var(--text-tertiary)', margin: '12px 0 0' }}>Rough cost: about 15 credits to search a company plus 2 per contact read. A company already scanned is not re-spent for 180 days. Each company&rsquo;s contacts are listed under People → Corporate contacts (the people button above), and its lead on Discover carries them as &ldquo;People to approach&rdquo; (the score button).</p>
       </div>
     </aside>
   );

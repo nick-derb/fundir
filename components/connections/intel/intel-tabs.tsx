@@ -90,7 +90,7 @@ function IntelInner({ people, kpis, network, leads: initialLeads, insights: init
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
       <div ref={stripRef} role="tablist" aria-label="Connections views" style={{ position: 'relative', display: 'flex', alignItems: 'stretch', borderBottom: '1px solid var(--border-hairline)', background: 'var(--bg-surface)', padding: '0 26px', overflowX: 'auto' }}>
         {TABS.map(t => (
-          <button key={t.key} type="button" role="tab" data-tab={t.key} aria-selected={t.key === tab} className="ni-tab" onClick={() => setParams({ tab: t.key, lead: t.key === 'discover' || t.key === 'paths' || t.key === 'pipeline' ? leadId : null, person: t.key === 'people' ? personId : null })}>
+          <button key={t.key} type="button" role="tab" data-tab={t.key} aria-selected={t.key === tab} className="ni-tab" onClick={() => setParams({ tab: t.key, lead: t.key === 'discover' || t.key === 'paths' || t.key === 'pipeline' ? leadId : null, person: t.key === 'people' ? personId : null, kind: null, q: null })}>
             <span style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '11px 14px', whiteSpace: 'nowrap', fontSize: 12.5, fontFamily: 'var(--font-sans)' }}>
               {t.label}
               {counts[t.key] !== undefined && <i style={{ fontStyle: 'normal', fontFamily: MONO, fontSize: 9, color: 'var(--text-tertiary)', opacity: t.key === tab ? 1 : 0.7 }}>{counts[t.key]}</i>}
@@ -109,17 +109,19 @@ function IntelInner({ people, kpis, network, leads: initialLeads, insights: init
       {tab === 'discover' && <DiscoverView leads={leads} insights={insights} filters={filters} onFilters={setFilters} selectedId={leadId} onOpen={openLead} onInsight={i => (i.lead_id ? openLead(i.lead_id) : i.path.find(p => p.id && p.kind === 'org') ? openMap({ kind: 'org', id: i.path.find(p => p.id && p.kind === 'org')!.id! }) : undefined)} />}
       {tab === 'pipeline' && <PipelineView leads={leads} team={team} selectedId={leadId} onOpen={openLead} onChanged={reload} readOnly={readOnly} />}
       {tab === 'paths' && <WarmPathsView leads={leads} selectedId={leadId} onOpen={openLead} onPerson={id => openMap({ kind: 'person', id })} />}
-      {tab === 'people' && <PeopleView selectedId={personId} onOpen={openPerson} onOpenLead={openLead} onFocus={openMap} />}
+      {tab === 'people' && <PeopleView key={`${sp.get('kind') ?? ''}|${sp.get('q') ?? ''}`} selectedId={personId} onOpen={openPerson} onOpenLead={openLead} onFocus={openMap} initialQ={sp.get('q') ?? ''} initialKinds={sp.get('kind') ? [sp.get('kind')!] : []} />}
       {tab === 'map' && <MapView focus={focus} onFocus={f => setParams({ focus: f ? `${f.kind}:${f.id}` : null })} onOpenLead={openLead} />}
       {tab === 'organizations' && <OrganizationsView onOpenLead={openLead} onFocus={openMap} />}
       {tab === 'relationships' && <RelationshipsView onFocus={openMap} />}
       {tab === 'network' && <NetworkView initial={network} />}
       {tab === 'funders' && <ConnectionsView people={people} kpis={kpis} />}
 
-      <LeadDrawer leadId={leadId} onClose={() => setParams({ lead: null })} onStep={step} onOpenMap={openMap} onChanged={reload} readOnly={readOnly} position={position} />
+      <LeadDrawer leadId={leadId} onClose={() => setParams({ lead: null })} onStep={step} onOpenMap={openMap} onOpenPerson={openPerson} onChanged={reload} readOnly={readOnly} position={position} />
       <PersonPeek personId={personId} onClose={() => setParams({ person: null })} onOpenLead={openLead} onOpenMap={openMap} onSaveUrl={saveUrl} readOnly={readOnly} />
       <RefreshPanel open={refreshOpen} onClose={() => setParams({ refresh: null })} onFinished={reload} readOnly={readOnly} />
-      {targetsOpen && <TargetsPanel onClose={() => setParams({ targets: null })} onFinished={reload} readOnly={readOnly} />}
+      {targetsOpen && <TargetsPanel onClose={() => setParams({ targets: null })} onFinished={reload} readOnly={readOnly}
+        onOpenPeople={company => setParams({ tab: 'people', kind: 'corporate_contact', q: company, targets: null, lead: null, person: null })}
+        onOpenLead={id => setParams({ tab: 'discover', lead: id, targets: null, person: null })} />}
     </div>
   );
 }

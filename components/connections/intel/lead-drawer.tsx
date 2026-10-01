@@ -9,13 +9,13 @@
 // up below — then the action, the pipeline control, the activity, sources.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { X, ChevronUp, ChevronDown, ExternalLink, Map as MapIcon, Sparkles, ShieldCheck, Check } from 'lucide-react';
+import { X, ChevronUp, ChevronDown, ExternalLink, Map as MapIcon, Sparkles, ShieldCheck, Check, Users } from 'lucide-react';
 import type { LeadDetail, PipelineState } from '@/lib/network/queries';
 import type { Explanation } from '@/lib/network/explain';
 import { PathRail } from './path-rail';
 import { MapGraph } from './map-graph';
 import type { GraphPayload } from '@/lib/network/queries';
-import { SERIF, MONO, ScoreRing, ConfChip, TypeChip, StatusChip, Eyebrow, SectionRule, Skeleton, STATUS_LABEL, fmtDate, hueFor, typeLabel, initialsOf, AMBER } from './shared';
+import { SERIF, MONO, ScoreRing, ConfChip, TypeChip, StatusChip, Eyebrow, SectionRule, Skeleton, STATUS_LABEL, fmtDate, hueFor, typeLabel, initialsOf, AMBER, Avatar, Chip, SLATE, INFO } from './shared';
 import { ReasonDialog, type TeamMember } from './pipeline-view';
 import { BOARD_COLUMNS, OPEN_STATES, daysUntil, dismissalLabel } from '@/lib/network/pipeline';
 
@@ -24,14 +24,17 @@ interface Props {
   onClose: () => void;
   onStep?: (dir: -1 | 1) => void;
   onOpenMap?: (focus: { kind: 'person' | 'org'; id: string }) => void;
+  onOpenPerson?: (id: string) => void;
   onChanged?: () => void;
   readOnly?: boolean;
   position?: { index: number; total: number } | null;
 }
 
+const TIER_LABEL: Record<string, string> = { giving: 'Community / giving', executive: 'Senior leadership', local: 'Local operations' };
+
 const SOURCE_LABEL: Record<string, string> = { irs_990_xml: 'IRS 990 filing', propublica: 'ProPublica', foundation_site: 'foundation site', corporate_site: 'company site', cyc_workbook: 'CYC records', linkedin_api: 'LinkedIn', public_bio: 'public bio', cyc_site: 'CYC board page', seed: 'seed list (uncited)', irs_bmf: 'IRS BMF', instrumentl: 'Instrumentl', manual: 'manual' };
 
-export function LeadDrawer({ leadId, onClose, onStep, onOpenMap, onChanged, readOnly, position }: Props) {
+export function LeadDrawer({ leadId, onClose, onStep, onOpenMap, onOpenPerson, onChanged, readOnly, position }: Props) {
   const [lead, setLead] = useState<LeadDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -134,6 +137,30 @@ export function LeadDrawer({ leadId, onClose, onStep, onOpenMap, onChanged, read
               <Eyebrow style={{ display: 'block', marginBottom: 10 }}>{lead.insight_type === 'Untapped Funder' ? 'White space' : 'Introduction path'}</Eyebrow>
               <PathRail path={lead.path} confidence={lead.confidence} onNode={n => n.id && onOpenMap?.({ kind: n.kind, id: n.id })} />
             </div>
+
+            {/* people to approach: the scanned community / giving contacts at a target company */}
+            {(lead.contact_list ?? []).length > 0 && (() => { const cs = lead.contact_list; const bridged = cs.filter(c => c.pathTo).length; return (
+              <>
+                <SectionRule label={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Users style={{ width: 12, height: 12, color: hue.color }} />People to approach</span>} right={<span className="fd-mono" style={{ fontSize: 9.5, color: 'var(--text-tertiary)', letterSpacing: '.05em', textTransform: 'uppercase' }}>{cs.length} at {lead.target?.name ?? 'the company'}{bridged ? ` · ${bridged} with a path` : ''}</span>} />
+                <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {cs.map(c => (
+                    <li key={c.id} className="ni-card" style={{ padding: '9px 12px', display: 'grid', gridTemplateColumns: '32px minmax(0,1fr) auto', gap: 10, alignItems: 'center', borderLeft: `3px solid ${c.pathTo ? 'var(--accent)' : 'transparent'}` }}>
+                      <Avatar name={c.name} size={32} />
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                          <button type="button" onClick={() => onOpenPerson?.(c.id)} style={{ border: 'none', background: 'none', padding: 0, font: 'inherit', fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', cursor: 'pointer', textAlign: 'left' }}>{c.name}</button>
+                          {c.tier && <Chip text={TIER_LABEL[c.tier]} color={c.tier === 'giving' ? 'var(--accent)' : SLATE} border={c.tier === 'giving' ? 'rgba(12,107,90,.32)' : 'rgba(91,115,131,.34)'} />}
+                        </div>
+                        <span style={{ display: 'block', fontSize: 12, color: 'var(--text-secondary)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{[c.title, c.location].filter(Boolean).join(' · ') || '—'}</span>
+                        <span style={{ display: 'block', fontSize: 11.5, marginTop: 3, color: c.pathTo ? 'var(--accent)' : 'var(--text-tertiary)' }}>{c.pathTo ? `Ask ${c.pathTo} for an introduction — they share career history` : 'No CYC connection yet — a cold approach'}</span>
+                      </div>
+                      {c.linkedin_url ? <a href={c.linkedin_url} target="_blank" rel="noopener noreferrer" className="ni-ghost" style={{ height: 28, width: 28, padding: 0, justifyContent: 'center', color: INFO }} title="Open LinkedIn profile" aria-label={`Open ${c.name} on LinkedIn`}><ExternalLink style={{ width: 12, height: 12 }} /></a> : <span />}
+                    </li>
+                  ))}
+                </ul>
+                <p className="fd-caption" style={{ color: 'var(--text-tertiary)', margin: '8px 0 0', fontSize: 11 }}>Found by the target-company scan and verified against each LinkedIn profile. Open a name for career history and sources.</p>
+              </>
+            ); })()}
 
             {/* why */}
             <SectionRule label={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Sparkles style={{ width: 12, height: 12, color: hue.color }} />Why Fundir recommends this</span>} right={x ? <span className="fd-mono" style={{ fontSize: 9.5, color: 'var(--text-tertiary)', letterSpacing: '.05em', textTransform: 'uppercase', display: 'inline-flex', alignItems: 'center', gap: 5 }}><ShieldCheck style={{ width: 11, height: 11, color: 'var(--accent)' }} />{x.validation.bullets_kept} of {x.validation.bullets_total} claims verified</span> : null} />

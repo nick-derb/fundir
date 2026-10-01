@@ -102,6 +102,9 @@ export function pickContacts<T extends ScoredTargetHit>(hits: T[], keep = KEEP_P
 
 export const tierLabel = (tier: ScoredTargetHit['tier']) => (tier === 'giving' ? 'Community / giving staff' : tier === 'executive' ? 'Senior leadership' : 'Local operations leader');
 
+/** The tier a kept contact's current title reads as, for the UI. */
+export const contactTier = (title: string | null, headline: string | null): ScoredTargetHit['tier'] | null => scoreTargetHit({ url: '', name: null, headline, title, location: null })?.tier ?? null;
+
 // ── Verification after the profile is read ──────────────────────────────────
 // The employee search returns a title and a company as LinkedIn last indexed
 // them; the full profile is current. A contact is kept only if the profile
@@ -180,6 +183,8 @@ export interface TargetRow {
   id: string; name: string; searchName: string; category: string; organizationId: string | null;
   status: string; note: string | null; hits: number; kept: number; scannedAt: string | null;
   searches: Array<{ keyword: string; hits: number; kept: number }>;
+  /** Filled by targetStatus: contacts still on file at the company, and the lead they roll up into. */
+  contacts?: number; leadId?: string | null; leadScore?: number | null;
 }
 
 const rowOf = (t: Record<string, unknown>): TargetRow => ({
@@ -240,10 +245,19 @@ export async function targetStatus(orgId: string): Promise<TargetStatus> {
   const db = createServerClient();
   const targets = await listTargets(db, orgId);
   const [{ data: people }, { data: runs }] = await Promise.all([
-    db.from('network_people').select('id, enriched_at, linkedin_url').eq('org_id', orgId).eq('kind', CORPORATE_CONTACT_KIND),
+    db.from('network_people').select('id, enriched_at, linkedin_url, organization_id').eq('org_id', orgId).eq('kind', CORPORATE_CONTACT_KIND),
     db.from('network_refresh_runs').select('started_at, api_calls, status, notes, rapidapi_credits').eq('org_id', orgId).contains('categories', ['targets']).order('started_at', { ascending: false }).limit(200),
   ]);
   const ids = (people ?? []).map(p => p.id as string);
+  // Per company: contacts on file and the Corporate Giving Opportunity lead they roll up into.
+  const perOrg = new Map<string, number>();
+  for (const p of people ?? []) if (p.organization_id) perOrg.set(p.organization_id as string, (perOrg.get(p.organization_id as string) ?? 0) + 1);
+  const orgIds = targets.map(t => t.organizationId).filter((x): x is string => !!x);
+  const leadOf = new Map<string, { id: string; score: number }>();
+  for (let i = 0; i < orgIds.length; i += 300) {
+    const { data: ls } = await db.from('network_leads').select('id, target_org_id, opportunity_score').eq('org_id', orgId).eq('insight_type', 'Corporate Giving Opportunity').in('target_org_id', orgIds.slice(i, i + 300));
+    for (const l of ls ?? []) { const s = Math.round(Number(l.opportunity_score ?? 0)); const cur = leadOf.get(l.target_org_id as string); if (!cur || cur.score < s) leadOf.set(l.target_org_id as string, { id: l.id as string, score: s }); }
+  }
   let withPath = 0;
   if (ids.length) {
     const linked = new Set<string>();
@@ -262,7 +276,8 @@ export async function targetStatus(orgId: string): Promise<TargetStatus> {
   const pendingEnrich = (people ?? []).filter(p => !p.enriched_at && p.linkedin_url).length;
   return {
     configured: isLinkedInConfigured(),
-    targets, pendingScans,
+    targets: targets.map(t => ({ ...t, contacts: t.organizationId ? perOrg.get(t.organizationId) ?? 0 : 0, leadId: t.organizationId ? leadOf.get(t.organizationId)?.id ?? null : null, leadScore: t.organizationId ? leadOf.get(t.organizationId)?.score ?? null : null })),
+    pendingScans,
     people: ids.length, enriched: (people ?? []).filter(p => p.enriched_at).length, pendingEnrich, withPath,
     creditsSpent: (runs ?? []).reduce((n, r) => n + Number(r.rapidapi_credits ?? 0), 0),
     lastRun: runs?.[0] ? { started_at: runs[0].started_at as string, api_calls: Number(runs[0].api_calls ?? 0), status: runs[0].status as string, notes: (runs[0].notes as string | null) ?? null } : null,
