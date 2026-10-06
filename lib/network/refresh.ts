@@ -242,7 +242,7 @@ export async function runRefreshStep(orgId: string, opts: { categories?: Refresh
       errors.push(...v.errors);
       if (v.rejected) errors.push(`${v.rejected} candidate URL${v.rejected === 1 ? '' : 's'} rejected (profile did not corroborate the person)`);
       // Only search once the web-search candidates are drained, so credits go to the cheap check first.
-      if (!v.verified.length && !v.rejected && !v.errors.length) {
+      if (!v.verified.length && !v.probable.length && !v.rejected && !v.errors.length) {
         const d = await discoverByEmployer(db, orgId, budget, DISCOVER_PER_STEP, resolveCompanyMemo);
         discovered.push(...d.found);
         errors.push(...d.errors);
