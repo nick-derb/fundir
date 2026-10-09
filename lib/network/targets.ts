@@ -199,6 +199,9 @@ export async function listTargets(db: Db, orgId: string): Promise<TargetRow[]> {
   return (data ?? []).map(rowOf);
 }
 
+/** A 403 (not subscribed / key rejected) or 429 (rate or quota limit): retrying within the step only burns calls. */
+const isApiRefusal = (e: unknown) => /\bAPI (403|429)\b/.test(String(e instanceof Error ? e.message : e));
+
 const isPending = (t: TargetRow) => t.status === 'pending' || t.status === 'error' || (!!t.scannedAt && Date.now() - new Date(t.scannedAt).getTime() > SCAN_STALE_DAYS * 86400000);
 
 export async function addTarget(db: Db, orgId: string, input: { name: string; searchName?: string | null; category?: string; createdBy?: string | null }): Promise<{ added: boolean; target: TargetRow }> {
@@ -321,6 +324,7 @@ export async function runTargetStep(orgId: string, opts: { maxEnrich?: number; c
   // ── 1. Read unread contacts first (career + education = the edges; quick and cheap) ──
   const enriched: string[] = [];
   const pruned: string[] = [];
+  let apiRefused = false;
   const targetNames = new Map((await listTargets(db, orgId)).filter(t => t.organizationId).map(t => [t.organizationId as string, t]));
   const { data: unread } = await db.from('network_people').select('id, name, linkedin_url, current_org, organization_id').eq('org_id', orgId).eq('kind', CORPORATE_CONTACT_KIND).is('enriched_at', null).not('linkedin_url', 'is', null).order('created_at').limit(maxEnrich);
   for (const p of unread ?? []) {
@@ -343,6 +347,7 @@ export async function runTargetStep(orgId: string, opts: { maxEnrich?: number; c
     } catch (e) {
       errors.push(`${p.name}: ${e instanceof Error ? e.message : 'enrich failed'}`);
       if (/budget exhausted/i.test(String(e))) break;
+      if (isApiRefusal(e)) { apiRefused = true; break; }   // subscription or rate limit: nothing else will succeed this step
       if (/404|not found|no data/i.test(String(e))) await db.from('network_people').update({ enriched_at: new Date().toISOString(), note: 'LinkedIn profile could not be read.' }).eq('id', p.id);
     }
   }
@@ -350,8 +355,8 @@ export async function runTargetStep(orgId: string, opts: { maxEnrich?: number; c
   // ── 2. One target scan (two async searches can take two minutes, so only when the clock allows) ──
   let scanned: TargetStepResult['scanned'] = null;
   const targets = await listTargets(db, orgId);
-  const next = opts.scan === false || timeLeft() < 150_000 ? undefined : targets.find(isPending);
-  if (opts.scan !== false && !next && targets.some(isPending)) errors.push('scan deferred to the next step — this one spent its time reading profiles');
+  const next = opts.scan === false || apiRefused || timeLeft() < 150_000 ? undefined : targets.find(isPending);
+  if (opts.scan !== false && !next && targets.some(isPending)) errors.push(apiRefused ? 'scan skipped — the LinkedIn API refused this step' : 'scan deferred to the next step — this one spent its time reading profiles');
   if (next) {
     const stamp = { scanned_at: new Date().toISOString() };
     try {
@@ -369,7 +374,7 @@ export async function runTargetStep(orgId: string, opts: { maxEnrich?: number; c
         for (const keyword of SEARCH_KEYWORDS) {
           let hits: EmployeeHit[] = [];
           try { hits = await searchEmployees(match, { budget, maxResults: RESULTS_PER_SEARCH, keywords: keyword }); }
-          catch (e) { errors.push(`${next.name} (${keyword}): ${e instanceof Error ? e.message : 'search failed'}`); if (/budget exhausted/i.test(String(e))) break; }
+          catch (e) { errors.push(`${next.name} (${keyword}): ${e instanceof Error ? e.message : 'search failed'}`); if (/budget exhausted/i.test(String(e)) || isApiRefusal(e)) break; }
           let kept = 0;
           for (const h of hits) {
             const s = scoreTargetHit(h);
@@ -398,7 +403,7 @@ export async function runTargetStep(orgId: string, opts: { maxEnrich?: number; c
       }
     } catch (e) {
       errors.push(`${next.name}: ${e instanceof Error ? e.message : 'scan failed'}`);
-      if (!/budget exhausted/i.test(String(e))) {
+      if (!/budget exhausted/i.test(String(e)) && !isApiRefusal(e)) {   // a refusal is not the company's fault; leave it pending untouched
         await db.from('network_target_companies').update({ ...stamp, status: 'error', note: String(e instanceof Error ? e.message : e).slice(0, 300), hits: 0, kept: 0, searches: [] }).eq('id', next.id);
       }
     }
