@@ -120,16 +120,16 @@ begin
        and nullif(trim(coalesce(c.connection, '')), '') is not null
        and lower(trim(c.connection)) not in ('unknown', 'no', 'none', 'not started', 'n/a', 'tbd')
   ), gone as (
-    delete from network_relationships r
-     where r.org_id = p_org_id and r.source_type = 'cyc_workbook' and r.relationship_type = 'existing_cyc_relationship'
+    delete from network_relationships rel   -- not "r": that is the loop record below
+     where rel.org_id = p_org_id and rel.source_type = 'cyc_workbook' and rel.relationship_type = 'existing_cyc_relationship'
        and (
          -- trustee-level: the trustee no longer carries a connection on the list
-         (exists (select 1 from network_people p where p.id in (r.source_person_id, r.target_person_id) and p.kind = 'trustee')
-          and not exists (select 1 from keep_trustee k where k.id in (r.source_person_id, r.target_person_id)))
+         (exists (select 1 from network_people p where p.id in (rel.source_person_id, rel.target_person_id) and p.kind = 'trustee')
+          and not exists (select 1 from keep_trustee k where k.id in (rel.source_person_id, rel.target_person_id)))
          or
          -- foundation-level: the foundation row no longer carries a connection
-         (r.evidence->>'level' = 'foundation'
-          and not exists (select 1 from keep_foundation k where k.id = r.target_organization_id))
+         (rel.evidence->>'level' = 'foundation'
+          and not exists (select 1 from keep_foundation k where k.id = rel.target_organization_id))
        )
      returning 1
   )
