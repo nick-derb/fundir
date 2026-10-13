@@ -3,13 +3,25 @@ import { getAuthContext } from '@/lib/auth-context';
 import { createServerClient } from '@/lib/supabase';
 import { getValidToken } from '@/lib/oauth-tokens';
 import { uploadDocument } from '@/lib/data-hub';
-import { previewCultivation, commitCultivation } from '@/lib/cultivation-import';
+import { previewCultivation, commitCultivation, cultivationLastImport } from '@/lib/cultivation-import';
 
 export const maxDuration = 120;
 
+// GET — what is live now (when the list was last replaced, how many rows carry a
+// connection), so the upload card can say which version Fundir is running on.
+export async function GET() {
+  const ctx = await getAuthContext();
+  if (!ctx) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+  try {
+    return NextResponse.json({ last: await cultivationLastImport(createServerClient(), ctx.orgId) });
+  } catch (e) {
+    return NextResponse.json({ error: e instanceof Error ? e.message : 'Failed' }, { status: 500 });
+  }
+}
+
 // POST multipart {file} [?commit=1] — preview what a fresh Foundation Cultivation
-// List would change, or write it (foundations, board members, and the trustees
-// in the relationship graph). Works without Microsoft 365; when the org storage
+// List would change, or write it (foundations, board members, the Known
+// Connections, and the trustees and CYC links in the relationship graph). Works without Microsoft 365; when the org storage
 // is connected a copy of the workbook is filed into the Data Hub as well.
 export async function POST(req: NextRequest) {
   const ctx = await getAuthContext();

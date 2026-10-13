@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Target, Send, Table2, Check, FileText } from 'lucide-react';
+import { Target, Send, Table2, Check, FileText, Upload, X } from 'lucide-react';
+import { CultivationCard } from '@/components/cultivation-card';
 
 // Real board-network view in the "officer trail" design language, wired to
 // funder_board_members + cyc_cultivation facts + the Instrumentl funding history.
@@ -14,6 +15,8 @@ const SLATE = '#5B7383';
 export interface CnPerson {
   id: string; name: string; initials: string; foundation: string; title: string;
   connectionToCyc: string; connectionType: string; whoKnows: string; outreachStatus: string;
+  /** From the Known Connections sheet: who at CYC knows the foundation, and where its outreach stands. */
+  foundationConnection: string; foundationStatus: string;
   warm: boolean; awaiting: boolean;
   funderType: string; assets: string; fundingFocus: string; notes: string;
   cycFunded: 'awarded' | 'applied' | 'declined' | 'pipeline' | null; cycAmount: string;
@@ -50,9 +53,10 @@ function Source({ children }: { children: React.ReactNode }) {
   return <span className="fd-caption" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: 'var(--text-tertiary)' }}><FileText style={{ width: 11, height: 11 }} />Source: {children}</span>;
 }
 
-export function ConnectionsView({ people, kpis }: { people: CnPerson[]; kpis: CnKpis }) {
+export function ConnectionsView({ people, kpis, readOnly }: { people: CnPerson[]; kpis: CnKpis; readOnly?: boolean }) {
   const [filter, setFilter] = useState<'all' | 'warm' | 'awaiting'>('all');
   const [selected, setSelected] = useState(people[0]?.id ?? '');
+  const [uploadOpen, setUploadOpen] = useState(false);
 
 
   const visible = filter === 'warm' ? people.filter(p => p.warm)
@@ -68,13 +72,17 @@ export function ConnectionsView({ people, kpis }: { people: CnPerson[]; kpis: Cn
         <style dangerouslySetInnerHTML={{ __html: CSS }} />
         <p className="fd-eyebrow" style={{ color: 'var(--text-tertiary)', margin: '0 0 9px' }}>Chicago Youth Centers</p>
         <h1 className="fd-display" style={{ fontSize: 'clamp(1.7rem,2.6vw,2.15rem)', margin: 0 }}>Connections</h1>
-        <p style={{ marginTop: 12, color: 'var(--text-secondary)', maxWidth: '60ch' }}>No board-member connections loaded yet. Add them in the Prospecting workbook (Board Members tab) and they will appear here.</p>
+        <p style={{ marginTop: 12, color: 'var(--text-secondary)', maxWidth: '60ch' }}>No board-member connections loaded yet. Upload the Foundation Cultivation List and they will appear here.</p>
+        <div style={{ marginTop: 16, maxWidth: 760 }}><CultivationCard readOnly={readOnly} /></div>
       </div>
     );
   }
 
-  const openingLine = person.warm
+  const ownWarm = !!person.connectionToCyc && person.warm;
+  const openingLine = ownWarm
     ? `${person.whoKnows || 'Someone at CYC'} has a ${person.connectionType ? person.connectionType.toLowerCase() : 'connection'} to ${person.name}, who sits on the ${person.foundation} board.`
+    : person.foundationConnection
+    ? `${person.foundationConnection} knows ${person.foundation}${person.foundationStatus ? ` (${person.foundationStatus.toLowerCase()})` : ''}. ${person.name} sits on its board — the introduction can go through that connection.`
     : `${person.name} sits on the ${person.foundation} board. No connection to CYC is mapped yet — a warm path would turn this seat from cold to workable.`;
 
   return (
@@ -87,7 +95,12 @@ export function ConnectionsView({ people, kpis }: { people: CnPerson[]; kpis: Cn
           <h1>Connections</h1>
           <p className="fd-lede">The board members behind the funders CYC is pursuing: who at CYC can reach them, and whether the foundation has funded CYC before. A warm introduction turns a cold prospect into a workable one.</p>
         </div>
+        <button type="button" className="fd-btn" style={{ flex: 'none', alignSelf: 'flex-start' }} aria-expanded={uploadOpen} onClick={() => setUploadOpen(v => !v)} title="Replace the Foundation Cultivation List with an updated .xlsx">
+          {uploadOpen ? <X style={{ width: 13, height: 13 }} /> : <Upload style={{ width: 13, height: 13 }} />}{uploadOpen ? 'Close' : 'Update from spreadsheet'}
+        </button>
       </div>
+
+      {uploadOpen && <div style={{ marginBottom: 20 }}><CultivationCard readOnly={readOnly} /></div>}
 
       <div className="fd-stats" style={{ marginBottom: 20 }}>
         <Stat label="Board members" value={kpis.board} sub="tracked from filings" />
@@ -127,7 +140,8 @@ export function ConnectionsView({ people, kpis }: { people: CnPerson[]; kpis: Cn
                       <span style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
                         {p.warm && <Chip text="Warm" color="var(--accent)" border="rgba(12,107,90,.3)" />}
                         {p.cycFunded === 'awarded' && <Chip text="Funded CYC" color="var(--accent)" border="rgba(12,107,90,.3)" />}
-                        {p.whoKnows && <Chip text="Known" color={SLATE} border="rgba(91,115,131,.3)" />}
+                        {(p.whoKnows || p.foundationConnection) && <Chip text="Known" color={SLATE} border="rgba(91,115,131,.3)" />}
+                        {p.foundationStatus && <Chip text={p.foundationStatus} color={SLATE} border="rgba(91,115,131,.3)" />}
                         {p.awaiting && <Chip text="No outreach" color={AMBER} border="rgba(156,122,42,.32)" />}
                       </span>
                     </div>
@@ -154,8 +168,8 @@ export function ConnectionsView({ people, kpis }: { people: CnPerson[]; kpis: Cn
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(230px,1fr))', gap: '0 24px', borderTop: '1px solid var(--border-hairline)' }}>
                 <div style={{ padding: '12px 0' }}>
                   <p className="fd-eyebrow" style={{ color: 'var(--text-tertiary)', margin: '0 0 6px' }}>Connection</p>
-                  <p style={{ margin: '0 0 6px', fontSize: 12.5, lineHeight: 1.5 }}>{person.warm ? `${person.connectionToCyc}${person.connectionType ? ` · ${person.connectionType}` : ''}` : 'No connection to CYC mapped.'}</p>
-                  <Source>board roster</Source>
+                  <p style={{ margin: '0 0 6px', fontSize: 12.5, lineHeight: 1.5 }}>{ownWarm ? `${person.connectionToCyc}${person.connectionType ? ` · ${person.connectionType}` : ''}` : person.foundationConnection ? `${person.foundationConnection} knows ${person.foundation}${person.foundationStatus ? ` · ${person.foundationStatus}` : ''}` : 'No connection to CYC mapped.'}</p>
+                  <Source>{ownWarm ? 'board roster' : person.foundationConnection ? 'Known Connections sheet' : 'board roster'}</Source>
                 </div>
                 <div style={{ padding: '12px 0' }}>
                   <p className="fd-eyebrow" style={{ color: 'var(--text-tertiary)', margin: '0 0 6px' }}>Funding</p>
@@ -167,7 +181,7 @@ export function ConnectionsView({ people, kpis }: { people: CnPerson[]; kpis: Cn
                 <button type="button" className="fd-btn-primary"><Send style={{ width: 13, height: 13 }} />Draft the outreach</button>
                 <button type="button" className="fd-btn"><Table2 style={{ width: 13, height: 13 }} />Add to cultivation list</button>
                 <span style={{ flex: 1 }} />
-                <span className="fd-caption" style={{ color: 'var(--text-tertiary)', whiteSpace: 'nowrap' }}>{person.whoKnows ? `${person.whoKnows} knows them` : 'No path recorded'}</span>
+                <span className="fd-caption" style={{ color: 'var(--text-tertiary)', whiteSpace: 'nowrap' }}>{person.whoKnows ? `${person.whoKnows} knows them` : person.foundationConnection ? `${person.foundationConnection} knows the foundation` : 'No path recorded'}</span>
               </div>
             </div>
           </div>

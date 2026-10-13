@@ -114,7 +114,7 @@ function IntelInner({ people, kpis, network, leads: initialLeads, insights: init
       {tab === 'organizations' && <OrganizationsView onOpenLead={openLead} onFocus={openMap} />}
       {tab === 'relationships' && <RelationshipsView onFocus={openMap} />}
       {tab === 'network' && <NetworkView initial={network} />}
-      {tab === 'funders' && <ConnectionsView people={people} kpis={kpis} />}
+      {tab === 'funders' && <ConnectionsView people={people} kpis={kpis} readOnly={readOnly} />}
 
       <LeadDrawer leadId={leadId} onClose={() => setParams({ lead: null })} onStep={step} onOpenMap={openMap} onOpenPerson={openPerson} onChanged={reload} readOnly={readOnly} position={position} />
       <PersonPeek personId={personId} onClose={() => setParams({ person: null })} onOpenLead={openLead} onOpenMap={openMap} onSaveUrl={saveUrl} readOnly={readOnly} />
