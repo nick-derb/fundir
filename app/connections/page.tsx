@@ -41,7 +41,7 @@ export default async function ConnectionsPage() {
 
   const [boardRes, cultRes, subRes, network, leads, insights] = await Promise.all([
     db.from('funder_board_members').select('foundation_name, member_name, title, connection_to_cyc, connection_type, who_knows_them, outreach_status').eq('org_id', org).order('foundation_name'),
-    db.from('cyc_cultivation').select('foundation_name, funder_type, total_assets, funding_focus, notes').eq('org_id', org),
+    db.from('cyc_cultivation').select('foundation_name, funder_type, total_assets, funding_focus, notes, connection, outreach_status').eq('org_id', org),
     db.from('cyc_grant_submissions').select('funder_name, outcome, amount_awarded, status, stage').eq('org_id', org),
     getNetworkState(org),
     listLeads(db, org).catch(() => []),
@@ -49,10 +49,13 @@ export default async function ConnectionsPage() {
   ]);
 
   // Foundation facts keyed by normalized name.
-  const cultMap = new Map<string, { funderType: string; assets: string; focus: string; notes: string }>();
+  // The Known Connections sheet records a connection and a status per foundation,
+  // not per person: every seat at that foundation inherits them.
+  const cultMap = new Map<string, { funderType: string; assets: string; focus: string; notes: string; connection: string; status: string }>();
   for (const c of cultRes.data ?? []) {
     cultMap.set(norm(c.foundation_name), {
       funderType: c.funder_type ?? '', assets: money(c.total_assets), focus: c.funding_focus ?? '', notes: c.notes ?? '',
+      connection: isWarm(c.connection) ? (c.connection as string).trim() : '', status: (c.outreach_status ?? '').trim(),
     });
   }
   // CYC's funding relationship per funder (from real Instrumentl history). A tracker
@@ -84,9 +87,11 @@ export default async function ConnectionsPage() {
       connectionToCyc: b.connection_to_cyc || '',
       connectionType: b.connection_type || '',
       whoKnows: b.who_knows_them || '',
-      outreachStatus: b.outreach_status || '',
-      warm: isWarm(b.connection_to_cyc),
-      awaiting: isAwaiting(b.outreach_status),
+      outreachStatus: b.outreach_status || cult?.status || '',
+      foundationConnection: cult?.connection || '',
+      foundationStatus: cult?.status || '',
+      warm: isWarm(b.connection_to_cyc) || !!cult?.connection,
+      awaiting: isAwaiting(b.outreach_status || cult?.status),
       funderType: cult?.funderType || '',
       assets: cult?.assets || '',
       fundingFocus: cult?.focus || '',
