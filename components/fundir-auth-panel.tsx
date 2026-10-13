@@ -61,6 +61,24 @@ function GoogleG() {
   );
 }
 
+function EyeIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M2.5 12s3.5-6.5 9.5-6.5S21.5 12 21.5 12s-3.5 6.5-9.5 6.5S2.5 12 2.5 12Z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
+function EyeOffIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M3 3l18 18" />
+      <path d="M10.6 10.6a2 2 0 0 0 2.8 2.8" />
+      <path d="M9.9 5.7A10.5 10.5 0 0 1 12 5.5c6 0 9.5 6.5 9.5 6.5a17.6 17.6 0 0 1-2.9 3.7" />
+      <path d="M6.3 6.3A17 17 0 0 0 2.5 12s3.5 6.5 9.5 6.5a9.6 9.6 0 0 0 3.7-.7" />
+    </svg>
+  );
+}
 function MicrosoftSquares() {
   return (
     <svg width="17" height="17" viewBox="0 0 23 23" aria-hidden="true">
@@ -122,6 +140,14 @@ const CSS = `
   padding:0 18px;font:inherit;font-size:15px;color:${INK};margin-bottom:12px}
 .fa-field::placeholder{color:#8C918C}
 .fa-field:focus{outline:none;border-color:${SAGE};background:#F2F3EF}
+
+.fa-pw{position:relative}
+.fa-pw .fa-field{padding-right:48px}
+.fa-eye{position:absolute;top:0;right:6px;height:52px;width:40px;display:flex;align-items:center;justify-content:center;
+  background:none;border:0;padding:0;color:#8C918C;cursor:pointer;border-radius:var(--radius)}
+.fa-eye:hover,.fa-eye[aria-pressed="true"]{color:${INK}}
+.fa-eye:focus-visible{outline:2px solid ${SAGE};outline-offset:-4px}
+.fa-eye svg{width:18px;height:18px;display:block}
 
 .fa-forgot{align-self:flex-end;display:block;margin:-4px 0 0 auto;background:none;border:0;padding:0;
   font:inherit;font-size:13px;font-weight:500;color:${SAGE_DEEP};cursor:pointer}
@@ -187,6 +213,7 @@ export function FundirAuthPanel({
 }: FundirAuthPanelProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [artFailed, setArtFailed] = useState(false);
   const register = mode === 'register';
   const busy = submitting || !!busyProvider;
@@ -259,16 +286,29 @@ export function FundirAuthPanel({
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
-            <input
-              className="fa-field"
-              type="password"
-              autoComplete={register ? 'new-password' : 'current-password'}
-              placeholder={register ? 'Create a password' : 'Enter password'}
-              aria-label="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && submit()}
-            />
+            <div className="fa-pw">
+              <input
+                className="fa-field"
+                type={showPassword ? 'text' : 'password'}
+                autoComplete={register ? 'new-password' : 'current-password'}
+                placeholder={register ? 'Create a password' : 'Enter password'}
+                aria-label="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && submit()}
+              />
+              <button
+                className="fa-eye"
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                aria-pressed={showPassword}
+                title={showPassword ? 'Hide password' : 'Show password'}
+                tabIndex={-1}
+              >
+                {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+              </button>
+            </div>
 
             {!register && onForgot ? (
               <button className="fa-forgot" type="button" onClick={() => onForgot(email)}>
