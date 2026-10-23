@@ -1,127 +1,132 @@
 import { createServerClient } from '@/lib/supabase';
 import { getAuthContext } from '@/lib/auth-context';
+import { isAdminEmail } from '@/lib/admin-emails';
 import { ViewAsButton } from '@/components/admin/view-as-button';
+import { AdminHeader, Card, Pill, Empty, MONO, timeAgo, fmtDate } from '@/components/admin/ui';
+import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
 
-// Founder "People" roster — every account with profile, onboarding + calendar
-// status, and last login, so the owner can confirm everyone's set up. Read-only.
-
-function ago(iso: string | null | undefined): string {
-  if (!iso) return 'Never';
-  const diff = Date.now() - new Date(iso).getTime();
-  if (Number.isNaN(diff)) return '—';
-  const min = Math.floor(diff / 60000);
-  if (min < 1) return 'Just now';
-  if (min < 60) return `${min}m ago`;
-  const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr}h ago`;
-  const day = Math.floor(hr / 24);
-  if (day < 30) return `${day}d ago`;
-  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-}
+// Every account on the platform: who they are, which workspace they belong
+// to and with what role, whether they finished onboarding and connected a
+// calendar, and when they last signed in. Read-only apart from "View as".
 
 export default async function AdminPeoplePage() {
   const ctx = await getAuthContext();
   // The real admin, even if they happen to be mid-impersonation.
   const meId = ctx?.realAdmin?.id ?? ctx?.userId;
   const db = createServerClient();
-  const [authRes, profilesRes, membersRes, integRes] = await Promise.all([
+  const [authRes, profilesRes, membersRes, integRes, allowRes] = await Promise.all([
     db.auth.admin.listUsers({ perPage: 200 }),
     db.from('profiles').select('user_id, first_name, last_name, display_name, role, onboarded_at, avatar_url'),
     db.from('user_organizations').select('user_id, role, organizations(name, org_code)'),
     db.from('user_integrations').select('user_id').eq('provider', 'microsoft'),
+    db.from('access_allowlist').select('email'),
   ]);
 
   const users = authRes.data?.users ?? [];
   const profileById = new Map((profilesRes.data ?? []).map(p => [p.user_id, p]));
-  const memberById = new Map((membersRes.data ?? []).map(m => [m.user_id, m]));
+  const membersById = new Map<string, Array<{ role: string; org_code: string; org_name: string }>>();
+  for (const m of membersRes.data ?? []) {
+    const org = m.organizations as unknown as { name?: string; org_code?: string } | null;
+    const list = membersById.get(m.user_id) ?? [];
+    list.push({ role: String(m.role ?? 'member'), org_code: org?.org_code ?? '—', org_name: org?.name ?? '—' });
+    membersById.set(m.user_id, list);
+  }
   const calSet = new Set((integRes.data ?? []).map(i => i.user_id));
+  const allowlisted = new Set((allowRes.data ?? []).map(a => String(a.email).toLowerCase()));
 
   const rows = users.map(u => {
     const p = profileById.get(u.id);
-    const m = memberById.get(u.id) as { role?: string; organizations?: { name?: string; org_code?: string } | null } | undefined;
-    const org = m?.organizations ?? null;
     const name = p?.display_name || [p?.first_name, p?.last_name].filter(Boolean).join(' ').trim();
+    const email = u.email ?? '—';
     return {
-      id: u.id,
-      email: u.email ?? '—',
+      id: u.id, email,
       name: name || '—',
       avatar: p?.avatar_url ?? null,
-      org: org?.name ?? '—',
-      role: p?.role || m?.role || '—',
+      title: p?.role || '',
+      orgs: membersById.get(u.id) ?? [],
+      platformAdmin: isAdminEmail(email),
+      allowlisted: allowlisted.has(email.toLowerCase()),
       onboarded: !!p?.onboarded_at,
       calendar: calSet.has(u.id),
-      lastSignIn: u.last_sign_in_at,
+      provider: (u.app_metadata?.provider as string | undefined) ?? 'email',
+      joined: u.created_at,
+      lastSignIn: u.last_sign_in_at ?? null,
     };
   }).sort((a, b) => (b.lastSignIn ?? '').localeCompare(a.lastSignIn ?? ''));
 
+  const noOrg = rows.filter(r => r.orgs.length === 0).length;
   const onboardedCount = rows.filter(r => r.onboarded).length;
   const calCount = rows.filter(r => r.calendar).length;
 
-  const th: React.CSSProperties = { textAlign: 'left', padding: '10px 14px', fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#64748b', borderBottom: '1px solid rgba(255,255,255,0.08)' };
-  const td: React.CSSProperties = { padding: '12px 14px', fontSize: 13, color: '#cbd5e1', borderBottom: '1px solid rgba(255,255,255,0.05)', verticalAlign: 'middle' };
-  const pill = (on: boolean, yes: string, no: string): React.CSSProperties => ({
-    display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 600,
-    color: on ? '#34d399' : '#64748b',
-  });
-
   return (
-    <div style={{ padding: '32px 36px', color: '#e2e8f0' }}>
-      <div style={{ marginBottom: 6, fontSize: 22, fontWeight: 700, letterSpacing: '-0.01em' }}>People</div>
-      <p style={{ color: '#64748b', fontSize: 13, margin: '0 0 22px' }}>
-        {rows.length} account{rows.length === 1 ? '' : 's'} · {onboardedCount} onboarded · {calCount} calendar-connected
-      </p>
+    <div className="adm-page">
+      <AdminHeader
+        title="People"
+        summary={<>{rows.length} account{rows.length === 1 ? '' : 's'} · {onboardedCount} onboarded · {calCount} calendar-connected{noOrg ? <> · <span style={{ color: '#fbbf24' }}>{noOrg} without a workspace</span></> : null}</>}
+        right={<Link href="/admin/access" className="adm-link">Manage who can sign in →</Link>}
+      />
 
-      <div style={{ border: '1px solid rgba(255,255,255,0.08)', borderRadius: 'var(--radius)', overflow: 'hidden', background: 'rgba(255,255,255,0.02)' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr>
-              <th style={th}>Person</th>
-              <th style={th}>Organization</th>
-              <th style={th}>Role</th>
-              <th style={th}>Onboarded</th>
-              <th style={th}>Calendar</th>
-              <th style={th}>Last login</th>
-              <th style={{ ...th, textAlign: 'right' }}></th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.length === 0 ? (
-              <tr><td style={{ ...td, color: '#64748b' }} colSpan={7}>No accounts found.</td></tr>
-            ) : rows.map(r => (
-              <tr key={r.id}>
-                <td style={td}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    {r.avatar
-                      // eslint-disable-next-line @next/next/no-img-element
-                      ? <img src={r.avatar} alt="" style={{ width: 30, height: 30, borderRadius: '50%', objectFit: 'cover', flex: 'none' }} />
-                      : <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, color: '#94a3b8', flex: 'none' }}>{(r.name[0] || r.email[0] || '?').toUpperCase()}</div>}
-                    <div style={{ minWidth: 0 }}>
-                      <div style={{ color: '#f1f5f9', fontWeight: 500 }}>{r.name}</div>
-                      <div style={{ color: '#64748b', fontSize: 11.5 }}>{r.email}</div>
-                    </div>
-                  </div>
-                </td>
-                <td style={td}>{r.org}</td>
-                <td style={td}>{r.role}</td>
-                <td style={td}><span style={pill(r.onboarded, '', '')}>{r.onboarded ? '● Complete' : '○ Pending'}</span></td>
-                <td style={td}><span style={pill(r.calendar, '', '')}>{r.calendar ? '● Connected' : '○ Not connected'}</span></td>
-                <td style={{ ...td, color: '#94a3b8', fontFamily: 'ui-monospace, monospace', fontSize: 12 }}>{ago(r.lastSignIn)}</td>
-                <td style={{ ...td, textAlign: 'right' }}>
-                  {r.id === meId
-                    ? <span style={{ fontSize: 11, color: '#475569' }}>You</span>
-                    : <ViewAsButton userId={r.id} />}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <Card>
+        {rows.length === 0 ? <Empty>No accounts found.</Empty> : (
+          <div style={{ overflowX: 'auto' }}>
+            <table className="adm-table">
+              <thead>
+                <tr>
+                  <th>Person</th><th>Workspace</th><th>Role</th><th>Setup</th><th>Joined</th><th>Last sign-in</th><th style={{ textAlign: 'right' }}></th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map(r => (
+                  <tr key={r.id} className="adm-row">
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        {r.avatar
+                          // eslint-disable-next-line @next/next/no-img-element
+                          ? <img src={r.avatar} alt="" style={{ width: 30, height: 30, borderRadius: '50%', objectFit: 'cover', flex: 'none' }} />
+                          : <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, color: '#94a3b8', flex: 'none' }}>{(r.name[0] || r.email[0] || '?').toUpperCase()}</div>}
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ color: '#f1f5f9', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 6 }}>
+                            {r.name}
+                            {r.platformAdmin && <Pill tone="bad">Platform admin</Pill>}
+                          </div>
+                          <div style={{ color: '#64748b', fontSize: 11.5 }}>{r.email}{r.title ? ` · ${r.title}` : ''}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      {r.orgs.length === 0
+                        ? <Pill tone={r.allowlisted ? 'warn' : 'neutral'}>{r.allowlisted ? 'Allowlisted, not yet joined' : 'No workspace'}</Pill>
+                        : r.orgs.map(o => <span key={o.org_code} title={o.org_name} style={{ marginRight: 4 }}><Pill tone="accent">{o.org_code}</Pill></span>)}
+                    </td>
+                    <td style={{ textTransform: 'capitalize' }}>{r.orgs[0]?.role ?? '—'}</td>
+                    <td>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 3, fontSize: 11.5 }}>
+                        <span style={{ color: r.onboarded ? '#34d399' : '#64748b' }}>{r.onboarded ? '● Onboarded' : '○ Onboarding pending'}</span>
+                        <span style={{ color: r.calendar ? '#34d399' : '#64748b' }}>{r.calendar ? '● Calendar connected' : '○ No calendar'}</span>
+                      </div>
+                    </td>
+                    <td style={{ color: '#94a3b8', whiteSpace: 'nowrap' }}>
+                      <div>{fmtDate(r.joined)}</div>
+                      <div style={{ fontSize: 11, color: '#64748b' }}>via {r.provider === 'azure' ? 'Microsoft' : r.provider === 'google' ? 'Google' : 'email'}</div>
+                    </td>
+                    <td style={{ ...MONO, color: '#94a3b8', fontSize: 12, whiteSpace: 'nowrap' }}>{timeAgo(r.lastSignIn)}</td>
+                    <td style={{ textAlign: 'right' }}>
+                      {r.id === meId
+                        ? <span style={{ fontSize: 11, color: '#475569' }}>You</span>
+                        : <ViewAsButton userId={r.id} />}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
 
-      <p style={{ color: '#475569', fontSize: 11.5, marginTop: 14 }}>
-        &ldquo;View as&rdquo; opens the app exactly as that person sees it. A banner stays pinned while
-        you&rsquo;re viewing, and every session is recorded in the impersonation audit log.
+      <p style={{ color: '#475569', fontSize: 11.5, margin: 0 }}>
+        &ldquo;View as&rdquo; opens the app exactly as that person sees it, read-only, with a banner pinned while you look. Every session is recorded in the <Link href="/admin/impersonation" className="adm-link">View-as Log</Link>.
       </p>
     </div>
   );

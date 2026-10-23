@@ -1,26 +1,17 @@
 export const dynamic = 'force-dynamic';
 
 import { createServerClient } from '@/lib/supabase';
-import { Activity, CheckCircle, AlertCircle, Clock } from 'lucide-react';
+import { CheckCircle, AlertCircle } from 'lucide-react';
+import { AdminHeader, Card, Pill, Empty, MONO } from '@/components/admin/ui';
 
 async function getSystemData() {
   const db = createServerClient();
-  const [runsRes, matchesRes] = await Promise.all([
-    db.from('pipeline_runs')
-      .select('id, started_at, grants_discovered, grants_new, high_matches, medium_matches, duration_seconds, error_message')
-      .order('started_at', { ascending: false })
-      .limit(20),
-    db.from('match_results').select('id, composite_score, pipeline_stage, matched_at').order('matched_at', { ascending: false }).limit(5),
-  ]);
-
-  // Check Supabase connectivity
-  const supabaseOk = !runsRes.error;
-
-  return {
-    runs: runsRes.data ?? [],
-    recentMatches: matchesRes.data ?? [],
-    supabaseOk,
-  };
+  const runsRes = await db.from('pipeline_runs')
+    .select('id, started_at, grants_discovered, grants_new, high_matches, medium_matches, duration_seconds, error_message')
+    .order('started_at', { ascending: false })
+    .limit(20);
+  // A successful read doubles as the Supabase connectivity check.
+  return { runs: runsRes.data ?? [], supabaseOk: !runsRes.error };
 }
 
 function formatDuration(s: number | null): string {
@@ -28,12 +19,6 @@ function formatDuration(s: number | null): string {
   if (s < 60) return `${s}s`;
   return `${Math.floor(s / 60)}m ${s % 60}s`;
 }
-
-const CARD: React.CSSProperties = {
-  background: 'rgba(255,255,255,0.04)',
-  border: '1px solid rgba(255,255,255,0.07)',
-  borderRadius: '12px',
-};
 
 const GUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const GRAPH_SCOPES = ['Files.ReadWrite', 'Sites.ReadWrite.All', 'User.Read', 'Calendars.Read'];
@@ -86,7 +71,7 @@ async function getMicrosoftReadiness(domain: string) {
 export default async function AdminSystemPage({ searchParams }: { searchParams: Promise<{ domain?: string }> }) {
   const sp = await searchParams;
   const domain = (sp?.domain ?? 'chicagoyouthcenters.org').trim().toLowerCase();
-  const [{ runs, recentMatches, supabaseOk }, ms] = await Promise.all([getSystemData(), getMicrosoftReadiness(domain)]);
+  const [{ runs, supabaseOk }, ms] = await Promise.all([getSystemData(), getMicrosoftReadiness(domain)]);
 
   const checks = [
     { label: 'Supabase DB',       ok: supabaseOk,  note: supabaseOk ? 'Connected' : 'Connection error' },
@@ -99,31 +84,16 @@ export default async function AdminSystemPage({ searchParams }: { searchParams: 
   ];
 
   return (
-    <div style={{ padding: '36px 40px', maxWidth: '1000px' }}>
-      <div style={{ marginBottom: '28px' }}>
-        <p style={{ fontSize: '11px', fontWeight: 700, color: '#475569', letterSpacing: '0.1em', textTransform: 'uppercase', margin: '0 0 6px' }}>
-          Admin Console
-        </p>
-        <h1 style={{ fontSize: '24px', fontWeight: 800, color: '#f1f5f9', margin: 0, letterSpacing: '-0.02em' }}>
-          System
-        </h1>
-        <p style={{ fontSize: '13px', color: '#475569', margin: '6px 0 0' }}>
-          Infrastructure health and pipeline run history.
-        </p>
-      </div>
+    <div className="adm-page" style={{ maxWidth: 1000 }}>
+      <AdminHeader title="System" summary="Configuration health, grant-discovery run history, and the Microsoft 365 connection." />
 
-      {/* Health checks */}
-      <div style={{ ...CARD, padding: '20px 24px', marginBottom: '20px' }}>
-        <h2 style={{ fontSize: '13px', fontWeight: 700, color: '#e2e8f0', margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Activity size={14} color="#0d9488" />
-          Configuration Health
-        </h2>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+      <Card title="Configuration health" subtitle={`${checks.filter(c => c.ok).length} of ${checks.length} checks passing`}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 8, padding: 16 }}>
           {checks.map(({ label, ok, note }) => (
             <div key={label} style={{
               display: 'flex', alignItems: 'center', gap: '10px',
               padding: '10px 14px',
-              background: ok ? 'rgba(34,197,94,0.04)' : 'rgba(239,68,68,0.04)',
+              background: ok ? 'rgba(34,197,94,0.05)' : 'rgba(239,68,68,0.05)',
               border: `1px solid ${ok ? 'rgba(34,197,94,0.12)' : 'rgba(239,68,68,0.12)'}`,
               borderRadius: '8px',
             }}>
@@ -138,75 +108,35 @@ export default async function AdminSystemPage({ searchParams }: { searchParams: 
             </div>
           ))}
         </div>
-      </div>
+      </Card>
 
-      {/* Pipeline run log */}
-      <div style={CARD}>
-        <div style={{ padding: '16px 24px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Clock size={14} color="#0d9488" />
-          <h2 style={{ fontSize: '13px', fontWeight: 700, color: '#e2e8f0', margin: 0 }}>
-            Pipeline Run Log — Last {runs.length} Runs
-          </h2>
-        </div>
+      <Card title={`Pipeline run log · last ${runs.length}`} subtitle="Grant discovery executions, newest first">
         {runs.length === 0 ? (
-          <div style={{ padding: '40px', textAlign: 'center', color: '#475569', fontSize: '13px' }}>
-            No pipeline runs recorded yet. Run grant discovery from the Discover page.
-          </div>
+          <Empty>No pipeline runs recorded yet. Run grant discovery from the Discover page.</Empty>
         ) : (
           <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '600px' }}>
-              <thead>
-                <tr style={{ background: 'rgba(0,0,0,0.15)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                  {['Timestamp', 'Discovered', 'New', 'High', 'Medium', 'Duration', 'Status'].map(h => (
-                    <th key={h} style={{ padding: '10px 16px', textAlign: 'left', fontSize: '10px', fontWeight: 700, color: '#334155', letterSpacing: '0.07em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
+            <table className="adm-table" style={{ minWidth: 600 }}>
+              <thead><tr><th>Run</th><th>Discovered</th><th>New</th><th>High</th><th>Medium</th><th>Duration</th><th>Status</th></tr></thead>
               <tbody>
-                {runs.map((run, i) => (
-                  <tr key={run.id} style={{
-                    borderTop: i > 0 ? '1px solid rgba(255,255,255,0.04)' : 'none',
-                    transition: 'background 0.1s',
-                  }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.025)'; }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
-                  >
-                    <td style={{ padding: '11px 16px', fontSize: '12px', color: '#64748b', whiteSpace: 'nowrap' }}>
-                      {new Date(run.started_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                    </td>
-                    <td style={{ padding: '11px 16px', fontSize: '13px', fontWeight: 700, color: '#e2e8f0' }}>{run.grants_discovered}</td>
-                    <td style={{ padding: '11px 16px', fontSize: '13px', fontWeight: 700, color: '#0d9488' }}>{run.grants_new}</td>
-                    <td style={{ padding: '11px 16px', fontSize: '13px', fontWeight: 700, color: '#22c55e' }}>{run.high_matches}</td>
-                    <td style={{ padding: '11px 16px', fontSize: '13px', fontWeight: 700, color: '#fbbf24' }}>{run.medium_matches}</td>
-                    <td style={{ padding: '11px 16px', fontSize: '12px', color: '#64748b' }}>{formatDuration(run.duration_seconds)}</td>
-                    <td style={{ padding: '11px 16px' }}>
-                      {run.error_message ? (
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '2px 8px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '5px', fontSize: '10px', fontWeight: 600, color: '#f87171' }}>
-                          Error
-                        </span>
-                      ) : (
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '2px 8px', background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.2)', borderRadius: '5px', fontSize: '10px', fontWeight: 600, color: '#22c55e' }}>
-                          OK
-                        </span>
-                      )}
-                    </td>
+                {runs.map(run => (
+                  <tr key={run.id} className="adm-row" title={run.error_message ?? undefined}>
+                    <td style={{ color: '#94a3b8', fontSize: 12, whiteSpace: 'nowrap' }}>{new Date(run.started_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</td>
+                    <td style={{ fontWeight: 600 }}>{run.grants_discovered ?? '—'}</td>
+                    <td style={{ fontWeight: 700, color: '#2dd4bf' }}>{run.grants_new ?? '—'}</td>
+                    <td style={{ fontWeight: 700, color: '#4ade80' }}>{run.high_matches ?? '—'}</td>
+                    <td style={{ fontWeight: 700, color: '#fbbf24' }}>{run.medium_matches ?? '—'}</td>
+                    <td style={{ ...MONO, fontSize: 12, color: '#64748b' }}>{formatDuration(run.duration_seconds)}</td>
+                    <td>{run.error_message ? <Pill tone="bad">Error</Pill> : <Pill tone="good">OK</Pill>}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         )}
-      </div>
+      </Card>
 
-      {/* ── Microsoft 365 readiness ── */}
-      <div style={{ ...CARD, marginTop: '24px' }}>
-        <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-          <h2 style={{ fontSize: '14px', fontWeight: 700, color: '#f1f5f9', margin: 0 }}>Microsoft 365 readiness</h2>
-          <p style={{ fontSize: '12px', color: '#64748b', margin: '4px 0 0' }}>What the shared Data Hub connection depends on, and the one link a tenant admin needs.</p>
-        </div>
-        <div style={{ padding: '14px 20px', display: 'grid', gap: '10px', fontSize: '13px' }}>
+      <Card title="Microsoft 365 readiness" subtitle="What the shared Data Hub connection depends on, and the one link a tenant admin needs.">
+        <div style={{ padding: '14px 20px', display: 'grid', gap: 10, fontSize: 13 }}>
           {[
             { ok: !ms.tenantIsGuid, label: 'Sign-in authority', note: ms.tenantIsGuid ? `Pinned to one tenant (${ms.tenantSetting.slice(0, 8)}…) — every other organization is blocked. Set MICROSOFT_TENANT_ID to "organizations".` : `${ms.tenantSetting} — any work or school tenant can connect` },
             { ok: ms.clientIdSet, label: 'App registration', note: ms.clientIdSet ? 'Client ID configured' : 'MICROSOFT_CLIENT_ID missing' },
@@ -246,7 +176,7 @@ export default async function AdminSystemPage({ searchParams }: { searchParams: 
               : <p style={{ margin: 0, color: '#f87171' }}>No Microsoft 365 tenant found for {ms.domain}. Check the spelling, or the organization may not use Microsoft 365.</p>}
           </div>
         </div>
-      </div>
+      </Card>
     </div>
   );
 }
