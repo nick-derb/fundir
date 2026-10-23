@@ -1,117 +1,52 @@
 export const dynamic = 'force-dynamic';
 
 import { createServerClient } from '@/lib/supabase';
-import { Building2 } from 'lucide-react';
 import Link from 'next/link';
 import { OrgTableRow } from './org-table-row';
+import { AdminHeader, Card, Empty, timeAgo } from '@/components/admin/ui';
 
 async function getOrgs() {
   const db = createServerClient();
-  const { data } = await db
-    .from('organizations')
-    .select('id, org_code, name, ein, city, state, fiscal_year_start, fiscal_year_end, created_at')
-    .order('created_at', { ascending: false });
-  return data ?? [];
+  const [{ data: orgs }, { data: members }] = await Promise.all([
+    db.from('organizations').select('id, org_code, name, ein, city, state, fiscal_year_start, fiscal_year_end, created_at').order('created_at', { ascending: false }),
+    db.from('user_organizations').select('org_id'),
+  ]);
+  const counts = new Map<string, number>();
+  for (const m of members ?? []) counts.set(m.org_id, (counts.get(m.org_id) ?? 0) + 1);
+  return (orgs ?? []).map(o => ({ ...o, userCount: counts.get(o.id) ?? 0 }));
 }
 
 function fiscalLabel(start: string | null): string {
   if (!start) return 'Jan – Dec';
-  const map: Record<string, string> = {
-    '01-01': 'Jan – Dec',
-    '07-01': 'Jul – Jun',
-    '10-01': 'Oct – Sep',
-    '04-01': 'Apr – Mar',
-  };
-  return map[start] ?? start;
-}
-
-function timeAgo(ts: string) {
-  const diff = Date.now() - new Date(ts).getTime();
-  const days = Math.floor(diff / 86_400_000);
-  if (days === 0) return 'Today';
-  if (days === 1) return 'Yesterday';
-  return `${days}d ago`;
+  return ({ '01-01': 'Jan – Dec', '07-01': 'Jul – Jun', '10-01': 'Oct – Sep', '04-01': 'Apr – Mar' } as Record<string, string>)[start] ?? start;
 }
 
 export default async function AdminOrganizationsPage() {
   const orgs = await getOrgs();
 
   return (
-    <div style={{ padding: '36px 40px', maxWidth: '1200px' }}>
-
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '28px' }}>
-        <div>
-          <p style={{ fontSize: '11px', fontWeight: 700, color: '#475569', letterSpacing: '0.1em', textTransform: 'uppercase', margin: '0 0 6px' }}>
-            Admin Console
-          </p>
-          <h1 style={{ fontSize: '24px', fontWeight: 800, color: '#f1f5f9', margin: 0, letterSpacing: '-0.02em' }}>
-            Organizations
-          </h1>
-          <p style={{ fontSize: '13px', color: '#475569', margin: '6px 0 0' }}>
-            {orgs.length} organization{orgs.length !== 1 ? 's' : ''} registered on the platform.
-          </p>
-        </div>
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: '6px',
-          padding: '6px 14px',
-          background: 'rgba(13,148,136,0.08)',
-          border: '1px solid rgba(13,148,136,0.2)',
-          borderRadius: '8px',
-          fontSize: '12px', fontWeight: 600, color: '#0d9488',
-        }}>
-          <Building2 size={13} />
-          {orgs.length} total
-        </div>
-      </div>
-
-      <div style={{
-        background: 'rgba(255,255,255,0.03)',
-        border: '1px solid rgba(255,255,255,0.07)',
-        borderRadius: '12px',
-        overflow: 'hidden',
-      }}>
+    <div className="adm-page">
+      <AdminHeader
+        title="Organizations"
+        summary={`${orgs.length} organization${orgs.length !== 1 ? 's' : ''} on the platform. Deleting one removes its workspace and every row that belongs to it.`}
+        right={<Link href="/admin/invites" className="adm-link">Invite a new organization →</Link>}
+      />
+      <Card>
         {orgs.length === 0 ? (
-          <div style={{ padding: '60px', textAlign: 'center' }}>
-            <Building2 size={32} color="#1e293b" style={{ margin: '0 auto 12px' }} />
-            <p style={{ fontSize: '14px', color: '#475569' }}>No organizations registered yet.</p>
-            <Link href="/admin/invites" style={{ fontSize: '13px', color: '#0d9488' }}>
-              Create an invite code to get started →
-            </Link>
-          </div>
+          <Empty>No organizations yet. <Link href="/admin/invites" className="adm-link">Create an invite code to get started →</Link></Empty>
         ) : (
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-                {['Organization', 'EIN', 'Location', 'Org Code', 'Fiscal Year', 'Joined', 'Actions'].map(h => (
-                  <th key={h} style={{
-                    padding: '12px 16px',
-                    fontSize: '10px', fontWeight: 700,
-                    color: '#334155',
-                    letterSpacing: '0.07em',
-                    textTransform: 'uppercase',
-                    textAlign: 'left',
-                    background: 'rgba(0,0,0,0.2)',
-                    whiteSpace: 'nowrap',
-                  }}>
-                    {h}
-                  </th>
+          <div style={{ overflowX: 'auto' }}>
+            <table className="adm-table">
+              <thead><tr><th>Organization</th><th>EIN</th><th>Location</th><th>Code</th><th>Users</th><th>Fiscal year</th><th>Joined</th><th>Actions</th></tr></thead>
+              <tbody>
+                {orgs.map(org => (
+                  <OrgTableRow key={org.id} org={org} fiscalLabel={fiscalLabel(org.fiscal_year_start)} timeAgo={timeAgo(org.created_at)} />
                 ))}
-              </tr>
-            </thead>
-            <tbody>
-              {orgs.map((org, i) => (
-                <OrgTableRow
-                  key={org.id}
-                  org={org}
-                  isFirst={i === 0}
-                  fiscalLabel={fiscalLabel(org.fiscal_year_start)}
-                  timeAgo={org.created_at ? timeAgo(org.created_at) : '—'}
-                />
-              ))}
-            </tbody>
-          </table>
+              </tbody>
+            </table>
+          </div>
         )}
-      </div>
+      </Card>
     </div>
   );
 }

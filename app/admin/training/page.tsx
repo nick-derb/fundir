@@ -3,6 +3,7 @@ import { createServerClient } from '@/lib/supabase';
 import { FEATURE_SPEC_VERSION } from '@/lib/training/feature-export';
 import { fetchFunderWinRateSummary } from '@/lib/funder-win-rates';
 import { TrainingActions } from '@/components/admin/training-actions';
+import { AdminHeader, Stat } from '@/components/admin/ui';
 import { redirect } from 'next/navigation';
 
 export const dynamic = 'force-dynamic';
@@ -44,20 +45,16 @@ export default async function TrainingPage() {
   const pct = Math.min(100, Math.round((total / MIN_LABELS) * 100));
 
   const card: React.CSSProperties = {
-    border: '1px solid rgba(255,255,255,0.08)', borderRadius: 'var(--radius)',
-    background: 'rgba(255,255,255,0.02)', padding: '18px 20px',
+    border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12,
+    background: 'rgba(255,255,255,0.03)', padding: '18px 20px',
   };
-  const stat: React.CSSProperties = { ...card, flex: 1, minWidth: 150 };
-  const statNum: React.CSSProperties = { fontSize: 28, fontWeight: 700, color: '#f1f5f9', lineHeight: 1 };
-  const statLbl: React.CSSProperties = { fontSize: 11, color: '#64748b', marginTop: 7, letterSpacing: '0.04em', textTransform: 'uppercase' };
 
   return (
-    <div style={{ padding: '32px 36px', color: '#e2e8f0', maxWidth: 900 }}>
-      <div style={{ marginBottom: 6, fontSize: 22, fontWeight: 700, letterSpacing: '-0.01em' }}>Model Training</div>
-      <p style={{ color: '#64748b', fontSize: 13, margin: '0 0 24px' }}>
-        Phase 1 — turning CYC&rsquo;s outcome history and Data Hub metrics into a versioned, trainable
-        dataset. Nothing here changes live scores; the transparent heuristic remains the source of truth.
-      </p>
+    <div className="adm-page" style={{ maxWidth: 900 }}>
+      <AdminHeader
+        title="Model Training"
+        summary={`Phase 1: turning ${ctx.orgName}'s outcome history and Data Hub metrics into a versioned, trainable dataset. Nothing here changes live scores; the transparent heuristic remains the source of truth.`}
+      />
 
       {/* readiness */}
       <div style={{ ...card, marginBottom: 20, borderColor: ready ? 'rgba(52,211,153,0.35)' : 'rgba(251,191,36,0.30)' }}>
@@ -79,19 +76,11 @@ export default async function TrainingPage() {
       </div>
 
       {/* stats */}
-      <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginBottom: 20 }}>
-        <div style={stat}><div style={statNum}>{total}</div><div style={statLbl}>Labeled examples</div></div>
-        <div style={stat}><div style={statNum}>{awarded}</div><div style={statLbl}>Awarded</div></div>
-        <div style={stat}><div style={statNum}>{rejected}</div><div style={statLbl}>Rejected</div></div>
-        <div style={stat}>
-          <div style={statNum}>{snapCount}</div>
-          <div style={statLbl}>Data Hub snapshots</div>
-          {latestSnap && (
-            <div style={{ fontSize: 10.5, color: '#475569', marginTop: 6 }}>
-              last {new Date(latestSnap.taken_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} · {latestSnap.row_count} rows
-            </div>
-          )}
-        </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 20 }}>
+        <Stat label="Labeled examples" value={total} />
+        <Stat label="Awarded" value={awarded} tone="#4ade80" />
+        <Stat label="Rejected" value={rejected} tone="#f87171" />
+        <Stat label="Data Hub snapshots" value={snapCount} sub={latestSnap ? `last ${new Date(latestSnap.taken_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} · ${latestSnap.row_count} rows` : undefined} />
       </div>
 
       {/* real grant track record (lever #2) */}

@@ -18,11 +18,7 @@ interface InviteCode {
   expires_at: string | null;
 }
 
-const CARD: React.CSSProperties = {
-  background: 'rgba(255,255,255,0.04)',
-  border: '1px solid rgba(255,255,255,0.07)',
-  borderRadius: '12px',
-};
+import { AdminHeader, CARD } from '@/components/admin/ui';
 
 function StatusBadge({ code }: { code: InviteCode }) {
   const pct = code.max_uses > 0 ? (code.uses_count / code.max_uses) * 100 : 0;
@@ -178,7 +174,7 @@ export default function AdminInvitesPage() {
   }
 
   return (
-    <div style={{ padding: '36px 40px', maxWidth: '960px' }}>
+    <div className="adm-page" style={{ maxWidth: 960 }}>
 
       {/* Toast */}
       {toast && (
@@ -194,18 +190,7 @@ export default function AdminInvitesPage() {
         </div>
       )}
 
-      {/* Header */}
-      <div style={{ marginBottom: '28px' }}>
-        <p style={{ fontSize: '11px', fontWeight: 700, color: '#475569', letterSpacing: '0.1em', textTransform: 'uppercase', margin: '0 0 6px' }}>
-          Admin Console
-        </p>
-        <h1 style={{ fontSize: '24px', fontWeight: 800, color: '#f1f5f9', margin: 0, letterSpacing: '-0.02em' }}>
-          Invite Codes
-        </h1>
-        <p style={{ fontSize: '13px', color: '#475569', margin: '6px 0 0' }}>
-          Create codes for new organizations. Share the invite link — they land directly in the onboarding flow.
-        </p>
-      </div>
+      <AdminHeader title="Invite Codes" summary="Codes for onboarding a new organization. Share the invite link and they land in the onboarding flow with the code pre-filled. For adding a person to an existing workspace, use Access Control instead." />
 
       {/* How it works */}
       <div style={{ ...CARD, padding: '16px 20px', marginBottom: '20px', display: 'flex', gap: '24px' }}>
