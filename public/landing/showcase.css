@@ -5,9 +5,6 @@
 .sc{--ink:#101917;--ink2:#5E6D67;--ink3:#A3AFAA;--rule:#E2E6E4;--sunk:#F1F4F3;--paper:#F7F8F7;--accent:#0C6B5A;--accent-tint:rgba(12,107,90,.08);--sage:#659A80;--gold:#B7A46A;--amber:#C0852B;--slate:#5B7383;--mono:'JetBrains Mono',ui-monospace,monospace;--serif:'Instrument Serif',Palatino,Georgia,serif;--sans:Inter,ui-sans-serif,system-ui,sans-serif;position:relative;z-index:2;background:var(--paper);padding:110px 40px;color:var(--ink)}
 .sc *{box-sizing:border-box}
 .sc-in{max-width:1180px;margin:0 auto}
-.sc-h{font-family:var(--serif);font-weight:400;font-size:clamp(1.9rem,3.7vw,3.05rem);line-height:1.12;letter-spacing:-.018em;margin:0 0 44px;max-width:40ch;text-wrap:pretty}
-.sc-h span{color:#7F8E88}
-.sc-h--sans{font-family:var(--sans);font-weight:500;font-size:clamp(1.55rem,2.9vw,2.45rem);line-height:1.22;letter-spacing:-.022em;max-width:34ch}
 
 /* ── cards ── */
 .sc-card{position:relative;display:flex;flex-direction:column;min-height:470px;background:#fff;border:1px solid var(--rule);border-radius:12px;overflow:hidden;box-shadow:0 1px 2px rgba(16,25,23,.03);transition:box-shadow .35s,transform .35s}
