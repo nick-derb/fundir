@@ -74,7 +74,6 @@
 .sc-stat[aria-pressed="true"] b,.sc-stat[aria-pressed="true"] span{color:var(--ink)}
 .sc-viz{position:relative;height:520px;background:radial-gradient(60% 70% at 50% 72%,rgba(101,154,128,.42),rgba(101,154,128,0) 72%),radial-gradient(90% 60% at 50% 100%,rgba(12,107,90,.18),rgba(12,107,90,0) 70%),#fff}
 .sc-viz canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
-.sc-viz .sc-chip{top:16px;right:16px}
 
 /* ── variant C: map + data hub + ledger ── */
 .sc-c-row{display:grid;grid-template-columns:1.85fr 1fr;gap:16px}
