@@ -1,8 +1,7 @@
-/* Fundir showcase — the motion behind the product cards: variant switcher
-   (mockup only), expand toggles, assistant chat sequence, lead-card state
-   loop, Data Hub reading loop, the relationship globe, and the morphing
-   network behind the stats row. Every loop starts when its card scrolls into
-   view and respects prefers-reduced-motion. */
+/* Fundir home page — the motion behind the product cards: expand toggles,
+   score rings, the Data Hub reading loop, the bar chart, the morphing network
+   behind the stats row, and the relationship-map edges. Every loop starts when
+   its card scrolls into view and respects prefers-reduced-motion. */
 window.FundirShowcase = {
   init: function (root) {
     root = root || document;
@@ -23,24 +22,7 @@ window.FundirShowcase = {
       var g = c.getContext('2d'); g.setTransform(d, 0, 0, d, 0, 0); return { g: g, w: r.width, h: r.height };
     }
 
-    /* ── variant switcher (mockup only) ── */
-    var variants = [].slice.call(root.querySelectorAll('[data-sc-variant]'));
-    var sw = root.querySelector('[data-sc-switch]');
-    var booted = {};
-    function show(key) {
-      variants.forEach(function (v) { v.hidden = v.getAttribute('data-sc-variant') !== key; });
-      if (sw) [].forEach.call(sw.querySelectorAll('button'), function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-key') === key)); });
-      if (history.replaceState) history.replaceState(null, '', '#mock-' + key);
-      var v = variants.filter(function (x) { return x.getAttribute('data-sc-variant') === key; })[0];
-      if (v && !booted[key]) { booted[key] = true; boot(v); }
-      document.querySelectorAll('[data-reveal]:not(.fd-in)').forEach(function (el) { if (v && v.contains(el)) el.classList.add('fd-in'); });
-    }
-    if (variants.length) {
-      var m = (location.hash || '').match(/mock-([abc])/);
-      var start = m ? m[1] : (variants[0].getAttribute('data-sc-variant'));
-      if (sw) sw.addEventListener('click', function (e) { var b = e.target.closest('button[data-key]'); if (b) { show(b.getAttribute('data-key')); var sec = root.querySelector('.sc'); if (sec) sec.scrollIntoView({ behavior: 'smooth', block: 'start' }); } });
-      show(start);
-    } else boot(root);
+    boot(root);
 
     function boot(scope) {
       /* expand buttons: the card takes the full row */
@@ -53,25 +35,6 @@ window.FundirShowcase = {
         });
       });
 
-      /* assistant chat: bubbles arrive in order, then the exchange replays */
-      [].forEach.call(scope.querySelectorAll('[data-sc-chat]'), function (chat) {
-        var steps = [].slice.call(chat.querySelectorAll('.sc-bub'));
-        if (reduce) { chat.classList.add('is-live'); return; }
-        onVisible(chat, function () {
-          function run() {
-            chat.classList.remove('is-live'); steps.forEach(function (s) { s.style.transitionDelay = '0s'; });
-            requestAnimationFrame(function () { steps.forEach(function (s, i) { s.style.transitionDelay = (0.3 + i * 0.9) + 's'; }); chat.classList.add('is-live'); });
-          }
-          run(); setInterval(run, 9000);
-        });
-      });
-
-      /* lead card: intro needed → meeting booked, like checkout → receipt */
-      [].forEach.call(scope.querySelectorAll('[data-sc-lead]'), function (lead) {
-        lead.setAttribute('data-state', '0');
-        if (reduce) return;
-        onVisible(lead, function () { var s = 0; setInterval(function () { s = 1 - s; lead.setAttribute('data-state', String(s)); }, 3600); });
-      });
 
       /* score rings */
       [].forEach.call(scope.querySelectorAll('[data-sc-ring]'), function (svg) {
@@ -106,59 +69,6 @@ window.FundirShowcase = {
       /* bar chart */
       [].forEach.call(scope.querySelectorAll('[data-sc-chart]'), function (ch) { onVisible(ch, function () { ch.classList.add('is-live'); }); });
 
-      /* speckles: dust in two corners, the Fundir answer to Stripe's pink grain */
-      [].forEach.call(scope.querySelectorAll('[data-sc-speckle]'), function (c) {
-        function draw() {
-          var f = fitCanvas(c); if (!f) return; var g = f.g, w = f.w, h = f.h, R = rnd(7); g.clearRect(0, 0, w, h);
-          var cl = [[0.08, 0.14, 0.26], [0.95, 0.9, 0.3], [0.5, 1.05, 0.22]];
-          for (var k = 0; k < cl.length; k++) for (var i = 0; i < 520; i++) {
-            var a = R() * 6.283, d = Math.pow(R(), 0.55) * cl[k][2] * Math.max(w, h);
-            var x = cl[k][0] * w + Math.cos(a) * d, y = cl[k][1] * h + Math.sin(a) * d * 0.8;
-            var t = d / (cl[k][2] * Math.max(w, h));
-            g.fillStyle = rgba(R() < 0.18 ? GOLD : SAGE, (1 - t) * 0.55 * (0.4 + R() * 0.6));
-            g.beginPath(); g.arc(x, y, 0.6 + R() * 1.1, 0, 6.283); g.fill();
-          }
-        }
-        draw(); window.addEventListener('resize', draw);
-      });
-
-      /* globe: the network as a sphere of people, with two warm paths lit */
-      [].forEach.call(scope.querySelectorAll('[data-sc-globe]'), function (c) {
-        var N = 2600, pts = [], R = rnd(11), phi = Math.PI * (3 - Math.sqrt(5));
-        for (var i = 0; i < N; i++) { var y = 1 - (i / (N - 1)) * 2, r = Math.sqrt(1 - y * y), th = phi * i; pts.push([Math.cos(th) * r, y, Math.sin(th) * r, R()]); }
-        var arcs = [[[-0.55, 0.18], [0.5, 0.62]], [[-0.1, -0.2], [0.65, 0.3]], [[0.2, 0.75], [-0.6, 0.45]]];
-        var rot = 0, last = 0, raf;
-        function rotY(p, a) { var cs = Math.cos(a), sn = Math.sin(a); return [p[0] * cs - p[2] * sn, p[1], p[0] * sn + p[2] * cs]; }
-        function onSphere(lon, lat) { return [Math.cos(lat) * Math.sin(lon), Math.sin(lat), Math.cos(lat) * Math.cos(lon)]; }
-        function slerp(a, b, t) { var d = Math.max(-1, Math.min(1, a[0] * b[0] + a[1] * b[1] + a[2] * b[2])), o = Math.acos(d), s = Math.sin(o) || 1; var ka = Math.sin((1 - t) * o) / s, kb = Math.sin(t * o) / s; return [a[0] * ka + b[0] * kb, a[1] * ka + b[1] * kb, a[2] * ka + b[2] * kb]; }
-        function frame(ts) {
-          var f = fitCanvas(c); if (!f) { raf = requestAnimationFrame(frame); return; }
-          var g = f.g, w = f.w, h = f.h, cx = w * 0.5, cy = h * 0.92, Rr = Math.min(w * 0.62, h * 0.95);
-          if (!reduce) rot += Math.min(0.05, (ts - last) / 1000) * 0.12; last = ts;
-          g.clearRect(0, 0, w, h);
-          var tilt = -0.42;
-          function proj(p) { var q = rotY(p, rot); var y2 = q[1] * Math.cos(tilt) - q[2] * Math.sin(tilt), z2 = q[1] * Math.sin(tilt) + q[2] * Math.cos(tilt); return [cx + q[0] * Rr, cy - y2 * Rr, z2]; }
-          for (var i = 0; i < N; i++) { var s = proj(pts[i]); if (s[2] < -0.05 || s[1] > h + 4) continue; var a = 0.12 + (s[2] + 0.05) * 0.55; g.fillStyle = rgba(pts[i][3] < 0.1 ? GOLD : pts[i][3] < 0.5 ? SAGE : ACC, a * (0.5 + pts[i][3] * 0.5)); g.beginPath(); g.arc(s[0], s[1], 0.9 + pts[i][3] * 0.9, 0, 6.283); g.fill(); }
-          /* equator ring, like the pink orbit */
-          g.strokeStyle = rgba(GOLD, 0.55); g.lineWidth = 1; g.beginPath();
-          for (var k = 0; k <= 180; k++) { var lon = -Math.PI + k / 90 * Math.PI, s2 = proj(onSphere(lon, 0.28)); if (s2[2] < 0) { g.moveTo(s2[0], s2[1]); continue; } g.lineTo(s2[0], s2[1]); } g.stroke();
-          /* warm paths */
-          var pulse = (ts / 2600) % 1;
-          arcs.forEach(function (ar, j) {
-            var A = onSphere(ar[0][0], ar[0][1]), B = onSphere(ar[1][0], ar[1][1]);
-            g.lineWidth = 1.6; g.strokeStyle = rgba(ACC, 0.85); g.beginPath();
-            var started = false;
-            for (var t = 0; t <= 1.0001; t += 0.02) { var p = slerp(A, B, t); var lift = 1 + Math.sin(t * Math.PI) * 0.09; var s3 = proj([p[0] * lift, p[1] * lift, p[2] * lift]); if (s3[2] < -0.02) { started = false; continue; } if (!started) { g.moveTo(s3[0], s3[1]); started = true; } else g.lineTo(s3[0], s3[1]); }
-            g.stroke();
-            var pp = slerp(A, B, (pulse + j * 0.33) % 1), lift2 = 1 + Math.sin(((pulse + j * 0.33) % 1) * Math.PI) * 0.09, sp = proj([pp[0] * lift2, pp[1] * lift2, pp[2] * lift2]);
-            if (sp[2] > 0) { g.fillStyle = rgba(ACC, 1); g.beginPath(); g.arc(sp[0], sp[1], 3, 0, 6.283); g.fill(); g.fillStyle = rgba(ACC, 0.18); g.beginPath(); g.arc(sp[0], sp[1], 8, 0, 6.283); g.fill(); }
-            [A, B].forEach(function (e) { var se = proj(e); if (se[2] > 0) { g.fillStyle = '#fff'; g.beginPath(); g.arc(se[0], se[1], 3.2, 0, 6.283); g.fill(); g.strokeStyle = rgba(ACC, 1); g.lineWidth = 1.5; g.stroke(); } });
-          });
-          if (!reduce) raf = requestAnimationFrame(frame);
-        }
-        onVisible(c, function () { raf = requestAnimationFrame(frame); });
-        window.addEventListener('resize', function () { if (reduce) frame(0); });
-      });
 
       /* morphing network behind the stats row */
       [].forEach.call(scope.querySelectorAll('[data-sc-viz]'), function (box) {
