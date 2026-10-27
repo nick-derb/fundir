@@ -8,8 +8,7 @@ import { getValidUserToken } from '@/lib/oauth-tokens';
 import { getUpcomingEvents, type CalendarEvent } from '@/lib/microsoft-graph';
 import { getGoogleUpcomingEvents } from '@/lib/google-calendar';
 import { cookies } from 'next/headers';
-import { type DashData } from '@/components/dashboard/dashboard-view';
-import { TodayView } from '@/components/dashboard/today-view';
+import { DashboardView, type DashData } from '@/components/dashboard/dashboard-view';
 import { buildBrief } from '@/lib/brief';
 
 const FY_MONTHS = ['Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
@@ -183,7 +182,7 @@ export default async function DashboardPage() {
 
   return (
     <AppShell orgName={ctx.orgName} orgId={ctx.orgId} userEmail={ctx.email} userName={ctx.displayName} userAvatar={ctx.avatarUrl} isAdmin={ctx.isAdmin} availableOrgs={ctx.availableOrgs} currentOrgCode={ctx.orgCode}>
-      <TodayView data={data} brief={brief} />
+      <DashboardView data={data} brief={brief} />
     </AppShell>
   );
 }

@@ -1,21 +1,25 @@
 'use client';
 
-// Tenant dashboard. Wired to real data: Instrumentl pipeline
-// (cyc_grant_submissions) for KPIs / deadlines / activity / needs, org_goals
-// for goals, and the user's Microsoft/Google calendar.
+// Tenant dashboard. Wired to real data: the application pipeline
+// (cyc_grant_submissions) for KPIs / deadlines / activity, org_goals for
+// goals, the user's Microsoft/Google calendar, and the brief (lib/brief) for
+// what changed in the funding picture, what is due and who to ask.
 //
-// Layout, top to bottom: date + greeting, one ruled KPI strip, then the
-// left column in order of urgency (next deadlines, this week, deadline load
-// by month, FY goals) with a rail for today, needs-attention and the
-// assistant. No hero band, parallax, reveal-on-scroll or hover lift: the
-// numbers carry the page.
+// Layout, top to bottom: the tenant's hero (CYC's plays once per session),
+// date + greeting, one ruled KPI strip, then the left column in order of
+// urgency (what changed, next deadlines, this week, deadline load by month,
+// FY goals) with a rail for do-today, the board's asks, today's calendar
+// and the assistant.
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import {
   CalendarDays, Mail, Send, CheckCircle2, Hourglass, Radar, ArrowRight,
-  FileEdit, MessageSquare, Clock, Pencil, X, Plus, Trash2,
+  MessageSquare, Clock, Pencil, X, Plus, Trash2, FileEdit,
 } from 'lucide-react';
+import type { Brief } from '@/lib/brief';
+import { CycHeroTransform } from '@/components/cyc-hero-transform';
+import { BRIEF_CSS, BriefSection, DoToday, AskYourBoard, useBriefSeen, briefSummary } from './brief-section';
 import { OrgName } from '@/components/org-context';
 
 declare global {
@@ -80,7 +84,9 @@ function SectionHead({ title, sub, right }: { title: string; sub?: string; right
   );
 }
 
-export function DashboardView({ data, embedded }: { data: DashData; embedded?: boolean }) {
+export function DashboardView({ data, brief }: { data: DashData; brief?: Brief }) {
+  const [now] = useState(() => new Date());
+  useBriefSeen();
   const [goals, setGoals] = useState(data.goals);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<DashGoal[]>([]);
@@ -120,21 +126,24 @@ export function DashboardView({ data, embedded }: { data: DashData; embedded?: b
   }
 
   return (
-    <div className="dv-root" ref={rootRef} style={{ background: 'var(--bg-page)', padding: embedded ? 0 : '22px 26px 40px' }}>
-      <style dangerouslySetInnerHTML={{ __html: CSS }} />
+    <div className="dv-root" ref={rootRef} style={{ background: 'var(--bg-page)', padding: '22px 26px 40px' }}>
+      <style dangerouslySetInnerHTML={{ __html: CSS + BRIEF_CSS }} />
+
+      {/* The tenant's hero. CYC's skyline-to-wordmark sequence plays once per browser session, then rests. */}
+      {data.isCyc && <div className="dv-section" style={{ marginBottom: 18, overflow: 'hidden' }}><CycHeroTransform /></div>}
 
       {/* header */}
-      {!embedded && <div className="fd-page-head" style={{ marginBottom: 16 }}>
+      <div className="fd-page-head" style={{ marginBottom: 16 }}>
         <div style={{ minWidth: 0 }}>
           <p className="fd-eyebrow" style={{ color: 'var(--text-tertiary)', margin: 0 }}>{data.today}</p>
           <h1>{data.greeting}, {data.firstName}</h1>
-          <p className="fd-lede">Live workspace · your Instrumentl pipeline and calendar</p>
+          <p className="fd-lede">{(brief && briefSummary(brief)) ?? 'Live workspace · your pipeline, calendar and network'}</p>
         </div>
         <div className="dv-actions" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <Link href="/calendar" className="fd-btn"><CalendarDays style={{ width: 13, height: 13 }} />Calendar</Link>
           <a href="https://outlook.office.com/mail/" target="_blank" rel="noreferrer" className="fd-btn-primary"><Mail style={{ width: 13, height: 13 }} />Open Outlook</a>
         </div>
-      </div>}
+      </div>
 
       {/* KPI strip */}
       <div className="fd-stats" style={{ marginBottom: 18 }}>
@@ -155,10 +164,13 @@ export function DashboardView({ data, embedded }: { data: DashData; embedded?: b
         })}
       </div>
 
-      <div className="dv-cols" style={embedded ? { gridTemplateColumns: 'minmax(0,1fr)' } : undefined}>
+      <div className="dv-cols">
 
         {/* LEFT */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 18, minWidth: 0 }}>
+
+          {/* What changed: the brief */}
+          {brief && <BriefSection brief={brief} now={now} head={(title, sub, right) => <SectionHead title={title} sub={sub} right={right} />} />}
 
           {/* Next deadlines */}
           <section className="dv-section" aria-labelledby="dv-deadlines">
@@ -262,7 +274,9 @@ export function DashboardView({ data, embedded }: { data: DashData; embedded?: b
         </div>
 
         {/* RIGHT RAIL */}
-        {!embedded && <div className="dv-rail">
+        <div className="dv-rail">
+          {brief && <DoToday brief={brief} />}
+          {brief && <AskYourBoard brief={brief} />}
 
           {/* Today */}
           <section className="dv-section" style={{ padding: '14px 16px' }}>
@@ -284,8 +298,8 @@ export function DashboardView({ data, embedded }: { data: DashData; embedded?: b
             ))}
           </section>
 
-          {/* Needs attention */}
-          {data.needs.length > 0 && (
+          {/* Needs attention (only without a brief) */}
+          {!brief && data.needs.length > 0 && (
             <section className="dv-section" style={{ padding: '14px 16px 6px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
                 <span className="fd-eyebrow" style={{ color: 'var(--text-secondary)', flex: 1 }}>Needs attention</span>
@@ -306,7 +320,7 @@ export function DashboardView({ data, embedded }: { data: DashData; embedded?: b
             <p style={{ margin: '0 0 12px', fontSize: 12.5, lineHeight: 1.55, color: 'var(--text-secondary)' }}>Search your filings, documents and funder record in plain language.</p>
             <button type="button" onClick={() => window.dispatchEvent(new CustomEvent('fundir:open-advisor'))} className="fd-btn" style={{ width: '100%', justifyContent: 'center' }}><MessageSquare style={{ width: 13, height: 13 }} />Open assistant</button>
           </section>
-        </div>}
+        </div>
       </div>
 
       {/* goals modal */}

@@ -34,7 +34,7 @@ type NavGroup = { label: string; items: NavItem[] };
 
 const NAV_GROUPS: NavGroup[] = [
   { label: 'Your day', items: [
-    { href: '/dashboard',    label: 'Today',        icon: LayoutDashboard },
+    { href: '/dashboard',    label: 'Dashboard',    icon: LayoutDashboard },
     { href: '/calendar',     label: 'Calendar',     icon: CalendarDays    },
     { href: '/applications', label: 'Applications', icon: FileText,       adminOnly: true },
   ] },
