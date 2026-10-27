@@ -61,7 +61,7 @@ export function CalendarConnector({ status }: Props) {
               <span className="block text-[11.5px] text-tertiary truncate">{st.connected && st.email ? `Connected as ${st.email}` : desc}</span>
             </span>
             {st.connected ? (
-              <span className="inline-flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-[.12em] text-accent">
+ <span className="inline-flex items-center gap-1.5 text-[11.5px] font-mono text-accent">
                 <CheckCircle className="w-3.5 h-3.5" /> Connected
               </span>
             ) : (

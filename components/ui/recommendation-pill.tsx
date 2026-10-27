@@ -36,7 +36,7 @@ export function RecommendationPill({ recommendation, reason, label }: Recommenda
     <span
       title={reason}
       className={clsx(
-        'inline-flex items-center h-6 px-2.5 rounded-sm font-semibold uppercase tracking-wider text-eyebrow',
+ 'inline-flex items-center h-6 px-2.5 rounded-sm font-semibold text-eyebrow',
         VARIANT_CLASSES[recommendation],
       )}
     >

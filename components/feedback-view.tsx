@@ -9,6 +9,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Bug, Database, Lightbulb, Send, Check, Copy, Loader2, Paperclip, X, Download } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/supabase';
+import { OrgShort, useOrg } from '@/components/org-context';
 
 interface Attachment { name: string; path: string; size: number; type: string | null }
 const fmtSize = (n: number) => (n >= 1e6 ? `${(n / 1e6).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1e3))} KB`);
@@ -49,6 +50,7 @@ function Label({ children, accent }: { children: React.ReactNode; accent?: boole
 }
 
 export function FeedbackView({ initialPage, isAdmin, orgName }: { initialPage: string | null; isAdmin: boolean; orgName: string }) {
+  const org = useOrg();
   const [kind, setKind] = useState<Kind>(initialPage ? 'bug' : 'data');
   const [page, setPage] = useState(initialPage ?? '');
   const [title, setTitle] = useState('');
@@ -175,14 +177,14 @@ export function FeedbackView({ initialPage, isAdmin, orgName }: { initialPage: s
               <button type="button" className="fd-btn-primary" disabled={!canSend || busy || !!uploading} onClick={submit}>{busy ? <Loader2 className="animate-spin" style={{ width: 13, height: 13 }} /> : <Send style={{ width: 13, height: 13 }} />}Send</button>
               <span className="fd-caption" style={{ color: 'var(--text-tertiary)' }}>Sent as you, with the page and today&rsquo;s date.</span>
             </div>
-            <p className="fd-caption" style={{ color: 'var(--text-tertiary)', margin: '4px 0 0', borderTop: '1px solid var(--border-hairline)', paddingTop: 10 }}>Fundir is in beta with CYC. Every message is read by a person. Data corrections are applied with your name and the date as their source, never silently.</p>
+            <p className="fd-caption" style={{ color: 'var(--text-tertiary)', margin: '4px 0 0', borderTop: '1px solid var(--border-hairline)', paddingTop: 10 }}>Fundir is in beta with <OrgShort />. Every message is read by a person. Data corrections are applied with your name and the date as their source, never silently.</p>
           </div>
         </div>
 
         {/* queue */}
         <div className="fd-card" style={{ overflow: 'hidden' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderBottom: '1px solid var(--border-hairline)' }}>
-            <span className="fd-eyebrow" style={{ color: 'var(--text-secondary)' }}>{isAdmin ? 'Queue · everyone at CYC' : 'Your messages'}</span>
+            <span className="fd-eyebrow" style={{ color: 'var(--text-secondary)' }}>{isAdmin ? `Queue · everyone at ${org.short}` : 'Your messages'}</span>
             <span className="fd-mono" style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>{openCount} open</span>
             <span style={{ flex: 1 }} />
             <div style={{ display: 'flex', gap: 4 }}>
@@ -202,9 +204,9 @@ export function FeedbackView({ initialPage, isAdmin, orgName }: { initialPage: s
 function promptFor(it: Item): string {
   const where = it.page ? ` on ${it.page}` : '';
   const att = it.attachments?.length ? ` Attachments (private 'feedback' bucket): ${it.attachments.map(a => a.path).join(', ')}.` : '';
-  if (it.kind === 'bug') return `Bug report from ${it.user_name ?? it.user_email ?? 'a CYC user'}${where}: "${it.title}". What happened: ${it.details ?? '—'}. Expected: ${it.expected ?? '—'}.${att} Please find the cause and fix it.`;
-  if (it.kind === 'data') { const r = it.record_ref ?? {}; return `Data correction from ${it.user_name ?? it.user_email ?? 'a CYC user'}: ${r.entity ?? 'record'} "${r.name ?? ''}" — field "${r.field ?? ''}" currently "${r.current ?? ''}", should be "${r.proposed ?? ''}". Source: ${r.source || `${it.user_name ?? it.user_email} (CYC staff), ${it.created_at.slice(0, 10)}`}. ${it.details ?? ''}${att} Apply it with that provenance and re-derive anything downstream.`; }
-  return `Idea from ${it.user_name ?? it.user_email ?? 'a CYC user'}: "${it.title}". ${it.details ?? ''}${att} Assess and propose how it would fit the console.`;
+  if (it.kind === 'bug') return `Bug report from ${it.user_name ?? it.user_email ?? 'a user'}${where}: "${it.title}". What happened: ${it.details ?? '—'}. Expected: ${it.expected ?? '—'}.${att} Please find the cause and fix it.`;
+  if (it.kind === 'data') { const r = it.record_ref ?? {}; return `Data correction from ${it.user_name ?? it.user_email ?? 'a user'}: ${r.entity ?? 'record'} "${r.name ?? ''}" — field "${r.field ?? ''}" currently "${r.current ?? ''}", should be "${r.proposed ?? ''}". Source: ${r.source || `${it.user_name ?? it.user_email} (staff), ${it.created_at.slice(0, 10)}`}. ${it.details ?? ''}${att} Apply it with that provenance and re-derive anything downstream.`; }
+  return `Idea from ${it.user_name ?? it.user_email ?? 'a user'}: "${it.title}". ${it.details ?? ''}${att} Assess and propose how it would fit the console.`;
 }
 
 function Row({ it, admin, onChanged }: { it: Item; admin: boolean; onChanged: () => void }) {

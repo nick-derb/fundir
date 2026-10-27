@@ -399,7 +399,7 @@ export function ReportsCharts({ data }: { data: ReportsData }) {
           <div className="min-w-0">
             <div className="flex items-center gap-2 mb-2">
               <BarChart3 className="w-3.5 h-3.5" style={{ color: 'var(--accent)' }} />
-              <span className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.12em]" style={{ color: 'var(--text-tertiary)' }}>
+ <span className="font-mono text-[11.5px] font-semibold" style={{ color: 'var(--text-tertiary)' }}>
                 Grant Intelligence · Reports
               </span>
             </div>

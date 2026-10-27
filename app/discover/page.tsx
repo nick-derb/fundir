@@ -92,7 +92,7 @@ export default async function DiscoverPage() {
             {/* Last run stats */}
             {lastRun && (
               <div className="bg-white rounded-md border border-[#e8ecf0] p-4">
-                <p className="text-[10px] font-bold text-[#9ca3af] uppercase tracking-widest mb-3">Last Discovery Run</p>
+ <p className="text-[11.5px] font-medium text-[#9ca3af] mb-3">Last Discovery Run</p>
                 <div className="space-y-2">
                   {[
                     { label: 'Scanned',    value: lastRun.grants_discovered ?? 0, color: '#6b7280' },

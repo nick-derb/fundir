@@ -35,7 +35,7 @@ export function PathRail({ path, confidence, compact, onNode }: { path: PathNode
         );
       })}
       {!compact && confidence && (
-        <span className="fd-mono" style={{ alignSelf: 'center', marginLeft: 14, fontSize: 9.5, letterSpacing: '.05em', textTransform: 'uppercase', color: tone, whiteSpace: 'nowrap', fontFamily: MONO }}>{confidence === 'High' ? 'documented' : confidence === 'Medium' ? 'documented, gaps' : 'inferred'}</span>
+        <span className="fd-mono" style={{ alignSelf: 'center', marginLeft: 14, fontSize: 11.5, color: tone, whiteSpace: 'nowrap', fontFamily: MONO }}>{confidence === 'High' ? 'documented' : confidence === 'Medium' ? 'documented, gaps' : 'inferred'}</span>
       )}
     </div>
   );

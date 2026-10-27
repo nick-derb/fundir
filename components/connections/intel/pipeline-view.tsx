@@ -10,6 +10,7 @@ import { CalendarClock, Check, Loader2, X } from 'lucide-react';
 import type { LeadRow, PipelineState } from '@/lib/network/queries';
 import { BOARD_COLUMNS, CLOSED_STATES, DISMISSAL_REASONS, IN_MOTION, OPEN_STATES, daysUntil, dismissalLabel, type DismissalReason } from '@/lib/network/pipeline';
 import { SERIF, MONO, Avatar, OrgMark, TypeChip, ConfChip, Eyebrow, STATUS_LABEL, hueFor, SLATE, AMBER, INFO, initialsOf } from './shared';
+import { OrgName } from '@/components/org-context';
 
 const STRIPE: Record<string, string> = { NEW: SLATE, RESEARCHING: SLATE, INTRODUCTION_NEEDED: AMBER, INTRO_REQUESTED: AMBER, CONTACTED: INFO, MEETING: INFO, PROPOSAL: 'var(--accent)', AWAITING_DECISION: 'var(--accent)', WON: 'var(--accent)', LOST: 'var(--text-tertiary)', DEFERRED: SLATE, NOT_A_FIT: 'var(--text-tertiary)' };
 
@@ -53,7 +54,7 @@ export function PipelineView({ leads, team, selectedId, onOpen, onChanged, readO
     <div className="ni-root" style={{ padding: '24px 26px 60px' }}>
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 24, flexWrap: 'wrap', marginBottom: 18 }}>
         <div>
-          <Eyebrow style={{ display: 'block', margin: '0 0 9px' }}>Chicago Youth Centers · Network intelligence</Eyebrow>
+          <Eyebrow style={{ display: 'block', margin: '0 0 9px' }}><OrgName /> · Network intelligence</Eyebrow>
           <h1 style={{ fontFamily: SERIF, fontWeight: 400, fontSize: 'clamp(1.9rem,3vw,2.5rem)', lineHeight: 1.04, letterSpacing: '-.018em', margin: 0 }}>Pipeline</h1>
           <p style={{ margin: '9px 0 0', fontSize: 13.5, lineHeight: 1.6, color: 'var(--text-secondary)', maxWidth: '62ch' }}>Drag a lead as the work moves. Closing one as &ldquo;not a fit&rdquo; asks why, and the reason lowers the score of the next lead of the same shape — the team&rsquo;s judgement, written into the number.</p>
         </div>
@@ -159,7 +160,7 @@ export function ReasonDialog({ lead, onCancel, onPick }: { lead: LeadRow; onCanc
             <button key={r.id} type="button" onClick={() => setPick(r.id)} aria-pressed={pick === r.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 8, border: `1px solid ${pick === r.id ? 'var(--accent)' : 'var(--border-hairline)'}`, background: pick === r.id ? 'var(--accent-tint)' : 'var(--bg-surface)', font: 'inherit', fontSize: 12.5, cursor: 'pointer', color: 'inherit', textAlign: 'left' }}>
               <span style={{ width: 14, height: 14, borderRadius: 'var(--radius-sm)', border: `1.5px solid ${pick === r.id ? 'var(--accent)' : 'var(--border-strong)'}`, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>{pick === r.id && <Check style={{ width: 9, height: 9, color: 'var(--accent)' }} />}</span>
               {r.label}
-              {r.feeds && <span className="fd-mono" style={{ marginLeft: 'auto', fontSize: 9, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--text-tertiary)' }}>feeds score</span>}
+              {r.feeds && <span className="fd-mono" style={{ marginLeft: 'auto', fontSize: 11.5, color: 'var(--text-tertiary)' }}>feeds score</span>}
             </button>
           ))}
         </div>

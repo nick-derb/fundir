@@ -11,9 +11,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { Search, LayoutList, LayoutGrid, ExternalLink, Map as MapIcon, Sparkles, Briefcase, Landmark, Route, Clock, Link2, Download, ChevronLeft, ChevronRight, Check } from 'lucide-react';
 import type { PersonRow } from '@/lib/network/queries';
 import { SERIF, MONO, Avatar, Chip, Eyebrow, Skeleton, fmtDate, SLATE, AMBER, INFO } from './shared';
+import { OrgName, OrgPossessive } from '@/components/org-context';
 
 const KINDS: Array<{ key: string; label: string; match: (p: PersonRow) => boolean }> = [
-  { key: 'board', label: 'CYC board', match: p => p.kind === 'board' },
+  { key: 'board', label: 'Our board', match: p => p.kind === 'board' },
   { key: 'auxiliary', label: 'Auxiliary board', match: p => p.kind === 'auxiliary' },
   { key: 'council', label: 'Council', match: p => p.kind === 'council' },
   { key: 'staff', label: 'Staff', match: p => p.kind === 'staff' },
@@ -29,11 +30,11 @@ function statusOf(p: PersonRow): { tone: string; label: string } {
   if (p.kind === 'corporate_contact') return p.enriched_at ? { tone: 'var(--accent)', label: `Profile read ${fmtDate(p.enriched_at)} and verified` } : { tone: SLATE, label: 'Found by the target scan, profile not read yet' };
   return p.verification === 'verified' ? { tone: 'var(--accent)', label: 'Documented in a filing or roster' } : p.verification === 'inferred' ? { tone: AMBER, label: 'Inferred' } : { tone: SLATE, label: 'On a roster' };
 }
-const roleLine = (p: PersonRow) => [p.title ?? (p.own && p.board_role ? `CYC ${p.board_role}` : null), p.org, p.location].filter(Boolean).join(' · ');
+const roleLine = (p: PersonRow) => [p.title ?? (p.own && p.board_role ? p.board_role : null), p.org, p.location].filter(Boolean).join(' · ');
 
 /** The chips a row wears: who they are to CYC, and the warm path when there is one. */
 function PersonChips({ p, compact }: { p: PersonRow; compact?: boolean }) {
-  if (p.own) return <Chip text={compact ? (p.kind === 'board' ? 'CYC board' : p.kind) : p.kind === 'staff' ? 'CYC staff' : p.kind === 'board' ? `CYC board${p.board_role ? ` · ${p.board_role}` : ''}` : p.kind === 'auxiliary' ? 'Auxiliary board' : 'Council'} color="var(--accent)" border="rgba(12,107,90,.32)" />;
+  if (p.own) return <Chip text={compact ? (p.kind === 'board' ? 'Our board' : p.kind) : p.kind === 'staff' ? 'Our staff' : p.kind === 'board' ? `Our board${p.board_role ? ` · ${p.board_role}` : ''}` : p.kind === 'auxiliary' ? 'Auxiliary board' : 'Council'} color="var(--accent)" border="rgba(12,107,90,.32)" />;
   if (p.kind === 'corporate_contact') return (
     <>
       <Chip text={compact ? 'Corporate contact' : `Corporate contact · ${p.org ?? 'target company'}`} color={INFO} border="rgba(62,108,168,.34)" />
@@ -91,9 +92,9 @@ export function PeopleView({ selectedId, onOpen, onOpenLead, onFocus, initialQ, 
     <div className="ni-root" style={{ padding: '24px 26px 60px' }}>
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 20, flexWrap: 'wrap', marginBottom: 18 }}>
         <div>
-          <Eyebrow style={{ display: 'block', margin: '0 0 9px' }}>Chicago Youth Centers · Network intelligence</Eyebrow>
+          <Eyebrow style={{ display: 'block', margin: '0 0 9px' }}><OrgName /> · Network intelligence</Eyebrow>
           <h1 style={{ fontFamily: SERIF, fontWeight: 400, fontSize: 'clamp(1.9rem,3vw,2.5rem)', lineHeight: 1.04, letterSpacing: '-.018em', margin: 0 }}>People</h1>
-          <p style={{ margin: '9px 0 0', fontSize: 13.5, lineHeight: 1.6, color: 'var(--text-secondary)', maxWidth: '64ch' }}>Everyone the graph knows — CYC&rsquo;s own people, the trustees and executives of the funders around them, and the community-giving contacts found at target companies. No photos are stored; every fact traces to a filing, a roster, a public bio or a LinkedIn profile.</p>
+          <p style={{ margin: '9px 0 0', fontSize: 13.5, lineHeight: 1.6, color: 'var(--text-secondary)', maxWidth: '64ch' }}>Everyone the graph knows — <OrgPossessive /> own people, the trustees and executives of the funders around them, and the community-giving contacts found at target companies. No photos are stored; every fact traces to a filing, a roster, a public bio or a LinkedIn profile.</p>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           {picked.size > 0 && <button type="button" className="ni-primary" onClick={exportCsv}><Download style={{ width: 12, height: 12 }} />Export {picked.size} selected</button>}

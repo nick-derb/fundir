@@ -50,7 +50,7 @@ export function PeerListEditor({ initialRows }: Props) {
       {/* Current peers */}
       <div className="bg-canvas-1 rounded-md shadow-flat overflow-hidden">
         <div className="px-5 py-4 border-b border-canvas-3">
-          <p className="text-eyebrow font-semibold text-ink-2 uppercase tracking-wider">Your peer organizations</p>
+ <p className="text-eyebrow font-semibold text-ink-2">Your peer organizations</p>
           <p className="text-h2 font-semibold text-ink-0 mt-0.5">{rows.length} peer{rows.length === 1 ? '' : 's'}</p>
           <p className="text-caption text-ink-2 mt-0.5">
             Peer-funding overlap drives funder prospect scoring. Add orgs that look like you on
@@ -104,7 +104,7 @@ function PeerRow({ row, onRemove, disabled }: { row: PeerListRow; onRemove: () =
         <div className="flex items-baseline gap-2 flex-wrap">
           <span className="text-body font-semibold text-ink-0 truncate">{row.name}</span>
           {row.ein && <span className="text-eyebrow text-ink-2 tabular-nums">EIN {row.ein}</span>}
-          {row.ntee_code && <span className="text-eyebrow text-ink-2 uppercase tracking-wider">{row.ntee_code}</span>}
+ {row.ntee_code && <span className="text-eyebrow text-ink-2">{row.ntee_code}</span>}
           {row.state && <span className="text-eyebrow text-ink-2">{row.city ? `${row.city}, ${row.state}` : row.state}</span>}
         </div>
         {!editing ? (
@@ -205,7 +205,7 @@ function AddPeerSearch() {
           <div className="w-6 h-6 rounded-sm bg-action-soft text-action flex items-center justify-center">
             <Plus className="w-3.5 h-3.5" />
           </div>
-          <p className="text-eyebrow font-semibold text-ink-2 uppercase tracking-wider">Add a peer</p>
+ <p className="text-eyebrow font-semibold text-ink-2">Add a peer</p>
         </div>
         <p className="text-body text-ink-1">Search ProPublica&apos;s Nonprofit Explorer for orgs that look like you.</p>
       </div>

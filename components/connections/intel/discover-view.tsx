@@ -10,6 +10,7 @@ import type { LeadRow, InsightRow } from '@/lib/network/queries';
 import { daysUntil } from '@/lib/network/pipeline';
 import { PathRail } from './path-rail';
 import { SERIF, MONO, ScoreBar, ConfChip, TypeChip, StatusChip, Eyebrow, hueFor, STATUS_LABEL, fmtDate } from './shared';
+import { OrgName, OrgPossessive, OrgShort } from '@/components/org-context';
 
 export interface DiscoverFilters { q: string; types: string[]; conf: string[]; min: number; status: 'open' | 'all' | 'active' | 'closed'; sort: 'score' | 'updated' | 'name' | 'confidence' }
 export const DEFAULT_FILTERS: DiscoverFilters = { q: '', types: [], conf: [], min: 0, status: 'open', sort: 'score' };
@@ -70,10 +71,10 @@ export function DiscoverView({ leads, insights, filters, onFilters, selectedId, 
       {/* header */}
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 24, flexWrap: 'wrap', marginBottom: 18 }}>
         <div style={{ minWidth: 0 }}>
-          <Eyebrow style={{ display: 'block', margin: '0 0 9px' }}>Chicago Youth Centers · Network intelligence</Eyebrow>
+          <Eyebrow style={{ display: 'block', margin: '0 0 9px' }}><OrgName /> · Network intelligence</Eyebrow>
           <h1 style={{ fontFamily: SERIF, fontWeight: 400, fontSize: 'clamp(1.9rem,3vw,2.5rem)', lineHeight: 1.04, letterSpacing: '-.018em', margin: 0 }}>Discover</h1>
           <p style={{ margin: '9px 0 0', fontSize: 13.5, lineHeight: 1.6, color: 'var(--text-secondary)', maxWidth: '66ch' }}>
-            Every opportunity Fundir can see in CYC&rsquo;s graph, scored the same way and explained from evidence: funders reachable through a board member, corporations a CYC person works at, and funders of CYC&rsquo;s peers that show no CYC relationship yet.
+            Every opportunity Fundir can see in <OrgPossessive /> graph, scored the same way and explained from evidence: funders reachable through a board member, corporations a <OrgShort /> person works at, and funders of <OrgPossessive /> peers that show no <OrgShort /> relationship yet.
           </p>
         </div>
         <div className="ni-kpis" style={{ flex: '0 1 620px' }}>
@@ -152,7 +153,7 @@ export function DiscoverView({ leads, insights, filters, onFilters, selectedId, 
               <PathRail path={l.path.slice(1)} confidence={l.confidence} compact />
               {l.contacts && (
                 <span className="fd-caption" title={l.contacts.top ?? undefined} style={{ display: 'block', marginTop: 4, fontSize: 11, color: l.contacts.bridged ? 'var(--accent)' : 'var(--text-tertiary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {l.contacts.count} giving contact{l.contacts.count === 1 ? '' : 's'}{l.contacts.bridged ? ` · ${l.contacts.bridged} with a CYC path` : ''}{l.contacts.top ? ` — ${l.contacts.top}` : ''}
+                  {l.contacts.count} giving contact{l.contacts.count === 1 ? '' : 's'}{l.contacts.bridged ? ` · ${l.contacts.bridged} with a path` : ''}{l.contacts.top ? ` — ${l.contacts.top}` : ''}
                 </span>
               )}
             </div>

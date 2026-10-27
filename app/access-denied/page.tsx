@@ -80,7 +80,7 @@ export default async function AccessDeniedPage({ searchParams }: PageProps) {
           <div className="border-b border-hairline border-l-[3px] border-l-warning px-6 py-5">
             <div className="flex items-center gap-2 mb-2">
               <ShieldAlert className="w-4 h-4 text-warning" />
-              <span className="font-mono text-[10.5px] font-semibold text-warning uppercase tracking-[0.14em]">
+ <span className="font-mono text-[11.5px] font-semibold text-warning">
                 Access required
               </span>
             </div>
@@ -99,14 +99,14 @@ export default async function AccessDeniedPage({ searchParams }: PageProps) {
                   <Mail className="w-3.5 h-3.5 text-accent" />
                 </div>
                 <div className="min-w-0">
-                  <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.1em] text-secondary">
+ <p className="font-mono text-[11.5px] font-semibold text-secondary">
                     You signed in as
                   </p>
                   <p className="font-mono text-[13px] font-semibold text-primary tabular-nums break-all mt-0.5">
                     {email}
                   </p>
                   {provider && (
-                    <p className="font-mono text-[10.5px] text-tertiary mt-0.5 uppercase tracking-[0.08em]">
+ <p className="font-mono text-[11.5px] text-tertiary mt-0.5">
                       via {provider}
                     </p>
                   )}
@@ -119,7 +119,7 @@ export default async function AccessDeniedPage({ searchParams }: PageProps) {
               <div className="bg-surface border border-hairline border-l-[3px] border-l-info rounded-md px-3 py-3 flex items-start gap-2.5">
                 <Clock className="w-3.5 h-3.5 text-info flex-shrink-0 mt-0.5" />
                 <div className="min-w-0">
-                  <p className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.08em] text-info">
+ <p className="font-mono text-[11.5px] font-semibold text-info">
                     Pending review
                   </p>
                   <p className="text-[12px] text-muted mt-1 leading-relaxed">

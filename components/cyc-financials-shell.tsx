@@ -221,19 +221,19 @@ function IncomeTab() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card className="overflow-hidden">
           <CardHeader accent="var(--accent-tint)">
-            <p className="text-[11px] font-bold text-accent uppercase tracking-widest">Revenue</p>
+ <p className="text-[11.5px] font-medium text-accent">Revenue</p>
           </CardHeader>
           <div className="p-3 space-y-0.5">
-            <p className="text-[10px] font-bold text-tertiary uppercase tracking-widest px-3 py-1.5">Public Support</p>
+ <p className="text-[11.5px] font-medium text-tertiary px-3 py-1.5">Public Support</p>
             <DRow label="Contributions (cash)"    value={inc.revenue.contributionsCash}   prior={inc.revenue.contributionsCashPrior} />
             <DRow label="Contributions (in-kind)" value={inc.revenue.contributionsInKind} />
             <DRow label="Special events (net)"    value={inc.revenue.specialEventsNet} />
             <DRow label="Total Public Support"    value={inc.revenue.totalPublicSupport}  highlight />
-            <p className="text-[10px] font-bold text-tertiary uppercase tracking-widest px-3 py-1.5 mt-2">Direct Program Revenue</p>
+ <p className="text-[11.5px] font-medium text-tertiary px-3 py-1.5 mt-2">Direct Program Revenue</p>
             <DRow label="Government fees & grants" value={inc.revenue.governmentFeesGrants} prior={inc.revenue.governmentFeesGrantsPrior} />
             <DRow label="Program service fees"     value={inc.revenue.programServiceFees} />
             <DRow label="Total Program Revenue"    value={inc.revenue.totalDirectProgram}   highlight />
-            <p className="text-[10px] font-bold text-tertiary uppercase tracking-widest px-3 py-1.5 mt-2">Other Income</p>
+ <p className="text-[11.5px] font-medium text-tertiary px-3 py-1.5 mt-2">Other Income</p>
             <DRow label="Investment return (net)" value={inc.revenue.investmentReturnNet} />
             <DRow label="Realized gains"          value={inc.revenue.realizedGains} />
             <DRow label="Unrealized gains"        value={inc.revenue.unrealizedGains} />
@@ -243,15 +243,15 @@ function IncomeTab() {
         <div className="space-y-4">
           <Card className="overflow-hidden">
             <CardHeader accent="var(--critical-tint)">
-              <p className="text-[11px] font-bold text-critical uppercase tracking-widest">Expenses</p>
+ <p className="text-[11.5px] font-medium text-critical">Expenses</p>
             </CardHeader>
             <div className="p-3 space-y-0.5">
-              <p className="text-[10px] font-bold text-tertiary uppercase tracking-widest px-3 py-1.5">Program Services</p>
+ <p className="text-[11.5px] font-medium text-tertiary px-3 py-1.5">Program Services</p>
               <DRow label="Early Childhood Education" value={inc.expenses.earlyChildhoodEducation} prior={inc.expenses.earlyChildhoodPrior} />
               <DRow label="School Age Child Dev."     value={inc.expenses.schoolAgeChildDev}        prior={inc.expenses.schoolAgePrior} />
               <DRow label="Teen Leadership Dev."      value={inc.expenses.teenLeadershipDev}         prior={inc.expenses.teenPrior} />
               <DRow label="Total Program Services"    value={inc.expenses.totalProgramServices}      prior={inc.expenses.totalProgramPrior} highlight />
-              <p className="text-[10px] font-bold text-tertiary uppercase tracking-widest px-3 py-1.5 mt-2">Supporting Services</p>
+ <p className="text-[11.5px] font-medium text-tertiary px-3 py-1.5 mt-2">Supporting Services</p>
               <DRow label="Management & General"      value={inc.expenses.managementGeneral} />
               <DRow label="Development & Fundraising" value={inc.expenses.developmentFundraising} />
               <DRow label="Total Expenses"            value={inc.expenses.totalExpenses} prior={inc.expenses.totalExpensesPrior} highlight />
@@ -268,7 +268,7 @@ function IncomeTab() {
             </p>
           </div>
           <Card className="p-4">
-            <p className="text-[10px] font-bold text-secondary uppercase tracking-widest mb-3">Program Expense Ratio</p>
+ <p className="text-[11.5px] font-medium text-secondary mb-3">Program Expense Ratio</p>
             <div className="flex items-end justify-between mb-2">
               <span className="text-[32px] font-bold text-success">{progRatio}%</span>
               <span className="text-[11px] text-secondary mb-1">★★★★ Charity Navigator</span>
@@ -298,7 +298,7 @@ function BalanceTab() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card className="overflow-hidden">
           <CardHeader accent="var(--accent-tint)">
-            <p className="text-[11px] font-bold text-accent uppercase tracking-widest">Assets</p>
+ <p className="text-[11.5px] font-medium text-accent">Assets</p>
             <p className="text-[11px] text-secondary">{fmtFull(bal.assets.totalAssets)}</p>
           </CardHeader>
           <div className="p-3 space-y-0.5">
@@ -315,7 +315,7 @@ function BalanceTab() {
         </Card>
         <Card className="overflow-hidden">
           <CardHeader accent="var(--critical-tint)">
-            <p className="text-[11px] font-bold text-critical uppercase tracking-widest">Liabilities</p>
+ <p className="text-[11.5px] font-medium text-critical">Liabilities</p>
             <p className="text-[11px] text-secondary">{fmtFull(bal.liabilities.totalLiabilities)}</p>
           </CardHeader>
           <div className="p-3 space-y-0.5">
@@ -333,16 +333,16 @@ function BalanceTab() {
         </Card>
         <Card className="overflow-hidden">
           <CardHeader accent="var(--success-tint)">
-            <p className="text-[11px] font-bold text-success uppercase tracking-widest">Net Assets</p>
+ <p className="text-[11.5px] font-medium text-success">Net Assets</p>
             <p className="text-[11px] text-secondary">{fmtFull(bal.netAssets.totalNetAssets)}</p>
           </CardHeader>
           <div className="p-3 space-y-0.5">
-            <p className="text-[10px] font-bold text-tertiary uppercase tracking-widest px-3 py-1">Without Donor Restrictions</p>
+ <p className="text-[11.5px] font-medium text-tertiary px-3 py-1">Without Donor Restrictions</p>
             <DRow label="Undesignated"         value={bal.netAssets.unrestrictedUndesignated} />
             <DRow label="Board-designated"     value={bal.netAssets.boardDesignatedInvestment} />
             <DRow label="Invested in property" value={bal.netAssets.investedInPropertyEquip} />
             <DRow label="Subtotal"             value={bal.netAssets.totalWithoutRestriction} prior={bal.netAssets.totalWithoutRestrictionPrior} highlight />
-            <p className="text-[10px] font-bold text-tertiary uppercase tracking-widest px-3 py-1 mt-2">With Donor Restrictions</p>
+ <p className="text-[11.5px] font-medium text-tertiary px-3 py-1 mt-2">With Donor Restrictions</p>
             <DRow label="Time/purpose restricted" value={bal.netAssets.timePurposeRestricted} />
             <DRow label="Endowment fund"          value={bal.netAssets.endowmentFund} />
             <DRow label="Subtotal"                value={bal.netAssets.totalWithRestriction} prior={bal.netAssets.totalWithRestrictionPrior} highlight />
@@ -351,7 +351,7 @@ function BalanceTab() {
         </Card>
       </div>
       <Card className="p-5">
-        <p className="text-[11px] font-bold text-secondary uppercase tracking-widest mb-4">Liquidity & Availability (Note 2) — Usable Cash Analysis</p>
+ <p className="text-[11.5px] font-medium text-secondary mb-4">Liquidity & Availability (Note 2) — Usable Cash Analysis</p>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {([
             { label: 'Gross Financial Assets',    value: liq.grossFinancialAssets,     color: 'text-primary' },
@@ -458,7 +458,7 @@ function ProgramsTab() {
           <thead>
             <tr className="border-b" style={{ borderColor: 'var(--border-hairline)', background: 'var(--bg-elevated)' }}>
               {['Federal Program', 'ALN', 'Est. Amount', '% Revenue', 'Risk', 'Program Impact'].map((h, i) => (
-                <th key={h} className={`py-2.5 px-4 text-[10px] font-bold text-secondary uppercase tracking-wide ${i === 0 || i === 5 ? 'text-left' : i >= 4 ? 'text-left' : 'text-right'}`}>{h}</th>
+ <th key={h} className={`py-2.5 px-4 text-[11.5px] font-medium text-secondary ${i === 0 || i === 5 ? 'text-left' : i >= 4 ? 'text-left' : 'text-right'}`}>{h}</th>
               ))}
             </tr>
           </thead>
@@ -554,7 +554,7 @@ function CapitalTab() {
               <p className="text-[10px] text-tertiary">{fmt(end.expenditures)} distributed</p>
             </div>
           </div>
-          <p className="text-[10px] font-bold text-secondary uppercase tracking-widest mb-2">Named Funds</p>
+ <p className="text-[11.5px] font-medium text-secondary mb-2">Named Funds</p>
           <div className="space-y-1.5">
             {end.namedFunds.map(f => (
               <div key={f.name} className="flex justify-between text-[12px]">
@@ -675,7 +675,7 @@ function SitesTab() {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div>
-            <p className="text-[10px] font-bold text-secondary uppercase tracking-widest mb-3">
+ <p className="text-[11.5px] font-medium text-secondary mb-3">
               Early Learning ({CYC_IMPACT.earlyLearningParticipants} participants)
             </p>
             <div className="space-y-2.5">
@@ -688,7 +688,7 @@ function SitesTab() {
             </div>
           </div>
           <div>
-            <p className="text-[10px] font-bold text-secondary uppercase tracking-widest mb-3">
+ <p className="text-[11.5px] font-medium text-secondary mb-3">
               Out-of-School Time ({CYC_IMPACT.ostParticipants} participants)
             </p>
             <div className="space-y-2.5">
@@ -701,7 +701,7 @@ function SitesTab() {
             </div>
           </div>
           <div>
-            <p className="text-[10px] font-bold text-secondary uppercase tracking-widest mb-3">Org Overview</p>
+ <p className="text-[11.5px] font-medium text-secondary mb-3">Org Overview</p>
             <div className="space-y-3">
               {([
                 { label: 'Total Youth Served', value: CYC_IMPACT.youthServedTotal.toLocaleString() },
@@ -765,7 +765,7 @@ export function CYCFinancialsShell({
             <div className="min-w-0">
               <div className="flex items-center gap-2 mb-2">
                 <BarChart3 className="w-3.5 h-3.5" style={{ color: 'var(--accent)' }} />
-                <span className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.12em]" style={{ color: 'var(--text-tertiary)' }}>
+ <span className="font-mono text-[11.5px] font-semibold" style={{ color: 'var(--text-tertiary)' }}>
                   Org Intelligence · Financials
                 </span>
               </div>
@@ -780,11 +780,11 @@ export function CYCFinancialsShell({
               </p>
             </div>
             <div className="flex flex-col items-end gap-2 flex-shrink-0">
-              <span className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.08em] inline-flex items-center gap-2" style={{ color: 'var(--text-secondary)' }}>
+ <span className="font-mono text-[11.5px] font-semibold inline-flex items-center gap-2" style={{ color: 'var(--text-secondary)' }}>
                 <span className="w-[7px] h-[7px] rounded-full bg-success" />
                 ★★★★ Charity Navigator
               </span>
-              <span className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.08em] inline-flex items-center gap-2" style={{ color: 'var(--text-secondary)' }}>
+ <span className="font-mono text-[11.5px] font-semibold inline-flex items-center gap-2" style={{ color: 'var(--text-secondary)' }}>
                 <span className="w-[7px] h-[7px] rounded-full bg-critical" />
                 FY2025 Audited · Operating Deficit
               </span>

@@ -11,6 +11,7 @@ import Link from 'next/link';
 import {
   SlidersHorizontal, Plus, ArrowLeft, ArrowRight, Link2,
 } from 'lucide-react';
+import { OrgName } from '@/components/org-context';
 
 const OUTLOOK_NEW = 'https://outlook.office.com/calendar/0/deeplink/compose';
 const OUTLOOK_CAL = 'https://outlook.office.com/calendar/';
@@ -154,7 +155,7 @@ export function CalendarView({ data }: { data: CalData }) {
         {/* ── Page header ─────────────────────────────────────────────── */}
         <div className="fd-page-head">
           <div style={{ minWidth: 0 }}>
-            <p className="fd-eyebrow" style={{ color: 'var(--text-tertiary)', margin: '0 0 8px' }}>Chicago Youth Centers</p>
+            <p className="fd-eyebrow" style={{ color: 'var(--text-tertiary)', margin: '0 0 8px' }}><OrgName /></p>
             <h1>Calendar</h1>
             <p className="fd-lede">Your Microsoft schedule and every grant deadline, on one grid.</p>
           </div>
@@ -187,7 +188,7 @@ export function CalendarView({ data }: { data: CalData }) {
             <div className="cv-toolbar">
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
                 <div style={{ flex: 'none', width: 40, border: '1px solid var(--border-hairline)', borderRadius: 'var(--radius-xs)', overflow: 'hidden', textAlign: 'center' }}>
-                  <div className="fd-mono" style={{ fontSize: 7.5, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--accent-on)', background: 'var(--accent)', padding: '2px 0' }}>{MON_ABBR[(tm || 1) - 1]}</div>
+                  <div className="fd-mono" style={{ fontSize: 7.5, color: 'var(--accent-on)', background: 'var(--accent)', padding: '2px 0' }}>{MON_ABBR[(tm || 1) - 1]}</div>
                   <div className="fd-mono" style={{ fontSize: 15, fontWeight: 600, letterSpacing: '-.02em', padding: '2px 0 3px' }}>{td}</div>
                 </div>
                 <div style={{ minWidth: 0 }}>

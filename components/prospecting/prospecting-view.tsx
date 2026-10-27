@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Table2, RefreshCw, Download, Lock, Pencil } from 'lucide-react';
 import { IrsReplaceModal } from '@/components/prospecting/irs-replace-modal';
+import { OrgName, OrgShort } from '@/components/org-context';
 
 // Faithful port of templates/prospecting/Prospecting.dc.html, wired to CYC's
 // REAL loaded data (cyc_cultivation / funder_board_members / cyc_research_queue
@@ -56,9 +57,9 @@ export function ProspectingView({ sheets, instrumentl, bmfTotal, rowLimit, canRe
       {/* header */}
       <div className="fd-page-head">
         <div style={{ minWidth: 0 }}>
-          <p className="fd-eyebrow" style={{ color: 'var(--text-tertiary)', margin: '0 0 8px' }}>Chicago Youth Centers</p>
+          <p className="fd-eyebrow" style={{ color: 'var(--text-tertiary)', margin: '0 0 8px' }}><OrgName /></p>
           <h1>Prospecting</h1>
-          <p className="fd-lede">One workbook, shared by everyone at CYC. IRS sheets are replaced each release; your own columns stay put.</p>
+          <p className="fd-lede">One workbook, shared by everyone at <OrgShort />. IRS sheets are replaced each release; your own columns stay put.</p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <button className="fd-btn" onClick={() => setReplaceOpen(true)}><RefreshCw style={{ width: 13, height: 13 }} />Replace IRS data</button>
@@ -74,7 +75,7 @@ export function ProspectingView({ sheets, instrumentl, bmfTotal, rowLimit, canRe
           <span className="fd-tag" data-tone="slate">eo_il.xlsx</span>
           <span style={{ flex: 1 }} />
           <span className="fd-mono" style={{ fontSize: 10.5, color: 'var(--text-tertiary)', whiteSpace: 'nowrap' }}>All changes saved</span>
-          <span className="fd-eyebrow" style={{ color: 'var(--text-tertiary)', whiteSpace: 'nowrap' }}>Shared with everyone at CYC</span>
+          <span className="fd-eyebrow" style={{ color: 'var(--text-tertiary)', whiteSpace: 'nowrap' }}>Shared with everyone at <OrgShort /></span>
         </div>
 
         {/* tabs */}
@@ -186,7 +187,7 @@ export function ProspectingView({ sheets, instrumentl, bmfTotal, rowLimit, canRe
             <span className="fd-tag" data-tone="accent">Loaded</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, padding: '9px 0' }}>
-            <span className="fd-mono" style={{ fontSize: 10, color: 'var(--text-tertiary)', flex: 'none', width: 28 }}>CYC</span>
+            <span className="fd-mono" style={{ fontSize: 10, color: 'var(--text-tertiary)', flex: 'none', width: 28 }}><OrgShort /></span>
             <span style={{ flex: 1, fontSize: 12.5, color: 'var(--text-secondary)' }}>Cultivation, board and research columns · your own work</span>
             <span className="fd-tag">Live</span>
           </div>

@@ -203,7 +203,7 @@ function FinancialDoneView({ a, savedId, onReset }: { a: FinancialAnalysis; save
     <div className="space-y-4">
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-[10px] font-bold text-teal-500 uppercase tracking-widest mb-0.5">AI · Financial Model</p>
+ <p className="text-[11.5px] font-medium text-teal-500 mb-0.5">AI · Financial Model</p>
           <h3 className="text-[18px] font-bold text-slate-100">{a.org_name ?? a.file_name}</h3>
           <p className="text-[11px] text-slate-500">
             {yr} · {a.data_quality === 'complete' ? '● Complete' : a.data_quality === 'partial' ? '◐ Partial' : '○ Minimal'}
@@ -238,7 +238,7 @@ function FinancialDoneView({ a, savedId, onReset }: { a: FinancialAnalysis; save
           <div key={label} className="p-4 rounded-md border"
             style={{ background: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.08)' }}>
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">{label}</span>
+ <span className="text-[11.5px] font-medium text-slate-500">{label}</span>
               <Icon className="w-3.5 h-3.5" style={{ color }} />
             </div>
             <p className="text-[18px] font-bold font-mono leading-none" style={{ color }}>{value}</p>
@@ -277,7 +277,7 @@ function FinancialDoneView({ a, savedId, onReset }: { a: FinancialAnalysis; save
         {showIncome && (
           <div className="p-5 space-y-4">
             <div>
-              <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest mb-2">Revenue</p>
+ <p className="text-[11.5px] font-medium text-slate-600 mb-2">Revenue</p>
               <div className="space-y-1.5">
                 {a.income_statement.revenue_categories.map((cat, i) => (
                   <div key={i} className="flex items-center gap-2">
@@ -327,7 +327,7 @@ function FinancialDoneView({ a, savedId, onReset }: { a: FinancialAnalysis; save
             const proj = a.projections[key];
             return (
               <div key={key} className="text-center">
-                <p className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color }}>{label}</p>
+ <p className="text-[11.5px] font-medium mb-2" style={{ color }}>{label}</p>
                 <p className="text-[10px] text-slate-600 mb-2">+{proj.growth_rate_pct.toFixed(1)}%/yr</p>
                 {(['year1', 'year2', 'year3'] as const).map((y, i) => (
                   <div key={y} className="mb-1.5">
@@ -352,7 +352,7 @@ function FinancialDoneView({ a, savedId, onReset }: { a: FinancialAnalysis; save
               <div key={i} className="flex items-start gap-3 px-5 py-3.5">
                 <span className="w-1.5 h-1.5 rounded-full mt-2 flex-shrink-0" style={{ background: priorityColor(rec.priority) }} />
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-wide text-slate-600">{rec.priority} · {rec.category}</p>
+ <p className="text-[11.5px] font-medium text-slate-600">{rec.priority} · {rec.category}</p>
                   <p className="text-[12px] text-slate-400 mt-0.5 leading-relaxed">{rec.text}</p>
                 </div>
               </div>
@@ -376,7 +376,7 @@ function GeneralDoneView({ a, savedId, onReset }: { a: GeneralAnalysis; savedId:
         <div>
           <div className="flex items-center gap-2 mb-1">
             <DtIcon className="w-3.5 h-3.5" style={{ color: badge.text }} />
-            <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: badge.text }}>
+ <span className="text-[11.5px] font-medium" style={{ color: badge.text }}>
               AI · {docTypeLabel(a.doc_type)}
             </span>
           </div>
@@ -461,7 +461,7 @@ function GeneralDoneView({ a, savedId, onReset }: { a: GeneralAnalysis; savedId:
                 <span className="w-1.5 h-1.5 rounded-full mt-2 flex-shrink-0" style={{ background: priorityColor(act.priority) }} />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-0.5">
-                    <span className="text-[10px] font-bold text-slate-600 uppercase">{act.priority}</span>
+ <span className="text-[11.5px] font-medium text-slate-600">{act.priority}</span>
                     <span className="text-[10px] text-slate-700">·</span>
                     <span className="text-[10px] text-slate-600 flex items-center gap-1">
                       <Clock className="w-2.5 h-2.5" />{act.timeline}
@@ -505,7 +505,7 @@ function RecentAnalyses({ orgCode, onLoad }: {
 
   return (
     <div>
-      <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest mb-2.5">Recent Analyses</p>
+ <p className="text-[11.5px] font-medium text-slate-600 mb-2.5">Recent Analyses</p>
       <div className="space-y-1.5">
         {items.slice(0, 5).map(item => {
           const badge = docTypeBadgeColor(item.doc_type);
@@ -777,7 +777,7 @@ export function FinancialAnalyzer({
       {anyConnected && (
         <div className="flex items-center gap-2">
           <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.06)' }} />
-          <span className="text-[10px] text-slate-600 font-semibold uppercase tracking-widest">or upload from this computer</span>
+ <span className="text-[11.5px] text-slate-600 font-semibold">or upload from this computer</span>
           <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.06)' }} />
         </div>
       )}

@@ -15,7 +15,7 @@ export function ConnectionsTabs({
 
   const tabs = [
     { key: 'funders' as const, label: 'Funder boards', count: people.length },
-    { key: 'network' as const, label: 'CYC network', count: network.totals.leads },
+    { key: 'network' as const, label: 'Our network', count: network.totals.leads },
   ];
 
   return (

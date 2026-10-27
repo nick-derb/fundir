@@ -58,7 +58,7 @@ export function GrantCard({
       )}
     >
       <div className="flex items-start justify-between gap-3 mb-2">
-        <div className="text-eyebrow uppercase font-semibold text-ink-2 tracking-wider">
+ <div className="text-eyebrow font-semibold text-ink-2">
           {eyebrow}
         </div>
         <RecommendationPill recommendation={recommendation} reason={reason} />

@@ -6,6 +6,7 @@
 // so step 1 confirms their name rather than creating an account.
 
 import { useEffect, useRef, useState } from 'react';
+import { OrgName, OrgShort } from '@/components/org-context';
 
 declare global {
   interface Window { FundirField?: { init: (c: HTMLCanvasElement) => void } }
@@ -20,9 +21,9 @@ const ROLES = [
 ];
 
 const FOCUS = [
-  { id: 'prospect',  label: 'Finding funders worth pursuing',      note: 'Ranked matches screened against CYC filings' },
+  { id: 'prospect',  label: 'Finding funders worth pursuing',      note: 'Ranked matches screened against your filings' },
   { id: 'cultivate', label: 'Keeping the cultivation list warm',   note: 'Invitation-only funders and board paths' },
-  { id: 'write',     label: 'Writing and submitting applications', note: 'Requirements read against what CYC can show' },
+  { id: 'write',     label: 'Writing and submitting applications', note: 'Requirements read against what you can show' },
   { id: 'report',    label: 'Grant reporting and deadlines',       note: 'Interim reports, metrics, delivery dates' },
   { id: 'know',      label: 'Finding what we already documented',  note: 'Past narratives, outcomes, board records' },
 ];
@@ -34,7 +35,7 @@ const INK = '#101917', SAGE = '#659A80', ACCENT = '#0C6B5A', FAINT = '#9AA7A1', 
 
 const lbl: React.CSSProperties = {
   display: 'block', fontFamily: MONO, fontSize: 9.5, letterSpacing: '.13em',
-  textTransform: 'uppercase', color: '#9AA7A1', marginBottom: 7,
+  color: '#9AA7A1', marginBottom: 7,
 };
 const input: React.CSSProperties = {
   width: '100%', padding: '12px 13px', fontSize: 14, background: '#fff',
@@ -165,7 +166,7 @@ export function OnboardingFlow({
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 'auto' }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/landing/assets/fundir-mark.png" alt="Fundir" style={{ height: 24, width: 'auto', display: 'block' }} />
-          <span style={{ fontFamily: MONO, fontSize: 11.5, fontWeight: 500, letterSpacing: '.22em', textTransform: 'uppercase' }}>Fundir</span>
+          <span style={{ fontFamily: MONO, fontSize: 11.5, fontWeight: 500 }}>Fundir</span>
         </div>
 
         <div style={{ width: '100%', maxWidth: 430, margin: '0 auto', padding: '40px 0' }}>
@@ -174,7 +175,7 @@ export function OnboardingFlow({
             <div style={{ flex: 1, height: 2, background: '#E2E6E4', borderRadius: 2, overflow: 'hidden' }}>
               <i style={{ display: 'block', height: '100%', width: `${((i + 1) / STEPS.length) * 100}%`, background: ACCENT, borderRadius: 2, transition: 'width .45s cubic-bezier(.2,.8,.3,1)' }} />
             </div>
-            <span style={{ fontFamily: MONO, fontSize: 9.5, letterSpacing: '.13em', textTransform: 'uppercase', color: FAINT, whiteSpace: 'nowrap' }}>Step {i + 1} of {STEPS.length}</span>
+            <span style={{ fontFamily: MONO, fontSize: 11.5, color: FAINT, whiteSpace: 'nowrap' }}>Step {i + 1} of {STEPS.length}</span>
           </div>
 
           {/* ── account ── */}
@@ -210,7 +211,7 @@ export function OnboardingFlow({
                 </label>
                 <div>
                   <p style={{ margin: '0 0 9px', fontSize: 13.5, lineHeight: 1.55, color: '#5E6D67' }}>Square images work best. JPG or PNG, under 5 MB.</p>
-                  <button type="button" onClick={() => setPhoto('')} style={{ fontFamily: MONO, fontSize: 10, letterSpacing: '.12em', textTransform: 'uppercase', padding: '9px 15px', borderRadius: 999, border: '1px solid transparent', background: 'none', color: FAINT, cursor: 'pointer' }}>Remove</button>
+                  <button type="button" onClick={() => setPhoto('')} style={{ fontFamily: MONO, fontSize: 11.5, padding: '9px 15px', borderRadius: 999, border: '1px solid transparent', background: 'none', color: FAINT, cursor: 'pointer' }}>Remove</button>
                 </div>
               </div>
               <label style={{ display: 'block' }}><span style={lbl}>Display name</span>
@@ -221,11 +222,11 @@ export function OnboardingFlow({
           {/* ── role ── */}
           {step === 'role' && (
             <div>
-              <h1 style={h1}>What do you do at CYC?</h1>
+              <h1 style={h1}>What do you do at <OrgShort />?</h1>
               <p style={sub}>Used on your profile and to route mentions. It does not restrict what you can see.</p>
               <label style={{ display: 'block', marginBottom: 16 }}><span style={lbl}>Job title</span>
                 <input value={role} onChange={e => setRole(e.target.value)} placeholder="Director of Development" style={input} /></label>
-              <p style={{ fontFamily: MONO, fontSize: 9, letterSpacing: '.13em', textTransform: 'uppercase', color: FAINT, margin: '0 0 11px' }}>Common at CYC</p>
+              <p style={{ fontFamily: MONO, fontSize: 11.5, color: FAINT, margin: '0 0 11px' }}>Common at <OrgShort /></p>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                 {ROLES.map(r => (
                   <button key={r} type="button" onClick={() => setRole(r)}
@@ -249,7 +250,7 @@ export function OnboardingFlow({
                     <b style={{ display: 'block', fontSize: 13, fontWeight: 500 }}>Calendar connected</b>
                     <span style={{ fontSize: 11.5, color: '#8B968F' }}>Your schedule will appear on the dashboard.</span>
                   </div>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: MONO, fontSize: 9, letterSpacing: '.12em', textTransform: 'uppercase', color: ACCENT }}><i style={{ width: 4, height: 4, borderRadius: '50%', background: SAGE }} />Connected</span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: MONO, fontSize: 11.5, color: ACCENT }}><i style={{ width: 4, height: 4, borderRadius: '50%', background: SAGE }} />Connected</span>
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
@@ -296,10 +297,10 @@ export function OnboardingFlow({
             <div>
               <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, border: '1px solid rgba(12,107,90,.28)', borderRadius: 999, padding: '6px 12px', marginBottom: 22 }}>
                 <i style={{ width: 5, height: 5, borderRadius: '50%', background: ACCENT }} />
-                <span style={{ fontFamily: MONO, fontSize: 9.5, letterSpacing: '.13em', textTransform: 'uppercase', color: ACCENT }}>Account ready</span>
+                <span style={{ fontFamily: MONO, fontSize: 11.5, color: ACCENT }}>Account ready</span>
               </div>
               <h1 style={h1}>You are set up, {first || 'there'}.</h1>
-              <p style={{ ...sub, marginBottom: 26 }}>Your workspace is Chicago Youth Centers. Everything the team has loaded is already there.</p>
+              <p style={{ ...sub, marginBottom: 26 }}>Your workspace is <OrgName />. Everything the team has loaded is already there.</p>
               <div style={{ border: `1px solid ${RULE}`, borderRadius: 'var(--radius-sm)', background: '#fff', padding: '4px 16px', marginBottom: 26 }}>
                 {[
                   ['Profile', display || `${first} ${last}`.trim() || 'Not set'],
@@ -318,11 +319,11 @@ export function OnboardingFlow({
           {/* nav — spaced off the step content above it, so Continue never
               sits flush against the last field (e.g. the name step's inputs). */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 32 }}>
-            {canBack && <button type="button" onClick={back} style={{ fontFamily: MONO, fontSize: 10, letterSpacing: '.13em', textTransform: 'uppercase', background: 'none', border: 'none', padding: '6px 0', cursor: 'pointer', color: FAINT }}>← Back</button>}
+            {canBack && <button type="button" onClick={back} style={{ fontFamily: MONO, fontSize: 11.5, background: 'none', border: 'none', padding: '6px 0', cursor: 'pointer', color: FAINT }}>← Back</button>}
             <span style={{ flex: 1 }} />
-            {canSkip && <button type="button" onClick={next} style={{ fontFamily: MONO, fontSize: 10, letterSpacing: '.13em', textTransform: 'uppercase', background: 'none', border: 'none', padding: '6px 0', cursor: 'pointer', color: FAINT }}>Skip</button>}
+            {canSkip && <button type="button" onClick={next} style={{ fontFamily: MONO, fontSize: 11.5, background: 'none', border: 'none', padding: '6px 0', cursor: 'pointer', color: FAINT }}>Skip</button>}
             <button type="button" onClick={step === 'done' ? finish : next} disabled={saving}
-              style={{ fontFamily: MONO, fontSize: 11, letterSpacing: '.13em', textTransform: 'uppercase', padding: '14px 26px', borderRadius: 999, border: 'none', background: INK, color: '#F7F8F7', cursor: saving ? 'default' : 'pointer', whiteSpace: 'nowrap', opacity: saving ? 0.7 : 1 }}>
+              style={{ fontFamily: MONO, fontSize: 11.5, padding: '14px 26px', borderRadius: 999, border: 'none', background: INK, color: '#F7F8F7', cursor: saving ? 'default' : 'pointer', whiteSpace: 'nowrap', opacity: saving ? 0.7 : 1 }}>
               {saving ? 'Finishing…' : cta}
             </button>
           </div>

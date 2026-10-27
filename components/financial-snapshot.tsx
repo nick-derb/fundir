@@ -30,7 +30,7 @@ function MetricCard({ label, value, sub, icon: Icon, color, bg, negative = false
   return (
     <div className="bg-white rounded-md border border-[#e2e8f0] p-4">
       <div className="flex items-center justify-between mb-2">
-        <span className="text-[11px] font-semibold text-[#94a3b8] uppercase tracking-wide">{label}</span>
+ <span className="text-[11.5px] font-semibold text-[#94a3b8]">{label}</span>
         <div className="w-7 h-7 rounded-[6px] flex items-center justify-center" style={{ background: bg }}>
           <Icon className="w-3.5 h-3.5" style={{ color }} />
         </div>
@@ -98,7 +98,7 @@ function GrantReadinessGauge() {
   return (
     <div className="bg-[#f8fafc] rounded-md border border-[#e2e8f0] p-4">
       <div className="flex items-center justify-between mb-3">
-        <p className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-widest">Grant Readiness Index</p>
+ <p className="text-[11.5px] font-medium text-[#94a3b8]">Grant Readiness Index</p>
         <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
           style={{ background: color + '18', color }}>
           {label}
@@ -161,7 +161,7 @@ function RevenueTrendChart() {
   return (
     <div className="mt-5 pt-5 border-t border-[#f1f5f9]">
       <div className="flex items-center justify-between mb-3">
-        <p className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-widest">3-Year Revenue Trend</p>
+ <p className="text-[11.5px] font-medium text-[#94a3b8]">3-Year Revenue Trend</p>
         <div className="flex items-center gap-1.5">
           <TrendingDown className="w-3 h-3 text-[#dc2626]" />
           <span className="text-[11px] font-bold text-[#dc2626]">−22.5% from FY2023 peak</span>
@@ -285,14 +285,14 @@ export function FinancialSnapshot({ orgName, ein }: FinancialSnapshotProps) {
         {/* Revenue mix + health signals */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <p className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-widest mb-4">Revenue Composition</p>
+ <p className="text-[11.5px] font-medium text-[#94a3b8] mb-4">Revenue Composition</p>
             <RevenueBar label="Government Fees & Grants"       pct={govtPct}  color="#dc2626" amount={inc.revenue.governmentFeesGrants} />
             <RevenueBar label="Private Support & Events"       pct={privPct}  color="#2563eb" amount={inc.revenue.totalPublicSupport} />
             <RevenueBar label="Investment Income & Gains"      pct={otherPct} color="#7c3aed" amount={inc.revenue.totalOther} />
             <RevenueBar label="Program Service Fees"           pct={svcPct}   color="#94a3b8" amount={inc.revenue.programServiceFees + inc.revenue.contractualRevenue} />
 
             <div className="mt-5 pt-4 border-t border-[#f1f5f9] space-y-2">
-              <p className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-widest mb-2.5">Health Signals</p>
+ <p className="text-[11.5px] font-medium text-[#94a3b8] mb-2.5">Health Signals</p>
               <ReadinessSignal ok={false}   label="Line of credit drawn: $455K of $1.5M limit (first time in org history)" />
               <ReadinessSignal ok={false}   label="Operating deficit ($909K) — reversed from $1.017M surplus in FY2024" />
               <ReadinessSignal ok="warn"    label={`Net unrestricted liquidity: ${liq.monthsOfLiquidity} months (below 3-month target)`} />
@@ -302,7 +302,7 @@ export function FinancialSnapshot({ orgName, ein }: FinancialSnapshotProps) {
           </div>
 
           <div>
-            <p className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-widest mb-4">FY2025 Key Financials</p>
+ <p className="text-[11.5px] font-medium text-[#94a3b8] mb-4">FY2025 Key Financials</p>
             <div className="space-y-1.5">
               {([
                 { label: 'Total Revenue',          value: inc.revenue.totalRevenue,          hl: true,  neg: false },
@@ -332,7 +332,7 @@ export function FinancialSnapshot({ orgName, ein }: FinancialSnapshotProps) {
         {/* Critical + warning flags */}
         {(criticalFlags.length > 0 || warningFlags.length > 0) && (
           <div className="space-y-2">
-            <p className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-widest">Intelligence Flags</p>
+ <p className="text-[11.5px] font-medium text-[#94a3b8]">Intelligence Flags</p>
             {[...criticalFlags, ...warningFlags].map((flag, i) => {
               const isCrit = flag.severity === 'critical';
               return (

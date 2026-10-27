@@ -41,7 +41,7 @@ export default async function FoundationsPage() {
             <div className="w-6 h-6 rounded-sm bg-action-soft text-action flex items-center justify-center">
               <Sparkles className="w-3.5 h-3.5" />
             </div>
-            <span className="text-eyebrow font-semibold text-action uppercase tracking-wider">
+ <span className="text-eyebrow font-semibold text-action">
               Fundir exclusive · Foundation intelligence
             </span>
           </div>

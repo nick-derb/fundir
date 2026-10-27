@@ -74,7 +74,7 @@ export function StrategyResources() {
               </span>
               <b className="block text-[13px] font-medium tracking-[-.005em] mb-1.5 text-primary leading-snug">{r.title}</b>
               <span className="block text-[11.5px] leading-relaxed text-secondary mb-3">{r.blurb}</span>
-              <span className="font-mono text-[10px] uppercase tracking-[.08em] text-accent">{r.action} →</span>
+ <span className="font-mono text-[11.5px] text-accent">{r.action} →</span>
             </button>
           ))}
         </div>

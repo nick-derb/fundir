@@ -102,7 +102,7 @@ export function Chip({ text, color, border, tint, style }: { text: string; color
 export function TypeChip({ type }: { type: string | null | undefined }) { const h = hueFor(type); return <Chip text={h.short} color={h.color} border={h.border} />; }
 export function ConfChip({ confidence }: { confidence: string | null | undefined }) {
   const c = confColor(confidence);
-  return <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontFamily: MONO, fontSize: 9.5, letterSpacing: '.05em', textTransform: 'uppercase', color: c, whiteSpace: 'nowrap' }}><span style={{ width: 6, height: 6, borderRadius: 3, background: c }} />{confidence ?? '—'}</span>;
+  return <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontFamily: MONO, fontSize: 11.5, color: c, whiteSpace: 'nowrap' }}><span style={{ width: 6, height: 6, borderRadius: 3, background: c }} />{confidence ?? '—'}</span>;
 }
 export function StatusChip({ status }: { status: string }) {
   const tone = statusTone(status);

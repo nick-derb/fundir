@@ -90,14 +90,14 @@ export function DashboardHero({
       <style>{`
         .dh2{--dh2-accent:var(--accent);--dh2-accent-br:var(--accent-bright,#15917A);position:relative;padding:16px 22px 22px}
         .dh2-prov{display:flex;justify-content:flex-end;gap:16px;flex-wrap:wrap;font-family:var(--font-geist-mono,ui-monospace,monospace);
-          font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--text-tertiary)}
+          font-size:11.5px;color:var(--text-tertiary)}
         .dh2-prov b{color:var(--text-secondary);font-weight:600}
         .dh2-live{display:inline-flex;align-items:center;gap:6px}
         .dh2-live i{width:6px;height:6px;border-radius:50%;background:var(--dh2-accent-br);animation:dh2blink 2.4s infinite}
         @keyframes dh2blink{0%,100%{opacity:1}50%{opacity:.3}}
 
         .dh2-row{display:flex;align-items:flex-start;justify-content:space-between;gap:26px;margin-top:8px;flex-wrap:wrap}
-        .dh2-eyebrow{font-family:var(--font-geist-mono,ui-monospace,monospace);font-size:10.5px;letter-spacing:.15em;text-transform:uppercase;color:var(--text-tertiary)}
+        .dh2-eyebrow{font-family:var(--font-geist-mono,ui-monospace,monospace);font-size:11.5px;color:var(--text-tertiary)}
         .dh2-h1{font-size:27px;font-weight:800;letter-spacing:-.022em;margin:7px 0 0;color:var(--text-primary);line-height:1.05}
         .dh2-ticker{margin-top:11px;height:20px;position:relative;font-family:var(--font-geist-mono,ui-monospace,monospace);
           font-size:11.5px;color:var(--dh2-accent);overflow:hidden;min-width:280px;max-width:min(70vw,560px)}
@@ -135,7 +135,7 @@ export function DashboardHero({
         .dh2-kpi::before{left:-1px;top:-1px;border-right:none;border-bottom:none;border-radius:4px 0 0 0}
         .dh2-kpi::after{right:-1px;bottom:-1px;border-left:none;border-top:none;border-radius:0 0 4px 0}
         .dh2-kpi:hover::before,.dh2-kpi:hover::after{border-color:color-mix(in srgb,var(--dh2-accent) 70%,transparent)}
-        .dh2-k{font-family:var(--font-geist-mono,ui-monospace,monospace);font-size:9px;letter-spacing:.11em;text-transform:uppercase;
+        .dh2-k{font-family:var(--font-geist-mono,ui-monospace,monospace);font-size:11.5px;
           color:var(--text-tertiary);display:flex;justify-content:space-between;align-items:center}
         .dh2-k .dot{width:6px;height:6px;border-radius:50%;background:var(--dh2-accent-br)}
         .dh2-v{font-family:var(--font-geist-mono,ui-monospace,monospace);font-variant-numeric:tabular-nums;font-weight:700;font-size:23px;letter-spacing:-.02em;margin-top:6px;color:var(--text-primary)}

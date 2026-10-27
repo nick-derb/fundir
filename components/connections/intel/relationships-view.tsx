@@ -7,6 +7,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { EdgeRow } from '@/lib/network/queries';
 import { SERIF, MONO, Avatar, OrgMark, Chip, Eyebrow, Skeleton, relLabel, AMBER, SLATE } from './shared';
+import { OrgName, OrgShort } from '@/components/org-context';
 
 const VER_TONE: Record<string, string> = { verified: 'var(--accent)', probable: SLATE, inferred: AMBER };
 const VER_LABEL: Record<string, string> = { verified: 'documented', probable: 'undated', inferred: 'inferred' };
@@ -32,7 +33,7 @@ export function RelationshipsView({ onFocus }: { onFocus: (f: { kind: 'person' |
   return (
     <div className="ni-root" style={{ padding: '24px 26px 60px' }}>
       <div style={{ marginBottom: 18 }}>
-        <Eyebrow style={{ display: 'block', margin: '0 0 9px' }}>Chicago Youth Centers · Network intelligence</Eyebrow>
+        <Eyebrow style={{ display: 'block', margin: '0 0 9px' }}><OrgName /> · Network intelligence</Eyebrow>
         <h1 style={{ fontFamily: SERIF, fontWeight: 400, fontSize: 'clamp(1.9rem,3vw,2.5rem)', lineHeight: 1.04, letterSpacing: '-.018em', margin: 0 }}>Relationships</h1>
         <p style={{ margin: '9px 0 0', fontSize: 13.5, lineHeight: 1.6, color: 'var(--text-secondary)', maxWidth: '64ch' }}>Every link Fundir derived, graded by how well it is documented: <b style={{ color: 'var(--accent)', fontWeight: 500 }}>documented</b> links have cited facts on both ends and dated overlap; <b style={{ color: SLATE, fontWeight: 500 }}>undated</b> ones are cited but cannot prove the overlap; <b style={{ color: AMBER, fontWeight: 500 }}>inferred</b> ones rest on an uncited fact.</p>
       </div>
@@ -71,7 +72,7 @@ function End({ e }: { e: EdgeRow['a'] }) {
       {e.kind === 'person' ? <Avatar name={e.name} size={24} own={e.own} /> : <OrgMark name={e.name} size={24} />}
       <span style={{ minWidth: 0 }}>
         <b style={{ display: 'block', fontSize: 12.5, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.name}</b>
-        {e.own && <span className="fd-mono" style={{ fontSize: 9, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--accent)' }}>CYC</span>}
+        {e.own && <span className="fd-mono" style={{ fontSize: 11.5, color: 'var(--accent)' }}><OrgShort /></span>}
       </span>
     </span>
   );

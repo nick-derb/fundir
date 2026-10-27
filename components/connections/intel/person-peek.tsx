@@ -13,7 +13,7 @@ import type { PipelineState } from '@/lib/network/queries';
 
 const TABS = ['Overview', 'Career', 'Boards & paths', 'Sources'] as const;
 type Tab = typeof TABS[number];
-const SOURCE_LABEL: Record<string, string> = { irs_990_xml: 'IRS 990 filing', propublica: 'ProPublica', foundation_site: 'foundation website', corporate_site: 'company website', cyc_workbook: 'CYC records', linkedin_api: 'LinkedIn profile', public_bio: 'public bio', cyc_site: 'CYC board page', seed: 'seed list', irs_bmf: 'IRS BMF', manual: 'manual' };
+const SOURCE_LABEL: Record<string, string> = { irs_990_xml: 'IRS 990 filing', propublica: 'ProPublica', foundation_site: 'foundation website', corporate_site: 'company website', cyc_workbook: 'your records', linkedin_api: 'LinkedIn profile', public_bio: 'public bio', cyc_site: 'your board page', seed: 'seed list', irs_bmf: 'IRS BMF', manual: 'manual' };
 const src = (t: string | null) => (t ? SOURCE_LABEL[t] ?? t.replace(/_/g, ' ') : 'source not recorded');
 const span = (s: number | null, e: number | null, cur: boolean) => (s && (e || cur) ? `${s}–${cur ? 'present' : e}` : s ? `from ${s}` : e ? `until ${e}` : 'undated');
 
@@ -42,13 +42,13 @@ function PersonPeekInner({ personId, onClose, onOpenLead, onOpenMap, onSaveUrl, 
     window.addEventListener('keydown', onKey); return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
-  const kindLabel = p ? (p.own ? (p.kind === 'board' ? `CYC board${p.board_role ? ` · ${p.board_role}` : ''}` : p.kind === 'staff' ? 'CYC staff' : p.kind === 'auxiliary' ? 'CYC auxiliary board' : 'CYC council') : p.kind === 'trustee' ? 'Funder trustee' : p.kind === 'corporate_contact' ? `Corporate contact${p.org ? ` · ${p.org}` : ''}` : 'Funder executive') : '';
+  const kindLabel = p ? (p.own ? (p.kind === 'board' ? `Our board${p.board_role ? ` · ${p.board_role}` : ''}` : p.kind === 'staff' ? 'Our staff' : p.kind === 'auxiliary' ? 'Our auxiliary board' : 'Our council') : p.kind === 'trustee' ? 'Funder trustee' : p.kind === 'corporate_contact' ? `Corporate contact${p.org ? ` · ${p.org}` : ''}` : 'Funder executive') : '';
   const fact = (label: string, value: React.ReactNode) => (value ? [<span key={`${label}-l`} className="fd-caption" style={{ color: 'var(--text-tertiary)', fontSize: 11.5 }}>{label}</span>, <span key={`${label}-v`} style={{ fontSize: 12.5, color: 'var(--text-primary)', minWidth: 0, overflowWrap: 'anywhere' }}>{value}</span>] : null);
 
   return (
     <aside className="ni-peek" role="dialog" aria-modal="false" aria-label={p ? `${p.name} record` : 'Person record'}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px 10px 18px', borderBottom: '1px solid var(--border-hairline)', flex: 'none' }}>
-        <span className="fd-mono" style={{ fontSize: 9.5, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--text-tertiary)' }}>Person</span>
+        <span className="fd-mono" style={{ fontSize: 11.5, color: 'var(--text-tertiary)' }}>Person</span>
         <span style={{ flex: 1 }} />
         {p && <button type="button" className="ni-ghost" style={{ height: 28, fontSize: 11.5 }} onClick={() => onOpenMap({ kind: 'person', id: p.id })}><MapIcon style={{ width: 12, height: 12 }} />Map</button>}
         {p?.linkedin_url && <a href={p.linkedin_url} target="_blank" rel="noopener noreferrer" className="ni-ghost" style={{ height: 28, fontSize: 11.5, color: INFO, textDecoration: 'none' }}><ExternalLink style={{ width: 12, height: 12 }} />LinkedIn</a>}
@@ -96,7 +96,7 @@ function PersonPeekInner({ personId, onClose, onOpenLead, onOpenMap, onSaveUrl, 
                     <div style={{ marginTop: 18, border: `1px solid ${p.path_to ? 'rgba(12,107,90,.32)' : 'var(--border-hairline)'}`, background: p.path_to ? 'rgba(12,107,90,.07)' : 'var(--bg-page)', borderRadius: 10, padding: '12px 14px' }}>
                       <Eyebrow color={p.path_to ? 'var(--accent)' : 'var(--text-secondary)'} style={{ display: 'block', marginBottom: 6 }}>{p.path_to ? 'Warm path' : 'How to approach'}</Eyebrow>
                       <p className="fd-caption" style={{ margin: 0, color: 'var(--text-secondary)', fontSize: 12.5 }}>
-                        {p.path_to ? `Ask ${p.path_to} for an introduction — the two share career history.` : `No CYC connection found yet, so this is a cold approach: cite the company's community giving and CYC's programs.`}
+                        {p.path_to ? `Ask ${p.path_to} for an introduction — the two share career history.` : `No connection to your people found yet, so this is a cold approach: cite the company's community giving and your programs.`}
                         {p.best_lead && <> <button type="button" onClick={() => onOpenLead(p.best_lead!.id)} style={{ border: 'none', background: 'none', padding: 0, font: 'inherit', fontSize: 12.5, color: 'var(--accent)', cursor: 'pointer' }}>Open the {p.org ?? 'company'} lead ›</button></>}
                       </p>
                     </div>
@@ -145,7 +145,7 @@ function PersonPeekInner({ personId, onClose, onOpenLead, onOpenMap, onSaveUrl, 
                           <span className="fd-mono" style={{ fontSize: 10.5, color: 'var(--text-tertiary)' }}>{span(e.start_year, e.end_year, e.is_current)}</span>
                         </div>
                         {e.title && <p style={{ margin: '2px 0 0', fontSize: 12.5, color: 'var(--text-secondary)' }}>{e.title}</p>}
-                        <span className="fd-mono" style={{ display: 'inline-block', marginTop: 4, fontSize: 9.5, letterSpacing: '.05em', textTransform: 'uppercase', color: 'var(--text-tertiary)' }}>per {src(e.source_type)}{e.source_url ? <a href={e.source_url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', marginLeft: 6 }}>open</a> : null}</span>
+                        <span className="fd-mono" style={{ display: 'inline-block', marginTop: 4, fontSize: 11.5, color: 'var(--text-tertiary)' }}>per {src(e.source_type)}{e.source_url ? <a href={e.source_url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', marginLeft: 6 }}>open</a> : null}</span>
                       </div>
                     </div>
                   ))}
@@ -165,7 +165,7 @@ function PersonPeekInner({ personId, onClose, onOpenLead, onOpenMap, onSaveUrl, 
                     <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: '1px solid var(--border-hairline)' }}>
                       <button type="button" onClick={() => onOpenMap({ kind: 'org', id: s.org_id })} style={{ border: 'none', background: 'none', padding: 0, font: 'inherit', fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', cursor: 'pointer', textAlign: 'left', minWidth: 0, flex: 1 }}>{s.org}</button>
                       <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{s.title ?? 'Board'}</span>
-                      <span className="fd-mono" style={{ fontSize: 9.5, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '.05em' }}>{src(s.source_type)}</span>
+                      <span className="fd-mono" style={{ fontSize: 11.5, color: 'var(--text-tertiary)' }}>{src(s.source_type)}</span>
                     </div>
                   ))}
                   <Eyebrow color="var(--text-secondary)" style={{ display: 'block', margin: '18px 0 8px' }}>{p.own ? 'Paths through this person' : 'Paths to this person'}</Eyebrow>

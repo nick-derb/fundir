@@ -22,7 +22,7 @@ interface Props {
   snapshot?: ConcentrationSnapshot | null;
 }
 
-// Severity reads from the row's 3px LEFT BORDER + uppercase tag, never as a
+// Severity reads from the row's 3px LEFT BORDER + tag, never as a
 // full-fill card. Drops the harsh maroon for elevated; uses the desaturated
 // semantic ramp.
 const SEVERITY_STYLE: Record<ConcentrationRiskFlag['severity'], { borderCls: string; tagCls: string; label: string }> = {
@@ -47,7 +47,7 @@ export function ConcentrationPanel({ snapshot }: Props) {
     return (
       <div className="rounded-sm border border-hairline bg-surface p-4 flex items-center justify-between gap-3">
         <div>
-          <div className="text-eyebrow uppercase text-secondary mb-1">Funding concentration</div>
+ <div className="text-eyebrow text-secondary mb-1">Funding concentration</div>
           <p className="text-body text-muted">
             No concentration snapshot yet. Run the analysis to see your government dependency and risk flags.
           </p>
@@ -79,7 +79,7 @@ export function ConcentrationPanel({ snapshot }: Props) {
       {/* Header */}
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
-          <div className="text-eyebrow uppercase text-secondary mb-1">
+ <div className="text-eyebrow text-secondary mb-1">
             Funding concentration
           </div>
           <div className="flex items-baseline gap-2">
@@ -152,7 +152,7 @@ export function ConcentrationPanel({ snapshot }: Props) {
             const s = SEVERITY_STYLE[f.severity];
             return (
               <li key={i} className={`flex items-start gap-3 pl-3 border-l-[3px] ${s.borderCls}`}>
-                <span className={`text-eyebrow font-semibold uppercase tracking-wider shrink-0 mt-0.5 ${s.tagCls}`}>
+ <span className={`text-eyebrow font-semibold shrink-0 mt-0.5 ${s.tagCls}`}>
                   {s.label}
                 </span>
                 <div className="min-w-0">

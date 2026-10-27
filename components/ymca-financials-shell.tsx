@@ -92,7 +92,7 @@ function Flag({
           <AlertTriangle className={`w-3.5 h-3.5 flex-shrink-0 ${sev.tone}`} />
           <p className={`text-[13px] font-semibold ${sev.tone} truncate`}>{headline}</p>
         </div>
-        <span className={`font-mono text-[9.5px] font-semibold uppercase tracking-[0.08em] ${sev.tone} flex-shrink-0`}>
+ <span className={`font-mono text-[11.5px] font-semibold ${sev.tone} flex-shrink-0`}>
           {category}
         </span>
       </div>
@@ -163,7 +163,7 @@ function OverviewTab() {
         {kpis.map(({ label, value, sub, icon: Icon, color, bg, neg }) => (
           <Card key={label} className="p-4">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-[10px] font-bold text-secondary uppercase tracking-wide">{label}</span>
+ <span className="text-[11.5px] font-medium text-secondary">{label}</span>
               <div className="w-6 h-6 rounded-sm flex items-center justify-center" style={{ background: bg }}>
                 <Icon className="w-3.5 h-3.5" style={{ color }} />
               </div>
@@ -238,7 +238,7 @@ function CompensationTab() {
           { label: 'Avg Exec Comp',        value: fmt(avgComp),                         color: 'var(--info)' },
         ].map(({ label, value, color }) => (
           <Card key={label} className="p-4">
-            <p className="text-[10px] font-bold text-secondary uppercase tracking-wide mb-2">{label}</p>
+ <p className="text-[11.5px] font-medium text-secondary mb-2">{label}</p>
             <p className="text-[20px] font-bold font-mono" style={{ color }}>{value}</p>
           </Card>
         ))}
@@ -254,7 +254,7 @@ function CompensationTab() {
           <thead>
             <tr className="border-b" style={{ borderColor: 'var(--border-hairline)', background: 'var(--bg-elevated)' }}>
               {['Name / Title', 'From Org', 'Other', 'Total', 'YoY'].map((h, i) => (
-                <th key={h} className={`py-2.5 px-4 text-[10px] font-bold text-secondary uppercase tracking-wide ${i === 0 ? 'text-left' : 'text-right'}`}>{h}</th>
+ <th key={h} className={`py-2.5 px-4 text-[11.5px] font-medium text-secondary ${i === 0 ? 'text-left' : 'text-right'}`}>{h}</th>
               ))}
             </tr>
           </thead>
@@ -340,7 +340,7 @@ function ContractorsTab() {
           { label: 'New in FY2024',            value: '3 of 5 new',                    color: 'var(--warning)' },
         ].map(({ label, value, color }) => (
           <Card key={label} className="p-4">
-            <p className="text-[10px] font-bold text-secondary uppercase tracking-wide mb-2">{label}</p>
+ <p className="text-[11.5px] font-medium text-secondary mb-2">{label}</p>
             <p className="text-[20px] font-bold font-mono" style={{ color }}>{value}</p>
           </Card>
         ))}
@@ -356,7 +356,7 @@ function ContractorsTab() {
           <thead>
             <tr className="border-b" style={{ borderColor: 'var(--border-hairline)', background: 'var(--bg-elevated)' }}>
               {['Contractor', 'Category', 'Amount', 'YoY'].map((h, i) => (
-                <th key={h} className={`py-2.5 px-4 text-[10px] font-bold text-secondary uppercase tracking-wide ${i === 0 || i === 1 ? 'text-left' : 'text-right'}`}>{h}</th>
+ <th key={h} className={`py-2.5 px-4 text-[11.5px] font-medium text-secondary ${i === 0 || i === 1 ? 'text-left' : 'text-right'}`}>{h}</th>
               ))}
             </tr>
           </thead>
@@ -476,7 +476,7 @@ export function YMCAFinancialsShell({
           <div className="min-w-0">
             <div className="flex items-center gap-2 mb-1.5">
               <BarChart3 className="w-3.5 h-3.5 text-accent" />
-              <span className="font-mono text-[10.5px] font-semibold text-accent uppercase tracking-[0.14em]">
+ <span className="font-mono text-[11.5px] font-semibold text-accent">
                 Org Intelligence · Financials
               </span>
             </div>
@@ -488,11 +488,11 @@ export function YMCAFinancialsShell({
             </p>
           </div>
           <div className="flex flex-col items-end gap-2 flex-shrink-0">
-            <span className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.08em] text-critical inline-flex items-center gap-1.5">
+ <span className="font-mono text-[11.5px] font-semibold text-critical inline-flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-critical" />
               FY2024 IRS 990 · ($24.1M) Deficit
             </span>
-            <span className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.08em] text-info inline-flex items-center gap-1.5">
+ <span className="font-mono text-[11.5px] font-semibold text-info inline-flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-info" />
               #9 &amp; #10 Human Services · Chicago
             </span>

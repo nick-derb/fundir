@@ -64,7 +64,7 @@ function ProfileRow({ icon: Icon, label, value, chips }: {
     <div className="px-4 py-3 border-b border-[#f1f5f9] last:border-0 transition-colors">
       <div className="flex items-center gap-1.5 mb-1">
         <Icon className="w-3 h-3 text-[#94a3b8]" />
-        <span className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-widest">{label}</span>
+ <span className="text-[11.5px] font-medium text-[#94a3b8]">{label}</span>
       </div>
       {empty && <span className="text-[12px] text-[#cbd5e1]">—</span>}
       {value && <p className="text-[13px] text-[#0f172a] font-medium">{value}</p>}
@@ -318,7 +318,7 @@ export function ConversationalOnboarding() {
 
             {summary && (
               <div className="px-4 py-3 border-t border-[#e2e8f0] bg-gradient-to-b from-[#f0fdfa] to-white">
-                <p className="text-[10px] font-bold text-[#0d9488] uppercase tracking-widest mb-1">Summary</p>
+ <p className="text-[11.5px] font-medium text-[#0d9488] mb-1">Summary</p>
                 <p className="text-[12px] text-[#0f172a] leading-relaxed">{summary}</p>
               </div>
             )}

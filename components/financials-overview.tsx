@@ -317,7 +317,7 @@ function KpiCard({ label, tone, value, delta, sparkline, delay = 0 }: KpiCardPro
       style={{ ...revealStyle(seen, reduce, delay), boxShadow: '0 1px 2px rgba(11,18,32,0.04)' }}
     >
       <div className="flex items-center justify-between">
-        <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.11em] text-secondary">
+ <span className="font-mono text-[11.5px] font-semibold text-secondary">
           {label}
         </span>
         <span className={`w-[7px] h-[7px] rounded-full ${TONE_DOT[tone]}`} />
@@ -565,10 +565,10 @@ function RevenueTrajectory({ series }: TrajectoryProps) {
       style={revealStyle(seen, reduce, 0)}
     >
       <div className="flex items-center justify-between mb-1.5 flex-wrap gap-2">
-        <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.11em] text-secondary">
+ <span className="font-mono text-[11.5px] font-semibold text-secondary">
           Revenue &amp; bottom line
         </span>
-        <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.11em] text-tertiary">
+ <span className="font-mono text-[11.5px] font-semibold text-tertiary">
           {series[0].label}–{series[series.length - 1].label} · $M
         </span>
       </div>
@@ -769,7 +769,7 @@ function CompositeHealth({ score, verdict, subcopy, drivers }: CompositeHealthPr
       style={revealStyle(seen, reduce, 60)}
     >
       <div className="flex items-center justify-between mb-1.5">
-        <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.11em] text-secondary">
+ <span className="font-mono text-[11.5px] font-semibold text-secondary">
           Composite health
         </span>
       </div>
@@ -804,7 +804,7 @@ function CompositeHealth({ score, verdict, subcopy, drivers }: CompositeHealthPr
             </text>
           </svg>
           <div className="min-w-0 flex-1">
-            <div className={`font-mono text-[12px] font-semibold uppercase tracking-[0.08em] ${verdictTone}`}>
+ <div className={`font-mono text-[12px] font-semibold ${verdictTone}`}>
               {verdict}
             </div>
             <p className="text-[12px] text-secondary mt-1 leading-[1.45]">
@@ -863,11 +863,11 @@ function RevenueConcentration({ data }: { data: FinancialsOverviewData['concentr
       style={revealStyle(seen, reduce, 0)}
     >
       <div className="flex items-center justify-between mb-1.5 flex-wrap gap-2">
-        <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.11em] text-secondary">
+ <span className="font-mono text-[11.5px] font-semibold text-secondary">
           Revenue concentration
         </span>
         {above && (
-          <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.06em] text-critical bg-critical-tint rounded-md px-2 py-1">
+ <span className="font-mono text-[11.5px] font-semibold text-critical bg-critical-tint rounded-md px-2 py-1">
             Above {data.thresholdPct}% threshold
           </span>
         )}
@@ -936,7 +936,7 @@ function LiquidityRunway({ data }: { data: FinancialsOverviewData['liquidity'] }
       style={revealStyle(seen, reduce, 60)}
     >
       <div className="flex items-center justify-between mb-1.5">
-        <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.11em] text-secondary">
+ <span className="font-mono text-[11.5px] font-semibold text-secondary">
           Liquidity runway
         </span>
       </div>
@@ -1051,7 +1051,7 @@ function ChipPiece({ label, value, accent }: { label: string; value: string; acc
     accent === 'critical' ? 'text-critical' : 'text-primary';
   return (
     <span className={`border ${borderCls} rounded-md px-2.5 py-1.5 bg-page inline-flex flex-col leading-tight`}>
-      <span className="text-[8.5px] uppercase tracking-[0.06em] text-tertiary font-semibold">{label}</span>
+ <span className="text-[11.5px] text-tertiary font-semibold">{label}</span>
       <span className={`mt-0.5 font-semibold tabular-nums ${valueCls}`}>{value}</span>
     </span>
   );
@@ -1071,11 +1071,11 @@ function ExpenseAllocation({ data }: { data: FinancialsOverviewData['expense'] }
       style={revealStyle(seen, reduce, 0)}
     >
       <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
-        <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.11em] text-secondary">
+ <span className="font-mono text-[11.5px] font-semibold text-secondary">
           Where every dollar goes
         </span>
         {data.benchmarkLabel && (
-          <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.11em] text-success">
+ <span className="font-mono text-[11.5px] font-semibold text-success">
             {data.programPct.toFixed(0)}¢ to program · {data.benchmarkLabel}
           </span>
         )}
@@ -1160,7 +1160,7 @@ function FlagCard({ flag, reduce, delay }: { flag: FlagRow; reduce: boolean; del
           <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
           {flag.headline}
         </div>
-        <span className="font-mono text-[9px] font-semibold uppercase tracking-[0.08em] text-tertiary flex-none mt-1">
+ <span className="font-mono text-[11.5px] font-semibold text-tertiary flex-none mt-1">
           {flag.category}
         </span>
       </div>

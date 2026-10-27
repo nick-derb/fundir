@@ -47,7 +47,7 @@ export function ImpersonationBanner({ name, email }: { name: string; email: stri
         onClick={exit}
         disabled={exiting}
         style={{
-          fontFamily: 'inherit', fontSize: 11, letterSpacing: '.08em', textTransform: 'uppercase',
+          fontFamily: 'inherit', fontSize: 11.5,
           fontWeight: 600, padding: '5px 13px', borderRadius: 999,
           border: '1px solid rgba(253,237,228,.55)', background: 'transparent', color: '#FDEDE4',
           cursor: exiting ? 'default' : 'pointer', opacity: exiting ? 0.7 : 1, whiteSpace: 'nowrap',

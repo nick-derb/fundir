@@ -42,7 +42,7 @@ function CardHeader({ eyebrow, title, actions, className, ...rest }: CardHeaderP
     <div className={clsx('flex items-start justify-between gap-3 mb-3', className)} {...rest}>
       <div className="min-w-0">
         {eyebrow != null && (
-          <div className="text-eyebrow uppercase font-semibold text-ink-2 mb-1">
+ <div className="text-eyebrow font-semibold text-ink-2 mb-1">
             {eyebrow}
           </div>
         )}

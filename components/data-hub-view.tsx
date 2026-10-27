@@ -19,6 +19,7 @@ import {
   Search, SlidersHorizontal, Upload, UploadCloud, X, MoreVertical, FileText,
   Table2, Landmark, Users, BarChart3, AlertCircle, Loader2, Check, Plus, ExternalLink,
 } from 'lucide-react';
+import { OrgShort } from '@/components/org-context';
 
 const SERIF = 'var(--font-display)';
 
@@ -64,7 +65,7 @@ const COLLECTIONS = [
 
 const ext = (n: string) => n.toLowerCase().slice(n.lastIndexOf('.') + 1);
 
-// A fiscal-year tag ("FY27 …") is on almost everything CYC files, so it only
+// A fiscal-year tag ("FY27 …") is on almost everything <OrgShort /> files, so it only
 // counts when no real keyword matched — otherwise "FY27 Board list" reads as
 // a financial. Board & governance is checked first for the same reason.
 const FISCAL_YEAR = /(?<![a-z])fy\s?'?\d{2}(?!\d)/i;
@@ -395,7 +396,7 @@ export function DataHubView({ orgName, userEmail }: { orgName: string; userEmail
                     {f.signals.length > 0 && (
                       <div className="flex flex-wrap gap-1.5 mt-2.5">
                         {f.signals.map((s, i) => (
-                          <span key={i} className="font-mono text-[9.5px] uppercase tracking-[.06em] text-accent border rounded-xs px-[7px] py-[3px]"
+ <span key={i} className="font-mono text-[11.5px] text-accent border rounded-xs px-[7px] py-[3px]"
                                 style={{ borderColor: 'rgba(12,107,90,.24)', animation: 'fd-fade .3s ease' }}>{s}</span>
                         ))}
                       </div>

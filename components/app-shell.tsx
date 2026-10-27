@@ -22,29 +22,33 @@ import { AiAdvisor } from '@/components/ai-advisor';
 import { switchAdminOrg } from '@/actions/admin-org';
 import { bundledLogoFor } from '@/lib/org-logo';
 import { UserMenu } from '@/components/user-menu';
+import { OrgProvider } from '@/components/org-context';
 
-// Sidebar IA. Three groups, read top to bottom in the order a development
-// officer works: what is due (Work), what Fundir knows (Knowledge), and the
-// organisation itself. Applications is still a placeholder, so during the
-// beta only admins see it (the route stays live).
+// Sidebar IA. Four groups, read top to bottom in the order a development
+// officer works: the day (Today, Calendar), the three engines the home page
+// promises (Prospecting, Network, Peers), what the organization knows, then
+// the organization itself. Applications is still a placeholder, so during
+// the beta only admins see it (the route stays live).
 type NavItem = { href: string; label: string; icon: React.ComponentType<{ className?: string }>; adminOnly?: boolean };
 type NavGroup = { label: string; items: NavItem[] };
 
 const NAV_GROUPS: NavGroup[] = [
-  { label: 'Work', items: [
-    { href: '/dashboard',    label: 'Dashboard',    icon: LayoutDashboard },
-    { href: '/prospecting',  label: 'Prospecting',  icon: Radar           },
-    { href: '/connections',  label: 'Connections',  icon: Share2          },
+  { label: 'Your day', items: [
+    { href: '/dashboard',    label: 'Today',        icon: LayoutDashboard },
     { href: '/calendar',     label: 'Calendar',     icon: CalendarDays    },
     { href: '/applications', label: 'Applications', icon: FileText,       adminOnly: true },
   ] },
+  { label: 'Intelligence', items: [
+    { href: '/prospecting',  label: 'Prospecting',  icon: Radar           },
+    { href: '/connections',  label: 'Network',      icon: Share2          },
+    { href: '/peers',        label: 'Peers',        icon: Users           },
+  ] },
   { label: 'Knowledge', items: [
-    { href: '/peers',        label: 'Peer Network', icon: Users           },
-    { href: '/data',         label: 'Data Hub',     icon: Database        },
+    { href: '/data',         label: 'Data hub',     icon: Database        },
     { href: '/reports',      label: 'Reports',      icon: TrendingUp      },
   ] },
   { label: 'Organization', items: [
-    { href: '/org',          label: 'Org Profile',  icon: Building2       },
+    { href: '/org',          label: 'Profile',      icon: Building2       },
     { href: '/settings',     label: 'Settings',     icon: Settings        },
     { href: '/feedback',     label: 'Feedback',     icon: MessageSquare   },
   ] },
@@ -190,6 +194,7 @@ export function AppShell({
   const orgLogoUrl = bundledLogoFor(currentOrgCode);
 
   return (
+    <OrgProvider name={orgName} code={currentOrgCode}>
     <div className="flex min-h-screen bg-page">
       {paletteOpen && <CommandPalette />}
 
@@ -277,7 +282,7 @@ export function AppShell({
             {orgMenuOpen && availableOrgs.length > 1 && (
               <div className={`absolute top-full left-0 mt-1 rounded-sm overflow-hidden border border-hairline bg-surface z-50 ${collapsed ? 'md:left-full md:ml-2 md:w-60' : 'right-0'}`}
                 style={{ boxShadow: 'var(--shadow-overlay)' }}>
-                <p className="px-3 pt-2 pb-1 text-eyebrow text-tertiary uppercase">Switch organization</p>
+ <p className="px-3 pt-2 pb-1 text-eyebrow text-tertiary">Switch organization</p>
                 {availableOrgs.map(org => (
                   <button
                     key={org.id}
@@ -311,7 +316,7 @@ export function AppShell({
           </div>
 
           {isAdmin && !collapsed && (
-            <p className="mt-1 px-2 text-eyebrow uppercase text-tertiary">Admin view</p>
+ <p className="mt-1 px-2 text-eyebrow text-tertiary">Admin view</p>
           )}
         </div>
 
@@ -323,7 +328,7 @@ export function AppShell({
             if (items.length === 0) return null;
             return (
               <div key={group.label} className={gi > 0 ? `mt-2 pt-2 border-t border-hairline ${collapsed ? 'md:mt-1 md:pt-1' : ''}` : ''}>
-                <p className={`fd-eyebrow px-3 pt-2 pb-1.5 text-tertiary ${collapsed ? 'md:hidden' : ''}`}>{group.label}</p>
+                <p className={`fd-eyebrow px-3 pt-2 pb-1.5 text-tertiary ${collapsed ? 'md:hidden' : ''}`} style={{ fontSize: 11.5 }}>{group.label}</p>
                 {items.map(({ href, label, icon: Icon }) => {
                   const active = isActive(href);
                   return (
@@ -349,7 +354,7 @@ export function AppShell({
             </Link>
           )}
           {userEmail && !collapsed && (
-            <p className="px-3 py-1 text-eyebrow text-tertiary truncate uppercase">{userEmail}</p>
+ <p className="px-3 py-1 text-eyebrow text-tertiary truncate">{userEmail}</p>
           )}
           {/* Theme toggle removed from the UI during the beta (light only). The theme
               tokens, toggleTheme() and the data-theme plumbing stay in place; set
@@ -420,5 +425,6 @@ export function AppShell({
       {/* AI grant strategist — fixed overlay, available on every page */}
       <AiAdvisor orgCode={currentOrgCode} orgId={orgId} orgName={orgName} />
     </div>
+    </OrgProvider>
   );
 }

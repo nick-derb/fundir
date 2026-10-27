@@ -86,7 +86,7 @@ function FoundationCard({ f, rank, onOpen }: { f: FoundationProfile; rank: numbe
         </div>
 
         <div className="mb-3">
-          <span className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-wide">Mission Fit</span>
+ <span className="text-[11.5px] font-medium text-[#94a3b8]">Mission Fit</span>
           <div className="mt-1"><FitBar score={f.fitScore} /></div>
           <p className="text-[10px] text-[#94a3b8] mt-1">{f.fitReason}</p>
         </div>
@@ -232,7 +232,7 @@ function FoundationDetailPanel({ f, onClose }: { f: FoundationProfile; onClose: 
         {/* Header — light canvas, design tokens */}
         <div className="sticky top-0 z-10 px-5 py-4 flex items-start gap-3 bg-canvas-0 border-b border-canvas-3">
           <div className="flex-1 min-w-0">
-            <p className="text-eyebrow font-semibold text-action uppercase tracking-wider mb-1">Foundation 990 Report</p>
+ <p className="text-eyebrow font-semibold text-action mb-1">Foundation 990 Report</p>
             <h2 className="text-h1 font-semibold text-ink-0 leading-snug">{f.name}</h2>
             <p className="text-caption text-ink-2 mt-0.5">{f.city}, {f.state}</p>
           </div>
@@ -280,7 +280,7 @@ function FoundationDetailPanel({ f, onClose }: { f: FoundationProfile; onClose: 
                   { label: 'NTEE Code',          value: data.nteeCode || '—' },
                 ].map(s => (
                   <div key={s.label} className="bg-canvas-0 rounded-md ring-1 ring-canvas-3 p-3">
-                    <p className="text-eyebrow text-ink-2 uppercase tracking-wider mb-1">{s.label}</p>
+ <p className="text-eyebrow text-ink-2 mb-1">{s.label}</p>
                     <p className="text-h2 font-semibold text-ink-0">{s.value}</p>
                   </div>
                 ))}
@@ -290,7 +290,7 @@ function FoundationDetailPanel({ f, onClose }: { f: FoundationProfile; onClose: 
               <div className="bg-canvas-1 rounded-md ring-1 ring-canvas-3 p-4">
                 <div className="flex items-baseline justify-between mb-3 gap-3 flex-wrap">
                   <div>
-                    <p className="text-eyebrow font-semibold text-ink-2 uppercase tracking-wider">Annual deployment</p>
+ <p className="text-eyebrow font-semibold text-ink-2">Annual deployment</p>
                     <p className="text-h2 font-semibold text-ink-0 mt-0.5">
                       {formatCompact(data.latestExpenses)}
                       <span className="text-caption text-ink-2 font-normal ml-1.5">FY{data.latestYear}</span>
@@ -321,7 +321,7 @@ function FoundationDetailPanel({ f, onClose }: { f: FoundationProfile; onClose: 
 
               {/* Fit + focus (from Fundir scoring) */}
               <div>
-                <p className="text-eyebrow font-semibold text-ink-2 uppercase tracking-wider mb-2">Why Fundir matched this funder</p>
+ <p className="text-eyebrow font-semibold text-ink-2 mb-2">Why Fundir matched this funder</p>
                 <div className="mb-2"><FitBar score={f.fitScore} /></div>
                 <p className="text-caption text-ink-2 mb-2.5">{f.fitReason}</p>
                 <div className="flex flex-wrap gap-1">

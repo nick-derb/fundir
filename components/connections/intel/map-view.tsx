@@ -12,10 +12,12 @@ import type { GraphPayload, GraphNode } from '@/lib/network/queries';
 import { MapGraph, buildLayout, strongestPath } from './map-graph';
 import { typeLabel, relLabel, STATUS_LABEL } from './shared';
 import type { PipelineState } from '@/lib/network/queries';
+import { OrgName, OrgShort, useOrg } from '@/components/org-context';
 
 export interface MapFocus { kind: 'person' | 'org'; id: string }
 
-export function MapView({ focus, onFocus, onOpenLead }: { focus: MapFocus | null; onFocus: (f: MapFocus | null) => void; onOpenLead: (id: string) => void }) {
+export function MapView({ focus, onFocus, onOpenLead, onOpenPerson }: { focus: MapFocus | null; onFocus: (f: MapFocus | null) => void; onOpenLead: (id: string) => void; onOpenPerson?: (id: string) => void }) {
+  const org = useOrg();
   const [data, setData] = useState<GraphPayload | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -49,9 +51,9 @@ export function MapView({ focus, onFocus, onOpenLead }: { focus: MapFocus | null
     <div className="ni-root" style={{ padding: '22px 24px 60px' }}>
       <div className="fd-page-head">
         <div style={{ minWidth: 0 }}>
-          <p className="fd-eyebrow" style={{ color: 'var(--text-tertiary)', margin: '0 0 8px' }}>Chicago Youth Centers · Network intelligence</p>
+          <p className="fd-eyebrow" style={{ color: 'var(--text-tertiary)', margin: '0 0 8px' }}><OrgName /> · Network intelligence</p>
           <h1>Map</h1>
-          <p className="fd-lede">CYC at the top, every warm path hanging beneath it. Double-click a card to make it the centre.</p>
+          <p className="fd-lede"><OrgShort /> at the top, every warm path hanging beneath it. Double-click a card to make it the centre.</p>
         </div>
         <form onSubmit={e => { e.preventDefault(); if (q.trim()) load(null, q.trim()); }} style={{ position: 'relative', flex: '0 1 320px', minWidth: 220 }}>
           <Search style={{ position: 'absolute', left: 10, top: 9, width: 14, height: 14, color: 'var(--text-tertiary)', pointerEvents: 'none' }} />
@@ -77,7 +79,7 @@ export function MapView({ focus, onFocus, onOpenLead }: { focus: MapFocus | null
             <button type="button" className="fd-btn" style={{ height: 24, padding: '0 8px', fontSize: 11 }} onClick={() => setFull(f => !f)} aria-pressed={full}><Maximize2 style={{ width: 11, height: 11 }} />{full ? 'Show panel' : 'Wide'}</button>
           </div>
           {error ? <p className="fd-caption" style={{ padding: 20, color: 'var(--warning)' }}>{error}</p> : (
-            <MapGraph data={data} height="auto" maxHeight={full ? 820 : 720} selectedId={selected?.id ?? null} onSelect={n => setSelected(n)} onActivate={n => { if (n.rowId) load({ kind: n.kind, id: n.rowId }); }} onOpenLead={onOpenLead} />
+            <MapGraph data={data} height="auto" maxHeight={full ? 820 : 720} selectedId={selected?.id ?? null} onSelect={n => setSelected(n)} onActivate={n => { if (n.rowId) load({ kind: n.kind, id: n.rowId }); }} onOpenPerson={onOpenPerson} onOpenLead={onOpenLead} />
           )}
         </div>
 
@@ -86,12 +88,13 @@ export function MapView({ focus, onFocus, onOpenLead }: { focus: MapFocus | null
             {selected ? (
               <div key={selected.id}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
-                  <span className="fd-tag" data-tone={selected.own ? 'accent' : undefined}>{selected.own ? 'CYC' : selected.kind === 'person' ? 'person' : typeLabel(selected.orgType) || 'organization'}</span>
+                  <span className="fd-tag" data-tone={selected.own ? 'accent' : undefined}>{selected.own ? org.short : selected.kind === 'person' ? 'person' : typeLabel(selected.orgType) || 'organization'}</span>
                   {selected.score !== null && <span className="fd-mono" style={{ fontSize: 10, color: selected.score >= 70 ? 'var(--accent)' : 'var(--text-tertiary)' }}>score {selected.score}</span>}
                 </div>
                 <h2 className="fd-display" style={{ fontSize: '1.3rem', lineHeight: 1.15, margin: '0 0 4px' }}>{selected.label}</h2>
                 {selected.sub && <p className="fd-caption" style={{ margin: 0, color: 'var(--text-secondary)' }}>{selected.sub}</p>}
                 <div style={{ display: 'flex', gap: 6, marginTop: 12, flexWrap: 'wrap' }}>
+                  {selected.kind === 'person' && selected.rowId && onOpenPerson && <button type="button" className="fd-btn-primary" style={{ height: 28 }} onClick={() => onOpenPerson(selected.rowId!)}>Open profile</button>}
                   {selected.rowId && !selected.focus && <button type="button" className="fd-btn" style={{ height: 28 }} onClick={() => load({ kind: selected.kind, id: selected.rowId! })}>Focus here</button>}
                   {selected.lead_id && <button type="button" className="fd-btn-primary" style={{ height: 28 }} onClick={() => onOpenLead(selected.lead_id!)}>Open lead</button>}
                 </div>

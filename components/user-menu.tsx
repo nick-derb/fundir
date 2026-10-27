@@ -205,7 +205,7 @@ export function UserMenu({
             </div>
 
             <div className="px-3.5 py-2.5 border-t border-hairline bg-page">
-              <p className="text-eyebrow text-tertiary uppercase mb-[3px]">Signed in to</p>
+ <p className="text-eyebrow text-tertiary mb-[3px]">Signed in to</p>
               <p className="text-[12px] text-secondary truncate">{orgName}</p>
             </div>
 
@@ -331,7 +331,7 @@ export function UserMenu({
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="block text-eyebrow text-tertiary uppercase mb-1.5">{label}</span>
+ <span className="block text-eyebrow text-tertiary mb-1.5">{label}</span>
       {children}
     </label>
   );

@@ -72,7 +72,7 @@ export function AITab({ orgCode, orgId, orgName, googleConnected, microsoftConne
         {!anyConnected && (
           <div className="mx-5 mt-4 mb-5 rounded-md border overflow-hidden" style={{ borderColor: 'var(--card-border)' }}>
             <div className="px-4 py-2.5 border-b" style={{ borderColor: 'var(--card-border)', background: 'var(--badge-bg)' }}>
-              <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-tertiary)' }}>Connect cloud storage</p>
+ <p className="text-[11.5px] font-medium" style={{ color: 'var(--text-tertiary)' }}>Connect cloud storage</p>
             </div>
             <IntegrationConnector
               orgCode={orgCode}
@@ -148,7 +148,7 @@ function AnalysisExpandView({ analysis }: { analysis: Record<string, unknown> })
           ].map(({ label, value, color }) => (
             <div key={label} className="p-3 rounded-[8px] border"
               style={{ background: 'var(--badge-bg)', borderColor: 'var(--card-border)' }}>
-              <p className="text-[9px] text-tertiary uppercase tracking-wide mb-1">{label}</p>
+ <p className="text-[11.5px] text-tertiary mb-1">{label}</p>
               <p className="text-[15px] font-bold font-mono" style={{ color }}>{value}</p>
             </div>
           ))}
@@ -167,7 +167,7 @@ function AnalysisExpandView({ analysis }: { analysis: Record<string, unknown> })
       <p className="text-[12px] text-secondary leading-relaxed">{summary}</p>
       {sections.slice(0, 2).map((s, i) => (
         <div key={i}>
-          <p className="text-[10px] font-bold text-tertiary uppercase tracking-widest mb-1.5">{s.title}</p>
+ <p className="text-[11.5px] font-medium text-tertiary mb-1.5">{s.title}</p>
           <div className="space-y-1">
             {s.items.slice(0, 3).map((item, j) => (
               <div key={j} className="flex items-start gap-2">
@@ -182,7 +182,7 @@ function AnalysisExpandView({ analysis }: { analysis: Record<string, unknown> })
       ))}
       {grantAlignment.length > 0 && (
         <div>
-          <p className="text-[10px] font-bold text-tertiary uppercase tracking-widest mb-1.5">Grant Alignment</p>
+ <p className="text-[11.5px] font-medium text-tertiary mb-1.5">Grant Alignment</p>
           {grantAlignment.slice(0, 2).map((g, i) => {
             const c = g.potential === 'high' ? { bg: 'var(--success-tint)', text: 'var(--success)' } : { bg: 'var(--warning-tint)', text: 'var(--warning)' };
             return (
@@ -433,7 +433,7 @@ export function StrategyBriefTab({ orgCode, orgName }: { orgCode: string; orgNam
     <div className="space-y-6">
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-[10px] font-bold text-info uppercase tracking-widest mb-0.5">AI · Strategy Brief</p>
+ <p className="text-[11.5px] font-medium text-info mb-0.5">AI · Strategy Brief</p>
           <h2 className="text-[20px] font-bold text-primary">{brief.org_name} Funding Strategy</h2>
           <p className="text-[11px] text-secondary">
             Synthesized from {brief.analysis_count} document{brief.analysis_count !== 1 ? 's' : ''} · {new Date(brief.generated_at).toLocaleDateString()}
@@ -447,13 +447,13 @@ export function StrategyBriefTab({ orgCode, orgName }: { orgCode: string; orgNam
 
       <div className="p-5 rounded-md border"
         style={{ background: 'var(--info-tint)', borderColor: 'var(--info-tint)' }}>
-        <p className="text-[10px] font-bold text-info uppercase tracking-widest mb-2">Executive Summary</p>
+ <p className="text-[11.5px] font-medium text-info mb-2">Executive Summary</p>
         <p className="text-[13px] text-muted leading-relaxed">{brief.executive_summary}</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card className="p-5">
-          <p className="text-[11px] font-bold text-success uppercase tracking-widest mb-3">Organizational Strengths</p>
+ <p className="text-[11.5px] font-medium text-success mb-3">Organizational Strengths</p>
           <div className="space-y-2">
             {brief.organizational_strengths.map((s, i) => (
               <div key={i} className="flex items-start gap-2">
@@ -464,7 +464,7 @@ export function StrategyBriefTab({ orgCode, orgName }: { orgCode: string; orgNam
           </div>
         </Card>
         <Card className="p-5">
-          <p className="text-[11px] font-bold text-critical uppercase tracking-widest mb-3">Critical Gaps</p>
+ <p className="text-[11.5px] font-medium text-critical mb-3">Critical Gaps</p>
           <div className="space-y-2.5">
             {brief.critical_gaps.map((g, i) => (
               <div key={i} className="flex items-start gap-2">
@@ -525,7 +525,7 @@ export function StrategyBriefTab({ orgCode, orgName }: { orgCode: string; orgNam
               <div className="flex items-start justify-between gap-2 mb-2">
                 <div>
                   <p className="text-[13px] font-bold text-primary">{g.focus_area}</p>
-                  <span className="text-[10px] font-bold text-secondary uppercase">{g.type}</span>
+ <span className="text-[11.5px] font-medium text-secondary">{g.type}</span>
                 </div>
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0"
                   style={{ background: `${readinessBadge(g.readiness)}22`, color: readinessBadge(g.readiness) }}>
@@ -544,7 +544,7 @@ export function StrategyBriefTab({ orgCode, orgName }: { orgCode: string; orgNam
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
           {brief.quarterly_action_plan.map(q => (
             <Card key={q.quarter} className="p-4">
-              <p className="text-[11px] font-bold text-info uppercase tracking-widest mb-3">{q.quarter}</p>
+ <p className="text-[11.5px] font-medium text-info mb-3">{q.quarter}</p>
               <div className="space-y-2">
                 {q.actions.map((action, i) => (
                   <div key={i} className="flex items-start gap-2">
@@ -559,13 +559,13 @@ export function StrategyBriefTab({ orgCode, orgName }: { orgCode: string; orgNam
       </div>
 
       <Card className="p-5">
-        <p className="text-[11px] font-bold text-accent uppercase tracking-widest mb-2">Revenue Diversification</p>
+ <p className="text-[11.5px] font-medium text-accent mb-2">Revenue Diversification</p>
         <p className="text-[12px] text-secondary leading-relaxed">{brief.revenue_diversification}</p>
       </Card>
 
       {brief.risk_mitigation.length > 0 && (
         <Card className="p-5">
-          <p className="text-[11px] font-bold text-warning uppercase tracking-widest mb-3">Risk Mitigation</p>
+ <p className="text-[11.5px] font-medium text-warning mb-3">Risk Mitigation</p>
           <div className="space-y-2">
             {brief.risk_mitigation.map((r, i) => (
               <div key={i} className="flex items-start gap-2">
@@ -636,7 +636,7 @@ export function OrgFinancialsTab({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-accent mb-0.5">IRS Form 990 · ProPublica</p>
+ <p className="text-[11.5px] font-medium text-accent mb-0.5">IRS Form 990 · ProPublica</p>
           <h2 className="text-[20px] font-bold" style={{ color: 'var(--text-primary)' }}>Financial Health Overview</h2>
           <p className="text-[12px] mt-0.5" style={{ color: 'var(--text-secondary)' }}>
             FY{computed.filingYear}{ein ? ` · EIN ${ein}` : orgName ? ` · ${orgName}` : ''}
@@ -675,7 +675,7 @@ export function OrgFinancialsTab({
           <div key={label} className="rounded-md border p-4"
             style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)' }}>
             <div className="flex items-center justify-between mb-3">
-              <span className="text-[11px] font-semibold uppercase tracking-wide"
+ <span className="text-[11.5px] font-semibold "
                 style={{ color: 'var(--text-secondary)' }}>{label}</span>
               <div className="w-7 h-7 rounded-[6px] flex items-center justify-center"
                 style={{ background: color + '20' }}>
@@ -691,7 +691,7 @@ export function OrgFinancialsTab({
       {/* Revenue mix + eligibility signals */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="rounded-md border p-5" style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)' }}>
-          <p className="text-[11px] font-bold uppercase tracking-widest mb-4"
+ <p className="text-[11.5px] font-medium mb-4"
             style={{ color: 'var(--text-tertiary)' }}>Revenue Mix</p>
           <div className="space-y-4">
             {[
@@ -713,7 +713,7 @@ export function OrgFinancialsTab({
         </div>
 
         <div className="rounded-md border p-5" style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)' }}>
-          <p className="text-[11px] font-bold uppercase tracking-widest mb-4"
+ <p className="text-[11.5px] font-medium mb-4"
             style={{ color: 'var(--text-tertiary)' }}>Grant Eligibility Signals</p>
           <div className="space-y-4">
             {[
@@ -757,7 +757,7 @@ export function OrgFinancialsTab({
       {/* Revenue history sparkline */}
       {history && history.length > 1 && (
         <div className="rounded-md border p-5" style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)' }}>
-          <p className="text-[11px] font-bold uppercase tracking-widest mb-4"
+ <p className="text-[11.5px] font-medium mb-4"
             style={{ color: 'var(--text-tertiary)' }}>Revenue History</p>
           <div className="flex items-end gap-3" style={{ height: 80 }}>
             {history.slice(-7).map(yr => {
@@ -836,7 +836,7 @@ export function FinancialsShell({
         <div className="relative px-8 py-7 max-w-7xl mx-auto">
           <div className="flex items-center gap-2 mb-1">
             <BarChart3 className="w-3.5 h-3.5 text-accent" />
-            <span className="text-[10px] font-bold text-accent uppercase tracking-widest">Org Intelligence · Financials</span>
+ <span className="text-[11.5px] font-medium text-accent">Org Intelligence · Financials</span>
           </div>
           <h1 className="text-[26px] font-bold leading-tight" style={{ color: 'var(--fin-heading)' }}>{orgName ?? 'My Organization'}</h1>
         </div>

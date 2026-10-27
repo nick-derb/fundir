@@ -450,7 +450,7 @@ export default async function GrantDetailPage({
                       <div className="w-6 h-6 rounded-sm flex items-center justify-center bg-action-soft text-action">
                         <Sparkles className="w-3.5 h-3.5" />
                       </div>
-                      <p className="text-eyebrow font-semibold text-ink-2 uppercase tracking-wider">
+ <p className="text-eyebrow font-semibold text-ink-2">
                         Why it&apos;s a match
                       </p>
                     </div>
@@ -474,7 +474,7 @@ export default async function GrantDetailPage({
               {/* Synopsis */}
               {grant?.synopsis && (
                 <div className="fd-card p-5">
-                  <p className="text-eyebrow font-semibold text-ink-2 uppercase tracking-wider mb-3">Synopsis</p>
+ <p className="text-eyebrow font-semibold text-ink-2 mb-3">Synopsis</p>
                   <p className="text-body text-ink-0 leading-relaxed">{grant.synopsis}</p>
                 </div>
               )}
@@ -484,7 +484,7 @@ export default async function GrantDetailPage({
                 <div className="bg-signal-maybe-soft ring-1 ring-signal-maybe/20 rounded-md p-5">
                   <div className="flex items-center gap-2 mb-3">
                     <AlertCircle className="w-4 h-4 text-signal-maybe" />
-                    <p className="text-eyebrow font-semibold text-signal-maybe uppercase tracking-wider">Eligibility notes</p>
+ <p className="text-eyebrow font-semibold text-signal-maybe">Eligibility notes</p>
                   </div>
                   <ul className="space-y-2">
                     {(match.eligibility_flags as string[]).map((flag, i) => (
@@ -499,7 +499,7 @@ export default async function GrantDetailPage({
               {/* Key requirements (when extracted) */}
               {fields.key_requirements?.length > 0 && (
                 <div className="fd-card p-5">
-                  <p className="text-eyebrow font-semibold text-ink-2 uppercase tracking-wider mb-3">Key requirements</p>
+ <p className="text-eyebrow font-semibold text-ink-2 mb-3">Key requirements</p>
                   <ul className="space-y-2.5">
                     {fields.key_requirements.map((req: string, i: number) => (
                       <li key={i} className="flex items-start gap-2.5 text-body text-ink-0">
@@ -650,7 +650,7 @@ function MetadataBlock({ fields }: { fields: Record<string, unknown> }) {
 
   return (
     <div className="fd-card p-5">
-      <p className="text-eyebrow font-semibold text-ink-2 uppercase tracking-wider mb-4">Details</p>
+ <p className="text-eyebrow font-semibold text-ink-2 mb-4">Details</p>
       <dl className="space-y-3">
         {rows.map(r => (
           <div key={r.label} className="grid grid-cols-[140px_1fr] gap-3 items-start">

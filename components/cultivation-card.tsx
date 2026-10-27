@@ -92,7 +92,7 @@ export function CultivationCard({ readOnly, onDone }: { readOnly?: boolean; onDo
                   <Stat label="Foundations" value={c.foundations_with_connection} tone="var(--accent)" /><Stat label="People" value={c.members_with_connection} tone="var(--accent)" /><Stat label="With a status" value={c.with_status} /><Stat label="CYC names matched" value={c.resolved.length} />
                 </div>
                 {c.resolved.length > 0 && <p className="mt-2 text-[11.5px] text-secondary flex items-start gap-1.5"><Link2 className="w-3.5 h-3.5 flex-none mt-[2px] text-accent" /><span>Linked in the graph as the path in: {c.resolved.join('; ')}.</span></p>}
-                {c.unresolved.length > 0 && <p className="mt-1.5 text-[11.5px] text-secondary">Kept as notes (not a CYC board or staff name): {c.unresolved.join('; ')}.</p>}
+                {c.unresolved.length > 0 && <p className="mt-1.5 text-[11.5px] text-secondary">Kept as notes (not a board or staff name): {c.unresolved.join('; ')}.</p>}
                 {c.statuses.length > 0 && <p className="mt-1.5 text-[11.5px] text-secondary">Status: {c.statuses.map(s => `${s.foundation} — ${s.status}`).join('; ')}.</p>}
               </>
             )}

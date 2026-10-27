@@ -60,7 +60,7 @@ export function DiscoveryControls({ onComplete, orgId }: { onComplete?: () => vo
       <div className="p-5 space-y-4">
         {/* Keyword */}
         <div>
-          <label className="block text-[12px] font-semibold text-[#475569] mb-1.5 uppercase tracking-wide">
+ <label className="block text-[12px] font-semibold text-[#475569] mb-1.5">
             Keyword
           </label>
           <div className="relative">
@@ -77,7 +77,7 @@ export function DiscoveryControls({ onComplete, orgId }: { onComplete?: () => vo
 
         {/* Categories */}
         <div>
-          <label className="block text-[12px] font-semibold text-[#475569] mb-1.5 uppercase tracking-wide">
+ <label className="block text-[12px] font-semibold text-[#475569] mb-1.5">
             Funding Categories
           </label>
           <div className="flex flex-wrap gap-1.5">

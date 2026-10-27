@@ -78,7 +78,7 @@ function revealStyle(seen: boolean, reduce: boolean, delayMs = 0): CSSProperties
 // ════════════════════════════════════════════════════════════════════════════
 
 const INPUT = 'w-full px-3 py-2 border border-hairline rounded-md text-[13px] text-primary placeholder:text-tertiary bg-surface focus:outline-none focus:ring-2 focus:border-accent transition-colors';
-const LABEL = 'block font-mono text-[10.5px] font-semibold text-secondary uppercase tracking-[0.08em] mb-1.5';
+const LABEL = 'block font-mono text-[11.5px] font-semibold text-secondary mb-1.5';
 
 function fmtMoney(n: number): string {
   if (!n) return '$0';
@@ -174,7 +174,7 @@ function SnapshotKpi({
       className={`bg-surface border border-hairline border-l-[3px] ${TONE_BORDER[tone]} rounded-sm px-4 py-3`}
       style={revealStyle(seen, reduce, delay)}
     >
-      <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.08em] text-secondary">
+ <p className="font-mono text-[11.5px] font-semibold text-secondary">
         {label}
       </p>
       <p className="font-mono text-[18px] font-bold tabular-nums text-primary mt-1.5 leading-none">
@@ -347,7 +347,7 @@ function GrantRecordTable({
 
   const total = records.reduce((s, r) => s + r.amount, 0);
 
-  const headerCellCls = 'text-left px-3 py-2 font-mono font-semibold text-tertiary uppercase tracking-[0.08em] text-[10px]';
+ const headerCellCls = 'text-left px-3 py-2 font-mono font-semibold text-tertiary text-[11.5px]';
 
   return (
     <div>
@@ -392,7 +392,7 @@ function GrantRecordTable({
                 <tr className="border-t border-hairline bg-elevated">
                   <td
                     colSpan={1 + (showYear || showDate ? 1 : 0) + (showStatus ? 1 : 0) + 1}
-                    className="px-3 py-2 font-mono text-[10.5px] font-semibold uppercase tracking-[0.08em] text-secondary"
+ className="px-3 py-2 font-mono text-[11.5px] font-semibold text-secondary"
                   >
                     Total · <span className="tabular-nums">{records.length}</span> grants
                   </td>
@@ -551,17 +551,17 @@ export function OrgProfileEditor({
         </div>
         <div className="flex items-center gap-3 flex-wrap">
           {saveStatus === 'saved' && (
-            <span className="flex items-center gap-1.5 font-mono text-[10.5px] font-semibold uppercase tracking-[0.08em] text-success">
+ <span className="flex items-center gap-1.5 font-mono text-[11.5px] font-semibold text-success">
               <CheckCircle className="w-3.5 h-3.5" />{saveMsg}
             </span>
           )}
           {saveStatus === 'error' && (
-            <span className="flex items-center gap-1.5 font-mono text-[10.5px] font-semibold uppercase tracking-[0.08em] text-critical">
+ <span className="flex items-center gap-1.5 font-mono text-[11.5px] font-semibold text-critical">
               <AlertCircle className="w-3.5 h-3.5" />{saveMsg}
             </span>
           )}
           {pctWarning && (
-            <span className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.08em] text-warning flex items-center gap-1.5">
+ <span className="font-mono text-[11.5px] font-semibold text-warning flex items-center gap-1.5">
               <AlertCircle className="w-3 h-3" />
               Revenue %s sum to <span className="tabular-nums">{pctSum}%</span>
             </span>

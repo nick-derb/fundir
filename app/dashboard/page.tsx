@@ -7,7 +7,10 @@ import { redirect } from 'next/navigation';
 import { getValidUserToken } from '@/lib/oauth-tokens';
 import { getUpcomingEvents, type CalendarEvent } from '@/lib/microsoft-graph';
 import { getGoogleUpcomingEvents } from '@/lib/google-calendar';
-import { DashboardView, type DashData } from '@/components/dashboard/dashboard-view';
+import { cookies } from 'next/headers';
+import { type DashData } from '@/components/dashboard/dashboard-view';
+import { TodayView } from '@/components/dashboard/today-view';
+import { buildBrief } from '@/lib/brief';
 
 const FY_MONTHS = ['Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
 const fyIndex = (m: number) => (m - 6 + 12) % 12;
@@ -163,6 +166,14 @@ export default async function DashboardPage() {
   const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
   const todayLabel = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
 
+  // The brief: everything that moved since the person last opened this page.
+  const seenRaw = (await cookies()).get('fundir_brief_seen')?.value;
+  const seenAt = seenRaw ? new Date(decodeURIComponent(seenRaw)) : null;
+  const brief = await buildBrief(db, ctx.orgId, {
+    seenAt: seenAt && !Number.isNaN(seenAt.getTime()) ? seenAt : null,
+    deadlines: deadlineRows.map(r => ({ funder: r.funder, type: r.type, date: r.date.toISOString().slice(0, 10), days: r.days, stage: r.stage })),
+  });
+
   const data: DashData = {
     greeting, firstName: ctx.firstName || ctx.displayName || 'there', today: todayLabel,
     isCyc: ctx.orgCode?.toUpperCase().startsWith('CYC') ?? false,
@@ -172,7 +183,7 @@ export default async function DashboardPage() {
 
   return (
     <AppShell orgName={ctx.orgName} orgId={ctx.orgId} userEmail={ctx.email} userName={ctx.displayName} userAvatar={ctx.avatarUrl} isAdmin={ctx.isAdmin} availableOrgs={ctx.availableOrgs} currentOrgCode={ctx.orgCode}>
-      <DashboardView data={data} />
+      <TodayView data={data} brief={brief} />
     </AppShell>
   );
 }

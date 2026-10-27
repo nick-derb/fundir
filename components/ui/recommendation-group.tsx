@@ -73,7 +73,7 @@ function SectionHeading({
   return (
     <div className="flex items-baseline gap-2">
       <span className={`w-1.5 h-1.5 rounded-full ${dotCls}`} aria-hidden />
-      <span className="text-eyebrow uppercase text-primary font-semibold">{label}</span>
+ <span className="text-eyebrow text-primary font-semibold">{label}</span>
       <span className="font-mono text-caption text-secondary tabular-nums">{count}</span>
     </div>
   );

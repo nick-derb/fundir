@@ -72,7 +72,7 @@ export function EvidenceList({ items, collapseAfter = 6 }: EvidenceListProps) {
             aria-hidden
           />
           <span className="text-body text-ink-0 flex-1 min-w-0">{item.text}</span>
-          <span className="text-eyebrow text-ink-3 uppercase font-semibold shrink-0 pt-0.5">
+ <span className="text-eyebrow text-ink-3 font-semibold shrink-0 pt-0.5">
             {FACTOR_LABEL[item.factor]}
           </span>
         </li>

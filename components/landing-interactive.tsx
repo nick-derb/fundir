@@ -224,7 +224,7 @@ const PANEL_PREVIEWS = [
   (
     <div className="p-4" key="risk">
       <div className="mb-3 flex items-center justify-between">
-        <span className="text-[10px] text-white/40 uppercase tracking-wider">Federal Exposure</span>
+ <span className="text-[11.5px] text-white/40">Federal Exposure</span>
         <span className="text-[9px] text-red-400 font-bold bg-red-400/10 px-2 py-0.5 rounded">2 At Risk</span>
       </div>
       <div className="space-y-2">
@@ -283,7 +283,7 @@ export function ProductTabs({ products }: { products: Product[] }) {
       <div className="bg-[#1a1f2e]">
         <div className="max-w-6xl mx-auto px-8 py-16 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           <div key={active} className="animate-slide-in-left">
-            <p className="text-[10px] font-bold text-[#0d9488] tracking-widest mb-4 uppercase">{products[active].label}</p>
+ <p className="text-[11.5px] font-medium text-[#0d9488] mb-4">{products[active].label}</p>
             <h3 className="text-[36px] font-bold text-white leading-tight mb-6">{products[active].heading}</h3>
             <p className="text-[16px] text-white/50 leading-relaxed mb-8">{products[active].body}</p>
             <Link

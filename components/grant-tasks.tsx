@@ -183,7 +183,7 @@ export function GrantTasks({ grantId, initialTasks }: GrantTasksProps) {
           {done.length > 0 && (
             <>
               <div className="px-5 py-2 border-t border-[#f1f5f9] bg-[#f8fafc]">
-                <p className="text-[10px] font-semibold text-[#94a3b8] uppercase tracking-wide">Completed ({done.length})</p>
+ <p className="text-[11.5px] font-semibold text-[#94a3b8]">Completed ({done.length})</p>
               </div>
               <div className="divide-y divide-[#f8fafc]">
                 {done.map(t => <TaskRow key={t.id} task={t} />)}

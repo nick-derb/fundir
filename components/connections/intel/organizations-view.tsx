@@ -8,10 +8,12 @@ import { useEffect, useMemo, useState } from 'react';
 import { Search, ExternalLink } from 'lucide-react';
 import type { OrgRow } from '@/lib/network/queries';
 import { SERIF, MONO, OrgMark, ScoreBar, Chip, Eyebrow, Skeleton, hueFor, typeLabel, SLATE } from './shared';
+import { OrgName, OrgPossessive, OrgShort, useOrg } from '@/components/org-context';
 
 const TYPE_ORDER = ['foundation', 'community_foundation', 'corporate_foundation', 'corporation', 'bank', 'nonprofit', 'university', 'government'];
 
 export function OrganizationsView({ onOpenLead, onFocus }: { onOpenLead: (id: string) => void; onFocus: (f: { kind: 'org'; id: string }) => void }) {
+  const org = useOrg();
   const [rows, setRows] = useState<OrgRow[] | null>(null);
   const [q, setQ] = useState('');
   const [types, setTypes] = useState<string[]>([]);
@@ -23,19 +25,19 @@ export function OrganizationsView({ onOpenLead, onFocus }: { onOpenLead: (id: st
   return (
     <div className="ni-root" style={{ padding: '24px 26px 60px' }}>
       <div style={{ marginBottom: 18 }}>
-        <Eyebrow style={{ display: 'block', margin: '0 0 9px' }}>Chicago Youth Centers · Network intelligence</Eyebrow>
+        <Eyebrow style={{ display: 'block', margin: '0 0 9px' }}><OrgName /> · Network intelligence</Eyebrow>
         <h1 style={{ fontFamily: SERIF, fontWeight: 400, fontSize: 'clamp(1.9rem,3vw,2.5rem)', lineHeight: 1.04, letterSpacing: '-.018em', margin: 0 }}>Organizations</h1>
-        <p style={{ margin: '9px 0 0', fontSize: 13.5, lineHeight: 1.6, color: 'var(--text-secondary)', maxWidth: '64ch' }}>The funders, corporations and foundations that appear in CYC&rsquo;s graph, and what the graph can say about each one from filings, rosters and CYC&rsquo;s own records.</p>
+        <p style={{ margin: '9px 0 0', fontSize: 13.5, lineHeight: 1.6, color: 'var(--text-secondary)', maxWidth: '64ch' }}>The funders, corporations and foundations that appear in <OrgPossessive /> graph, and what the graph can say about each one from filings, rosters and <OrgPossessive /> own records.</p>
       </div>
       <div className="ni-card" style={{ padding: '10px 12px', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', position: 'sticky', top: 56, zIndex: 5 }}>
         <label style={{ position: 'relative', flex: '1 1 200px', minWidth: 150 }}><Search style={{ position: 'absolute', left: 10, top: 9, width: 14, height: 14, color: 'var(--text-tertiary)' }} /><input className="ni-input" placeholder="Search organizations…" value={q} onChange={e => setQ(e.target.value)} aria-label="Search organizations" /></label>
         {typeCounts.map(([t, n]) => <button key={t} type="button" className="ni-seg" aria-pressed={types.includes(t)} onClick={() => setTypes(x => x.includes(t) ? x.filter(y => y !== t) : [...x, t])}>{typeLabel(t) || 'other'}<i>{n}</i></button>)}
         <span style={{ flex: 1 }} />
-        <select className="ni-select" value={only} onChange={e => setOnly(e.target.value as typeof only)} aria-label="Show"><option value="all">Everything</option><option value="leads">With a lead</option><option value="peers">Funds CYC peers</option><option value="people">CYC people inside</option></select>
+        <select className="ni-select" value={only} onChange={e => setOnly(e.target.value as typeof only)} aria-label="Show"><option value="all">Everything</option><option value="leads">With a lead</option><option value="peers">Funds <OrgShort /> peers</option><option value="people"><OrgShort /> people inside</option></select>
       </div>
       <div className="ni-card" style={{ overflow: 'hidden' }}>
         <div data-ni-grid="org" style={{ display: 'grid', gridTemplateColumns: 'minmax(220px,2fr) 120px 90px 90px 90px 110px', gap: 12, padding: '8px 16px', borderBottom: '1px solid var(--border-hairline)', background: 'var(--bg-page)' }} aria-hidden>
-          {['Organization', 'Type', 'Peer grants', 'Trustees', 'CYC people', 'Best lead'].map((h, i) => <span key={h} className="fd-eyebrow" style={{ color: 'var(--text-tertiary)', fontSize: 10 }} data-ni-hide-md={i >= 2 && i <= 4 ? true : undefined}>{h}</span>)}
+          {['Organization', 'Type', 'Peer grants', 'Trustees', 'Our people', 'Best lead'].map((h, i) => <span key={h} className="fd-eyebrow" style={{ color: 'var(--text-tertiary)', fontSize: 10 }} data-ni-hide-md={i >= 2 && i <= 4 ? true : undefined}>{h}</span>)}
         </div>
         {rows === null && Array.from({ length: 8 }).map((_, i) => <div key={i} style={{ padding: '14px 16px', borderBottom: '1px solid var(--border-hairline)' }}><Skeleton h={14} w={`${40 + (i * 13) % 40}%`} /></div>)}
         {rows !== null && visible.length === 0 && <p className="fd-caption" style={{ padding: '30px 16px', textAlign: 'center', color: 'var(--text-tertiary)' }}>No organizations match.</p>}
@@ -51,7 +53,7 @@ export function OrganizationsView({ onOpenLead, onFocus }: { onOpenLead: (id: st
                 </div>
                 <span style={{ display: 'flex', gap: 5, alignItems: 'center', marginTop: 3, flexWrap: 'wrap' }}>
                   {[r.city, r.state].filter(Boolean).length > 0 && <span className="fd-caption" style={{ color: 'var(--text-tertiary)', fontSize: 11 }}>{[r.city, r.state].filter(Boolean).join(', ')}</span>}
-                  {r.funded_cyc && <Chip text="Funded CYC" color="var(--accent)" border="rgba(12,107,90,.3)" />}
+                  {r.funded_cyc && <Chip text={`Funded ${org.short}`} color="var(--accent)" border="rgba(12,107,90,.3)" />}
                   {r.insight_types.slice(0, 2).map(t => <Chip key={t} text={hueFor(t).short} color={hueFor(t).color} border={hueFor(t).border} />)}
                 </span>
               </div>

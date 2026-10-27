@@ -10,6 +10,7 @@ import type { PeerOrgCard, PeerPerson, FunderRelation } from '@/lib/network/peer
 import type { PeerStaffStatus } from '@/lib/network/peer-staff';
 import { PeerScanPanel } from '@/components/peers/peer-scan-panel';
 import { Avatar, Chip, Eyebrow, SectionRule, ScoreBar, SLATE, AMBER, INFO } from '@/components/connections/intel/shared';
+import { OrgShort, useOrg } from '@/components/org-context';
 
 const CSS = `
 .pn-root{color:var(--text-primary)}
@@ -29,7 +30,7 @@ const CSS = `
 `;
 
 const REL: Record<FunderRelation | 'peer_funder', { label: string; color: string }> = {
-  funds_cyc: { label: 'Funds CYC', color: 'var(--accent)' }, cyc_pursuing: { label: 'CYC pursuing', color: AMBER }, untapped: { label: 'Not yet approached', color: SLATE }, peer_funder: { label: 'Funds a peer', color: INFO },
+  funds_cyc: { label: 'Funds us', color: 'var(--accent)' }, cyc_pursuing: { label: 'We are pursuing', color: AMBER }, untapped: { label: 'Not yet approached', color: SLATE }, peer_funder: { label: 'Funds a peer', color: INFO },
 };
 const TIER: Record<PeerPerson['tier'], { label: string; color: string }> = { development: { label: 'Development', color: 'var(--accent)' }, executive: { label: 'Leadership', color: INFO }, other: { label: 'Staff', color: SLATE } };
 const verColor = (v: string) => (v === 'verified' ? 'var(--accent)' : v === 'probable' ? SLATE : AMBER);
@@ -46,6 +47,7 @@ function Kpi({ label, value, accent, sub }: { label: string; value: number | str
 }
 
 export function PeerNetworkView({ peers, people, status, isAdmin }: { peers: PeerOrgCard[]; people: PeerPerson[]; status: PeerStaffStatus; isAdmin: boolean }) {
+  const tenant = useOrg();
   const [q, setQ] = useState('');
   const [org, setOrg] = useState<string | null>(null);
   const [tier, setTier] = useState<'all' | 'development' | 'executive'>('all');
@@ -79,16 +81,16 @@ export function PeerNetworkView({ peers, people, status, isAdmin }: { peers: Pee
       <div className="fd-page-head">
         <div style={{ minWidth: 0 }}>
           <Eyebrow>Peer network</Eyebrow>
-          <h1>People at CYC&apos;s peer organizations</h1>
-          <p className="fd-lede">Development and leadership staff at the youth-serving nonprofits most like CYC, read from public LinkedIn profiles, with every documented way CYC could reach them: a colleague of a CYC board member, a past job at a funder CYC tracks, or the funders behind their own organization. CYC&apos;s own contacts live under Connections.</p>
+          <h1>People at <OrgShort />&apos;s peer organizations</h1>
+          <p className="fd-lede">Development and leadership staff at the youth-serving nonprofits most like <OrgShort />, read from public LinkedIn profiles, with every documented way <OrgShort /> could reach them: a colleague of a <OrgShort /> board member, a past job at a funder <OrgShort /> tracks, or the funders behind their own organization. <OrgShort />&apos;s own contacts live under Connections.</p>
         </div>
       </div>
 
       <div className="fd-stats" style={{ marginBottom: 18 }}>
         <Kpi label="Peers scanned" value={`${status.scanned} / ${status.peers}`} sub="organizations read" />
         <Kpi label="People found" value={people.length} sub="development and leadership" />
-        <Kpi label="With a path to CYC" value={withPath} accent sub="a documented route" />
-        <Kpi label="Ex-funder or alumni" value={exFunder} sub="worked at a funder or at CYC" />
+        <Kpi label={`With a path to ${tenant.short}`} value={withPath} accent sub="a documented route" />
+        <Kpi label="Ex-funder or alumni" value={exFunder} sub={`worked at a funder or at ${tenant.short}`} />
         <Kpi label="Funders in common" value={overlapFunders} sub="also give to a peer" />
       </div>
 
@@ -111,7 +113,7 @@ export function PeerNetworkView({ peers, people, status, isAdmin }: { peers: Pee
               const untapped = p.funders.length - shared;
               return (
                 <p style={{ margin: '5px 0 0', fontSize: 11, color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {shared > 0 && <>{shared} funder{shared === 1 ? '' : 's'} shared with CYC</>}
+                  {shared > 0 && <>{shared} funder{shared === 1 ? '' : 's'} shared with {tenant.short}</>}
                   {shared > 0 && untapped > 0 && ' · '}
                   {untapped > 0 && <b style={{ color: AMBER, fontWeight: 500 }}>{untapped} untapped</b>}
                 </p>
@@ -129,8 +131,8 @@ export function PeerNetworkView({ peers, people, status, isAdmin }: { peers: Pee
         </label>
         {(['all', 'development', 'executive'] as const).map(t => <button key={t} type="button" className="fd-seg" aria-pressed={tier === t} onClick={() => setTier(t)}>{t === 'all' ? 'All roles' : TIER[t].label}</button>)}
         <span style={{ width: 1, height: 18, background: 'var(--border-hairline)' }} />
-        <button type="button" className="fd-seg" aria-pressed={only === 'path'} onClick={() => setOnly(only === 'path' ? 'all' : 'path')}><Route style={{ width: 12, height: 12 }} />Has a path to CYC</button>
-        <button type="button" className="fd-seg" aria-pressed={only === 'funder'} onClick={() => setOnly(only === 'funder' ? 'all' : 'funder')}><Landmark style={{ width: 12, height: 12 }} />Ex-funder / CYC alumni</button>
+        <button type="button" className="fd-seg" aria-pressed={only === 'path'} onClick={() => setOnly(only === 'path' ? 'all' : 'path')}><Route style={{ width: 12, height: 12 }} />Has a path to <OrgShort /></button>
+        <button type="button" className="fd-seg" aria-pressed={only === 'funder'} onClick={() => setOnly(only === 'funder' ? 'all' : 'funder')}><Landmark style={{ width: 12, height: 12 }} />Ex-funder / <OrgShort /> alumni</button>
         <button type="button" className="fd-seg" aria-pressed={only === 'untapped'} onClick={() => setOnly(only === 'untapped' ? 'all' : 'untapped')}><Building2 style={{ width: 12, height: 12 }} />Org has untapped funders</button>
         <span style={{ flex: 1 }} />
         <select value={sort} onChange={e => setSort(e.target.value as typeof sort)} className="fd-input" style={{ height: 28, color: 'var(--text-secondary)', fontSize: 12, padding: '0 8px' }}>
@@ -152,7 +154,7 @@ export function PeerNetworkView({ peers, people, status, isAdmin }: { peers: Pee
                     <b style={{ fontSize: 13.5, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</b>
                     <Chip text={TIER[p.tier].label} color={TIER[p.tier].color} border={`color-mix(in srgb, ${TIER[p.tier].color} 35%, transparent)`} />
                     {p.paths.length > 0 && <Chip text={`${p.paths.length} path${p.paths.length === 1 ? '' : 's'}`} color="var(--accent)" border="rgba(12,107,90,.3)" />}
-                    {p.cycAlumni && <Chip text="CYC alum" color={AMBER} border="rgba(156,122,42,.35)" />}
+                    {p.cycAlumni && <Chip text="Our alum" color={AMBER} border="rgba(156,122,42,.35)" />}
                     {p.funderPast.length > 0 && <Chip text="Ex-funder" color={INFO} border="rgba(62,108,168,.35)" />}
                     {p.org !== p.foundAt && <Chip text={`Ex-${p.foundAt}`} color={AMBER} border="rgba(156,122,42,.35)" />}
                   </div>
@@ -190,13 +192,13 @@ export function PeerNetworkView({ peers, people, status, isAdmin }: { peers: Pee
 
               {person.paths.length > 0 && (
                 <>
-                  <SectionRule label={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Users style={{ width: 12, height: 12 }} />Paths to CYC</span>} />
+                  <SectionRule label={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Users style={{ width: 12, height: 12 }} />Paths to <OrgShort /></span>} />
                   {person.paths.map((p, i) => (
                     <div key={i} style={{ display: 'flex', gap: 10, padding: '8px 0', borderBottom: '1px solid var(--border-hairline)' }}>
                       <Avatar name={p.person.name} size={26} own={p.person.kind !== 'trustee' && p.person.kind !== 'executive'} />
                       <div style={{ minWidth: 0 }}>
                         <b style={{ fontSize: 12.5, fontWeight: 500 }}>{p.person.name}</b> <span style={{ fontSize: 11.5, color: 'var(--text-tertiary)' }}>{p.person.kindLabel}{p.person.title ? ` · ${p.person.title}` : ''}</span>
-                        <p style={{ margin: '2px 0 0', fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.45 }}>{p.summary ?? p.label} <span className="fd-mono" style={{ fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '.05em', color: verColor(p.verification) }}>{p.verification}</span></p>
+                        <p style={{ margin: '2px 0 0', fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.45 }}>{p.summary ?? p.label} <span className="fd-mono" style={{ fontSize: 11.5, color: verColor(p.verification) }}>{p.verification}</span></p>
                       </div>
                     </div>
                   ))}
@@ -225,7 +227,7 @@ export function PeerNetworkView({ peers, people, status, isAdmin }: { peers: Pee
               {peerOf && peerOf.funders.length > 0 && (
                 <>
                   <SectionRule label={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Landmark style={{ width: 12, height: 12 }} />Who funds {peerOf.name}</span>} />
-                  <p style={{ margin: '0 0 8px', fontSize: 11.5, color: 'var(--text-tertiary)', lineHeight: 1.45 }}>From the funders&apos; IRS 990 filings. Green means the funder already gives to CYC; amber means CYC is pursuing them; grey means CYC has not approached them.</p>
+                  <p style={{ margin: '0 0 8px', fontSize: 11.5, color: 'var(--text-tertiary)', lineHeight: 1.45 }}>From the funders&apos; IRS 990 filings. Green means the funder already gives to <OrgShort />; amber means <OrgShort /> is pursuing them; grey means <OrgShort /> has not approached them.</p>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                     {peerOf.funders.map((f, i) => <span key={i} title={`${f.events} grant${f.events === 1 ? '' : 's'}${f.lastYear ? `, latest ${f.lastYear}` : ''}`} className="pn-funder"><span style={{ width: 7, height: 7, borderRadius: 4, background: REL[f.relation].color }} />{f.name}</span>)}
                   </div>

@@ -10,6 +10,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { X, RefreshCw, Loader2, Check, Download, FileSpreadsheet, FileJson, AlertTriangle, ExternalLink } from 'lucide-react';
 import type { RefreshEstimate, RefreshCategory, RefreshStepResult } from '@/lib/network/refresh';
 import { SERIF, MONO, Eyebrow, Skeleton, fmtDate, AMBER } from './shared';
+import { OrgShort } from '@/components/org-context';
 
 interface Live { steps: number; enriched: number; scanned: number; leads: number; relationships: number; calls: number; credits: number; errors: string[]; done: boolean }
 const EMPTY: Live = { steps: 0, enriched: 0, scanned: 0, leads: 0, relationships: 0, calls: 0, credits: 0, errors: [], done: false };
@@ -65,13 +66,13 @@ export function RefreshPanel({ open, onClose, onFinished, readOnly }: { open: bo
     <aside className="ni-peek" role="dialog" aria-modal="false" aria-label="Refresh the network" style={{ width: 'min(520px,100vw)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px 10px 18px', borderBottom: '1px solid var(--border-hairline)', flex: 'none' }}>
         <RefreshCw style={{ width: 13, height: 13, color: 'var(--accent)' }} />
-        <span className="fd-mono" style={{ fontSize: 9.5, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--text-tertiary)' }}>Refresh · on demand</span>
+        <span className="fd-mono" style={{ fontSize: 11.5, color: 'var(--text-tertiary)' }}>Refresh · on demand</span>
         <span style={{ flex: 1 }} />
         <button type="button" className="ni-ghost" style={{ height: 28, width: 28, padding: 0, justifyContent: 'center' }} aria-label="Close" onClick={onClose} disabled={phase === 'running'}><X style={{ width: 14, height: 14 }} /></button>
       </div>
       <div style={{ flex: 1, overflowY: 'auto', padding: '20px 22px 40px' }}>
         <h2 style={{ fontFamily: SERIF, fontWeight: 400, fontSize: '1.6rem', lineHeight: 1.1, letterSpacing: '-.015em', margin: '0 0 6px' }}>{phase === 'idle' ? 'Before you run it' : phase === 'done' ? 'Refresh complete' : 'Refreshing…'}</h2>
-        <p className="fd-caption" style={{ color: 'var(--text-secondary)', margin: '0 0 18px' }}>A refresh reads CYC profiles that are new or stale, then scans their former employers for people worth an introduction. It runs in bounded steps, spends nothing on the model, and ends with a dated snapshot. Quarterly is plenty.</p>
+        <p className="fd-caption" style={{ color: 'var(--text-secondary)', margin: '0 0 18px' }}>A refresh reads <OrgShort /> profiles that are new or stale, then scans their former employers for people worth an introduction. It runs in bounded steps, spends nothing on the model, and ends with a dated snapshot. Quarterly is plenty.</p>
         {error && <p className="fd-caption" style={{ color: 'var(--critical)', margin: '0 0 12px' }}>{error}</p>}
 
         {/* pre-flight */}
@@ -96,7 +97,7 @@ export function RefreshPanel({ open, onClose, onFinished, readOnly }: { open: bo
               <Stat label="Subscription" value={`$${est.plan.monthlyUsd}/mo`} sub={est.plan.name} />
             </div>
             <p className="fd-caption" style={{ color: 'var(--text-tertiary)', margin: '12px 0 0', fontSize: 11.5 }}>
-              {est.peopleWithoutUrl > 0 ? `${est.peopleWithoutUrl} CYC people have no LinkedIn URL yet and are not counted — add URLs on the People tab to widen the next run. ` : ''}
+              {est.peopleWithoutUrl > 0 ? `${est.peopleWithoutUrl} of your people have no LinkedIn URL yet and are not counted — add URLs on the People tab to widen the next run. ` : ''}
               Last run {est.lastRun ? `${fmtDate(est.lastRun.started_at)} · ${est.lastRun.api_calls} calls · ${est.lastRun.status}` : 'never'}.
             </p>
             <div style={{ display: 'flex', gap: 8, marginTop: 18, alignItems: 'center' }}>

@@ -269,7 +269,7 @@ export default async function SettingsPage() {
                     {s.env}
                   </div>
                   <div
-                    className={`flex items-center gap-1.5 font-mono text-[10.5px] font-semibold uppercase tracking-[0.08em] tabular-nums whitespace-nowrap ${
+ className={`flex items-center gap-1.5 font-mono text-[11.5px] font-semibold tabular-nums whitespace-nowrap ${
                       s.ok ? 'text-success' : 'text-tertiary'
                     }`}
                   >
@@ -289,7 +289,7 @@ export default async function SettingsPage() {
             right={
               lastSyncLabel && (
                 <div className="text-right flex-shrink-0">
-                  <p className="font-mono text-[10px] uppercase tracking-[0.08em] text-tertiary">Last synced</p>
+ <p className="font-mono text-[11.5px] text-tertiary">Last synced</p>
                   <p className="font-mono text-[12px] font-semibold text-primary tabular-nums">{lastSyncLabel}</p>
                 </div>
               )
@@ -309,7 +309,7 @@ export default async function SettingsPage() {
 
               <div className="flex items-center gap-3">
                 <div className="flex-1 h-px bg-hairline" />
-                <span className="font-mono text-[10.5px] uppercase tracking-[0.08em] text-tertiary">
+ <span className="font-mono text-[11.5px] text-tertiary">
                   or sync by EIN on file
                 </span>
                 <div className="flex-1 h-px bg-hairline" />
@@ -326,12 +326,12 @@ export default async function SettingsPage() {
                         </span>
                       </p>
                       {orgFinancial.financial_year ? (
-                        <p className="font-mono text-[10.5px] uppercase tracking-[0.08em] text-success inline-flex items-center gap-1.5">
+ <p className="font-mono text-[11.5px] text-success inline-flex items-center gap-1.5">
                           <CheckCircle className="w-3 h-3" />
                           FY<span className="tabular-nums">{orgFinancial.financial_year}</span> data loaded
                         </p>
                       ) : (
-                        <p className="font-mono text-[10.5px] uppercase tracking-[0.08em] text-warning inline-flex items-center gap-1.5">
+ <p className="font-mono text-[11.5px] text-warning inline-flex items-center gap-1.5">
                           <span className="w-1.5 h-1.5 rounded-full bg-warning" />
                           EIN on file · click Sync to fetch
                         </p>
@@ -365,7 +365,7 @@ export default async function SettingsPage() {
               }
               icon={Zap}
               right={
-                <span className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.08em] text-success inline-flex items-center gap-1.5">
+ <span className="font-mono text-[11.5px] font-semibold text-success inline-flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-success" />
                   Completed
                 </span>
@@ -506,7 +506,7 @@ function StatusTag({ ok, label, tone }: StatusTagProps) {
                          'bg-ink-300';
   return (
     <span
-      className={`font-mono text-[10.5px] font-semibold uppercase tracking-[0.08em] tabular-nums inline-flex items-center gap-1.5 ${cls}`}
+ className={`font-mono text-[11.5px] font-semibold tabular-nums inline-flex items-center gap-1.5 ${cls}`}
     >
       <span className={`w-1.5 h-1.5 rounded-full ${dot}`} />
       {label}

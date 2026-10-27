@@ -66,7 +66,7 @@ function ActionBtn({ onClick, title, color, children }: {
 
 const labelSt: React.CSSProperties = {
   display: 'block', fontSize: '11px', fontWeight: 600,
-  color: '#475569', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '6px',
+  color: '#475569', marginBottom: '6px',
 };
 
 const inputSt: React.CSSProperties = {
@@ -327,7 +327,7 @@ export default function AdminInvitesPage() {
           <div>
             <div style={{ display: 'grid', gridTemplateColumns: '160px 1fr 140px 90px 80px 110px', gap: '12px', padding: '10px 20px', borderBottom: '1px solid rgba(255,255,255,0.05)', background: 'rgba(0,0,0,0.15)' }}>
               {['Code', 'Org / Label', 'Uses', 'Status', 'Expires', 'Actions'].map(h => (
-                <span key={h} style={{ fontSize: '10px', fontWeight: 700, color: '#334155', letterSpacing: '0.07em', textTransform: 'uppercase' }}>{h}</span>
+                <span key={h} style={{ fontSize: '11.5px', fontWeight: 700, color: '#334155' }}>{h}</span>
               ))}
             </div>
 

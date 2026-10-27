@@ -299,7 +299,7 @@ export function GrantWorkspace({
 
           {/* Create new document */}
           <div>
-            <p className="text-[11px] font-bold text-[#94a3b8] uppercase tracking-widest mb-2">
+ <p className="text-[11.5px] font-medium text-[#94a3b8] mb-2">
               Add Document
             </p>
             <div className="flex flex-wrap gap-2">

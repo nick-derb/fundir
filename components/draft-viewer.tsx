@@ -79,7 +79,7 @@ function renderSection(text: string): React.ReactNode {
     out.push(
       <span
         key={`todo-${m.index}`}
-        className="inline-flex items-center gap-1 mx-0.5 px-1.5 py-0.5 rounded-sm text-eyebrow font-semibold uppercase tracking-wider bg-signal-skip-soft text-signal-skip"
+ className="inline-flex items-center gap-1 mx-0.5 px-1.5 py-0.5 rounded-sm text-eyebrow font-semibold bg-signal-skip-soft text-signal-skip"
         title="Claude couldn't ground this claim. Confirm with the org before submission."
       >
         <AlertCircle className="w-3 h-3" />
@@ -163,7 +163,7 @@ export function DraftViewer({ draft, grantId }: DraftViewerProps) {
               <FileText className="w-4 h-4" />
             </div>
             <div className="min-w-0">
-              <p className="text-eyebrow font-semibold text-ink-2 uppercase tracking-wider">
+ <p className="text-eyebrow font-semibold text-ink-2">
                 Generated draft
               </p>
               <p className="text-h2 font-semibold text-ink-0 mt-0.5">
@@ -207,7 +207,7 @@ export function DraftViewer({ draft, grantId }: DraftViewerProps) {
               </span>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <span className="text-eyebrow font-semibold uppercase text-ink-2">
+ <span className="text-eyebrow font-semibold text-ink-2">
                     {SOURCE_TYPE_LABEL[s.source_type] ?? s.source_type}
                   </span>
                   <span className="text-caption text-ink-2">·</span>

@@ -185,7 +185,7 @@ export function AiAdvisor({ orgCode, orgId, orgName }: AiAdvisorProps) {
                   I&rsquo;m your grant strategist. I can read {isCyc ? "Chicago Youth Centers'" : 'your'} financials,
                   federal funding risk, and live grant matches — and help you decide what to do next.
                 </div>
-                <p className="text-[11px] font-semibold uppercase tracking-wide px-1" style={{ color: 'var(--text-tertiary, #94a3b8)' }}>
+ <p className="text-[11.5px] font-semibold px-1" style={{ color: 'var(--text-tertiary, #94a3b8)' }}>
                   Try asking
                 </p>
                 {starters.map(s => (

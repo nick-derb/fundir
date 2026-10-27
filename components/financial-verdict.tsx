@@ -109,7 +109,7 @@ export function FinancialVerdict({ grantId }: { grantId: string }) {
             {data.verdict && (
               <div className="rounded-md border border-[#0d9488]/25 overflow-hidden">
                 <div className="px-4 py-3" style={{ background: 'linear-gradient(135deg, #f0fdfa, #ecfeff)' }}>
-                  <p className="text-[10px] font-bold text-[#0d9488] uppercase tracking-widest mb-1">Bottom Line</p>
+ <p className="text-[11.5px] font-medium text-[#0d9488] mb-1">Bottom Line</p>
                   <p className="text-[12.5px] text-[#0f172a] leading-relaxed font-medium">{data.verdict.bottomLine}</p>
                 </div>
 
@@ -145,7 +145,7 @@ export function FinancialVerdict({ grantId }: { grantId: string }) {
             {/* Requirement checks */}
             {data.requirementChecks.length > 0 && (
               <div>
-                <p className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-widest mb-2">
+ <p className="text-[11.5px] font-medium text-[#94a3b8] mb-2">
                   Requirement Checks
                 </p>
                 <div className="space-y-2">

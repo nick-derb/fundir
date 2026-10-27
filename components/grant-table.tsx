@@ -208,7 +208,7 @@ function GrantSidePanel({ match, onClose, stageOverrides, onStageChange }: Grant
         {/* Header */}
         <div className="px-5 pt-5 pb-4 border-b border-[#f1f5f9] flex-shrink-0">
           <div className="flex items-start justify-between gap-2 mb-1">
-            <p className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-widest truncate">
+ <p className="text-[11.5px] font-medium text-[#94a3b8] truncate">
               {match.grant?.agency_name || 'Federal Grant'}
             </p>
             <button
@@ -234,12 +234,12 @@ function GrantSidePanel({ match, onClose, stageOverrides, onStageChange }: Grant
             <LargeScoreArc score={match.composite_score} />
             <div className="grid grid-cols-2 gap-x-8 gap-y-2.5 flex-1">
               <div>
-                <p className="text-[9px] font-bold text-[#94a3b8] uppercase tracking-wider mb-1">Deadline</p>
+ <p className="text-[11.5px] font-medium text-[#94a3b8] mb-1">Deadline</p>
                 <DeadlineCell dateStr={match.grant?.close_date} />
               </div>
               {award ? (
                 <div>
-                  <p className="text-[9px] font-bold text-[#94a3b8] uppercase tracking-wider mb-1">Max Award</p>
+ <p className="text-[11.5px] font-medium text-[#94a3b8] mb-1">Max Award</p>
                   <p className="text-[13px] font-bold text-[#0f172a]">{formatCurrency(award)}</p>
                   {floor && floor !== award && (
                     <p className="text-[10px] text-[#94a3b8]">floor {formatCurrency(floor)}</p>
@@ -248,7 +248,7 @@ function GrantSidePanel({ match, onClose, stageOverrides, onStageChange }: Grant
               ) : null}
               {ef?.geographic_scope && (
                 <div>
-                  <p className="text-[9px] font-bold text-[#94a3b8] uppercase tracking-wider mb-1">Scope</p>
+ <p className="text-[11.5px] font-medium text-[#94a3b8] mb-1">Scope</p>
                   <p className="text-[11px] text-[#475569]">{ef.geographic_scope}</p>
                 </div>
               )}
@@ -263,7 +263,7 @@ function GrantSidePanel({ match, onClose, stageOverrides, onStageChange }: Grant
           <div className="px-5 py-4 border-b border-[#f1f5f9]">
             <div className="flex items-center gap-1.5 mb-3">
               <Sparkles className="w-3 h-3 text-[#6366f1]" />
-              <p className="text-[10px] font-bold text-[#64748b] uppercase tracking-widest">Match Breakdown</p>
+ <p className="text-[11.5px] font-medium text-[#64748b]">Match Breakdown</p>
               <span className="ml-auto text-[11px] font-bold font-mono text-[#0f172a]">
                 {match.composite_score.toFixed(1)} / 100
               </span>
@@ -285,7 +285,7 @@ function GrantSidePanel({ match, onClose, stageOverrides, onStageChange }: Grant
           {/* 990 Signals */}
           {signals.length > 0 && (
             <div className="px-5 py-4 border-b border-[#f1f5f9]">
-              <p className="text-[10px] font-bold text-[#64748b] uppercase tracking-widest mb-3">990 Eligibility Signals</p>
+ <p className="text-[11.5px] font-medium text-[#64748b] mb-3">990 Eligibility Signals</p>
               <div className="space-y-2.5">
                 {signals.slice(0, 7).map(s => {
                   const cfg = signalConfig[s.status] || signalConfig.unknown;
@@ -308,7 +308,7 @@ function GrantSidePanel({ match, onClose, stageOverrides, onStageChange }: Grant
           <div className="px-5 py-4 border-b border-[#f1f5f9]">
             <div className="flex items-center gap-1.5 mb-2">
               <Sparkles className="w-3 h-3 text-[#0d9488]" />
-              <p className="text-[10px] font-bold text-[#64748b] uppercase tracking-widest">Fundir Assessment</p>
+ <p className="text-[11.5px] font-medium text-[#64748b]">Fundir Assessment</p>
             </div>
             {match.recommendation ? (
               <p className="text-[12px] text-[#475569] leading-relaxed">{match.recommendation}</p>
@@ -317,7 +317,7 @@ function GrantSidePanel({ match, onClose, stageOverrides, onStageChange }: Grant
             )}
             {match.eligibility_flags?.length > 0 && (
               <div className="mt-3 space-y-1.5">
-                <p className="text-[10px] font-bold text-[#d97706] uppercase tracking-widest mb-1.5">Eligibility Flags</p>
+ <p className="text-[11.5px] font-medium text-[#d97706] mb-1.5">Eligibility Flags</p>
                 {(match.eligibility_flags as string[]).map((flag, i) => (
                   <p key={i} className="text-[11px] text-amber-700 flex items-start gap-1.5 leading-snug">
                     <span className="text-amber-400 mt-0.5 flex-shrink-0">⚠</span>{flag}
@@ -330,7 +330,7 @@ function GrantSidePanel({ match, onClose, stageOverrides, onStageChange }: Grant
           {/* Grant Details */}
           {detailRows.length > 0 && (
             <div className="px-5 py-4">
-              <p className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-widest mb-3">Grant Details</p>
+ <p className="text-[11.5px] font-medium text-[#94a3b8] mb-3">Grant Details</p>
               <div className="space-y-2">
                 {detailRows.map(r => (
                   <div key={r.label} className="flex gap-3">
@@ -592,21 +592,21 @@ export function GrantTable({ matches, emptyMessage = 'No grants found.' }: Grant
       <table className="w-full text-[13px]">
         <thead>
           <tr className="border-b border-[#e2e8f0]">
-            <th className="text-left px-4 py-2.5 text-[10px] font-bold text-[#94a3b8] uppercase tracking-widest w-[36%]">Grant</th>
-            <th className="text-left px-4 py-2.5 text-[10px] font-bold text-[#94a3b8] uppercase tracking-widest">Agency</th>
-            <th className="text-left px-4 py-2.5 text-[10px] font-bold text-[#94a3b8] uppercase tracking-widest cursor-pointer select-none"
+ <th className="text-left px-4 py-2.5 text-[11.5px] font-medium text-[#94a3b8] w-[36%]">Grant</th>
+ <th className="text-left px-4 py-2.5 text-[11.5px] font-medium text-[#94a3b8]">Agency</th>
+ <th className="text-left px-4 py-2.5 text-[11.5px] font-medium text-[#94a3b8] cursor-pointer select-none"
               onClick={() => toggleSort('close_date')}>
               <span className="flex items-center gap-1">Deadline <SortIcon col="close_date" /></span>
             </th>
-            <th className="text-left px-4 py-2.5 text-[10px] font-bold text-[#94a3b8] uppercase tracking-widest cursor-pointer select-none"
+ <th className="text-left px-4 py-2.5 text-[11.5px] font-medium text-[#94a3b8] cursor-pointer select-none"
               onClick={() => toggleSort('award')}>
               <span className="flex items-center gap-1">Award <SortIcon col="award" /></span>
             </th>
-            <th className="text-center px-4 py-2.5 text-[10px] font-bold text-[#94a3b8] uppercase tracking-widest cursor-pointer select-none"
+ <th className="text-center px-4 py-2.5 text-[11.5px] font-medium text-[#94a3b8] cursor-pointer select-none"
               onClick={() => toggleSort('composite_score')}>
               <span className="flex items-center justify-center gap-1">Match <SortIcon col="composite_score" /></span>
             </th>
-            <th className="text-left px-4 py-2.5 text-[10px] font-bold text-[#94a3b8] uppercase tracking-widest cursor-pointer select-none"
+ <th className="text-left px-4 py-2.5 text-[11.5px] font-medium text-[#94a3b8] cursor-pointer select-none"
               onClick={() => toggleSort('pipeline_stage')}>
               <span className="flex items-center gap-1">Stage <SortIcon col="pipeline_stage" /></span>
             </th>

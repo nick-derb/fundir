@@ -13,7 +13,7 @@ export function ComingSoon({ title, blurb }: { title: string; blurb?: string }) 
           <div className="w-11 h-11 rounded-sm border border-hairline bg-surface flex items-center justify-center mx-auto mb-5">
             <Compass className="w-4 h-4 text-accent" />
           </div>
-          <p className="text-eyebrow uppercase text-accent mb-2">In design</p>
+ <p className="text-eyebrow text-accent mb-2">In design</p>
           <h1 className="text-h1 text-primary mb-2">{title}</h1>
           <p className="text-body text-muted leading-relaxed">
             {blurb ?? 'This section is being designed. It will light up here as soon as it’s ready.'}

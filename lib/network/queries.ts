@@ -11,6 +11,7 @@ import { normalizeOrgName } from '@/lib/network/normalize';
 import type { Explanation } from '@/lib/network/explain';
 import { loadCorpContacts } from '@/lib/network/corporate';
 import { contactTier } from '@/lib/network/targets';
+import { orgShortName } from '@/lib/org-label';
 
 type Db = ReturnType<typeof createServerClient>;
 const CYC_EIN = '362344429';
@@ -55,7 +56,16 @@ type RawLead = Record<string, unknown> & {
   person: { id: string; name: string; current_title: string | null; current_org: string | null; kind: string } | null;
 };
 
-function shapeLead(l: RawLead): LeadRow {
+/** The tenant's short name, for the path rail. One small read per call; cached per org for a minute. */
+const OWN_CACHE = new Map<string, { label: string; at: number }>();
+async function ownLabel(db: Db, orgId: string): Promise<string> {
+  const c = OWN_CACHE.get(orgId); if (c && Date.now() - c.at < 60_000) return c.label;
+  const { data } = await db.from('organizations').select('name').eq('id', orgId).maybeSingle();
+  const label = orgShortName((data?.name as string | null) ?? null);
+  OWN_CACHE.set(orgId, { label, at: Date.now() }); return label;
+}
+
+function shapeLead(l: RawLead, own = 'CYC'): LeadRow {
   const x = (l.explanation ?? null) as Explanation | null;
   const bd = (l.score_breakdown ?? {}) as { subtotals?: LeadRow['subtotals'] };
   const trustee = l.lead_type === 'organization' && l.person && !OWN_KINDS.has(l.person.kind) ? { id: l.person.id, name: l.person.name, title: l.person.current_title } : null;
@@ -67,16 +77,16 @@ function shapeLead(l: RawLead): LeadRow {
   const path: PathNode[] = [];
   const viaOrg = (l.via_org as string | null) ?? null;
   if (l.insight_type === 'Untapped Funder') {
-    if (target) path.push({ kind: 'org', id: target.id, label: target.name, sub: 'funds CYC peers' });
-    path.push({ kind: 'org', id: null, label: 'CYC', own: true, sub: 'no funding identified' });
+    if (target) path.push({ kind: 'org', id: target.id, label: target.name, sub: `funds ${own} peers` });
+    path.push({ kind: 'org', id: null, label: own, own: true, sub: 'no funding identified' });
   } else if (personLead) {
-    path.push({ kind: 'org', id: null, label: 'CYC', own: true });
-    if (via) path.push({ kind: 'person', id: via.id, label: via.name, sub: via.role ?? 'CYC', own: true });
+    path.push({ kind: 'org', id: null, label: own, own: true });
+    if (via) path.push({ kind: 'person', id: via.id, label: via.name, sub: via.role ?? own, own: true });
     if (viaOrg) path.push({ kind: 'org', id: target?.id ?? null, label: viaOrg, sub: 'shared employer' });
     path.push({ kind: 'person', id: personLead.id, label: personLead.name, sub: personLead.title });
   } else {
-    path.push({ kind: 'org', id: null, label: 'CYC', own: true });
-    if (via) path.push({ kind: 'person', id: via.id, label: via.name, sub: via.role ?? 'CYC', own: true });
+    path.push({ kind: 'org', id: null, label: own, own: true });
+    if (via) path.push({ kind: 'person', id: via.id, label: via.name, sub: via.role ?? own, own: true });
     if (trustee && viaOrg && target && viaOrg !== target.name) path.push({ kind: 'org', id: null, label: viaOrg, sub: 'shared history' });
     if (trustee) path.push({ kind: 'person', id: trustee.id, label: trustee.name, sub: trustee.title });
     if (target) path.push({ kind: 'org', id: target.id, label: target.name, sub: target.type?.replace(/_/g, ' ') ?? null });
@@ -109,7 +119,8 @@ async function attachContacts(db: Db, orgId: string, rows: LeadRow[]): Promise<v
 export async function listLeads(db: Db, orgId: string): Promise<LeadRow[]> {
   const { data, error } = await db.from('network_leads').select(LEAD_SELECT).eq('org_id', orgId).order('opportunity_score', { ascending: false, nullsFirst: false }).limit(500);
   if (error) throw new Error(`leads: ${error.message}`);
-  const rows = ((data ?? []) as unknown as RawLead[]).map(shapeLead);
+  const own = await ownLabel(db, orgId);
+  const rows = ((data ?? []) as unknown as RawLead[]).map(l => shapeLead(l, own));
   await attachContacts(db, orgId, rows);
   return rows;
 }
@@ -140,7 +151,7 @@ export async function getLeadDetail(db: Db, orgId: string, id: string): Promise<
   if (error) throw new Error(`lead: ${error.message}`);
   if (!data) return null;
   const raw = data as unknown as RawLead;
-  const row = shapeLead(raw);
+  const row = shapeLead(raw, await ownLabel(db, orgId));
   await attachContacts(db, orgId, [row]);
   const INS = 'id, insight_type, title, summary, score, confidence, lead_id';
   const [{ data: actions }, { data: byLead }, { data: byPath }, contact_list] = await Promise.all([
@@ -251,7 +262,7 @@ export async function graphOverview(db: Db, orgId: string, topN = 24): Promise<G
     const id = nid(p.kind, p.id, p.label);
     const lead = p.kind === 'org' && p.id ? leadByOrg.get(p.id) ?? null : null;
     const cur = nodes.get(id);
-    if (!cur) nodes.set(id, { id, kind: p.kind, label: p.label, sub: p.sub ?? null, own: !!p.own, orgType: p.kind === 'org' && l.target && p.id === l.target.id ? l.target.type : null, focus: p.label === 'CYC', lead_id: lead?.id ?? null, score: lead?.score ?? null, status: lead?.pipeline_status ?? null, rowId: p.id });
+    if (!cur) nodes.set(id, { id, kind: p.kind, label: p.label, sub: p.sub ?? null, own: !!p.own, orgType: p.kind === 'org' && l.target && p.id === l.target.id ? l.target.type : null, focus: !!p.own, lead_id: lead?.id ?? null, score: lead?.score ?? null, status: lead?.pipeline_status ?? null, rowId: p.id });
     return id;
   };
   for (const l of leads) {

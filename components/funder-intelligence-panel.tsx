@@ -31,7 +31,7 @@ export function FunderIntelligencePanel({ rows, org_name }: Props) {
     return (
       <div className="rounded-sm border border-hairline p-4 bg-surface flex items-center justify-between gap-3">
         <div>
-          <div className="text-eyebrow uppercase text-secondary mb-1">Funder prospects</div>
+ <div className="text-eyebrow text-secondary mb-1">Funder prospects</div>
           <p className="text-body text-muted">
             No prospect signals yet. Run the 990 ingest + scorer to surface funders who back peers like you.
           </p>
@@ -56,7 +56,7 @@ export function FunderIntelligencePanel({ rows, org_name }: Props) {
           <div className="min-w-0">
             <div className="flex items-center gap-2 mb-1">
               <Compass className="w-3.5 h-3.5 text-accent" />
-              <p className="text-eyebrow uppercase text-secondary">Funder prospects</p>
+ <p className="text-eyebrow text-secondary">Funder prospects</p>
             </div>
             <p className="text-h2 text-primary">
               <span className="font-mono tabular-nums">{rows.length}</span>{' '}

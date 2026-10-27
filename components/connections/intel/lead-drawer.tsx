@@ -32,7 +32,7 @@ interface Props {
 
 const TIER_LABEL: Record<string, string> = { giving: 'Community / giving', executive: 'Senior leadership', local: 'Local operations' };
 
-const SOURCE_LABEL: Record<string, string> = { irs_990_xml: 'IRS 990 filing', propublica: 'ProPublica', foundation_site: 'foundation site', corporate_site: 'company site', cyc_workbook: 'CYC records', linkedin_api: 'LinkedIn', public_bio: 'public bio', cyc_site: 'CYC board page', seed: 'seed list (uncited)', irs_bmf: 'IRS BMF', instrumentl: 'Instrumentl', manual: 'manual' };
+const SOURCE_LABEL: Record<string, string> = { irs_990_xml: 'IRS 990 filing', propublica: 'ProPublica', foundation_site: 'foundation site', corporate_site: 'company site', cyc_workbook: 'your records', linkedin_api: 'LinkedIn', public_bio: 'public bio', cyc_site: 'your board page', seed: 'seed list (uncited)', irs_bmf: 'IRS BMF', instrumentl: 'Instrumentl', manual: 'manual' };
 
 export function LeadDrawer({ leadId, onClose, onStep, onOpenMap, onOpenPerson, onChanged, readOnly, position }: Props) {
   const [lead, setLead] = useState<LeadDetail | null>(null);
@@ -100,7 +100,7 @@ export function LeadDrawer({ leadId, onClose, onStep, onOpenMap, onOpenPerson, o
     <aside className="ni-peek" role="dialog" aria-modal="false" aria-label={lead ? `${lead.target?.name ?? 'Lead'} details` : 'Lead details'}>
       {/* top bar */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px 10px 18px', borderBottom: '1px solid var(--border-hairline)', flex: 'none' }}>
-        <span className="fd-mono" style={{ fontSize: 9.5, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--text-tertiary)' }}>Lead{position ? ` ${position.index + 1} of ${position.total}` : ''}</span>
+        <span className="fd-mono" style={{ fontSize: 11.5, color: 'var(--text-tertiary)' }}>Lead{position ? ` ${position.index + 1} of ${position.total}` : ''}</span>
         <span style={{ flex: 1 }} />
         <span data-ni-hide-sm style={{ display: 'inline-flex', gap: 6, alignItems: 'center', marginRight: 6 }}><span className="ni-kbd">↑</span><span className="ni-kbd">↓</span><span className="fd-caption" style={{ color: 'var(--text-tertiary)', fontSize: 10.5 }}>move</span><span className="ni-kbd" style={{ marginLeft: 6 }}>esc</span></span>
         <button type="button" className="ni-ghost" style={{ height: 28, width: 28, padding: 0, justifyContent: 'center' }} aria-label="Previous lead" onClick={() => onStep?.(-1)}><ChevronUp style={{ width: 14, height: 14 }} /></button>
@@ -120,7 +120,7 @@ export function LeadDrawer({ leadId, onClose, onStep, onOpenMap, onOpenPerson, o
             {/* identity */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
               <TypeChip type={lead.insight_type} />
-              {lead.target?.type && <span className="fd-mono" style={{ fontSize: 9.5, letterSpacing: '.05em', textTransform: 'uppercase', color: 'var(--text-tertiary)' }}>{typeLabel(lead.target.type)}</span>}
+              {lead.target?.type && <span className="fd-mono" style={{ fontSize: 11.5, color: 'var(--text-tertiary)' }}>{typeLabel(lead.target.type)}</span>}
               {lead.target?.city && <span className="fd-caption" style={{ color: 'var(--text-tertiary)', fontSize: 11 }}>· {[lead.target.city, lead.target.state].filter(Boolean).join(', ')}</span>}
             </div>
             <h2 style={{ fontFamily: SERIF, fontWeight: 400, fontSize: 'clamp(1.5rem,2.4vw,1.9rem)', lineHeight: 1.1, letterSpacing: '-.015em', margin: '0 0 14px', textWrap: 'balance' as never }}>{lead.target?.name ?? lead.trustee?.name ?? 'Lead'}</h2>
@@ -141,7 +141,7 @@ export function LeadDrawer({ leadId, onClose, onStep, onOpenMap, onOpenPerson, o
             {/* people to approach: the scanned community / giving contacts at a target company */}
             {(lead.contact_list ?? []).length > 0 && (() => { const cs = lead.contact_list; const bridged = cs.filter(c => c.pathTo).length; return (
               <>
-                <SectionRule label={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Users style={{ width: 12, height: 12, color: hue.color }} />People to approach</span>} right={<span className="fd-mono" style={{ fontSize: 9.5, color: 'var(--text-tertiary)', letterSpacing: '.05em', textTransform: 'uppercase' }}>{cs.length} at {lead.target?.name ?? 'the company'}{bridged ? ` · ${bridged} with a path` : ''}</span>} />
+                <SectionRule label={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Users style={{ width: 12, height: 12, color: hue.color }} />People to approach</span>} right={<span className="fd-mono" style={{ fontSize: 11.5, color: 'var(--text-tertiary)' }}>{cs.length} at {lead.target?.name ?? 'the company'}{bridged ? ` · ${bridged} with a path` : ''}</span>} />
                 <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 6 }}>
                   {cs.map(c => (
                     <li key={c.id} className="ni-card" style={{ padding: '9px 12px', display: 'grid', gridTemplateColumns: '32px minmax(0,1fr) auto', gap: 10, alignItems: 'center', borderLeft: `3px solid ${c.pathTo ? 'var(--accent)' : 'transparent'}` }}>
@@ -152,7 +152,7 @@ export function LeadDrawer({ leadId, onClose, onStep, onOpenMap, onOpenPerson, o
                           {c.tier && <Chip text={TIER_LABEL[c.tier]} color={c.tier === 'giving' ? 'var(--accent)' : SLATE} border={c.tier === 'giving' ? 'rgba(12,107,90,.32)' : 'rgba(91,115,131,.34)'} />}
                         </div>
                         <span style={{ display: 'block', fontSize: 12, color: 'var(--text-secondary)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{[c.title, c.location].filter(Boolean).join(' · ') || '—'}</span>
-                        <span style={{ display: 'block', fontSize: 11.5, marginTop: 3, color: c.pathTo ? 'var(--accent)' : 'var(--text-tertiary)' }}>{c.pathTo ? `Ask ${c.pathTo} for an introduction — they share career history` : 'No CYC connection yet — a cold approach'}</span>
+                        <span style={{ display: 'block', fontSize: 11.5, marginTop: 3, color: c.pathTo ? 'var(--accent)' : 'var(--text-tertiary)' }}>{c.pathTo ? `Ask ${c.pathTo} for an introduction — they share career history` : 'No connection to your people yet — a cold approach'}</span>
                       </div>
                       {c.linkedin_url ? <a href={c.linkedin_url} target="_blank" rel="noopener noreferrer" className="ni-ghost" style={{ height: 28, width: 28, padding: 0, justifyContent: 'center', color: INFO }} title="Open LinkedIn profile" aria-label={`Open ${c.name} on LinkedIn`}><ExternalLink style={{ width: 12, height: 12 }} /></a> : <span />}
                     </li>
@@ -163,7 +163,7 @@ export function LeadDrawer({ leadId, onClose, onStep, onOpenMap, onOpenPerson, o
             ); })()}
 
             {/* why */}
-            <SectionRule label={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Sparkles style={{ width: 12, height: 12, color: hue.color }} />Why Fundir recommends this</span>} right={x ? <span className="fd-mono" style={{ fontSize: 9.5, color: 'var(--text-tertiary)', letterSpacing: '.05em', textTransform: 'uppercase', display: 'inline-flex', alignItems: 'center', gap: 5 }}><ShieldCheck style={{ width: 11, height: 11, color: 'var(--accent)' }} />{x.validation.bullets_kept} of {x.validation.bullets_total} claims verified</span> : null} />
+            <SectionRule label={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Sparkles style={{ width: 12, height: 12, color: hue.color }} />Why Fundir recommends this</span>} right={x ? <span className="fd-mono" style={{ fontSize: 11.5, color: 'var(--text-tertiary)', display: 'inline-flex', alignItems: 'center', gap: 5 }}><ShieldCheck style={{ width: 11, height: 11, color: 'var(--accent)' }} />{x.validation.bullets_kept} of {x.validation.bullets_total} claims verified</span> : null} />
             {x ? (
               <>
                 <p style={{ fontFamily: SERIF, fontWeight: 400, fontSize: 'clamp(1.05rem,1.6vw,1.22rem)', lineHeight: 1.4, letterSpacing: '-.01em', margin: '0 0 16px', color: 'var(--text-primary)' }}><Cited text={x.thesis} onCite={cite} hi={hi} /></p>
@@ -236,7 +236,7 @@ export function LeadDrawer({ leadId, onClose, onStep, onOpenMap, onOpenPerson, o
                       <span style={{ minWidth: 0 }}>
                         <span style={{ display: 'block', fontSize: 12.5, lineHeight: 1.5, color: 'var(--text-muted)' }}>{s.text}</span>
                         <span style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 3, flexWrap: 'wrap' }}>
-                          <span className="fd-mono" style={{ fontSize: 9.5, letterSpacing: '.05em', textTransform: 'uppercase', color: s.verification === 'inferred' ? 'var(--warning)' : 'var(--text-tertiary)' }}>{s.verification ?? s.kind}{s.source_type ? ` · ${SOURCE_LABEL[s.source_type] ?? s.source_type}` : ''}</span>
+                          <span className="fd-mono" style={{ fontSize: 11.5, color: s.verification === 'inferred' ? 'var(--warning)' : 'var(--text-tertiary)' }}>{s.verification ?? s.kind}{s.source_type ? ` · ${SOURCE_LABEL[s.source_type] ?? s.source_type}` : ''}</span>
                           {s.source_url && <a href={s.source_url} target="_blank" rel="noopener noreferrer" className="fd-mono" style={{ fontSize: 9.5, color: 'var(--accent)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 3 }}>open<ExternalLink style={{ width: 9, height: 9 }} /></a>}
                         </span>
                       </span>

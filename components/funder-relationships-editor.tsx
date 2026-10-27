@@ -58,7 +58,7 @@ export function FunderRelationshipsEditor({ initialRows }: Props) {
     <div className="space-y-5">
       <div className="bg-canvas-1 rounded-md shadow-flat overflow-hidden">
         <div className="px-5 py-4 border-b border-canvas-3">
-          <p className="text-eyebrow font-semibold text-ink-2 uppercase tracking-wider">Your funder relationships</p>
+ <p className="text-eyebrow font-semibold text-ink-2">Your funder relationships</p>
           <p className="text-h2 font-semibold text-ink-0 mt-0.5">{rows.length} on record</p>
           <p className="text-caption text-ink-2 mt-0.5">
             Existing relationships render as Deepen on the CRA panel; Prospect + peer-signal as Open; Declined hidden; Dormant flagged for re-engagement.
@@ -173,7 +173,7 @@ function RelationshipRow({ row, onRemove, onUpdated, disabled }: {
             type="button"
             onClick={() => setStatusOpen(o => !o)}
             disabled={pending || disabled}
-            className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-sm text-eyebrow font-semibold uppercase tracking-wider transition-colors ${meta.cls} hover:brightness-95 disabled:opacity-60`}
+ className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-sm text-eyebrow font-semibold transition-colors ${meta.cls} hover:brightness-95 disabled:opacity-60`}
           >
             {pending ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
             {meta.label}
@@ -240,7 +240,7 @@ function AddRelationshipSearch({ onAdded }: { onAdded: () => Promise<void> }) {
           <div className="w-6 h-6 rounded-sm bg-action-soft text-action flex items-center justify-center">
             <Plus className="w-3.5 h-3.5" />
           </div>
-          <p className="text-eyebrow font-semibold text-ink-2 uppercase tracking-wider">Add a relationship</p>
+ <p className="text-eyebrow font-semibold text-ink-2">Add a relationship</p>
         </div>
         <p className="text-body text-ink-1">Search funders already in your graph; defaults to &lsquo;Prospect&rsquo; — flip status after adding.</p>
       </div>

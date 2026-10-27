@@ -45,7 +45,7 @@ export function FederalExposure() {
         </div>
 
         {/* Program breakdown */}
-        <p className="text-[11px] font-semibold text-[#94a3b8] uppercase tracking-widest mb-3">
+ <p className="text-[11.5px] font-semibold text-[#94a3b8] mb-3">
           Program-by-Program Risk
         </p>
         <div className="space-y-3">
@@ -66,7 +66,7 @@ export function FederalExposure() {
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-[13px] font-semibold text-[#0f172a]">{formatCurrency(program.amount)}</span>
-                    <span className={`text-[10px] px-2 py-0.5 rounded-full border font-semibold uppercase ${getRiskColor(program.risk)}`}>
+ <span className={`text-[11.5px] px-2 py-0.5 rounded-full border font-semibold ${getRiskColor(program.risk)}`}>
                       {program.risk}
                     </span>
                   </div>

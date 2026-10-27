@@ -50,14 +50,14 @@ export function AdminNav({ userEmail }: { userEmail: string }) {
         </div>
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 5, padding: '3px 8px' }}>
           <Shield size={10} color="#f87171" />
-          <span style={{ fontSize: 10, fontWeight: 700, color: '#f87171', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Admin Console</span>
+          <span style={{ fontSize: 11.5, fontWeight: 700, color: '#f87171' }}>Admin Console</span>
         </div>
       </div>
 
       <nav className="adm-nav" style={{ flex: 1, padding: '10px 10px' }}>
         {GROUPS.map(g => (
           <div key={g.label} style={{ marginBottom: 14 }}>
-            <p style={{ fontSize: 9.5, fontWeight: 700, color: '#334155', letterSpacing: '0.12em', textTransform: 'uppercase', margin: '6px 12px 6px' }}>{g.label}</p>
+            <p style={{ fontSize: 11.5, fontWeight: 700, color: '#334155', margin: '6px 12px 6px' }}>{g.label}</p>
             {g.items.map(({ href, label, icon: Icon, exact }) => {
               const active = exact ? pathname === href : pathname.startsWith(href);
               return (

@@ -398,7 +398,7 @@ function StatTile({
 }: { label: string; children: ReactNode }) {
   return (
     <div className="border border-hairline rounded-sm px-[13px] py-3 bg-page">
-      <div className="font-mono text-[9px] tracking-[0.08em] uppercase text-secondary">{label}</div>
+ <div className="font-mono text-[11.5px] text-secondary">{label}</div>
       <div className="font-mono font-semibold text-[18px] mt-[5px] -tracking-[0.01em] text-primary leading-tight">
         {children}
       </div>
@@ -714,24 +714,24 @@ function WarmPath({
   const peers = topPeerNames.slice(0, 2).join(' · ');
   return (
     <div className="border border-hairline rounded-md p-[18px] bg-surface">
-      <div className="font-mono text-[10.5px] tracking-[0.1em] uppercase text-secondary font-semibold">
+ <div className="font-mono text-[11.5px] text-secondary font-semibold">
         Warm path in
       </div>
       <div className="flex items-stretch mt-3">
         <div className="flex-1 border border-accent rounded-[8px] px-[11px] py-2.5 bg-accent-tint text-center">
-          <div className="font-mono text-[8.5px] tracking-[0.08em] uppercase text-tertiary">You</div>
+ <div className="font-mono text-[11.5px] text-tertiary">You</div>
           <div className="text-[12px] font-semibold mt-1 leading-tight text-primary truncate">{orgName}</div>
         </div>
         <div className="flex items-center px-2 text-ink-300 text-base">→</div>
         <div className="flex-1 border border-hairline rounded-[8px] px-[11px] py-2.5 bg-page text-center">
-          <div className="font-mono text-[8.5px] tracking-[0.08em] uppercase text-tertiary">Via shared grantee</div>
+ <div className="font-mono text-[11.5px] text-tertiary">Via shared grantee</div>
           <div className="text-[12px] font-semibold mt-1 leading-tight text-primary truncate" title={peers}>
             {peers || 'Top peer'}
           </div>
         </div>
         <div className="flex items-center px-2 text-ink-300 text-base">→</div>
         <div className="flex-1 border border-dashed border-hairline rounded-[8px] px-[11px] py-2.5 bg-page text-center">
-          <div className="font-mono text-[8.5px] tracking-[0.08em] uppercase text-tertiary">Funder</div>
+ <div className="font-mono text-[11.5px] text-tertiary">Funder</div>
           <div className="text-[12px] font-semibold mt-1 leading-tight text-primary truncate" title={funderName}>{funderName}</div>
         </div>
       </div>
@@ -760,7 +760,7 @@ function RiskCallout({
     <div className="border border-hairline border-l-[3px] border-l-warning rounded-md px-[18px] py-4 bg-surface">
       <div className="flex items-center gap-2 mb-2">
         <AlertTriangle className="w-3.5 h-3.5 text-warning" />
-        <span className="font-mono text-[9.5px] tracking-[0.08em] uppercase text-warning font-semibold">
+ <span className="font-mono text-[11.5px] text-warning font-semibold">
           Differentiation risk
         </span>
       </div>
@@ -805,7 +805,7 @@ interface SourceListProps {
 function SourceList({ edges, hot, funderId, funderName, registerRef }: SourceListProps) {
   return (
     <div className="border-t border-hairline pt-[18px] mt-[26px]">
-      <div className="font-mono text-[10.5px] tracking-[0.1em] uppercase text-secondary font-semibold mb-2.5">
+ <div className="font-mono text-[11.5px] text-secondary font-semibold mb-2.5">
         Sources · {edges.length} disclosed grant edges
       </div>
       <div>
@@ -945,7 +945,7 @@ export function FunderBrief({ data, playSeq }: FunderBriefProps) {
       {/* ── ASK BAND ── */}
       {edgesWithAmt.length > 0 && (
         <section style={r2.style}>
-          <div className="font-mono text-[10.5px] tracking-[0.1em] uppercase text-secondary font-semibold mb-3">
+ <div className="font-mono text-[11.5px] text-secondary font-semibold mb-3">
             Grant size &amp; recommended ask
           </div>
           <AskBand
@@ -964,7 +964,7 @@ export function FunderBrief({ data, playSeq }: FunderBriefProps) {
         {/* Peer Ledger */}
         {edgesWithAmt.length > 0 && (
           <div style={r3.style}>
-            <div className="font-mono text-[10.5px] tracking-[0.1em] uppercase text-secondary font-semibold mb-2.5">
+ <div className="font-mono text-[11.5px] text-secondary font-semibold mb-2.5">
               Peers they fund · {edgesWithAmt.length}
             </div>
             <PeerLedger
@@ -1005,7 +1005,7 @@ export function FunderBrief({ data, playSeq }: FunderBriefProps) {
       {/* ── BACKGROUND ── */}
       {s.background && (
         <section style={r5.style}>
-          <div className="font-mono text-[10.5px] tracking-[0.1em] uppercase text-secondary font-semibold mb-3">
+ <div className="font-mono text-[11.5px] text-secondary font-semibold mb-3">
             Background
           </div>
           <BriefBackground text={s.background} citations={citations} ctx={ctx} showTodos={showTodos} />
@@ -1173,7 +1173,7 @@ export function FunderProspectRow({ row, orgName }: FunderProspectRowProps) {
 
 export function FunderProspectsEyebrow({ count }: { count: number }) {
   return (
-    <div className="font-mono text-[10.5px] tracking-[0.14em] uppercase text-accent font-semibold flex items-center gap-2">
+ <div className="font-mono text-[11.5px] text-accent font-semibold flex items-center gap-2">
       <Compass className="w-3.5 h-3.5" />
       Funder Prospects
       {count > 0 && <span className="font-mono tabular-nums text-tertiary font-normal">· {count}</span>}

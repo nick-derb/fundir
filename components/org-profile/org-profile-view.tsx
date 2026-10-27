@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { AlertCircle } from 'lucide-react';
+import { OrgName } from '@/components/org-context';
 
 // Faithful port of templates/org-profile/OrgProfile.dc.html — "What Fundir knows
 // about CYC" — wired to REAL data: programs (cyc-profile), audited FY25 financials
@@ -41,7 +42,7 @@ export function OrgProfileView({ ein, facets, kpis, gaps }: { ein: string; facet
 
       <div className="fd-page-head">
         <div style={{ minWidth: 0 }}>
-          <p className="fd-eyebrow" style={{ color: 'var(--text-tertiary)', margin: '0 0 8px' }}>Chicago Youth Centers · EIN {ein}</p>
+          <p className="fd-eyebrow" style={{ color: 'var(--text-tertiary)', margin: '0 0 8px' }}><OrgName /> · EIN {ein}</p>
           <h1>What Fundir knows about you</h1>
           <p className="fd-lede">Read from your own filings and audited statements. Every fact carries the source it came from.</p>
         </div>

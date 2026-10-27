@@ -101,7 +101,7 @@ export function DeadlineCalendar({ grants }: DeadlineCalendarProps) {
         {/* Day headers */}
         <div className="grid grid-cols-7 border-b border-[#f1f5f9]">
           {DAYS.map(d => (
-            <div key={d} className="py-2.5 text-center text-[11px] font-semibold text-[#94a3b8] uppercase tracking-wide">
+ <div key={d} className="py-2.5 text-center text-[11.5px] font-semibold text-[#94a3b8]">
               {d}
             </div>
           ))}

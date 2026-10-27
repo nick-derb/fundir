@@ -195,7 +195,7 @@ export function NLSearch() {
       {/* Suggested prompts */}
       {!response && !loading && !error && (
         <div className="px-4 py-3 border-b border-canvas-3">
-          <p className="text-eyebrow font-semibold text-ink-2 uppercase tracking-wider mb-2">Try</p>
+ <p className="text-eyebrow font-semibold text-ink-2 mb-2">Try</p>
           <div className="flex flex-wrap gap-1.5">
             {SUGGESTED.map(s => (
               <button
@@ -212,7 +212,7 @@ export function NLSearch() {
       {/* Parsed chips */}
       {response && (
         <div className="px-4 py-2.5 border-b border-canvas-3 bg-canvas-0 flex flex-wrap gap-1.5 items-center text-caption">
-          <span className="text-eyebrow font-semibold text-ink-2 uppercase tracking-wider mr-1">Parsed</span>
+ <span className="text-eyebrow font-semibold text-ink-2 mr-1">Parsed</span>
           {response.parsed.program_areas?.map(p => (
             <span key={`p-${p}`} className="px-2 py-0.5 rounded-sm bg-canvas-1 border border-canvas-3 text-ink-1 flex items-center gap-1">
               <Tag className="w-2.5 h-2.5" />{p}

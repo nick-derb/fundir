@@ -77,7 +77,7 @@ export function MatchConfigEditor({ initial, exclusionsActive, discoverySearches
         <div className="flex-1 min-w-0">
           {editing ? (
             <span
-              className={`font-mono text-[11px] font-semibold uppercase tracking-[0.08em] tabular-nums inline-flex items-center gap-1.5 ${
+ className={`font-mono text-[11.5px] font-semibold tabular-nums inline-flex items-center gap-1.5 ${
                 sumOk ? 'text-success' : 'text-critical'
               }`}
             >
@@ -85,7 +85,7 @@ export function MatchConfigEditor({ initial, exclusionsActive, discoverySearches
               Weights total {sum}%{sumOk ? '' : ' — must equal 100%'}
             </span>
           ) : notice ? (
-            <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-success inline-flex items-center gap-1.5">
+ <span className="font-mono text-[11.5px] font-semibold text-success inline-flex items-center gap-1.5">
               <Check className="w-3 h-3" />
               {notice}
             </span>
