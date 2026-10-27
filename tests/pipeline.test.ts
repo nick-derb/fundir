@@ -20,7 +20,7 @@ describe('dismissal feedback', () => {
   });
   it('penalises a new lead on a dismissed funder, a lead shape dismissed twice, and a path that failed twice — each with a written reason', () => {
     const a = feedbackAdjustments({ id: 'n1', target_org_id: 'mccormick', via_person_id: null, insight_type: 'Warm Introduction', pipeline_status: 'NEW' }, f);
-    expect(a).toHaveLength(1); expect(a[0].points).toBe(-15); expect(a[0].label).toContain('declined cyc before');
+    expect(a).toHaveLength(1); expect(a[0].points).toBe(-15); expect(a[0].label).toContain('declined us before');
     const b = feedbackAdjustments({ id: 'n2', target_org_id: 'new-funder', via_person_id: null, insight_type: 'Untapped Funder', pipeline_status: 'NEW' }, f);
     expect(b.map(x => x.key)).toEqual(['team_feedback_type']);
     const c = feedbackAdjustments({ id: 'n3', target_org_id: 'x', via_person_id: 'ramsey', insight_type: 'Shared Board', pipeline_status: 'RESEARCHING' }, f, { via: () => 'Sean Ramsey' });
