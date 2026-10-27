@@ -14,7 +14,7 @@ const iso = (daysFromNow: number, hour = 9) => { const x = d(daysFromNow); x.set
 const ymd = (daysFromNow: number) => d(daysFromNow).toISOString().slice(0, 10);
 const fmt = (daysFromNow: number) => d(daysFromNow).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
-export const LAB_DASH: DashData = {
+export const labDash = (): DashData => ({
   greeting: 'Good morning', firstName: 'Elle', isCyc: false,
   today: new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }),
   kpis: [
@@ -42,19 +42,19 @@ export const LAB_DASH: DashData = {
   }; }),
   todayEvents: [{ time: '10:00', title: 'Polk Bros. LOI review', meta: 'Room 2', dot: 'off' }, { time: '14:30', title: 'Call with M. Hartigan', meta: 'Online', dot: 'on' }],
   needs: [], calendarConnected: true,
-};
+});
 
 const L = (id: string) => `/connections?tab=discover&lead=${id}`;
-export const LAB_BRIEF: Brief = {
+export const labBrief = (): Brief => ({
   windowStart: iso(-7), seenAt: iso(-3, 17),
-  stats: { newPaths: 3, newInsights: 2, refreshes: 4, relationshipsFound: 612, profilesRead: 41, dueSoon: 2, followUps: 3, asksReady: 11 },
+  stats: { newPaths: 3, newInsights: 1, refreshes: 4, relationshipsFound: 612, profilesRead: 41, dueSoon: 2, followUps: 2, asksReady: 4 },
   signals: [
     { id: 'lead:1', kind: 'path', tone: 'accent', at: iso(-1, 6), isNew: true, title: 'New path to Polk Bros. Foundation', detail: 'M. Hartigan sat on the Crown Family board with L. Marsh from 2019 to 2022; Marsh now chairs the Polk Bros. grants committee, which funds three of your peers in youth development.', evidence: 'via M. Hartigan (Board chair) · Crown Family board · score 74 · high confidence', href: L('1'), cta: 'Open lead', score: 74 },
     { id: 'lead:2', kind: 'path', tone: 'accent', at: iso(-1, 6), isNew: true, title: 'New path to Field Foundation', detail: 'J. Lindqvist and program officer A. Delgado were colleagues at the Economic Club of Chicago; Field has no open application and funds two of your peers.', evidence: 'via J. Lindqvist (Treasurer) · Economic Club of Chicago · score 61 · medium confidence', href: L('2'), cta: 'Open lead', score: 61 },
     { id: 'filing:1', kind: 'filing', tone: 'info', at: iso(-2, 3), isNew: true, title: 'New filing read for Crown Family Philanthropies', detail: '41 grants added from the 2025 990-PF, $9.6M in total. Median grant to youth organizations rose to $120,000.', evidence: 'IRS 990-PF · filed May 2026', href: L('3'), cta: 'Open lead', score: null },
     { id: 'insight:1', kind: 'insight', tone: 'warning', at: iso(-2, 7), isNew: true, title: 'Joyce Foundation funds four of your peers and not you', detail: 'Education-focus grants to Uptown Youth, Lakeview Collective, Southside Scholars and Westside Futures in the last two filings. No board path yet; the 2025 filing shows room.', evidence: 'Untapped funder · medium confidence', href: L('5'), cta: 'Open lead', score: 47 },
     { id: 'lead:4', kind: 'path', tone: 'accent', at: iso(-3, 6), isNew: true, title: 'New path to McCormick Foundation', detail: 'Board member R. Okafor shares a former employer with trustee D. Keane (Northern Trust, 2014 to 2018).', evidence: 'via R. Okafor · Northern Trust · score 68 · high confidence', href: L('4'), cta: 'Open lead', score: 68 },
-    { id: 'refresh', kind: 'refresh', tone: 'slate', at: iso(-1, 5), isNew: true, title: '4 network refreshes ran this week', detail: 'Together they read 41 profiles, found 612 relationships, 3 new leads, scanned 9 companies.', evidence: null, href: '/connections?tab=network', cta: 'See the network', score: null },
+    { id: 'refresh', kind: 'refresh', tone: 'slate', at: iso(-1, 5), isNew: true, title: 'The network refresh ran on 4 days this week', detail: 'Together they read 41 profiles, found 612 relationships, 3 new leads, scanned 9 companies.', evidence: null, href: '/connections?tab=network', cta: 'See the network', score: null },
     { id: 'deadline:1', kind: 'deadline', tone: 'critical', at: ymd(3), isNew: false, title: 'Letter of inquiry for Polk Bros. Foundation due in 3 days', detail: `Drafting · ${d(3).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}`, evidence: null, href: '/calendar', cta: 'Open calendar', score: null },
     { id: 'follow:6', kind: 'follow_up', tone: 'warning', at: ymd(1), isNew: false, title: 'Send the FY25 outcomes summary to S. Whitfield (tomorrow)', detail: 'Field Foundation · Meeting', evidence: null, href: L('6'), cta: 'Open lead', score: 55 },
     { id: 'deadline:2', kind: 'deadline', tone: 'warning', at: ymd(9), isNew: false, title: 'Full proposal for Crown Family Philanthropies due in 9 days', detail: `Drafting · ${d(9).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}`, evidence: null, href: '/calendar', cta: 'Open calendar', score: null },
@@ -73,7 +73,7 @@ export const LAB_BRIEF: Brief = {
     { id: 'ask:p1', kind: 'ask', text: 'Ask M. Hartigan about Polk Bros. Foundation', sub: 'and 1 more · score 74', href: '/connections?tab=people&person=p1', days: null, tone: 'accent' },
     { id: 'ask:p3', kind: 'ask', text: 'Ask R. Okafor about McCormick Foundation', sub: 'score 68', href: '/connections?tab=people&person=p3', days: null, tone: 'accent' },
   ],
-};
+});
 
 const n = (id: string, kind: 'person' | 'org', label: string, sub: string | null, extra: Partial<GraphPayload['nodes'][number]> = {}) => ({ id, kind, label, sub, own: false, orgType: null, focus: false, lead_id: null, score: null, status: null, rowId: id.slice(2), ...extra });
 export const LAB_GRAPH: GraphPayload = {

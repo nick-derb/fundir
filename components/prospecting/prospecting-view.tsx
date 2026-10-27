@@ -182,12 +182,12 @@ export function ProspectingView({ sheets, instrumentl, bmfTotal, rowLimit, canRe
           ))}
           <span className="fd-eyebrow" style={{ color: 'var(--text-secondary)', display: 'block', margin: '18px 0 4px' }}>Source</span>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, padding: '9px 0', borderBottom: '1px solid var(--border-hairline)' }}>
-            <span className="fd-mono" style={{ fontSize: 10, color: 'var(--accent)', flex: 'none', width: 28 }}>BMF</span>
+            <span className="fd-mono" style={{ fontSize: 10, color: 'var(--accent)', flex: 'none', minWidth: 28, whiteSpace: 'nowrap' }}>BMF</span>
             <span style={{ flex: 1, fontSize: 12.5, color: 'var(--text-secondary)' }}>IRS Illinois exempt-org file · {bmfTotal} rows</span>
             <span className="fd-tag" data-tone="accent">Loaded</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, padding: '9px 0' }}>
-            <span className="fd-mono" style={{ fontSize: 10, color: 'var(--text-tertiary)', flex: 'none', width: 28 }}><OrgShort /></span>
+            <span className="fd-mono" style={{ fontSize: 10, color: 'var(--text-tertiary)', flex: 'none', minWidth: 28, whiteSpace: 'nowrap' }}><OrgShort /></span>
             <span style={{ flex: 1, fontSize: 12.5, color: 'var(--text-secondary)' }}>Cultivation, board and research columns · your own work</span>
             <span className="fd-tag">Live</span>
           </div>

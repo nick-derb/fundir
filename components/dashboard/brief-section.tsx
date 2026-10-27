@@ -7,14 +7,12 @@
 // already maintains; "since you last looked" is a cookie this component
 // sets for itself.
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import { ArrowRight, Check, Sparkles, Clock, Share2, FileText, RefreshCw } from 'lucide-react';
 import type { Brief, BriefSignal, SignalKind, Tone } from '@/lib/brief';
 import { useOrg } from '@/components/org-context';
-
-const COOKIE = 'fundir_brief_seen';
-const SIX_HOURS = 6 * 3600 * 1000;
+import { readBriefSeen, writeBriefSeen, SEEN_COOKIE } from '@/lib/brief-seen';
 
 export const BRIEF_CSS = `
 .bf-filters{display:flex;gap:4px;flex-wrap:wrap;padding:0 18px 10px}
@@ -42,14 +40,14 @@ export const BRIEF_CSS = `
 .bf-score{font-family:var(--font-mono);font-size:12px;font-weight:600;color:var(--accent);text-align:right}
 .bf-more{display:block;width:100%;border:none;border-top:1px solid var(--border-hairline);background:none;font:inherit;font-size:12.5px;color:var(--accent);padding:10px 18px;text-align:left;cursor:pointer}
 .bf-more:hover{background:var(--bg-elevated)}
-.bf-todo{display:grid;grid-template-columns:18px minmax(0,1fr) auto;gap:10px;align-items:start;padding:9px 0;border-top:1px solid var(--border-hairline);text-decoration:none;color:inherit}
-.bf-todo:first-of-type{border-top:none}
+.bf-todo{display:grid;grid-template-columns:18px minmax(0,1fr) auto;gap:10px;align-items:start;padding:9px 0;text-decoration:none;color:inherit}
+.bf-todo + .bf-todo{border-top:1px solid var(--border-hairline)}
 .bf-todo i{width:16px;height:16px;border-radius:50%;border:1.5px solid var(--border-strong);margin-top:2px;display:inline-flex;align-items:center;justify-content:center;color:var(--accent)}
 .bf-todo b{display:block;font-size:12.5px;font-weight:500;line-height:1.35}
 .bf-todo span{display:block;font-size:11.5px;color:var(--text-tertiary);margin-top:2px}
 .bf-due{font-family:var(--font-mono);font-size:10.5px;white-space:nowrap;padding-top:3px}
-.bf-ask{display:grid;grid-template-columns:30px minmax(0,1fr);gap:10px;padding:10px 0;border-top:1px solid var(--border-hairline)}
-.bf-ask:first-of-type{border-top:none}
+.bf-ask{display:grid;grid-template-columns:30px minmax(0,1fr);gap:10px;padding:10px 0}
+.bf-ask + .bf-ask{border-top:1px solid var(--border-hairline)}
 .bf-ask b{display:block;font-size:12.5px;font-weight:500}
 .bf-ask small{display:block;font-size:11.5px;color:var(--text-tertiary)}
 .bf-ask ul{margin:6px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:3px}
@@ -72,10 +70,12 @@ const FILTERS: Array<{ key: 'all' | SignalKind; label: string }> = [
 const PAGE = 6;
 
 const initials = (n: string) => n.trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase();
+/** Date-only values are local calendar days (a due date); timestamps are instants. */
+const parseAt = (iso: string) => (/^\d{4}-\d{2}-\d{2}$/.test(iso) ? new Date(iso + 'T00:00:00') : new Date(iso));
 const relDay = (iso: string, now: Date) => {
-  const d = new Date(iso); const days = Math.round((new Date(now).setHours(0, 0, 0, 0) - new Date(d).setHours(0, 0, 0, 0)) / 86400000);
-  if (days <= 0) return 'today'; if (days === 1) return 'yesterday'; if (days < 7) return d.toLocaleDateString('en-US', { weekday: 'long' });
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  const d = parseAt(iso); const days = Math.round((new Date(now).setHours(0, 0, 0, 0) - new Date(d).setHours(0, 0, 0, 0)) / 86400000);
+  if (days === 0) return 'today'; if (days === 1) return 'yesterday'; if (days > 1 && days < 7) return d.toLocaleDateString('en-US', { weekday: 'long' });
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); // older, or a due date ahead
 };
 export const sinceLabel = (iso: string, now: Date) => {
   const d = new Date(iso); const h = (now.getTime() - d.getTime()) / 3600000;
@@ -85,17 +85,24 @@ export const sinceLabel = (iso: string, now: Date) => {
 };
 const toneColor: Record<Tone, string> = { accent: 'var(--accent)', warning: 'var(--warning)', critical: 'var(--critical)', slate: '#5B7383', info: 'var(--info)' };
 
-/** Remember that the brief was read. A reload inside the same working session keeps the same "since" baseline; the next day starts a new one. */
-export function useBriefSeen() {
+/** Remember that the brief was read. Loads less than six hours apart share one "since" baseline; the next working session starts a new one. */
+export function useBriefSeen(enabled = true) {
   useEffect(() => {
+    if (!enabled) return;
     try {
-      const m = document.cookie.match(new RegExp(`(?:^|; )${COOKIE}=([^;]+)`));
-      const last = m ? new Date(decodeURIComponent(m[1])) : null;
-      if (!last || Number.isNaN(last.getTime()) || Date.now() - last.getTime() > SIX_HOURS) {
-        document.cookie = `${COOKIE}=${encodeURIComponent(new Date().toISOString())}; path=/; max-age=31536000; SameSite=Lax`;
-      }
+      const m = document.cookie.match(new RegExp(`(?:^|; )${SEEN_COOKIE}=([^;]+)`));
+      const now = new Date();
+      const seen = readBriefSeen(m ? decodeURIComponent(m[1]) : null, now);
+      document.cookie = `${SEEN_COOKIE}=${encodeURIComponent(writeBriefSeen(seen, now))}; path=/; max-age=31536000; SameSite=Lax`;
     } catch { /* cookies blocked: the brief just shows the week */ }
-  }, []);
+  }, [enabled]);
+}
+
+/** The reader's clock: null on the server and during hydration, so no timezone-dependent text is in the server HTML. */
+const subscribeNever = () => () => {};
+export function useNow(): Date | null {
+  const mounted = useSyncExternalStore(subscribeNever, () => true, () => false);
+  return useMemo(() => (mounted ? new Date() : null), [mounted]);
 }
 
 /** One line of the lede: "3 new warm paths, 2 deadlines inside two weeks, 11 asks ready for your board." */
@@ -111,16 +118,16 @@ export function briefSummary(brief: Brief): string | null {
 }
 
 /** The "What changed" card: filter chips, the new signals, then the rest of the week, folded past the first page. */
-export function BriefSection({ brief, now, head }: { brief: Brief; now: Date; head: (title: string, sub: string, right?: React.ReactNode) => React.ReactNode }) {
+export function BriefSection({ brief, now, head }: { brief: Brief; now: Date | null; head: (title: string, sub: string, right?: React.ReactNode) => React.ReactNode }) {
   const [filter, setFilter] = useState<'all' | SignalKind>('all');
   const [open, setOpen] = useState(false);
   const counts = useMemo(() => { const c: Partial<Record<SignalKind, number>> = {}; for (const s of brief.signals) c[s.kind] = (c[s.kind] ?? 0) + 1; return c; }, [brief.signals]);
   const shown = useMemo(() => brief.signals.filter(s => filter === 'all' || s.kind === filter || (filter === 'follow_up' && s.kind === 'stale')), [brief.signals, filter]);
   const visible = open ? shown : shown.slice(0, PAGE);
   const fresh = visible.filter(s => s.isNew), earlier = visible.filter(s => !s.isNew);
-  const seen = sinceLabel(brief.seenAt, now);
+  const seen = now ? sinceLabel(brief.seenAt, now) : 'since you last looked';
   return (
-    <section className="dv-section" aria-labelledby="dv-brief">
+    <section className="dv-section" aria-label="What changed">
       {head('What changed', `${seen[0].toUpperCase()}${seen.slice(1)}, then the rest of the week. Every line links to its evidence.`, <span className="fd-tag" data-tone="accent">{brief.signals.filter(s => s.isNew).length} new</span>)}
       <div className="bf-filters" role="group" aria-label="Filter what changed">
         {FILTERS.map(f => {
@@ -139,13 +146,13 @@ export function BriefSection({ brief, now, head }: { brief: Brief; now: Date; he
   );
 }
 
-function Signal({ s, now }: { s: BriefSignal; now: Date }) {
+function Signal({ s, now }: { s: BriefSignal; now: Date | null }) {
   const k = KIND[s.kind]; const Icon = k.icon;
   return (
     <Link href={s.href} className="bf-sig" data-tone={s.tone}>
       <span className="bf-bar" />
       <span style={{ minWidth: 0 }}>
-        <span className="bf-kind"><Icon style={{ width: 12, height: 12, color: toneColor[s.tone] }} /><b>{k.label}</b><span>·</span><span>{relDay(s.at, now)}</span>{s.isNew && <em>new</em>}</span>
+        <span className="bf-kind"><Icon style={{ width: 12, height: 12, color: toneColor[s.tone] }} /><b>{k.label}</b>{now && <><span>·</span><span>{relDay(s.at, now)}</span></>}{s.isNew && <em>new</em>}</span>
         <span className="bf-title">{s.title}</span>
         {s.detail && <span className="bf-detail">{s.detail}</span>}
         {s.evidence && <span className="bf-ev">{s.evidence}</span>}

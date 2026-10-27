@@ -170,12 +170,12 @@ export function ConnectionsView({ people, kpis, readOnly }: { people: CnPerson[]
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(230px,1fr))', gap: '0 24px', borderTop: '1px solid var(--border-hairline)' }}>
                 <div style={{ padding: '12px 0' }}>
                   <p className="fd-eyebrow" style={{ color: 'var(--text-tertiary)', margin: '0 0 6px' }}>Connection</p>
-                  <p style={{ margin: '0 0 6px', fontSize: 12.5, lineHeight: 1.5 }}>{ownWarm ? `${person.connectionToCyc}${person.connectionType ? ` · ${person.connectionType}` : ''}` : person.foundationConnection ? `${person.foundationConnection} knows ${person.foundation}${person.foundationStatus ? ` · ${person.foundationStatus}` : ''}` : 'No connection to CYC mapped.'}</p>
+                  <p style={{ margin: '0 0 6px', fontSize: 12.5, lineHeight: 1.5 }}>{ownWarm ? `${person.connectionToCyc}${person.connectionType ? ` · ${person.connectionType}` : ''}` : person.foundationConnection ? `${person.foundationConnection} knows ${person.foundation}${person.foundationStatus ? ` · ${person.foundationStatus}` : ''}` : `No connection to ${org.short} mapped.`}</p>
                   <Source>{ownWarm ? 'board roster' : person.foundationConnection ? 'Known Connections sheet' : 'board roster'}</Source>
                 </div>
                 <div style={{ padding: '12px 0' }}>
                   <p className="fd-eyebrow" style={{ color: 'var(--text-tertiary)', margin: '0 0 6px' }}>Funding</p>
-                  <p style={{ margin: '0 0 6px', fontSize: 12.5, lineHeight: 1.5 }}>{person.cycFunded === 'awarded' ? `${person.foundation} has funded ${org.short}${person.cycAmount ? ` (${person.cycAmount})` : ''}.` : person.cycFunded === 'applied' ? `${org.short} has applied to ${person.foundation}; no decision yet.` : person.cycFunded === 'declined' ? `CYC applied to ${person.foundation} and was declined.` : person.cycFunded === 'pipeline' ? `${person.foundation} is on ${org.possessive} Instrumentl radar (researching / outreach); no application yet.` : `No CYC grant from ${person.foundation} on record.`}</p>
+                  <p style={{ margin: '0 0 6px', fontSize: 12.5, lineHeight: 1.5 }}>{person.cycFunded === 'awarded' ? `${person.foundation} has funded ${org.short}${person.cycAmount ? ` (${person.cycAmount})` : ''}.` : person.cycFunded === 'applied' ? `${org.short} has applied to ${person.foundation}; no decision yet.` : person.cycFunded === 'declined' ? `${org.short} applied to ${person.foundation} and was declined.` : person.cycFunded === 'pipeline' ? `${person.foundation} is on ${org.possessive} Instrumentl radar (researching / outreach); no application yet.` : `No ${org.short} grant from ${person.foundation} on record.`}</p>
                   <Source>Instrumentl history</Source>
                 </div>
               </div>

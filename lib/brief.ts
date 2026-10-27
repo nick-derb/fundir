@@ -1,4 +1,4 @@
-// The daily brief behind the Today page: what changed in this organization's
+// The daily brief on the dashboard: what changed in this organization's
 // funding picture since the person last looked, what is due, and which asks
 // the board could make this week. Read-only; composed from tables the
 // network, pipeline and calendar features already maintain, so nothing here
@@ -15,7 +15,7 @@ export type Tone = 'accent' | 'warning' | 'critical' | 'slate' | 'info';
 
 export interface BriefSignal {
   id: string; kind: SignalKind; tone: Tone;
-  /** When the thing happened (ISO). Signals sort newest first. */
+  /** When the thing happened, or for a deadline or follow-up the day it is due (ISO). Signals sort closest to now first. */
   at: string;
   /** True when it happened after the person last opened the brief. */
   isNew: boolean;
@@ -34,13 +34,15 @@ export interface Brief {
   stats: { newPaths: number; newInsights: number; refreshes: number; relationshipsFound: number; profilesRead: number; dueSoon: number; followUps: number; asksReady: number };
 }
 
-export interface DeadlineInput { funder: string; type: string; date: string; days: number; stage: string }
+export interface DeadlineInput { id: string; funder: string; type: string; date: string; days: number; stage: string }
 
 const DAY = 86400000;
 const KIND_LABEL: Record<string, string> = { INTRO_REQUESTED: 'Intro requested', CONTACTED: 'Contacted', MEETING: 'Meeting', PROPOSAL: 'Proposal', AWAITING_DECISION: 'Awaiting decision' };
 const chunks = <T,>(arr: T[], n: number): T[][] => { const o: T[][] = []; for (let i = 0; i < arr.length; i += n) o.push(arr.slice(i, i + n)); return o; };
 const leadHref = (id: string) => `/connections?tab=discover&lead=${id}`;
 const personHref = (id: string) => `/connections?tab=people&person=${id}`;
+/** Date-only values are local calendar days; timestamps are instants. */
+const parseAt = (iso: string) => (/^\d{4}-\d{2}-\d{2}$/.test(iso) ? new Date(iso + 'T00:00:00') : new Date(iso));
 
 /**
  * @param seenAt   when the person last opened the brief (null on a first visit)
@@ -56,8 +58,8 @@ export async function buildBrief(db: Db, orgId: string, opts: { seenAt: Date | n
   const [leads, insights, createdRes, runsRes] = await Promise.all([
     listLeads(db, orgId).catch(() => [] as LeadRow[]),
     listInsights(db, orgId).catch(() => []),
-    db.from('network_leads').select('id, created_at').eq('org_id', orgId),
-    db.from('network_refresh_runs').select('completed_at, profiles_enriched, relationships_found, leads_found, companies_scanned, status').eq('org_id', orgId).gte('completed_at', since).order('completed_at', { ascending: false }).limit(60),
+    db.from('network_leads').select('id, created_at').eq('org_id', orgId).gte('created_at', since),
+    db.from('network_refresh_runs').select('completed_at, profiles_enriched, relationships_found, leads_found, companies_scanned, status').eq('org_id', orgId).gte('completed_at', since).order('completed_at', { ascending: false }).limit(500),
   ]);
   const createdAt = new Map<string, string>(((createdRes.data ?? []) as Array<{ id: string; created_at: string }>).map(r => [r.id, r.created_at]));
   const signals: BriefSignal[] = [];
@@ -90,16 +92,18 @@ export async function buildBrief(db: Db, orgId: string, opts: { seenAt: Date | n
     });
   }
 
-  // ── Network refresh runs, summed into one line ──
+  // ── Network refresh runs, summed into one line. A refresh is logged as one row per
+  // bounded step, so the headline counts the days it ran, not the rows. ──
   type Run = { completed_at: string | null; profiles_enriched: number | null; relationships_found: number | null; leads_found: number | null; companies_scanned: number | null; status: string | null };
   const runs = ((runsRes.data ?? []) as Run[]).filter(r => r.completed_at);
   const sum = (k: keyof Run) => runs.reduce((a, r) => a + (Number(r[k]) || 0), 0);
+  const refreshDays = new Set(runs.map(r => r.completed_at!.slice(0, 10))).size;
   if (runs.length) {
     const latest = runs[0].completed_at!;
     const parts = [sum('profiles_enriched') ? `read ${sum('profiles_enriched')} profiles` : null, sum('relationships_found') ? `found ${sum('relationships_found')} relationships` : null, sum('leads_found') ? `${sum('leads_found')} new leads` : null, sum('companies_scanned') ? `scanned ${sum('companies_scanned')} companies` : null].filter(Boolean);
     signals.push({
       id: 'refresh', kind: 'refresh', tone: 'slate', at: latest, isNew: isNew(latest),
-      title: `${runs.length === 1 ? 'The network refresh ran' : `${runs.length} network refreshes ran`} this week`,
+      title: refreshDays === 1 ? 'The network refresh ran this week' : `The network refresh ran on ${refreshDays} days this week`,
       detail: parts.length ? `Together they ${parts.join(', ')}.` : 'Nothing new was found.', evidence: null,
       href: '/connections?tab=network', cta: 'See the network', score: null,
     });
@@ -141,9 +145,9 @@ export async function buildBrief(db: Db, orgId: string, opts: { seenAt: Date | n
   for (const d of opts.deadlines) {
     if (d.days > 14) continue;
     signals.push({
-      id: `deadline:${d.funder}:${d.date}`, kind: 'deadline', tone: d.days <= 3 ? 'critical' : 'warning', at: d.date, isNew: false,
+      id: `deadline:${d.id}`, kind: 'deadline', tone: d.days <= 3 ? 'critical' : 'warning', at: d.date, isNew: false,
       title: `${d.type} for ${d.funder} due ${d.days === 0 ? 'today' : d.days === 1 ? 'tomorrow' : `in ${d.days} days`}`,
-      detail: `${d.stage} · ${new Date(d.date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}`, evidence: null,
+      detail: `${d.stage} · ${parseAt(d.date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}`, evidence: null,
       href: '/calendar', cta: 'Open calendar', score: null,
     });
   }
@@ -166,7 +170,7 @@ export async function buildBrief(db: Db, orgId: string, opts: { seenAt: Date | n
       }
     }
   }
-  for (const d of opts.deadlines) if (d.days <= 14) todos.push({ id: `dl:${d.funder}:${d.date}`, kind: 'deadline', text: `${d.type}: ${d.funder}`, sub: d.stage, href: '/calendar', days: d.days, tone: d.days <= 3 ? 'critical' : 'warning' });
+  for (const d of opts.deadlines) if (d.days <= 14) todos.push({ id: `dl:${d.id}`, kind: 'deadline', text: `${d.type}: ${d.funder}`, sub: d.stage, href: '/calendar', days: d.days, tone: d.days <= 3 ? 'critical' : 'warning' });
 
   // ── Asks the board could make: open leads with a person to ask, grouped by that person ──
   const askable = leads.filter(l => l.via && l.target && ['NEW', 'RESEARCHING', 'INTRODUCTION_NEEDED'].includes(l.pipeline_status));
@@ -181,14 +185,16 @@ export async function buildBrief(db: Db, orgId: string, opts: { seenAt: Date | n
 
   const order: Record<TodoItem['kind'], number> = { deadline: 0, follow_up: 1, stale: 2, ask: 3 };
   todos.sort((a, b) => order[a.kind] - order[b.kind] || (a.days ?? 99) - (b.days ?? 99));
-  signals.sort((a, b) => Number(b.isNew) - Number(a.isNew) || new Date(b.at).getTime() - new Date(a.at).getTime());
+  // New first; then closest to now, so the latest event and the nearest due date lead.
+  const dist = (s: BriefSignal) => Math.abs(now.getTime() - parseAt(s.at).getTime());
+  signals.sort((a, b) => Number(b.isNew) - Number(a.isNew) || dist(a) - dist(b));
 
   return {
     windowStart: since, seenAt: seenAt.toISOString(), signals: signals.slice(0, 40), asks, todos: todos.slice(0, 8),
     stats: {
       newPaths: signals.filter(s => s.kind === 'path' && s.isNew).length,
       newInsights: signals.filter(s => s.kind === 'insight' && s.isNew).length,
-      refreshes: runs.length, relationshipsFound: sum('relationships_found'), profilesRead: sum('profiles_enriched'),
+      refreshes: refreshDays, relationshipsFound: sum('relationships_found'), profilesRead: sum('profiles_enriched'),
       dueSoon: opts.deadlines.filter(d => d.days <= 14).length,
       followUps: todos.filter(t => t.kind === 'follow_up' || t.kind === 'stale').length,
       asksReady: askable.length,

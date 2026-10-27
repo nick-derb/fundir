@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import type { Brief } from '@/lib/brief';
 import { CycHeroTransform } from '@/components/cyc-hero-transform';
-import { BRIEF_CSS, BriefSection, DoToday, AskYourBoard, useBriefSeen, briefSummary } from './brief-section';
+import { BRIEF_CSS, BriefSection, DoToday, AskYourBoard, useBriefSeen, useNow, briefSummary } from './brief-section';
 import { OrgName } from '@/components/org-context';
 
 declare global {
@@ -84,19 +84,21 @@ function SectionHead({ title, sub, right }: { title: string; sub?: string; right
   );
 }
 
-export function DashboardView({ data, brief }: { data: DashData; brief?: Brief }) {
-  const [now] = useState(() => new Date());
-  useBriefSeen();
+/** @param trackSeen false on the design lab, so a specimen page never moves a real reader's "since" baseline. */
+export function DashboardView({ data, brief, trackSeen = true }: { data: DashData; brief?: Brief; trackSeen?: boolean }) {
+  const now = useNow();
+  useBriefSeen(trackSeen);
   const [goals, setGoals] = useState(data.goals);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<DashGoal[]>([]);
   const [saving, setSaving] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
 
-  // The deadline-load bars are drawn by /dashboard/charts.js once it loads.
+  // The deadline-load bars are drawn by /charts/dashboard.js once it loads (served outside the
+  // signed-in prefixes so the design lab can draw them too).
   useEffect(() => {
     if (!document.getElementById('dash-charts')) {
-      const el = document.createElement('script'); el.id = 'dash-charts'; el.src = '/dashboard/charts.js'; document.body.appendChild(el);
+      const el = document.createElement('script'); el.id = 'dash-charts'; el.src = '/charts/dashboard.js'; document.body.appendChild(el);
     }
     let n = 0;
     const boot = setInterval(() => {
@@ -130,7 +132,7 @@ export function DashboardView({ data, brief }: { data: DashData; brief?: Brief }
       <style dangerouslySetInnerHTML={{ __html: CSS + BRIEF_CSS }} />
 
       {/* The tenant's hero. CYC's skyline-to-wordmark sequence plays once per browser session, then rests. */}
-      {data.isCyc && <div className="dv-section" style={{ marginBottom: 18, overflow: 'hidden' }}><CycHeroTransform /></div>}
+      {data.isCyc && <div style={{ marginBottom: 18 }}><CycHeroTransform /></div>}
 
       {/* header */}
       <div className="fd-page-head" style={{ marginBottom: 16 }}>

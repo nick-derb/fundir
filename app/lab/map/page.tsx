@@ -5,7 +5,7 @@ import { AppShell } from '@/components/app-shell';
 import { LabMap } from '@/components/lab-map';
 import { LAB_ORG } from '@/lib/lab-fixtures';
 
-export const dynamic = 'force-static';
+export const dynamic = 'force-dynamic';
 
 export default function LabMapPage() {
   if (process.env.VERCEL_ENV === 'production') notFound();

@@ -262,7 +262,7 @@ export async function graphOverview(db: Db, orgId: string, topN = 24): Promise<G
     const id = nid(p.kind, p.id, p.label);
     const lead = p.kind === 'org' && p.id ? leadByOrg.get(p.id) ?? null : null;
     const cur = nodes.get(id);
-    if (!cur) nodes.set(id, { id, kind: p.kind, label: p.label, sub: p.sub ?? null, own: !!p.own, orgType: p.kind === 'org' && l.target && p.id === l.target.id ? l.target.type : null, focus: !!p.own, lead_id: lead?.id ?? null, score: lead?.score ?? null, status: lead?.pipeline_status ?? null, rowId: p.id });
+    if (!cur) nodes.set(id, { id, kind: p.kind, label: p.label, sub: p.sub ?? null, own: !!p.own, orgType: p.kind === 'org' && l.target && p.id === l.target.id ? l.target.type : null, focus: p.kind === 'org' && !!p.own, lead_id: lead?.id ?? null, score: lead?.score ?? null, status: lead?.pipeline_status ?? null, rowId: p.id });
     return id;
   };
   for (const l of leads) {
