@@ -10,6 +10,7 @@ import { X, ExternalLink, Map as MapIcon, Sparkles, Loader2 } from 'lucide-react
 import type { PersonDetail } from '@/lib/network/queries';
 import { SERIF, MONO, Avatar, Chip, Eyebrow, Skeleton, fmtDate, relLabel, SLATE, AMBER, INFO, hueFor, STATUS_LABEL } from './shared';
 import type { PipelineState } from '@/lib/network/queries';
+import { useOrg } from '@/components/org-context';
 
 const TABS = ['Overview', 'Career', 'Boards & paths', 'Sources'] as const;
 type Tab = typeof TABS[number];
@@ -26,6 +27,7 @@ export function PersonPeek(props: PeekProps) {
 }
 
 function PersonPeekInner({ personId, onClose, onOpenLead, onOpenMap, onSaveUrl, readOnly }: PeekProps & { personId: string }) {
+  const org = useOrg();
   const [p, setP] = useState<PersonDetail | null>(null);
   const [error, setError] = useState('');
   const [tab, setTab] = useState<Tab>('Overview');
@@ -120,7 +122,7 @@ function PersonPeekInner({ personId, onClose, onOpenLead, onOpenMap, onSaveUrl, 
                           <li key={l.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5 }}>
                             <span style={{ width: 16, borderTop: `1.5px ${l.verification === 'verified' ? 'solid' : l.verification === 'probable' ? 'dashed' : 'dotted'} var(--text-secondary)`, flex: 'none' }} />
                             <button type="button" onClick={() => onOpenMap({ kind: l.other.kind, id: l.other.id })} style={{ border: 'none', background: 'none', padding: 0, font: 'inherit', fontSize: 12.5, fontWeight: 500, color: 'var(--text-primary)', cursor: 'pointer' }}>{l.other.name}</button>
-                            <span className="fd-mono" style={{ fontSize: 9.5, color: 'var(--text-tertiary)', letterSpacing: '.04em' }}>{relLabel(l.type)} · {l.verification}</span>
+                            <span className="fd-mono" style={{ fontSize: 9.5, color: 'var(--text-tertiary)', letterSpacing: '.04em' }}>{relLabel(l.type, org.short)} · {l.verification}</span>
                           </li>
                         ))}
                       </ul>

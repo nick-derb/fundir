@@ -79,7 +79,7 @@ const n = (id: string, kind: 'person' | 'org', label: string, sub: string | null
 export const LAB_GRAPH: GraphPayload = {
   mode: 'overview', focus: null,
   nodes: [
-    n('o:root', 'org', 'Northside Youth Collaborative', 'your organization', { own: true, focus: true, rowId: null }),
+    n('o:root', 'org', 'NYC', 'Northside Youth Collaborative', { own: true, focus: true, rowId: null }),
     n('p:p1', 'person', 'M. Hartigan', 'Board chair · 2016–', { own: true }),
     n('p:p2', 'person', 'J. Lindqvist', 'Treasurer · 2019–', { own: true }),
     n('p:p3', 'person', 'R. Okafor', 'Director · 2021–', { own: true }),

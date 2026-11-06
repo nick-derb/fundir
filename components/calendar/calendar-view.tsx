@@ -394,7 +394,7 @@ function Schedule({ days, byDay, todayISO, keyOf, single, onPickDay }: {
       </div>
       {/* all-day / deadline band — the week shows a few per day and hands the rest to Day view */}
       <div className="cv-sched">
-        <div className="fd-eyebrow" style={{ padding: '8px 6px 0 0', textAlign: 'right', color: 'var(--text-tertiary)', fontSize: 8.5, borderBottom: '1px solid var(--border-hairline)' }}>All day</div>
+        <div className="fd-eyebrow" style={{ padding: '8px 6px 0 0', textAlign: 'right', color: 'var(--text-tertiary)', fontSize: 11.5, borderBottom: '1px solid var(--border-hairline)' }}>All day</div>
         <div className="cv-allday" style={{ gridTemplateColumns: gridCols }}>
           {cols.map(c => {
             const shown = single ? c.untimed : c.untimed.slice(0, MAX_ALLDAY);

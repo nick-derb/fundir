@@ -34,7 +34,7 @@ const SANS = 'var(--font-sans)';
 const INK = '#101917', SAGE = '#659A80', ACCENT = '#0C6B5A', FAINT = '#9AA7A1', RULE = '#DFE5E2';
 
 const lbl: React.CSSProperties = {
-  display: 'block', fontFamily: MONO, fontSize: 9.5, letterSpacing: '.13em',
+  display: 'block', fontFamily: MONO, fontSize: 11.5,
   color: '#9AA7A1', marginBottom: 7,
 };
 const input: React.CSSProperties = {

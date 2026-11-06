@@ -37,7 +37,7 @@ export function OrganizationsView({ onOpenLead, onFocus }: { onOpenLead: (id: st
       </div>
       <div className="ni-card" style={{ overflow: 'hidden' }}>
         <div data-ni-grid="org" style={{ display: 'grid', gridTemplateColumns: 'minmax(220px,2fr) 120px 90px 90px 90px 110px', gap: 12, padding: '8px 16px', borderBottom: '1px solid var(--border-hairline)', background: 'var(--bg-page)' }} aria-hidden>
-          {['Organization', 'Type', 'Peer grants', 'Trustees', 'Our people', 'Best lead'].map((h, i) => <span key={h} className="fd-eyebrow" style={{ color: 'var(--text-tertiary)', fontSize: 10 }} data-ni-hide-md={i >= 2 && i <= 4 ? true : undefined}>{h}</span>)}
+          {['Organization', 'Type', 'Peer grants', 'Trustees', 'Our people', 'Best lead'].map((h, i) => <span key={h} className="fd-eyebrow" style={{ color: 'var(--text-tertiary)', fontSize: 11.5 }} data-ni-hide-md={i >= 2 && i <= 4 ? true : undefined}>{h}</span>)}
         </div>
         {rows === null && Array.from({ length: 8 }).map((_, i) => <div key={i} style={{ padding: '14px 16px', borderBottom: '1px solid var(--border-hairline)' }}><Skeleton h={14} w={`${40 + (i * 13) % 40}%`} /></div>)}
         {rows !== null && visible.length === 0 && <p className="fd-caption" style={{ padding: '30px 16px', textAlign: 'center', color: 'var(--text-tertiary)' }}>No organizations match.</p>}

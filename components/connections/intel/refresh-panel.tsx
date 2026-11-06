@@ -148,7 +148,7 @@ export function RefreshPanel({ open, onClose, onFinished, readOnly }: { open: bo
 function Stat({ label, value, sub, tone, live }: { label: string; value: string; sub?: string; tone?: string; live?: boolean }) {
   return (
     <div className="ni-kpi" style={{ padding: '10px 12px' }}>
-      <span className="fd-eyebrow" style={{ display: 'block', color: 'var(--text-tertiary)', fontSize: 9.5, marginBottom: 4 }}>{label}</span>
+      <span className="fd-eyebrow" style={{ display: 'block', color: 'var(--text-tertiary)', fontSize: 11.5, marginBottom: 4 }}>{label}</span>
       <b className="fd-kpi" style={{ fontSize: 18, color: tone, fontFamily: MONO, transition: 'color .2s' }}>{value}{live && <span aria-hidden style={{ display: 'inline-block', width: 6, height: 6, borderRadius: 3, background: 'var(--accent)', marginLeft: 6, verticalAlign: 'middle', animation: 'ni-pulse 1.2s ease-in-out infinite' }} />}</b>
       {sub && <span className="fd-caption" style={{ display: 'block', color: 'var(--text-tertiary)', fontSize: 10.5, marginTop: 2 }}>{sub}</span>}
     </div>

@@ -106,7 +106,7 @@ export function MapView({ focus, onFocus, onOpenLead, onOpenPerson }: { focus: M
                         <span style={{ width: 16, borderTop: `1.5px ${link.verification === 'verified' ? 'solid' : link.verification === 'probable' ? 'dashed' : 'dotted'} ${link.type === 'white_space' ? 'var(--warning)' : 'var(--text-secondary)'}`, flex: 'none' }} />
                         <span style={{ minWidth: 0, flex: 1 }}>
                           <b style={{ display: 'block', fontSize: 12, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{other!.label}</b>
-                          <span className="fd-mono" style={{ fontSize: 9.5, color: 'var(--text-tertiary)', letterSpacing: '.04em' }}>{relLabel(link.type)}{link.label && link.type !== 'relationship' ? ` · ${link.label.slice(0, 40)}` : ''}</span>
+                          <span className="fd-mono" style={{ fontSize: 9.5, color: 'var(--text-tertiary)', letterSpacing: '.04em' }}>{relLabel(link.type, org.short)}{link.label && link.type !== 'relationship' ? ` · ${link.label.slice(0, 40)}` : ''}</span>
                         </span>
                       </button>
                     </li>
@@ -138,7 +138,7 @@ export function MapView({ focus, onFocus, onOpenLead, onOpenPerson }: { focus: M
             )}
             <div style={{ marginTop: 'auto', paddingTop: 12, borderTop: '1px solid var(--border-hairline)' }}>
               <span className="fd-eyebrow" style={{ display: 'block', marginBottom: 6, color: 'var(--text-tertiary)' }}>Reading the map</span>
-              <p className="fd-caption" style={{ margin: 0, color: 'var(--text-tertiary)', fontSize: 11.5 }}>Each card hangs under the node it was reached through, so a path reads top to bottom, lane by lane. With nothing selected the strongest path is lit. The dot on a card is its evidence grade; ◆ opens the lead. Funders with no path yet sit folded in one card. Solid lines are dated, dashed undated, dotted inferred; <span style={{ color: 'var(--warning)' }}>amber</span> is white space. Faint curves are extra links between branches. Drag to pan, scroll to move, ⌘ + scroll to zoom, “+N more” unfolds a wide branch.</p>
+              <p className="fd-caption" style={{ margin: 0, color: 'var(--text-tertiary)', fontSize: 11.5 }}>Each card hangs under the node it was reached through, so a path reads top to bottom, lane by lane. With nothing selected the strongest path is lit. The dot on a card is its evidence grade; ◆ opens the lead and the person mark opens the profile. Funders with no path yet sit folded in one card. Solid lines are dated, dashed undated, dotted inferred; <span style={{ color: 'var(--warning)' }}>amber</span> is white space. Faint curves are extra links between branches. Drag to pan, scroll to move, ⌘ + scroll to zoom, “+N more” unfolds a wide branch.</p>
             </div>
           </div>
         )}

@@ -14,7 +14,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Minus, Plus, Maximize2, ChevronDown, User } from 'lucide-react';
 import type { GraphPayload, GraphNode, GraphLink, PipelineState } from '@/lib/network/queries';
 import { Avatar, OrgMark, typeLabel, STATUS_LABEL } from './shared';
-import { OrgPossessive, OrgShort, useOrg } from '@/components/org-context';
+import { OrgPossessive, useOrg } from '@/components/org-context';
 
 interface Props {
   data: GraphPayload | null;
@@ -52,8 +52,8 @@ const CSS = `
 .mg-lane{position:absolute;left:0;right:0;pointer-events:none;border-top:1px dashed color-mix(in srgb,var(--border-hairline) 70%,transparent)}
 .mg-lane[data-odd="true"]{background:color-mix(in srgb,var(--bg-surface) 45%,transparent)}
 .mg-gutter{position:absolute;left:0;top:0;bottom:0;pointer-events:none;border-right:1px solid var(--border-hairline);background:color-mix(in srgb,var(--bg-surface) 82%,transparent)}
-.mg-lanelabel{position:absolute;left:10px;display:flex;flex-direction:column;gap:2px;max-width:80px}
-.mg-lanelabel b{font-family:var(--font-sans);font-size:11.5px;font-weight:500;color:var(--text-secondary);line-height:1.25}
+.mg-lanelabel{position:absolute;left:10px;right:8px;display:flex;flex-direction:column;gap:2px}
+.mg-lanelabel b{font-family:var(--font-sans);font-size:11.5px;font-weight:500;color:var(--text-secondary);line-height:1.25;overflow-wrap:anywhere;hyphens:auto}
 .mg-lanelabel span{font-family:var(--font-sans);font-size:10.5px;color:var(--text-tertiary)}
 .mg-card{position:absolute;box-sizing:border-box;background:var(--bg-surface);border:1px solid var(--border-hairline);border-radius:var(--radius);box-shadow:0 1px 0 rgba(11,18,32,.03);cursor:pointer;outline:none;transition:opacity .16s,border-color .12s,box-shadow .12s;display:flex;flex-direction:column;overflow:hidden}
 .mg-card:hover{border-color:var(--border-strong)}
@@ -124,8 +124,8 @@ export function buildLayout(data: GraphPayload, expanded: Set<string>, compact: 
 
   // BFS forest: the focused node first, then whatever is left, biggest hub
   // first. Real relationships are walked before white-space links, so a funder
-  // that is both "gives to <OrgPossessive /> peers" and reachable through a board member
-  // hangs at the end of its warm path, not directly under <OrgShort />.
+  // that is both "gives to the tenant's peers" and reachable through a board member
+  // hangs at the end of its warm path, not directly under the tenant.
   const depth = new Map<string, number>(); const parent = new Map<string, { id: string; link: GraphLink } | null>();
   const children = new Map<string, string[]>();
   const roots: string[] = [];
@@ -216,9 +216,10 @@ export function strongestPath(lay: Layout): { ids: string[]; target: GraphNode }
   return { ids, target: best.node! };
 }
 
-// Fit keeps cards legible: never below 0.8×. A tree wider than the viewport is
-// centred on its root instead of shrunk, and the user pans along the layer.
-function fitView(lay: Layout, sz: { w: number; h: number }, gutter: number, minK = 0.8) {
+// Fit shrinks to the caller's floor (0.58 full, 0.5 compact) so the whole tree is
+// visible on first paint. A tree wider than the viewport at that floor is centred
+// on its root and the user pans along the layer.
+function fitView(lay: Layout, sz: { w: number; h: number }, gutter: number, minK: number) {
   if (!lay.placed.length) return { x: 0, y: 0, k: 1 };
   const avail = sz.w - gutter - 24;
   const k = Math.max(minK, Math.min(1, avail / lay.w, (sz.h - 24) / lay.h));
@@ -317,7 +318,14 @@ export function MapGraph({ data, height = 520, maxHeight = 720, selectedId, onSe
     let cur = layout?.parentOf.get(activeId); while (cur) { s.add(cur); cur = layout?.parentOf.get(cur); }
     return s;
   }, [activeId, adj, layout]);
-  const isLit = (a: string, b: string) => !!lit && lit.has(a) && lit.has(b);
+  // An edge lights when it touches the active card or is a step of its chain back to the root;
+  // a link between two lit cards that the active card is not on stays quiet.
+  const isLit = (a: string, b: string) => {
+    if (!lit || !activeId) return false;
+    if (a === activeId || b === activeId) return lit.has(a) && lit.has(b);
+    return lit.has(a) && lit.has(b) && (layout?.parentOf.get(a) === b || layout?.parentOf.get(b) === a) && (isChain(a) && isChain(b));
+  };
+  function isChain(id: string) { let cur: string | undefined = activeId ?? undefined; while (cur) { if (cur === id) return true; cur = layout?.parentOf.get(cur); } return false; }
   const onBest = (a: string, b: string) => !activeId && bestIds.has(a) && bestIds.has(b);
 
   const nodeCount = data?.nodes.length ?? 0;
@@ -423,7 +431,7 @@ function Card({ p, S, compact, degree, on, dim, onPath, onHover, onSelect, onAct
       style={{ left: p.x, top: p.y, width: S.W, height: S.H }}
       onMouseEnter={() => onHover(true)} onMouseLeave={() => onHover(false)}
       onClick={e => { e.stopPropagation(); onSelect(); }} onDoubleClick={e => { e.stopPropagation(); onActivate(); }}
-      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (e.shiftKey) onActivate(); else onSelect(); } }}>
+      onKeyDown={e => { if (e.target !== e.currentTarget) return; if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (e.shiftKey) onActivate(); else onSelect(); } }}>
       <div className="mg-head">
         {n.kind === 'person' ? <Avatar name={n.label} size={compact ? 24 : 30} own={n.own} /> : <OrgMark name={n.label} size={compact ? 24 : 30} accent={n.own || n.focus} />}
         <div className="mg-title"><b>{n.label}</b><span>{sub}</span></div>

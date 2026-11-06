@@ -7,12 +7,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { EdgeRow } from '@/lib/network/queries';
 import { SERIF, MONO, Avatar, OrgMark, Chip, Eyebrow, Skeleton, relLabel, AMBER, SLATE } from './shared';
-import { OrgName, OrgShort } from '@/components/org-context';
+import { OrgName, OrgShort, useOrg } from '@/components/org-context';
 
 const VER_TONE: Record<string, string> = { verified: 'var(--accent)', probable: SLATE, inferred: AMBER };
 const VER_LABEL: Record<string, string> = { verified: 'documented', probable: 'undated', inferred: 'inferred' };
 
 export function RelationshipsView({ onFocus }: { onFocus: (f: { kind: 'person' | 'org'; id: string }) => void }) {
+  const org = useOrg();
   const [loaded, setLoaded] = useState<{ key: string; edges: EdgeRow[] } | null>(null);
   const [type, setType] = useState<string>('');
   const [ver, setVer] = useState<string>('');
@@ -43,7 +44,7 @@ export function RelationshipsView({ onFocus }: { onFocus: (f: { kind: 'person' |
         <span style={{ flex: 1 }} />
         <select className="ni-select" value={type} onChange={e => setType(e.target.value)} aria-label="Relationship type">
           <option value="">All types</option>
-          {['former_colleague', 'current_colleague', 'shared_employer', 'shared_board', 'shared_university', 'existing_cyc_relationship', 'corporate_connection', 'foundation_connection', 'philanthropic_overlap', 'geographic_overlap', 'second_degree'].map(t => <option key={t} value={t}>{relLabel(t)}</option>)}
+          {['former_colleague', 'current_colleague', 'shared_employer', 'shared_board', 'shared_university', 'existing_cyc_relationship', 'corporate_connection', 'foundation_connection', 'philanthropic_overlap', 'geographic_overlap', 'second_degree'].map(t => <option key={t} value={t}>{relLabel(t, org.short)}</option>)}
         </select>
       </div>
       <div className="ni-card" style={{ overflow: 'hidden' }}>
@@ -55,12 +56,12 @@ export function RelationshipsView({ onFocus }: { onFocus: (f: { kind: 'person' |
             <End e={e.a} />
             <span aria-hidden style={{ display: 'flex', justifyContent: 'center' }}><span style={{ width: 24, borderTop: `1.5px ${e.verification === 'verified' ? 'solid' : e.verification === 'probable' ? 'dashed' : 'dotted'} ${VER_TONE[e.verification]}` }} /></span>
             <End e={e.b} />
-            <span><Chip text={relLabel(e.type)} color={VER_TONE[e.verification]} border={`color-mix(in srgb, ${VER_TONE[e.verification]} 35%, transparent)`} /></span>
+            <span><Chip text={relLabel(e.type, org.short)} color={VER_TONE[e.verification]} border={`color-mix(in srgb, ${VER_TONE[e.verification]} 35%, transparent)`} /></span>
             <span data-ni-hide-md className="fd-caption" style={{ color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={e.summary ?? ''}>{e.summary ?? '—'}{e.source_type ? <span className="fd-mono" style={{ color: 'var(--text-tertiary)', fontSize: 9.5, marginLeft: 6 }}>· {e.source_type.replace(/_/g, ' ')}</span> : null}</span>
             <b className="fd-mono" style={{ fontSize: 11.5, color: 'var(--text-secondary)', textAlign: 'right', fontFamily: MONO }}>{Math.round(e.strength)}</b>
           </div>
         ))}
-        <div style={{ padding: '9px 16px', background: 'var(--bg-page)' }}><span className="fd-mono" style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>{visible.length} link{visible.length === 1 ? '' : 's'}{edges && edges.length >= 500 ? ' · showing the strongest 500' : ''} · types: {types.slice(0, 4).map(([t, n]) => `${relLabel(t)} ${n}`).join(' · ')}</span></div>
+        <div style={{ padding: '9px 16px', background: 'var(--bg-page)' }}><span className="fd-mono" style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>{visible.length} link{visible.length === 1 ? '' : 's'}{edges && edges.length >= 500 ? ' · showing the strongest 500' : ''} · types: {types.slice(0, 4).map(([t, n]) => `${relLabel(t, org.short)} ${n}`).join(' · ')}</span></div>
       </div>
     </div>
   );

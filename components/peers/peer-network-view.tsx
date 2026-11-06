@@ -10,7 +10,7 @@ import type { PeerOrgCard, PeerPerson, FunderRelation } from '@/lib/network/peer
 import type { PeerStaffStatus } from '@/lib/network/peer-staff';
 import { PeerScanPanel } from '@/components/peers/peer-scan-panel';
 import { Avatar, Chip, Eyebrow, SectionRule, ScoreBar, SLATE, AMBER, INFO } from '@/components/connections/intel/shared';
-import { OrgShort, useOrg } from '@/components/org-context';
+import { OrgPossessive, OrgShort, useOrg } from '@/components/org-context';
 
 const CSS = `
 .pn-root{color:var(--text-primary)}
@@ -81,8 +81,8 @@ export function PeerNetworkView({ peers, people, status, isAdmin }: { peers: Pee
       <div className="fd-page-head">
         <div style={{ minWidth: 0 }}>
           <Eyebrow>Peer network</Eyebrow>
-          <h1>People at <OrgShort />&apos;s peer organizations</h1>
-          <p className="fd-lede">Development and leadership staff at the youth-serving nonprofits most like <OrgShort />, read from public LinkedIn profiles, with every documented way <OrgShort /> could reach them: a colleague of a <OrgShort /> board member, a past job at a funder <OrgShort /> tracks, or the funders behind their own organization. <OrgShort />&apos;s own contacts live under Connections.</p>
+          <h1>People at <OrgPossessive /> peer organizations</h1>
+          <p className="fd-lede">Development and leadership staff at the youth-serving nonprofits most like <OrgShort />, read from public LinkedIn profiles, with every documented way <OrgShort /> could reach them: a colleague of a <OrgShort /> board member, a past job at a funder <OrgShort /> tracks, or the funders behind their own organization. <OrgPossessive /> own contacts live under Connections.</p>
         </div>
       </div>
 
@@ -212,7 +212,7 @@ export function PeerNetworkView({ peers, people, status, isAdmin }: { peers: Pee
                 return (
                   <div key={i} style={{ display: 'grid', gridTemplateColumns: '96px minmax(0,1fr)', gap: 10, padding: '5px 0', fontSize: 12.5 }}>
                     <span className="fd-mono" style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{years(c.start, c.end, c.current)}</span>
-                    <span><b style={{ fontWeight: 500 }}>{c.org}</b>{c.title ? <span style={{ color: 'var(--text-secondary)' }}> · {c.title}</span> : null}{fp && <> <Chip text={REL[fp.relation].label} color={REL[fp.relation].color} border={`color-mix(in srgb, ${REL[fp.relation].color} 35%, transparent)`} /></>}{person.peerPast.includes(c.org) && <> <Chip text="CYC peer" color={SLATE} border="var(--border-hairline)" /></>}</span>
+                    <span><b style={{ fontWeight: 500 }}>{c.org}</b>{c.title ? <span style={{ color: 'var(--text-secondary)' }}> · {c.title}</span> : null}{fp && <> <Chip text={REL[fp.relation].label} color={REL[fp.relation].color} border={`color-mix(in srgb, ${REL[fp.relation].color} 35%, transparent)`} /></>}{person.peerPast.includes(c.org) && <> <Chip text={`${tenant.short} peer`} color={SLATE} border="var(--border-hairline)" /></>}</span>
                   </div>
                 );
               })}

@@ -11,7 +11,6 @@ import {
   FolderOpen, CloudUpload, CheckCircle2, AlertTriangle, Users, Activity,
 } from 'lucide-react';
 import Link from 'next/link';
-import { OrgShort } from '@/components/org-context';
 
 interface HubRow {
   submitted: string; submittedBy: string; site: string;
@@ -235,7 +234,7 @@ export function DataHub({ userEmail }: { userEmail: string }) {
 
   const knownSites = Array.from(new Set(rows.map(r => r.site).filter(Boolean)));
   const inputCls = 'w-full px-3 py-2 border border-hairline rounded-md text-[13px] text-primary placeholder:text-tertiary bg-surface focus:outline-none focus:ring-2 focus:border-accent transition-colors';
- const labelCls = 'block text-[11.5px] font-semibold text-secondary mb-1.5';
+  const labelCls = 'block text-[11.5px] font-semibold text-secondary mb-1.5';
 
   // ── Loading / not-connected states ──────────────────────────────────────────
   if (loading) {
@@ -273,7 +272,7 @@ export function DataHub({ userEmail }: { userEmail: string }) {
             <Table2 className="w-3.5 h-3.5 text-accent" />
           </div>
           <div className="flex-1 min-w-0">
-            <h2 className="text-[14px] font-bold text-primary leading-tight"><OrgShort /> Data Collection.xlsx</h2>
+            <h2 className="text-[14px] font-bold text-primary leading-tight">Shared data workbook</h2>
             <p className="text-[11px] text-secondary">
               Live shared workbook · {rows.length} {rows.length === 1 ? 'entry' : 'entries'} · everyone sees the same rows
             </p>
@@ -305,7 +304,7 @@ export function DataHub({ userEmail }: { userEmail: string }) {
               <thead>
                 <tr className="border-b border-hairline bg-elevated/40">
                   {['Submitted', 'By', 'Site', 'Period', 'Metric', 'Value', 'Notes'].map(h => (
- <th key={h} className="text-left px-4 py-2 text-[11.5px] font-semibold text-tertiary whitespace-nowrap">{h}</th>
+                    <th key={h} className="text-left px-4 py-2 text-[11.5px] font-semibold text-tertiary whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
               </thead>

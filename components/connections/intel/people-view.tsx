@@ -122,7 +122,7 @@ export function PeopleView({ selectedId, onOpen, onOpenLead, onFocus, initialQ, 
         <div className="ni-card" style={{ overflow: 'hidden' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 16px', borderBottom: '1px solid var(--border-hairline)', background: 'var(--bg-page)' }}>
             <Checkbox checked={allOnPage} onChange={() => setPicked(s => { const n = new Set(s); if (allOnPage) pageRows.forEach(p => n.delete(p.id)); else pageRows.forEach(p => n.add(p.id)); return n; })} label="Select page" />
-            <span className="fd-eyebrow" style={{ color: 'var(--text-tertiary)', fontSize: 10 }}>Showing {page * PAGE + 1}–{Math.min(visible.length, (page + 1) * PAGE)} of {visible.length}</span>
+            <span className="fd-eyebrow" style={{ color: 'var(--text-tertiary)', fontSize: 11.5 }}>Showing {page * PAGE + 1}–{Math.min(visible.length, (page + 1) * PAGE)} of {visible.length}</span>
           </div>
           {pageRows.map((p, i) => <PersonRowItem key={p.id} p={p} i={i} active={p.id === selectedId} picked={picked.has(p.id)} onPick={() => togglePick(p.id)} onOpen={() => onOpen(p.id)} onOpenLead={onOpenLead} onFocus={onFocus} />)}
           <Pager page={page} pages={pages} onPage={setPage} />

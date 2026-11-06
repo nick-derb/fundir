@@ -10,10 +10,10 @@ export const SESSION_GAP_MS = 6 * 3600 * 1000;
 
 export interface BriefSeen { baseline: Date | null; lastSeen: Date | null }
 
-const parse = (s: string | undefined): Date | null => {
+const parse = (s: string | undefined, now: Date): Date | null => {
   if (!s) return null;
   const d = new Date(s);
-  return Number.isNaN(d.getTime()) ? null : d;
+  return Number.isNaN(d.getTime()) || d.getTime() > now.getTime() ? null : d; // a future stamp is garbage
 };
 
 /** Resolve the baseline the brief should use from the cookie value (already percent-decoded). */
@@ -21,8 +21,8 @@ export function readBriefSeen(raw: string | null | undefined, now: Date): BriefS
   const v = raw ?? '';
   const [a, b] = v.split('|');
   const legacy = !v.includes('|'); // a single timestamp, written by the first release: the last visit
-  const stored = legacy ? null : parse(a);
-  const lastSeen = legacy ? parse(a) : parse(b);
+  const stored = legacy ? null : parse(a, now);
+  const lastSeen = legacy ? parse(a, now) : parse(b, now);
   if (lastSeen && now.getTime() - lastSeen.getTime() > SESSION_GAP_MS) return { baseline: lastSeen, lastSeen };
   return { baseline: stored, lastSeen };
 }

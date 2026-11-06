@@ -133,7 +133,7 @@ export function DiscoverView({ leads, insights, filters, onFilters, selectedId, 
       {/* ledger */}
       <div className="ni-card" style={{ overflow: 'hidden' }} ref={listRef}>
         <div data-ni-grid="lead" style={{ display: 'grid', gridTemplateColumns: '112px minmax(220px,1.5fr) minmax(240px,2fr) 90px 110px', gap: 12, padding: '8px 16px', borderBottom: '1px solid var(--border-hairline)', background: 'var(--bg-page)' }} aria-hidden>
-          {['Score', 'Opportunity', 'Why', 'Confidence', 'Status'].map(h => <span key={h} className="fd-eyebrow" style={{ color: 'var(--text-tertiary)', fontSize: 10 }} data-ni-hide-md={h === 'Why' || h === 'Status' ? true : undefined}>{h}</span>)}
+          {['Score', 'Opportunity', 'Why', 'Confidence', 'Status'].map(h => <span key={h} className="fd-eyebrow" style={{ color: 'var(--text-tertiary)', fontSize: 11.5 }} data-ni-hide-md={h === 'Why' || h === 'Status' ? true : undefined}>{h}</span>)}
         </div>
         {visible.length === 0 && (
           <div style={{ padding: '40px 20px', textAlign: 'center' }}>

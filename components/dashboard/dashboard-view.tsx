@@ -227,7 +227,7 @@ export function DashboardView({ data, brief, trackSeen = true }: { data: DashDat
                       {d.isToday
                         ? <span className="fd-mono" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 18, height: 18, padding: '0 4px', borderRadius: 'var(--radius-xs)', background: 'var(--text-primary)', color: 'var(--bg-surface)', fontSize: 10, fontWeight: 500 }}>{d.n}</span>
                         : <span className="fd-mono" style={{ fontSize: 10, color: 'var(--text-secondary)' }}>{d.n}</span>}
-                      <span className="fd-eyebrow" style={{ color: 'var(--text-tertiary)', fontSize: 9 }}>{d.dow}</span>
+                      <span className="fd-eyebrow" style={{ color: 'var(--text-tertiary)', fontSize: 11 }}>{d.dow}</span>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                       {d.events.map((e, j) => (

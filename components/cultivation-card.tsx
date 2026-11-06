@@ -10,6 +10,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Users, Upload, Check, Loader2, AlertTriangle, RefreshCw, Link2 } from 'lucide-react';
 import type { CultivationPreview, CultivationCommit, CultivationLastImport } from '@/lib/cultivation-import';
+import { useOrg } from '@/components/org-context';
 
 type Done = Pick<CultivationCommit, 'foundations' | 'members' | 'removed' | 'graph'> & { filed: { name: string; webUrl: string | null } | null; at: string };
 
@@ -20,6 +21,7 @@ const when = (iso: string | null) => {
 };
 
 export function CultivationCard({ readOnly, onDone }: { readOnly?: boolean; onDone?: () => void }) {
+  const org = useOrg();
   const router = useRouter();
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<CultivationPreview | null>(null);
@@ -77,19 +79,19 @@ export function CultivationCard({ readOnly, onDone }: { readOnly?: boolean; onDo
         {error && <p className="mt-3 text-[12px] text-critical flex items-center gap-1.5"><AlertTriangle className="w-3.5 h-3.5" />{error}</p>}
         {preview && (
           <div className="mt-4 rounded-md border border-hairline bg-page p-3.5" style={{ animation: 'fd-fade .3s ease' }}>
-            <span className="fd-eyebrow block text-tertiary mb-1.5" style={{ fontSize: 9.5 }}>Foundations</span>
+            <span className="fd-eyebrow block text-tertiary mb-1.5" style={{ fontSize: 11.5 }}>Foundations</span>
             <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(4, minmax(0,1fr))' }}>
               <Stat label="New" value={preview.foundations.new} tone="var(--accent)" /><Stat label="Updated" value={preview.foundations.updated} tone="#9C7A2A" /><Stat label="Unchanged" value={preview.foundations.unchanged} /><Stat label="IRS matched" value={preview.foundations.matched_irs} />
             </div>
-            <span className="fd-eyebrow block text-tertiary mt-3 mb-1.5" style={{ fontSize: 9.5 }}>Board members &amp; staff</span>
+            <span className="fd-eyebrow block text-tertiary mt-3 mb-1.5" style={{ fontSize: 11.5 }}>Board members &amp; staff</span>
             <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(4, minmax(0,1fr))' }}>
               <Stat label="New" value={preview.members.new} tone="var(--accent)" /><Stat label="Updated" value={preview.members.updated} tone="#9C7A2A" /><Stat label="Unchanged" value={preview.members.unchanged} /><Stat label="Removed" value={preview.members.removed} tone={preview.members.removed ? 'var(--critical)' : undefined} />
             </div>
             {c && (
               <>
-                <span className="fd-eyebrow block text-tertiary mt-3 mb-1.5" style={{ fontSize: 9.5 }}>Known connections{c.sheet ? '' : ' (no “Known Connections” sheet in this file)'}</span>
+                <span className="fd-eyebrow block text-tertiary mt-3 mb-1.5" style={{ fontSize: 11.5 }}>Known connections{c.sheet ? '' : ' (no “Known Connections” sheet in this file)'}</span>
                 <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(4, minmax(0,1fr))' }}>
-                  <Stat label="Foundations" value={c.foundations_with_connection} tone="var(--accent)" /><Stat label="People" value={c.members_with_connection} tone="var(--accent)" /><Stat label="With a status" value={c.with_status} /><Stat label="CYC names matched" value={c.resolved.length} />
+                  <Stat label="Foundations" value={c.foundations_with_connection} tone="var(--accent)" /><Stat label="People" value={c.members_with_connection} tone="var(--accent)" /><Stat label="With a status" value={c.with_status} /><Stat label={`${org.short} names matched`} value={c.resolved.length} />
                 </div>
                 {c.resolved.length > 0 && <p className="mt-2 text-[11.5px] text-secondary flex items-start gap-1.5"><Link2 className="w-3.5 h-3.5 flex-none mt-[2px] text-accent" /><span>Linked in the graph as the path in: {c.resolved.join('; ')}.</span></p>}
                 {c.unresolved.length > 0 && <p className="mt-1.5 text-[11.5px] text-secondary">Kept as notes (not a board or staff name): {c.unresolved.join('; ')}.</p>}
@@ -115,5 +117,5 @@ export function CultivationCard({ readOnly, onDone }: { readOnly?: boolean; onDo
 }
 
 function Stat({ label, value, tone }: { label: string; value: number; tone?: string }) {
-  return <div className="rounded-[8px] border border-hairline bg-surface px-2.5 py-2"><span className="fd-eyebrow block text-tertiary mb-1" style={{ fontSize: 9.5 }}>{label}</span><b className="font-mono text-[15px] font-semibold tabular-nums" style={{ color: tone }}>{value.toLocaleString('en-US')}</b></div>;
+  return <div className="rounded-[8px] border border-hairline bg-surface px-2.5 py-2"><span className="fd-eyebrow block text-tertiary mb-1" style={{ fontSize: 11.5 }}>{label}</span><b className="font-mono text-[15px] font-semibold tabular-nums" style={{ color: tone }}>{value.toLocaleString('en-US')}</b></div>;
 }

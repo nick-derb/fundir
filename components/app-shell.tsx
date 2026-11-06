@@ -282,7 +282,7 @@ export function AppShell({
             {orgMenuOpen && availableOrgs.length > 1 && (
               <div className={`absolute top-full left-0 mt-1 rounded-sm overflow-hidden border border-hairline bg-surface z-50 ${collapsed ? 'md:left-full md:ml-2 md:w-60' : 'right-0'}`}
                 style={{ boxShadow: 'var(--shadow-overlay)' }}>
- <p className="px-3 pt-2 pb-1 text-eyebrow text-tertiary">Switch organization</p>
+                <p className="px-3 pt-2 pb-1 text-eyebrow text-tertiary">Switch organization</p>
                 {availableOrgs.map(org => (
                   <button
                     key={org.id}
@@ -316,7 +316,7 @@ export function AppShell({
           </div>
 
           {isAdmin && !collapsed && (
- <p className="mt-1 px-2 text-eyebrow text-tertiary">Admin view</p>
+            <p className="mt-1 px-2 text-eyebrow text-tertiary">Admin view</p>
           )}
         </div>
 
@@ -354,7 +354,7 @@ export function AppShell({
             </Link>
           )}
           {userEmail && !collapsed && (
- <p className="px-3 py-1 text-eyebrow text-tertiary truncate">{userEmail}</p>
+            <p className="px-3 py-1 text-eyebrow text-tertiary truncate">{userEmail}</p>
           )}
           {/* Theme toggle removed from the UI during the beta (light only). The theme
               tokens, toggleTheme() and the data-theme plumbing stay in place; set

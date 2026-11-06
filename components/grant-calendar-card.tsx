@@ -54,7 +54,7 @@ export function GrantCalendarCard({ readOnly }: { readOnly?: boolean }) {
           <div className="mt-4 rounded-md border border-hairline bg-page p-3.5" style={{ animation: 'fd-fade .3s ease' }}>
             {preview.years.map(y => (
               <div key={y.fiscal_year} className="mb-3">
-                <span className="fd-eyebrow block text-tertiary mb-1.5" style={{ fontSize: 9.5 }}>{y.fiscal_year}{y.on_file_now ? ` · replaces ${y.on_file_now} rows on file` : ' · new'}</span>
+                <span className="fd-eyebrow block text-tertiary mb-1.5" style={{ fontSize: 11.5 }}>{y.fiscal_year}{y.on_file_now ? ` · replaces ${y.on_file_now} rows on file` : ' · new'}</span>
                 <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(4, minmax(0,1fr))' }}>
                   <Stat label="Items" value={y.in_file} tone="var(--accent)" /><Stat label="With a date" value={y.dated} /><Stat label="Rolling / TBD" value={y.undated} /><Stat label="Considered & rejected" value={y.rejected} />
                 </div>
@@ -78,5 +78,5 @@ export function GrantCalendarCard({ readOnly }: { readOnly?: boolean }) {
 }
 
 function Stat({ label, value, tone }: { label: string; value: number; tone?: string }) {
-  return <div className="rounded-[8px] border border-hairline bg-surface px-2.5 py-2"><span className="fd-eyebrow block text-tertiary mb-1" style={{ fontSize: 9.5 }}>{label}</span><b className="font-mono text-[15px] font-semibold tabular-nums" style={{ color: tone }}>{value.toLocaleString('en-US')}</b></div>;
+  return <div className="rounded-[8px] border border-hairline bg-surface px-2.5 py-2"><span className="fd-eyebrow block text-tertiary mb-1" style={{ fontSize: 11.5 }}>{label}</span><b className="font-mono text-[15px] font-semibold tabular-nums" style={{ color: tone }}>{value.toLocaleString('en-US')}</b></div>;
 }

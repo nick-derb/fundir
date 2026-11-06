@@ -65,7 +65,7 @@ async function ownLabel(db: Db, orgId: string): Promise<string> {
   OWN_CACHE.set(orgId, { label, at: Date.now() }); return label;
 }
 
-function shapeLead(l: RawLead, own = 'CYC'): LeadRow {
+function shapeLead(l: RawLead, own = 'our'): LeadRow {
   const x = (l.explanation ?? null) as Explanation | null;
   const bd = (l.score_breakdown ?? {}) as { subtotals?: LeadRow['subtotals'] };
   const trustee = l.lead_type === 'organization' && l.person && !OWN_KINDS.has(l.person.kind) ? { id: l.person.id, name: l.person.name, title: l.person.current_title } : null;

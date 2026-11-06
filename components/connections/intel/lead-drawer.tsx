@@ -289,7 +289,7 @@ function Workflow({ lead, team, readOnly, saving, note, setNote, onPatch, onAskR
       {/* owner + close actions */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8, alignItems: 'center' }}>
         <label style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-          <span className="fd-eyebrow" style={{ color: 'var(--text-tertiary)', fontSize: 10, flex: 'none' }}>Owner</span>
+          <span className="fd-eyebrow" style={{ color: 'var(--text-tertiary)', fontSize: 11.5, flex: 'none' }}>Owner</span>
           <select className="ni-select" style={{ flex: 1, minWidth: 0 }} value={lead.owner ?? ''} disabled={readOnly || saving} onChange={e => onPatch({ owner: e.target.value })} aria-label="Owner">
             <option value="">Unassigned</option>
             {team.map(t => <option key={t.id} value={t.email ?? t.id}>{t.name}</option>)}
@@ -309,7 +309,7 @@ function Workflow({ lead, team, readOnly, saving, note, setNote, onPatch, onAskR
       {!closed && (
         <div style={{ border: '1px solid var(--border-hairline)', borderRadius: 10, padding: '10px 12px', background: 'var(--bg-page)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-            <span className="fd-eyebrow" style={{ color: 'var(--text-tertiary)', fontSize: 10 }}>Next action</span>
+            <span className="fd-eyebrow" style={{ color: 'var(--text-tertiary)', fontSize: 11.5 }}>Next action</span>
             {lead.next_action && days !== null && <span className="fd-mono" style={{ fontSize: 10, color: dueTone, marginLeft: 'auto' }}>{days < 0 ? `${-days} day${-days === 1 ? '' : 's'} overdue` : days === 0 ? 'due today' : `in ${days} day${days === 1 ? '' : 's'}`}</span>}
           </div>
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
@@ -323,7 +323,7 @@ function Workflow({ lead, team, readOnly, saving, note, setNote, onPatch, onAskR
       )}
       {(lead.pipeline_status === 'AWAITING_DECISION' || closed) && (
         <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span className="fd-eyebrow" style={{ color: 'var(--text-tertiary)', fontSize: 10, flex: 'none' }}>Outcome</span>
+          <span className="fd-eyebrow" style={{ color: 'var(--text-tertiary)', fontSize: 11.5, flex: 'none' }}>Outcome</span>
           <input className="ni-input" style={{ paddingLeft: 10, height: 28, fontSize: 12 }} placeholder="e.g. $50,000 general operating, FY27" value={outcome} onChange={e => setOutcome(e.target.value)} onBlur={() => outcome !== (lead.outcome ?? '') && onPatch({ outcome })} disabled={readOnly || saving} aria-label="Outcome" />
         </label>
       )}
