@@ -5,6 +5,7 @@ import { getAuthContext } from '@/lib/auth-context';
 import { createServerClient } from '@/lib/supabase';
 import { getUserIntegration } from '@/lib/oauth-tokens';
 import { OnboardingFlow } from '@/components/welcome/onboarding-flow';
+import { OrgProvider } from '@/components/org-context';
 
 const STEP_INDEX: Record<string, number> = {
   account: 0, profile: 1, role: 2, calendar: 3, focus: 4, done: 5,
@@ -46,12 +47,15 @@ export default async function WelcomePage({
       }
     : null;
 
+  // The flow renders outside the app shell, so it needs the tenant label itself.
   return (
-    <OnboardingFlow
-      email={ctx.email}
-      calendarConnected={!!(msIntegration || googleIntegration)}
-      initialProfile={initialProfile}
-      initialStep={initialStep}
-    />
+    <OrgProvider name={ctx.orgName} code={ctx.orgCode}>
+      <OnboardingFlow
+        email={ctx.email}
+        calendarConnected={!!(msIntegration || googleIntegration)}
+        initialProfile={initialProfile}
+        initialStep={initialStep}
+      />
+    </OrgProvider>
   );
 }

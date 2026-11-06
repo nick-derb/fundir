@@ -150,7 +150,7 @@ const config: Config = {
         data:           ['14px', { lineHeight: '20px', fontWeight: '500' }],
         kpi:            ['28px', { lineHeight: '32px', letterSpacing: '-0.01em', fontWeight: '600' }],
         caption:        ['12px', { lineHeight: '18px' }],
-        eyebrow:        ['11px', { lineHeight: '14px', letterSpacing: '0.08em', fontWeight: '600' }],
+        eyebrow:        ['12px', { lineHeight: '16px', letterSpacing: '-0.005em', fontWeight: '500' }],
       },
 
       borderRadius: {

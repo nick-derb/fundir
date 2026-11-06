@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { UploadCloud, Lock, ShieldCheck, X, Loader2, CheckCircle2, AlertTriangle, FileSpreadsheet } from 'lucide-react';
 import type { Sheet } from '@/components/prospecting/prospecting-view';
 import { parseCsv, rowsToRecords, detectBmfFormat, normalizeBmfRows, type BmfRow } from '@/lib/prospecting/irs-bmf';
+import { OrgShort } from '@/components/org-context';
 
 // "Replace the IRS sheets" — drop the raw IRS Business Master File, see the
 // diff against the live sheet, apply. The file is parsed in the browser and
@@ -266,7 +267,7 @@ export function IrsReplaceModal({ open, onClose, lockedSheets, canReplace }: {
               {diff.canApply && diff.trackedRemoved > 0 && (
                 <div style={{ marginTop: 12, display: 'flex', gap: 9, alignItems: 'flex-start', border: '1px solid rgba(156,122,42,.3)', background: 'rgba(156,122,42,.06)', borderRadius: 'var(--radius-sm)', padding: '11px 13px' }}>
                   <AlertTriangle style={{ width: 14, height: 14, color: '#9C7A2A', flex: 'none', marginTop: 1 }} />
-                  <span style={{ fontSize: 12.5, lineHeight: 1.55, color: 'var(--text-secondary)' }}>{fmt(diff.trackedRemoved)} of the organizations that disappeared are on a CYC sheet. Their rows stay put with the values you last saw; the Cultivation List marks them as dropped from the IRS file.</span>
+                  <span style={{ fontSize: 12.5, lineHeight: 1.55, color: 'var(--text-secondary)' }}>{fmt(diff.trackedRemoved)} of the organizations that disappeared are on one of your sheets. Their rows stay put with the values you last saw; the Cultivation List marks them as dropped from the IRS file.</span>
                 </div>
               )}
 
@@ -280,7 +281,7 @@ export function IrsReplaceModal({ open, onClose, lockedSheets, canReplace }: {
                   {g.rows.map((r, i) => (
                     <div key={r.ein} style={{ display: 'flex', alignItems: 'baseline', gap: 9, padding: '8px 13px', borderBottom: i < g.rows.length - 1 ? '1px solid var(--border-hairline)' : 'none' }}>
                       <span className="fd-mono" style={{ fontSize: 10, color: 'var(--text-tertiary)', flex: 'none' }}>{r.ein}</span>
-                      <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.name ?? '—'}{r.city ? <span style={{ color: 'var(--text-tertiary)' }}> · {r.city}</span> : null}{r.tracked ? <span className="fd-eyebrow" style={{ marginLeft: 8, color: '#9C7A2A' }}>on a CYC sheet</span> : null}</span>
+                      <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.name ?? '—'}{r.city ? <span style={{ color: 'var(--text-tertiary)' }}> · {r.city}</span> : null}{r.tracked ? <span className="fd-eyebrow" style={{ marginLeft: 8, color: '#9C7A2A' }}>on a <OrgShort /> sheet</span> : null}</span>
                       <span className="fd-mono" style={{ fontSize: 10.5, color: 'var(--text-secondary)', flex: 'none' }}>
                         {g.kind === 'changed' ? <>{money(r.before)} → {money(r.after)}</> : money(r.assets)}
                       </span>

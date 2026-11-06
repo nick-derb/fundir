@@ -23,7 +23,7 @@ export function LegalShell({
       <div style={{ maxWidth: 720, margin: '0 auto', padding: '0 24px' }}>
         {/* header */}
         <header style={{ paddingTop: 44, paddingBottom: 30, borderBottom: `1px solid ${RULE}`, marginBottom: 38 }}>
-          <Link href="/" style={{ fontSize: 12, letterSpacing: '.18em', textTransform: 'uppercase', color: ACCENT, textDecoration: 'none', fontWeight: 600 }}>
+          <Link href="/" style={{ fontSize: 12, color: ACCENT, textDecoration: 'none', fontWeight: 600 }}>
             Fundir.ai
           </Link>
           <h1 style={{ fontFamily: SERIF, fontWeight: 400, fontSize: 'clamp(2rem,5vw,2.9rem)', letterSpacing: '-0.02em', margin: '18px 0 10px', lineHeight: 1.1 }}>
@@ -53,7 +53,7 @@ export function LegalShell({
 
 // Shared inline building blocks so the two pages stay visually consistent.
 export const H2 = (props: { children: ReactNode }) => (
-  <h2 style={{ fontSize: 13, fontWeight: 600, letterSpacing: '.02em', textTransform: 'uppercase', color: ACCENT, margin: '38px 0 12px' }}>{props.children}</h2>
+  <h2 style={{ fontSize: 13, fontWeight: 600, color: ACCENT, margin: '38px 0 12px' }}>{props.children}</h2>
 );
 export const P = (props: { children: ReactNode }) => (
   <p style={{ margin: '0 0 14px' }}>{props.children}</p>

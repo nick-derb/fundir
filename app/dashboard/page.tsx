@@ -7,7 +7,10 @@ import { redirect } from 'next/navigation';
 import { getValidUserToken } from '@/lib/oauth-tokens';
 import { getUpcomingEvents, type CalendarEvent } from '@/lib/microsoft-graph';
 import { getGoogleUpcomingEvents } from '@/lib/google-calendar';
+import { cookies } from 'next/headers';
 import { DashboardView, type DashData } from '@/components/dashboard/dashboard-view';
+import { buildBrief, type Brief } from '@/lib/brief';
+import { readBriefSeen, SEEN_COOKIE } from '@/lib/brief-seen';
 
 const FY_MONTHS = ['Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
 const fyIndex = (m: number) => (m - 6 + 12) % 12;
@@ -31,7 +34,7 @@ const STAGE: Record<string, { label: string; tone: 'accent' | 'neutral' | 'info'
 };
 
 interface Sub {
-  status: string | null; funder_name: string | null; opportunity_name: string | null;
+  id: string; status: string | null; funder_name: string | null; opportunity_name: string | null;
   loi_deadline: string | null; preproposal_deadline: string | null; fullproposal_deadline: string | null;
   amount_awarded: number | null;
 }
@@ -43,7 +46,7 @@ export default async function DashboardPage() {
 
   const [subsRes, goalsRes] = await Promise.all([
     db.from('cyc_grant_submissions')
-      .select('status, funder_name, opportunity_name, loi_deadline, preproposal_deadline, fullproposal_deadline, amount_awarded')
+      .select('id, status, funder_name, opportunity_name, loi_deadline, preproposal_deadline, fullproposal_deadline, amount_awarded')
       .eq('org_id', ctx.orgId),
     db.from('org_goals').select('id, label, current, target, unit').eq('org_id', ctx.orgId).order('sort'),
   ]);
@@ -79,24 +82,25 @@ export default async function DashboardPage() {
     ['preproposal_deadline', 'Pre-proposal'],
     ['fullproposal_deadline', 'Full proposal'],
   ];
-  interface Row { funder: string; type: string; date: Date; due: string; days: number; stage: string; tone: 'accent' | 'neutral' | 'info' | 'warning' }
+  interface Row { id: string; funder: string; type: string; date: Date; iso: string; due: string; days: number; stage: string; tone: 'accent' | 'neutral' | 'info' | 'warning' }
   const deadlineRows: Row[] = [];
   for (const s of subs) {
     const stage = STAGE[st(s.status ?? '')];
     if (!stage) continue; // terminal / unknown → skip
-    let best: { date: Date; type: string } | null = null;
+    let best: { date: Date; type: string; iso: string } | null = null;
     for (const [col, type] of DL) {
       const raw = s[col] as string | null;
       if (!raw) continue;
       const d = new Date(raw + 'T00:00:00');
       if (Number.isNaN(d.getTime()) || d < now) continue;
-      if (!best || d < best.date) best = { date: d, type };
+      if (!best || d < best.date) best = { date: d, type, iso: raw };
     }
     if (!best) continue;
     deadlineRows.push({
+      id: s.id,
       funder: s.funder_name || s.opportunity_name || '—',
       type: best.type,
-      date: best.date,
+      date: best.date, iso: best.iso,
       due: best.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
       days: Math.max(0, Math.ceil((best.date.getTime() - now.getTime()) / 86400000)),
       stage: stage.label, tone: stage.tone,
@@ -163,6 +167,19 @@ export default async function DashboardPage() {
   const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
   const todayLabel = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
 
+  // The brief: everything that moved since the person last opened this page.
+  // Without it the view falls back to the "Needs attention" list.
+  const seenAt = readBriefSeen((await cookies()).get(SEEN_COOKIE)?.value, new Date()).baseline;
+  let brief: Brief | undefined;
+  try {
+    brief = await buildBrief(db, ctx.orgId, {
+      seenAt,
+      deadlines: deadlineRows.map(r => ({ id: r.id, funder: r.funder, type: r.type, date: r.iso, days: r.days, stage: r.stage })),
+    });
+  } catch (e) {
+    console.error('[dashboard] brief unavailable', e instanceof Error ? e.message : e);
+  }
+
   const data: DashData = {
     greeting, firstName: ctx.firstName || ctx.displayName || 'there', today: todayLabel,
     isCyc: ctx.orgCode?.toUpperCase().startsWith('CYC') ?? false,
@@ -172,7 +189,7 @@ export default async function DashboardPage() {
 
   return (
     <AppShell orgName={ctx.orgName} orgId={ctx.orgId} userEmail={ctx.email} userName={ctx.displayName} userAvatar={ctx.avatarUrl} isAdmin={ctx.isAdmin} availableOrgs={ctx.availableOrgs} currentOrgCode={ctx.orgCode}>
-      <DashboardView data={data} />
+      <DashboardView data={data} brief={brief} />
     </AppShell>
   );
 }

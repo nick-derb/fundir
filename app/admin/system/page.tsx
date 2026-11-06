@@ -148,7 +148,7 @@ export default async function AdminSystemPage({ searchParams }: { searchParams: 
             </div>
           ))}
           <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: '12px' }}>
-            <p style={{ margin: '0 0 6px', fontSize: '11px', fontWeight: 700, color: '#475569', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Org connections</p>
+            <p style={{ margin: '0 0 6px', fontSize: '11.5px', fontWeight: 700, color: '#475569' }}>Org connections</p>
             {ms.connections.length === 0
               ? <p style={{ margin: 0, color: '#94a3b8' }}>None yet. A member connects from Settings → Cloud Storage → Microsoft 365.</p>
               : ms.connections.map(c => (
@@ -161,7 +161,7 @@ export default async function AdminSystemPage({ searchParams }: { searchParams: 
               ))}
           </div>
           <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: '12px' }}>
-            <p style={{ margin: '0 0 6px', fontSize: '11px', fontWeight: 700, color: '#475569', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Admin-consent link for {ms.domain}</p>
+            <p style={{ margin: '0 0 6px', fontSize: '11.5px', fontWeight: 700, color: '#475569' }}>Admin-consent link for {ms.domain}</p>
             <form method="get" style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
               <input name="domain" defaultValue={ms.domain} placeholder="organization domain" style={{ flex: 1, maxWidth: 320, padding: '6px 10px', fontSize: 12.5, borderRadius: 6, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.25)', color: '#e2e8f0' }} />
               <button type="submit" style={{ padding: '6px 12px', fontSize: 12.5, borderRadius: 6, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.06)', color: '#e2e8f0', cursor: 'pointer' }}>Look up</button>

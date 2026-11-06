@@ -7,7 +7,7 @@ import type { ReactNode, CSSProperties } from 'react';
 
 export const ADMIN_CSS = `
 .adm-table{width:100%;border-collapse:collapse}
-.adm-table th{padding:10px 16px;text-align:left;font-size:10px;font-weight:700;color:#475569;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;background:rgba(0,0,0,.18);border-bottom:1px solid rgba(255,255,255,.07)}
+.adm-table th{padding:10px 16px;text-align:left;font-size:11.5px;font-weight:700;color:#475569;white-space:nowrap;background:rgba(0,0,0,.18);border-bottom:1px solid rgba(255,255,255,.07)}
 .adm-table td{padding:12px 16px;font-size:13px;color:#cbd5e1;vertical-align:middle;border-top:1px solid rgba(255,255,255,.04)}
 .adm-table tbody tr:first-child td{border-top:none}
 .adm-row{transition:background .1s}
@@ -32,7 +32,7 @@ export function AdminHeader({ title, summary, eyebrow = 'Admin console', right }
   return (
     <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, marginBottom: 26 }}>
       <div style={{ minWidth: 0 }}>
-        <p style={{ ...MONO, fontSize: 10.5, fontWeight: 700, color: '#475569', letterSpacing: '0.12em', textTransform: 'uppercase', margin: '0 0 6px' }}>{eyebrow}</p>
+        <p style={{ ...MONO, fontSize: 11.5, fontWeight: 700, color: '#475569', margin: '0 0 6px' }}>{eyebrow}</p>
         <h1 style={{ fontSize: 24, fontWeight: 700, color: '#f1f5f9', margin: 0, letterSpacing: '-0.02em' }}>{title}</h1>
         {summary && <p style={{ fontSize: 13, color: '#64748b', margin: '6px 0 0', lineHeight: 1.5 }}>{summary}</p>}
       </div>
@@ -85,7 +85,7 @@ export function Empty({ children }: { children: ReactNode }) {
 export function Stat({ label, value, sub, tone }: { label: string; value: ReactNode; sub?: ReactNode; tone?: string }) {
   return (
     <div style={{ ...CARD, padding: '16px 18px' }}>
-      <p style={{ ...MONO, fontSize: 10, fontWeight: 700, color: '#64748b', letterSpacing: '0.08em', textTransform: 'uppercase', margin: 0 }}>{label}</p>
+      <p style={{ ...MONO, fontSize: 11.5, fontWeight: 700, color: '#64748b', margin: 0 }}>{label}</p>
       <p style={{ fontSize: 26, fontWeight: 700, color: tone ?? '#f1f5f9', margin: '8px 0 2px', lineHeight: 1 }}>{value}</p>
       {sub && <p style={{ fontSize: 11.5, color: '#64748b', margin: 0 }}>{sub}</p>}
     </div>

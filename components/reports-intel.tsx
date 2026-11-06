@@ -9,8 +9,10 @@
 import Link from 'next/link';
 import type { ReportsIntel } from '@/lib/network/reports';
 import { CSS, MONO, Eyebrow, Avatar, OrgMark, Chip, ScoreBar, fmtDate, money, SLATE, AMBER, INFO } from '@/components/connections/intel/shared';
+import { useOrg } from '@/components/org-context';
 
 export function ReportsIntelView({ data, orgName }: { data: ReportsIntel; orgName: string }) {
+  const org = useOrg();
   const d = data;
   const relTotal = d.evidence.relationships.verified + d.evidence.relationships.probable + d.evidence.relationships.inferred || 1;
   const leadTotal = d.evidence.leads.High + d.evidence.leads.Medium + d.evidence.leads.Low || 1;
@@ -25,15 +27,15 @@ export function ReportsIntelView({ data, orgName }: { data: ReportsIntel; orgNam
         <div style={{ minWidth: 0 }}>
           <Eyebrow style={{ display: 'block' }}>{orgName} · Reports</Eyebrow>
           <h1>What only Fundir can see</h1>
-          <p className="fd-lede">Six measures of CYC&rsquo;s funding network that no grant tracker carries: how far the board&rsquo;s relationships reach, who funds CYC&rsquo;s peers but not CYC, how well-documented the evidence is, how much of the board is mapped, whether leads are moving, and what each refresh cost.</p>
+          <p className="fd-lede">Six measures of {org.possessive} funding network that no grant tracker carries: how far the board&rsquo;s relationships reach, who funds {org.possessive} peers but not {org.short}, how well-documented the evidence is, how much of the board is mapped, whether leads are moving, and what each refresh cost.</p>
         </div>
         <span className="fd-mono" style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>as of {fmtDate(d.generated_at)}</span>
       </div>
 
       {/* headline numbers */}
       <div className="fd-stats" style={{ marginBottom: 20 }}>
-        <Kpi label="Funders reachable" value={d.reach.funders_reachable} sub="through a CYC person" accent />
-        <Kpi label="White space" value={d.white_space.funders} sub={`${money(d.white_space.peer_dollars)} to CYC peers`} />
+        <Kpi label="Funders reachable" value={d.reach.funders_reachable} sub={`through a ${org.short} person`} accent />
+        <Kpi label="White space" value={d.white_space.funders} sub={`${money(d.white_space.peer_dollars)} to ${org.short} peers`} />
         <Kpi label="High-confidence leads" value={d.reach.high_confidence} sub={`of ${d.reach.leads_open} open`} />
         <Kpi label="Documented links" value={`${documentedShare}%`} sub={`${relTotal.toLocaleString('en-US')} relationships`} />
         <Kpi label="Board mapped" value={`${d.coverage.read} / ${d.coverage.own_total}`} sub={`${d.coverage.own_total - d.coverage.with_url} need a URL`} />
@@ -48,7 +50,7 @@ export function ReportsIntelView({ data, orgName }: { data: ReportsIntel; orgNam
             <div key={p.person_id} style={{ display: 'grid', gridTemplateColumns: '30px 1fr auto', gap: 10, alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--border-hairline)' }}>
               <Avatar name={p.name} size={30} own />
               <div style={{ minWidth: 0 }}>
-                <b style={{ display: 'block', fontSize: 13, fontWeight: 500 }}>{p.name} <span className="fd-caption" style={{ color: 'var(--text-tertiary)', fontWeight: 400 }}>{p.role ? `· CYC ${p.role}` : ''}</span></b>
+                <b style={{ display: 'block', fontSize: 13, fontWeight: 500 }}>{p.name} <span className="fd-caption" style={{ color: 'var(--text-tertiary)', fontWeight: 400 }}>{p.role ? `· ${org.short} ${p.role}` : ''}</span></b>
                 <span className="fd-caption" style={{ color: 'var(--text-secondary)', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.targets.join(' · ')}</span>
               </div>
               <div style={{ textAlign: 'right' }}>
@@ -60,7 +62,7 @@ export function ReportsIntelView({ data, orgName }: { data: ReportsIntel; orgNam
         </Panel>
 
         {/* White space */}
-        <Panel title="White space" sub="Funders of CYC's peers with no CYC funding identified in available data, by what they give those peers." link={{ href: '/connections?tab=discover', label: 'Discover' }}>
+        <Panel title="White space" sub={`Funders of ${org.possessive} peers with no ${org.short} funding identified in available data, by what they give those peers.`} link={{ href: '/connections?tab=discover', label: 'Discover' }}>
           {d.white_space.by_year.length > 0 && (
             <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, height: 64, margin: '4px 0 12px' }} aria-label="Peer funding by year">
               {d.white_space.by_year.map(y => (
@@ -140,7 +142,7 @@ export function ReportsIntelView({ data, orgName }: { data: ReportsIntel; orgNam
 
         {/* Instrumentl-derived, only when present */}
         {d.grants && (
-          <Panel title="Grant applications" sub="From CYC's own submission history. Kept small on purpose: Instrumentl already reports this in depth." link={{ href: '/pipeline', label: 'Pipeline' }}>
+          <Panel title="Grant applications" sub={`From ${org.possessive} own submission history. Kept small on purpose: Instrumentl already reports this in depth.`} link={{ href: '/pipeline', label: 'Pipeline' }}>
             <div className="fd-stats">
               <Mini label="Submitted" value={d.grants.submitted} /><Mini label="Awarded" value={d.grants.awarded} tone="var(--accent)" /><Mini label="Win rate" value={`${d.grants.win_rate}%`} /><Mini label="Awarded value" value={money(d.grants.awarded_value)} />
             </div>
@@ -175,13 +177,13 @@ function Kpi({ label, value, sub, accent, tone }: { label: string; value: number
   );
 }
 function Mini({ label, value, tone }: { label: string; value: number | string; tone?: string }) {
-  return <div className="fd-stat" style={{ padding: '8px 10px 8px 0' }}><span className="fd-eyebrow" style={{ fontSize: 9.5, marginBottom: 3 }}>{label}</span><b style={{ fontSize: 15, color: tone }}>{typeof value === 'number' ? value.toLocaleString('en-US') : value}</b></div>;
+  return <div className="fd-stat" style={{ padding: '8px 10px 8px 0' }}><span className="fd-eyebrow" style={{ fontSize: 11.5, marginBottom: 3 }}>{label}</span><b style={{ fontSize: 15, color: tone }}>{typeof value === 'number' ? value.toLocaleString('en-US') : value}</b></div>;
 }
 function Stack({ label, parts }: { label: string; parts: Array<{ k: string; v: number; tone: string }> }) {
   const total = parts.reduce((n, p) => n + p.v, 0) || 1;
   return (
     <div style={{ marginBottom: 12 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}><span className="fd-eyebrow" style={{ color: 'var(--text-tertiary)', fontSize: 10 }}>{label}</span><span className="fd-mono" style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>{total.toLocaleString('en-US')}</span></div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}><span className="fd-eyebrow" style={{ color: 'var(--text-tertiary)', fontSize: 11.5 }}>{label}</span><span className="fd-mono" style={{ fontSize: 11.5, color: 'var(--text-tertiary)' }}>{total.toLocaleString('en-US')}</span></div>
       <div style={{ display: 'flex', height: 8, borderRadius: 4, overflow: 'hidden', background: 'var(--score-track)' }}>{parts.map(p => <span key={p.k} title={`${p.k}: ${p.v}`} style={{ width: `${(p.v / total) * 100}%`, background: p.tone, transition: 'width .6s cubic-bezier(.2,.8,.2,1)' }} />)}</div>
       <div style={{ display: 'flex', gap: 12, marginTop: 5, flexWrap: 'wrap' }}>{parts.map(p => <span key={p.k} className="fd-caption" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: 'var(--text-secondary)', fontSize: 11 }}><span style={{ width: 8, height: 8, borderRadius: 2, background: p.tone }} />{p.k} <b className="fd-mono" style={{ fontWeight: 500, fontFamily: MONO }}>{p.v}</b></span>)}</div>
     </div>

@@ -3,6 +3,7 @@ import { getAuthContext } from '@/lib/auth-context';
 import { createServerClient } from '@/lib/supabase';
 import { AppShell } from '@/components/app-shell';
 import { ProspectingView, type Sheet, type InstrumentlSummary } from '@/components/prospecting/prospecting-view';
+import { orgShortName } from '@/lib/org-label';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,6 +21,7 @@ export default async function ProspectingPage() {
   if (!ctx) redirect('/login');
   const db = createServerClient();
   const org = ctx.orgId;
+  const us = orgShortName(ctx.orgName);
 
   const [cult, board, queue, metro, peers, prospects, bmf, subs] = await Promise.all([
     db.from('cyc_cultivation').select('foundation_name, bmf_ein, in_il_bmf, funder_type, total_assets, funding_focus, notes', { count: 'exact' }).eq('org_id', org).limit(ROW_LIMIT),
@@ -45,7 +47,7 @@ export default async function ProspectingPage() {
     {
       key: 'board', label: 'Board Members', total: count(board.count), locked: false,
       note: 'Trustees pulled from filings. Connection fields are yours to fill.',
-      cols: ['Foundation Name', 'Board Member Name', 'Title', 'Connection to CYC?', 'Connection Type', 'Who at CYC Knows Them', 'Outreach Status'],
+      cols: ['Foundation Name', 'Board Member Name', 'Title', `Connection to ${us}?`, 'Connection Type', `Who at ${us} Knows Them`, 'Outreach Status'],
       lock: [0, 1, 2],
       rows: (board.data ?? []).map(r => [s(r.foundation_name), s(r.member_name), s(r.title), s(r.connection_to_cyc), s(r.connection_type), s(r.who_knows_them), s(r.outreach_status)]),
     },
@@ -65,14 +67,14 @@ export default async function ProspectingPage() {
     },
     {
       key: 'peers', label: 'Peer Youth Orgs', total: count(peers.count), locked: true,
-      note: 'Organizations sharing CYC NTEE codes. Used for grantee overlap.',
-      cols: ['EIN', 'Organization Name', 'Peer Category', 'NTEE Code', 'City', 'Total Assets ($)', 'Revenue ($)', 'Same NTEE as CYC'],
+      note: `Organizations sharing ${us} NTEE codes. Used for grantee overlap.`,
+      cols: ['EIN', 'Organization Name', 'Peer Category', 'NTEE Code', 'City', 'Total Assets ($)', 'Revenue ($)', `Same NTEE as ${us}`],
       lock: 'all',
       rows: (peers.data ?? []).map(r => [s(r.ein), s(r.name), s(r.peer_category), s(r.ntee_code), s(r.city), money(r.total_assets), money(r.revenue), s(r.same_ntee_as_cyc)]),
     },
     {
       key: 'prospects', label: 'Funder Prospects', total: count(prospects.count), locked: true,
-      note: 'The full prospect universe before CYC filters are applied.',
+      note: `The full prospect universe before ${us} filters are applied.`,
       cols: ['EIN', 'Organization Name', 'Funder Type', 'City', 'ZIP', 'Total Assets ($)', 'NTEE Code', 'Files 990-PF'],
       lock: 'all',
       rows: (prospects.data ?? []).map(r => [s(r.ein), s(r.name), s(r.funder_type), s(r.city), s(r.zip), money(r.total_assets), s(r.ntee_code), s(r.files_990pf)]),

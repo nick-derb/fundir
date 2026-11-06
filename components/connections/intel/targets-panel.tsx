@@ -8,6 +8,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { X, Building2, Plus, Trash2, Loader2, Play, Square, RefreshCw, Sparkles, Users } from 'lucide-react';
 import type { TargetStatus, TargetStepResult, TargetRow } from '@/lib/network/targets';
+import { OrgPossessive, OrgShort } from '@/components/org-context';
 
 type Status = TargetStatus & { starter: Array<{ name: string; category: string }> };
 
@@ -87,7 +88,7 @@ export function TargetsPanel({ onClose, onFinished, onOpenPeople, onOpenLead, re
       </div>
       <div style={{ flex: 1, overflowY: 'auto', padding: '18px 20px 40px' }}>
         <h2 className="fd-display" style={{ fontSize: '1.5rem', margin: '0 0 6px' }}>Companies to find contacts at</h2>
-        <p className="fd-caption" style={{ color: 'var(--text-secondary)', margin: '0 0 16px' }}>Grocers, retailers and Chicago brands CYC wants a door into, whether or not a board member ever worked there. Each company is searched once for community-affairs, giving and local-leadership people; the ones kept are read, linked to CYC&rsquo;s own people where they share history, and scored as Corporate Giving Opportunity leads.</p>
+        <p className="fd-caption" style={{ color: 'var(--text-secondary)', margin: '0 0 16px' }}>Grocers, retailers and Chicago brands <OrgShort /> wants a door into, whether or not a board member ever worked there. Each company is searched once for community-affairs, giving and local-leadership people; the ones kept are read, linked to <OrgPossessive /> own people where they share history, and scored as Corporate Giving Opportunity leads.</p>
         {error && <p className="fd-caption" style={{ color: 'var(--critical)', margin: '0 0 12px' }}>{error}</p>}
 
         {s && (

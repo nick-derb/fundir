@@ -13,6 +13,7 @@ import { useCallback, useState } from 'react';
 import {
   Radar, RefreshCw, UserPlus, ExternalLink, Check, X, Loader2, Link2, Briefcase, Download,
 } from 'lucide-react';
+import { OrgName, OrgShort } from '@/components/org-context';
 
 export interface NwEmployment { org_name: string; title: string | null; started: string | null; ended: string | null; is_current: boolean }
 export interface NwPerson {
@@ -128,9 +129,9 @@ export function NetworkView({ initial }: { initial: NwState }) {
       {/* header */}
       <div className="fd-page-head">
         <div style={{ minWidth: 0 }}>
-          <p className="fd-eyebrow" style={{ color: 'var(--text-tertiary)', margin: '0 0 8px' }}>Chicago Youth Centers</p>
+          <p className="fd-eyebrow" style={{ color: 'var(--text-tertiary)', margin: '0 0 8px' }}><OrgName /></p>
           <h1>Network</h1>
-          <p className="fd-lede">The board&rsquo;s LinkedIn footprint, mapped: each career names the rooms a member was in, and who in those rooms they can still call for CYC.</p>
+          <p className="fd-lede">The board&rsquo;s LinkedIn footprint, mapped: each career names the rooms a member was in, and who in those rooms they can still call for <OrgShort />.</p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           <a href="/api/network/export" download className="fd-btn" style={{ textDecoration: 'none' }} title="Download the full network as a dated Excel workbook">
@@ -177,7 +178,7 @@ export function NetworkView({ initial }: { initial: NwState }) {
         {/* roster */}
         <div className="fd-card nw-roster" style={{ overflow: 'hidden', position: 'sticky', top: 64 }}>
           <div className="nw-section">
-            <span className="fd-eyebrow" style={{ color: 'var(--text-secondary)' }}>CYC board &amp; staff</span>
+            <span className="fd-eyebrow" style={{ color: 'var(--text-secondary)' }}><OrgShort /> board &amp; staff</span>
             <span style={{ flex: 1 }} />
             <span className="fd-mono" style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>{state.people.length}</span>
           </div>

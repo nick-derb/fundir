@@ -1,21 +1,26 @@
 'use client';
 
-// Tenant dashboard. Wired to real data: Instrumentl pipeline
-// (cyc_grant_submissions) for KPIs / deadlines / activity / needs, org_goals
-// for goals, and the user's Microsoft/Google calendar.
+// Tenant dashboard. Wired to real data: the application pipeline
+// (cyc_grant_submissions) for KPIs / deadlines / activity, org_goals for
+// goals, the user's Microsoft/Google calendar, and the brief (lib/brief) for
+// what changed in the funding picture, what is due and who to ask.
 //
-// Layout, top to bottom: date + greeting, one ruled KPI strip, then the
-// left column in order of urgency (next deadlines, this week, deadline load
-// by month, FY goals) with a rail for today, needs-attention and the
-// assistant. No hero band, parallax, reveal-on-scroll or hover lift: the
-// numbers carry the page.
+// Layout, top to bottom: the tenant's hero (CYC's plays once per session),
+// date + greeting, one ruled KPI strip, then the left column in order of
+// urgency (what changed, next deadlines, this week, deadline load by month,
+// FY goals) with a rail for do-today, the board's asks, today's calendar
+// and the assistant.
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import {
   CalendarDays, Mail, Send, CheckCircle2, Hourglass, Radar, ArrowRight,
-  FileEdit, MessageSquare, Clock, Pencil, X, Plus, Trash2,
+  MessageSquare, Clock, Pencil, X, Plus, Trash2, FileEdit,
 } from 'lucide-react';
+import type { Brief } from '@/lib/brief';
+import { CycHeroTransform } from '@/components/cyc-hero-transform';
+import { BRIEF_CSS, BriefSection, DoToday, AskYourBoard, useBriefSeen, useNow, briefSummary } from './brief-section';
+import { OrgName } from '@/components/org-context';
 
 declare global {
   interface Window {
@@ -62,7 +67,7 @@ const CSS = `
 .dv-root .dv-goal-row input,.dv-root .dv-goal-row select{width:100%;font:inherit;font-size:13px;color:var(--text-primary);background:transparent;border:1px solid transparent;border-radius:var(--radius-sm);padding:7px 8px;outline:none}
 .dv-root .dv-goal-row input:focus,.dv-root .dv-goal-row select:focus{border-color:var(--accent)}
 .dv-root .dv-goal-row input[inputmode]{font-family:var(--font-mono);font-size:12px;text-align:right}
-.dv-root .dv-goal-row select{font-family:var(--font-mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-secondary);background:var(--bg-surface);border-color:var(--border-hairline);padding:6px 7px;cursor:pointer}
+.dv-root .dv-goal-row select{font-family:var(--font-mono);font-size:11.5px;color:var(--text-secondary);background:var(--bg-surface);border-color:var(--border-hairline);padding:6px 7px;cursor:pointer}
 @media (max-width:1180px){.dv-root .dv-cols{grid-template-columns:minmax(0,1fr)}.dv-root .dv-rail{position:static}}
 @media (max-width:640px){.dv-root .dv-week{min-width:560px}.dv-root .dv-goal-row{grid-template-columns:minmax(0,1fr) 64px 64px}.dv-root .dv-goal-row select,.dv-root .dv-goal-row > .dv-goal-unit{grid-column:1 / span 2}.dv-root .dv-actions{width:100%}.dv-root .dv-actions > *{flex:1;justify-content:center}}
 `;
@@ -79,17 +84,21 @@ function SectionHead({ title, sub, right }: { title: string; sub?: string; right
   );
 }
 
-export function DashboardView({ data }: { data: DashData }) {
+/** @param trackSeen false on the design lab, so a specimen page never moves a real reader's "since" baseline. */
+export function DashboardView({ data, brief, trackSeen = true }: { data: DashData; brief?: Brief; trackSeen?: boolean }) {
+  const now = useNow();
+  useBriefSeen(trackSeen);
   const [goals, setGoals] = useState(data.goals);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<DashGoal[]>([]);
   const [saving, setSaving] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
 
-  // The deadline-load bars are drawn by /dashboard/charts.js once it loads.
+  // The deadline-load bars are drawn by /charts/dashboard.js once it loads (served outside the
+  // signed-in prefixes so the design lab can draw them too).
   useEffect(() => {
     if (!document.getElementById('dash-charts')) {
-      const el = document.createElement('script'); el.id = 'dash-charts'; el.src = '/dashboard/charts.js'; document.body.appendChild(el);
+      const el = document.createElement('script'); el.id = 'dash-charts'; el.src = '/charts/dashboard.js'; document.body.appendChild(el);
     }
     let n = 0;
     const boot = setInterval(() => {
@@ -120,14 +129,17 @@ export function DashboardView({ data }: { data: DashData }) {
 
   return (
     <div className="dv-root" ref={rootRef} style={{ background: 'var(--bg-page)', padding: '22px 26px 40px' }}>
-      <style dangerouslySetInnerHTML={{ __html: CSS }} />
+      <style dangerouslySetInnerHTML={{ __html: CSS + BRIEF_CSS }} />
+
+      {/* The tenant's hero. CYC's skyline-to-wordmark sequence plays once per browser session, then rests. */}
+      {data.isCyc && <div style={{ marginBottom: 18 }}><CycHeroTransform /></div>}
 
       {/* header */}
       <div className="fd-page-head" style={{ marginBottom: 16 }}>
         <div style={{ minWidth: 0 }}>
           <p className="fd-eyebrow" style={{ color: 'var(--text-tertiary)', margin: 0 }}>{data.today}</p>
           <h1>{data.greeting}, {data.firstName}</h1>
-          <p className="fd-lede">Live workspace · your Instrumentl pipeline and calendar</p>
+          <p className="fd-lede">{(brief && briefSummary(brief)) ?? 'Live workspace · your pipeline, calendar and network'}</p>
         </div>
         <div className="dv-actions" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <Link href="/calendar" className="fd-btn"><CalendarDays style={{ width: 13, height: 13 }} />Calendar</Link>
@@ -158,6 +170,9 @@ export function DashboardView({ data }: { data: DashData }) {
 
         {/* LEFT */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 18, minWidth: 0 }}>
+
+          {/* What changed: the brief */}
+          {brief && <BriefSection brief={brief} now={now} head={(title, sub, right) => <SectionHead title={title} sub={sub} right={right} />} />}
 
           {/* Next deadlines */}
           <section className="dv-section" aria-labelledby="dv-deadlines">
@@ -212,7 +227,7 @@ export function DashboardView({ data }: { data: DashData }) {
                       {d.isToday
                         ? <span className="fd-mono" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 18, height: 18, padding: '0 4px', borderRadius: 'var(--radius-xs)', background: 'var(--text-primary)', color: 'var(--bg-surface)', fontSize: 10, fontWeight: 500 }}>{d.n}</span>
                         : <span className="fd-mono" style={{ fontSize: 10, color: 'var(--text-secondary)' }}>{d.n}</span>}
-                      <span className="fd-eyebrow" style={{ color: 'var(--text-tertiary)', fontSize: 9 }}>{d.dow}</span>
+                      <span className="fd-eyebrow" style={{ color: 'var(--text-tertiary)', fontSize: 11 }}>{d.dow}</span>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                       {d.events.map((e, j) => (
@@ -233,7 +248,7 @@ export function DashboardView({ data }: { data: DashData }) {
             <SectionHead title="Deadline load" sub="Upcoming application deadlines by month, FY27" right={<span className="fd-tag">FY27</span>} />
             <div style={{ padding: '0 18px' }}>
               <canvas data-chart="bars" data-values={data.monthly.join(',')} data-live={data.liveIdx} style={{ display: 'block', width: '100%', height: 120 }} />
-              <div className="fd-mono" style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, fontSize: 9, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--text-tertiary)' }}>
+              <div className="fd-mono" style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, fontSize: 11.5, color: 'var(--text-tertiary)' }}>
                 {data.months.map(m => <span key={m}>{m}</span>)}
               </div>
             </div>
@@ -262,6 +277,8 @@ export function DashboardView({ data }: { data: DashData }) {
 
         {/* RIGHT RAIL */}
         <div className="dv-rail">
+          {brief && <DoToday brief={brief} />}
+          {brief && <AskYourBoard brief={brief} />}
 
           {/* Today */}
           <section className="dv-section" style={{ padding: '14px 16px' }}>
@@ -283,8 +300,8 @@ export function DashboardView({ data }: { data: DashData }) {
             ))}
           </section>
 
-          {/* Needs attention */}
-          {data.needs.length > 0 && (
+          {/* Needs attention (only without a brief) */}
+          {!brief && data.needs.length > 0 && (
             <section className="dv-section" style={{ padding: '14px 16px 6px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
                 <span className="fd-eyebrow" style={{ color: 'var(--text-secondary)', flex: 1 }}>Needs attention</span>
@@ -344,7 +361,7 @@ export function DashboardView({ data }: { data: DashData }) {
               </button>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, padding: '12px 20px', borderTop: '1px solid var(--border-hairline)', background: 'var(--bg-page)' }}>
-              <span className="fd-caption" style={{ color: 'var(--text-tertiary)' }}>Visible to everyone at Chicago Youth Centers</span>
+              <span className="fd-caption" style={{ color: 'var(--text-tertiary)' }}>Visible to everyone at <OrgName /></span>
               <div style={{ display: 'flex', gap: 8 }}>
                 <button type="button" onClick={closeGoals} className="fd-btn">Cancel</button>
                 <button type="button" onClick={saveGoals} disabled={saving} className="fd-btn-primary">{saving ? 'Saving…' : 'Save goals'}</button>

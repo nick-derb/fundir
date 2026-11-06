@@ -2,7 +2,7 @@
  * <RecommendationGroup> — the win-triage primitive.
  *
  * Three sections (Pursue, Maybe, Skip), each with a quiet eyebrow header
- * (uppercase + semantic dot + mono count) and a stack of GrantCards. Skip
+ * (sentence-case label + semantic dot + mono count) and a stack of GrantCards. Skip
  * is collapsed by default — and when expanded, each card surfaces the
  * reason it's a skip. Saying no is a feature.
  *
@@ -73,7 +73,7 @@ function SectionHeading({
   return (
     <div className="flex items-baseline gap-2">
       <span className={`w-1.5 h-1.5 rounded-full ${dotCls}`} aria-hidden />
-      <span className="text-eyebrow uppercase text-primary font-semibold">{label}</span>
+      <span className="text-eyebrow text-primary font-semibold">{label}</span>
       <span className="font-mono text-caption text-secondary tabular-nums">{count}</span>
     </div>
   );

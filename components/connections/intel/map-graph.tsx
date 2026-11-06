@@ -11,9 +11,10 @@
 // strongest path is lit, so the first glance answers "where do we push".
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Minus, Plus, Maximize2, ChevronDown } from 'lucide-react';
+import { Minus, Plus, Maximize2, ChevronDown, User } from 'lucide-react';
 import type { GraphPayload, GraphNode, GraphLink, PipelineState } from '@/lib/network/queries';
 import { Avatar, OrgMark, typeLabel, STATUS_LABEL } from './shared';
+import { OrgPossessive, useOrg } from '@/components/org-context';
 
 interface Props {
   data: GraphPayload | null;
@@ -23,6 +24,7 @@ interface Props {
   onSelect?: (node: GraphNode | null) => void;
   onActivate?: (node: GraphNode) => void;   // double-click / Shift+Enter: focus the neighbourhood
   onOpenLead?: (leadId: string) => void;    // the ◆ on a funder card
+  onOpenPerson?: (personId: string) => void; // the profile mark on a person card
   compact?: boolean;
 }
 
@@ -36,7 +38,7 @@ interface TreeEdge { from: string; to: string; link: GraphLink | null }
 export interface Layout { placed: Placed[]; byId: Map<string, Placed>; edges: TreeEdge[]; cross: GraphLink[]; w: number; h: number; cardW: number; lanes: Array<{ depth: number; label: string }>; parentOf: Map<string, string> }
 
 const SIZES = {
-  full: { W: 224, H: 84, GX: 16, GY: 56, MAX: 6, PAD: 24, GUTTER: 92 },
+  full: { W: 224, H: 84, GX: 16, GY: 56, MAX: 6, PAD: 16, GUTTER: 80 },
   compact: { W: 168, H: 52, GX: 12, GY: 36, MAX: 4, PAD: 12, GUTTER: 0 },
 };
 const VER_RANK: Record<string, number> = { verified: 0, probable: 1, inferred: 2 };
@@ -50,9 +52,9 @@ const CSS = `
 .mg-lane{position:absolute;left:0;right:0;pointer-events:none;border-top:1px dashed color-mix(in srgb,var(--border-hairline) 70%,transparent)}
 .mg-lane[data-odd="true"]{background:color-mix(in srgb,var(--bg-surface) 45%,transparent)}
 .mg-gutter{position:absolute;left:0;top:0;bottom:0;pointer-events:none;border-right:1px solid var(--border-hairline);background:color-mix(in srgb,var(--bg-surface) 82%,transparent)}
-.mg-lanelabel{position:absolute;left:10px;display:flex;flex-direction:column;gap:2px;max-width:80px}
-.mg-lanelabel b{font-family:var(--font-mono);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;font-weight:600;color:var(--text-secondary);line-height:1.2}
-.mg-lanelabel span{font-family:var(--font-mono);font-size:9.5px;color:var(--text-tertiary)}
+.mg-lanelabel{position:absolute;left:10px;right:8px;display:flex;flex-direction:column;gap:2px}
+.mg-lanelabel b{font-family:var(--font-sans);font-size:11.5px;font-weight:500;color:var(--text-secondary);line-height:1.25;overflow-wrap:anywhere;hyphens:auto}
+.mg-lanelabel span{font-family:var(--font-sans);font-size:10.5px;color:var(--text-tertiary)}
 .mg-card{position:absolute;box-sizing:border-box;background:var(--bg-surface);border:1px solid var(--border-hairline);border-radius:var(--radius);box-shadow:0 1px 0 rgba(11,18,32,.03);cursor:pointer;outline:none;transition:opacity .16s,border-color .12s,box-shadow .12s;display:flex;flex-direction:column;overflow:hidden}
 .mg-card:hover{border-color:var(--border-strong)}
 .mg-card[data-path="true"]{border-color:rgba(12,107,90,.45)}
@@ -72,6 +74,8 @@ const CSS = `
 .mg-mark[data-tone="slate"] i{background:#5B7383}
 .mg-mark[data-tone="lead"]{border-color:rgba(156,122,42,.4);color:var(--warning);cursor:pointer}
 .mg-mark[data-tone="lead"]:hover{background:rgba(156,122,42,.10)}
+.mg-mark[data-tone="person"]{color:var(--text-secondary);cursor:pointer}
+.mg-mark[data-tone="person"]:hover{background:var(--accent-tint);color:var(--accent);border-color:rgba(12,107,90,.3)}
 .mg-foot{display:flex;align-items:center;gap:5px;padding:5px 8px;border-top:1px solid var(--border-hairline);background:var(--bg-page);min-width:0;overflow:hidden}
 .mg-metric{display:inline-flex;align-items:center;gap:4px;height:18px;padding:0 6px;border-radius:var(--radius-xs);border:1px solid var(--border-hairline);background:var(--bg-surface);font-family:var(--font-mono);font-size:9.5px;color:var(--text-secondary);white-space:nowrap;flex:none}
 .mg-metric[data-tone="accent"]{color:var(--accent);border-color:rgba(12,107,90,.3)}
@@ -97,7 +101,7 @@ const CSS = `
 // ── Layout ───────────────────────────────────────────────────────────────────
 
 const laneLabel = (nodes: GraphNode[], depth: number, root: GraphNode | undefined): string => {
-  if (depth === 0) return root?.own || root?.label === 'CYC' ? 'CYC' : 'Centre';
+  if (depth === 0) return root?.own ? root.label : 'Centre';
   let own = 0, people = 0, funders = 0, orgs = 0;
   for (const n of nodes) { if (n.kind === 'person') { if (n.own) own++; else people++; } else if (n.lead_id) funders++; else orgs++; }
   const parts: Array<[number, string]> = [[own, 'Board & staff'], [people, 'Contacts'], [funders, 'Funders'], [orgs, 'Shared rooms']];
@@ -120,8 +124,8 @@ export function buildLayout(data: GraphPayload, expanded: Set<string>, compact: 
 
   // BFS forest: the focused node first, then whatever is left, biggest hub
   // first. Real relationships are walked before white-space links, so a funder
-  // that is both "gives to CYC's peers" and reachable through a board member
-  // hangs at the end of its warm path, not directly under CYC.
+  // that is both "gives to the tenant's peers" and reachable through a board member
+  // hangs at the end of its warm path, not directly under the tenant.
   const depth = new Map<string, number>(); const parent = new Map<string, { id: string; link: GraphLink } | null>();
   const children = new Map<string, string[]>();
   const roots: string[] = [];
@@ -212,9 +216,10 @@ export function strongestPath(lay: Layout): { ids: string[]; target: GraphNode }
   return { ids, target: best.node! };
 }
 
-// Fit keeps cards legible: never below 0.8×. A tree wider than the viewport is
-// centred on its root instead of shrunk, and the user pans along the layer.
-function fitView(lay: Layout, sz: { w: number; h: number }, gutter: number, minK = 0.8) {
+// Fit shrinks to the caller's floor (0.58 full, 0.5 compact) so the whole tree is
+// visible on first paint. A tree wider than the viewport at that floor is centred
+// on its root and the user pans along the layer.
+function fitView(lay: Layout, sz: { w: number; h: number }, gutter: number, minK: number) {
   if (!lay.placed.length) return { x: 0, y: 0, k: 1 };
   const avail = sz.w - gutter - 24;
   const k = Math.max(minK, Math.min(1, avail / lay.w, (sz.h - 24) / lay.h));
@@ -227,7 +232,7 @@ function fitView(lay: Layout, sz: { w: number; h: number }, gutter: number, minK
 
 // ── Component ────────────────────────────────────────────────────────────────
 
-export function MapGraph({ data, height = 520, maxHeight = 720, selectedId, onSelect, onActivate, onOpenLead, compact }: Props) {
+export function MapGraph({ data, height = 520, maxHeight = 720, selectedId, onSelect, onActivate, onOpenLead, onOpenPerson, compact }: Props) {
   const S = compact ? SIZES.compact : SIZES.full;
   const wrapRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ w: 800, h: typeof height === 'number' ? height : 520 });
@@ -241,7 +246,9 @@ export function MapGraph({ data, height = 520, maxHeight = 720, selectedId, onSe
   const adj = useMemo(() => { const m = new Map<string, Set<string>>(); for (const l of data?.links ?? []) { (m.get(l.source) ?? m.set(l.source, new Set()).get(l.source)!).add(l.target); (m.get(l.target) ?? m.set(l.target, new Set()).get(l.target)!).add(l.source); } return m; }, [data]);
   const best = useMemo(() => (layout && !compact ? strongestPath(layout) : null), [layout, compact]);
   const bestIds = useMemo(() => new Set(best?.ids ?? []), [best]);
-  const minK = compact ? 0.5 : 0.8;
+  const minK = compact ? 0.5 : 0.72;
+  // On first fit a wide tree may shrink a little further than the legible floor, so the whole shape is visible before the person zooms in.
+  const fitFloor = compact ? 0.5 : 0.58;
 
   // Auto height: the tree at its minimum legible zoom, clamped, so a shallow
   // tree leaves no dead band and a deep one scrolls.
@@ -256,13 +263,13 @@ export function MapGraph({ data, height = 520, maxHeight = 720, selectedId, onSe
     const ro = new ResizeObserver(() => {
       const sz = { w: el.clientWidth, h: el.clientHeight };
       setSize(sz);
-      if (layoutRef.current) setView(fitView(layoutRef.current, sz, S.GUTTER, minK));
+      if (layoutRef.current) setView(fitView(layoutRef.current, sz, S.GUTTER, fitFloor));
     });
     ro.observe(el);
     return () => ro.disconnect();
-  }, [S.GUTTER, minK]);
+  }, [S.GUTTER, fitFloor]);
 
-  const fit = useCallback((lay: Layout | null) => { if (lay) setView(fitView(lay, size, S.GUTTER, minK)); }, [size, S.GUTTER, minK]);
+  const fit = useCallback((lay: Layout | null) => { if (lay) setView(fitView(lay, size, S.GUTTER, fitFloor)); }, [size, S.GUTTER, fitFloor]);
 
   // New payload: reset folds and fit (state adjusted during render, not in an effect). Fold changes keep the view.
   const dataKey = data ? `${data.mode}:${data.focus?.id ?? 'root'}:${data.nodes.length}` : '';
@@ -270,7 +277,7 @@ export function MapGraph({ data, height = 520, maxHeight = 720, selectedId, onSe
   if (dataKey !== seenKey) {
     setSeenKey(dataKey);
     setExpanded(new Set());
-    if (data) setView(fitView(buildLayout(data, new Set(), !!compact), size, S.GUTTER, minK));
+    if (data) setView(fitView(buildLayout(data, new Set(), !!compact), size, S.GUTTER, fitFloor));
   }
 
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -304,8 +311,21 @@ export function MapGraph({ data, height = 520, maxHeight = 720, selectedId, onSe
   };
 
   const activeId = hover ?? selectedId ?? null;
-  const lit = useMemo(() => (activeId ? new Set([activeId, ...(adj.get(activeId) ?? [])]) : null), [activeId, adj]);
-  const isLit = (a: string, b: string) => !!activeId && (a === activeId || b === activeId);
+  // Hovering or selecting a card lights its neighbours and the whole path back to the root, so one glance reads the introduction chain.
+  const lit = useMemo(() => {
+    if (!activeId) return null;
+    const s = new Set<string>([activeId, ...(adj.get(activeId) ?? [])]);
+    let cur = layout?.parentOf.get(activeId); while (cur) { s.add(cur); cur = layout?.parentOf.get(cur); }
+    return s;
+  }, [activeId, adj, layout]);
+  // An edge lights when it touches the active card or is a step of its chain back to the root;
+  // a link between two lit cards that the active card is not on stays quiet.
+  const isLit = (a: string, b: string) => {
+    if (!lit || !activeId) return false;
+    if (a === activeId || b === activeId) return lit.has(a) && lit.has(b);
+    return lit.has(a) && lit.has(b) && (layout?.parentOf.get(a) === b || layout?.parentOf.get(b) === a) && (isChain(a) && isChain(b));
+  };
+  function isChain(id: string) { let cur: string | undefined = activeId ?? undefined; while (cur) { if (cur === id) return true; cur = layout?.parentOf.get(cur); } return false; }
   const onBest = (a: string, b: string) => !activeId && bestIds.has(a) && bestIds.has(b);
 
   const nodeCount = data?.nodes.length ?? 0;
@@ -357,7 +377,7 @@ export function MapGraph({ data, height = 520, maxHeight = 720, selectedId, onSe
               on={selectedId === p.id} dim={lit && !lit.has(p.id) ? (hover && !selectedId ? 'hover' : 'true') : undefined} onPath={!activeId && bestIds.has(p.id)}
               onHover={h => setHover(h ? p.id : null)}
               onSelect={() => onSelect?.(p.node)} onActivate={() => p.node && onActivate?.(p.node)}
-              onOpenLead={onOpenLead} />
+              onOpenLead={onOpenLead} onOpenPerson={onOpenPerson} />
           ))}
         </div>
       )}
@@ -385,6 +405,7 @@ export function MapGraph({ data, height = 520, maxHeight = 720, selectedId, onSe
           <span><i style={{ width: 16, borderTop: '1.5px dotted var(--border-strong)' }} />inferred</span>
           <span><i style={{ width: 16, borderTop: '1.5px solid var(--warning)' }} />white space</span>
           <span><i className="mg-mark" data-tone="lead" style={{ width: 16, height: 16, fontSize: 8 }}>◆</i>open the lead</span>
+          <span><i className="mg-mark" data-tone="person" style={{ width: 16, height: 16 }}><User style={{ width: 9, height: 9 }} /></i>open the profile</span>
         </div>
       )}
     </div>
@@ -393,12 +414,13 @@ export function MapGraph({ data, height = 520, maxHeight = 720, selectedId, onSe
 
 const statusTone = (s: string | null): string | undefined => (!s ? undefined : s === 'WON' ? 'accent' : s === 'LOST' || s === 'NOT_A_FIT' || s === 'DEFERRED' ? undefined : s === 'NEW' ? 'slate' : 'warning');
 
-function Card({ p, S, compact, degree, on, dim, onPath, onHover, onSelect, onActivate, onOpenLead }: {
+function Card({ p, S, compact, degree, on, dim, onPath, onHover, onSelect, onActivate, onOpenLead, onOpenPerson }: {
   p: Placed; S: typeof SIZES.full; compact: boolean; degree: number; on: boolean; dim?: 'hover' | 'true'; onPath: boolean;
-  onHover: (h: boolean) => void; onSelect: () => void; onActivate: () => void; onOpenLead?: (id: string) => void;
+  onHover: (h: boolean) => void; onSelect: () => void; onActivate: () => void; onOpenLead?: (id: string) => void; onOpenPerson?: (id: string) => void;
 }) {
+  const org = useOrg();
   const n = p.node!;
-  const kindTag = n.own ? 'CYC' : n.kind === 'person' ? 'person' : typeLabel(n.orgType) || 'organization';
+  const kindTag = n.own ? (n.kind === 'person' ? 'ours' : org.short) : n.kind === 'person' ? 'person' : typeLabel(n.orgType) || 'organization';
   const verTone = p.ver === 'verified' ? 'accent' : p.ver === 'probable' ? 'slate' : p.ver === 'inferred' ? 'warning' : 'accent';
   const verTitle = p.ver === 'verified' ? 'Documented with dates' : p.ver === 'probable' ? 'Documented, undated' : p.ver === 'inferred' ? 'Inferred' : 'Centre of this map';
   const sub = n.sub ?? (n.kind === 'person' ? 'person' : 'organization');
@@ -409,13 +431,17 @@ function Card({ p, S, compact, degree, on, dim, onPath, onHover, onSelect, onAct
       style={{ left: p.x, top: p.y, width: S.W, height: S.H }}
       onMouseEnter={() => onHover(true)} onMouseLeave={() => onHover(false)}
       onClick={e => { e.stopPropagation(); onSelect(); }} onDoubleClick={e => { e.stopPropagation(); onActivate(); }}
-      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (e.shiftKey) onActivate(); else onSelect(); } }}>
+      onKeyDown={e => { if (e.target !== e.currentTarget) return; if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (e.shiftKey) onActivate(); else onSelect(); } }}>
       <div className="mg-head">
         {n.kind === 'person' ? <Avatar name={n.label} size={compact ? 24 : 30} own={n.own} /> : <OrgMark name={n.label} size={compact ? 24 : 30} accent={n.own || n.focus} />}
         <div className="mg-title"><b>{n.label}</b><span>{sub}</span></div>
         {!compact && (
           <div className="mg-marks">
             <span className="mg-mark" data-tone={verTone} title={verTitle}><i /></span>
+            {n.kind === 'person' && n.rowId && onOpenPerson && (
+              <button type="button" className="mg-mark" data-tone="person" title="Open the profile" aria-label={`Open the profile for ${n.label}`}
+                onClick={e => { e.stopPropagation(); onOpenPerson(n.rowId!); }} onDoubleClick={e => e.stopPropagation()}><User style={{ width: 10, height: 10 }} /></button>
+            )}
             {n.lead_id && (
               <button type="button" className="mg-mark" data-tone="lead" style={{ font: 'inherit', fontFamily: 'var(--font-mono)', fontSize: 9 }} title="Open the lead" aria-label={`Open the lead for ${n.label}`}
                 onClick={e => { e.stopPropagation(); onOpenLead?.(n.lead_id!); }} onDoubleClick={e => e.stopPropagation()}>◆</button>
@@ -440,12 +466,12 @@ function GroupCard({ p, S, dim, onExpand, onOpenLead }: { p: Placed; S: typeof S
   const preview = members.slice(0, GROUP_PREVIEW);
   const h = S.H + 14 * preview.length;
   return (
-    <div data-mg-card className="mg-card mg-group" role="button" tabIndex={0} aria-label={`${members.length} funders with no path yet`} title="Funders that give to CYC's peers but have no documented path yet · click to unfold"
+    <div data-mg-card className="mg-card mg-group" role="button" tabIndex={0} aria-label={`${members.length} funders with no path yet`} title="Funders that give to your peers but have no documented path yet · click to unfold"
       data-dim={dim} style={{ left: p.x, top: p.y, width: S.W, height: h }}
       onClick={e => { e.stopPropagation(); onExpand(); }} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onExpand(); } }}>
       <div className="mg-head" style={{ flex: 'none', paddingBottom: 4 }}>
         <span className="mg-mark" data-tone="warning" style={{ width: 30, height: 30 }}><i /></span>
-        <div className="mg-title"><b>{members.length} funders, no path yet</b><span>white space · give to CYC&rsquo;s peers</span></div>
+        <div className="mg-title"><b>{members.length} funders, no path yet</b><span>white space · give to <OrgPossessive /> peers</span></div>
         <ChevronDown style={{ width: 14, height: 14, color: 'var(--text-tertiary)', flex: 'none' }} />
       </div>
       <ul>

@@ -102,7 +102,7 @@ export function DashboardConsole({ cra, deadlines, funders }: DashboardConsolePr
         .dc-bankrow:last-child{border-bottom:none;padding-bottom:2px}
         .dc-bmain{flex:1;min-width:0}
         .dc-bname{font-size:15px;font-weight:700;color:var(--text-primary);display:flex;align-items:center;gap:9px;flex-wrap:wrap}
-        .dc-tag{font-family:var(--dc-mono);font-size:8.5px;letter-spacing:.1em;padding:3px 7px;border-radius:5px;font-weight:700;text-transform:uppercase}
+        .dc-tag{font-family:var(--dc-mono);font-size:11.5px;padding:3px 7px;border-radius:5px;font-weight:700;}
         .dc-tag.pros{background:color-mix(in srgb,var(--dc-blue) 12%,transparent);color:var(--dc-blue)}
         .dc-tag.open{background:var(--accent-tint,rgba(12,107,90,.09));color:var(--dc-accent)}
         .dc-tag.exist{background:color-mix(in srgb,var(--dc-accent-br) 16%,transparent);color:var(--dc-accent)}

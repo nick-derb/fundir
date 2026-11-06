@@ -91,7 +91,7 @@ export function DataHubHero({ orgName = 'Chicago Youth Centers' }: { orgName?: s
           background:var(--bg-surface);border-bottom:1px solid var(--border-hairline);overflow:hidden}
         .dh-center{max-width:880px;margin:0 auto;text-align:center;padding:44px 26px 0}
         .dh-pill{display:inline-flex;align-items:center;gap:8px;border-radius:999px;padding:7px 14px;font-size:11px;font-weight:700;
-          letter-spacing:.08em;text-transform:uppercase;color:var(--accent);background:var(--accent-tint,rgba(12,107,90,.10))}
+          color:var(--accent);background:var(--accent-tint,rgba(12,107,90,.10))}
         .dh-h2{font-size:clamp(26px,3.6vw,38px);font-weight:800;letter-spacing:-.025em;line-height:1.08;margin:16px 0 0;color:var(--text-primary)}
         .dh-sub{color:var(--text-secondary);font-size:14.5px;line-height:1.65;max-width:64ch;margin:14px auto 0}
         [data-dh-reveal]{opacity:0;transform:translateY(22px);transition:opacity .7s cubic-bezier(.2,.7,.2,1),transform .7s cubic-bezier(.2,.7,.2,1)}

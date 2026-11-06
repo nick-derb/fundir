@@ -7,11 +7,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { EdgeRow } from '@/lib/network/queries';
 import { SERIF, MONO, Avatar, OrgMark, Chip, Eyebrow, Skeleton, relLabel, AMBER, SLATE } from './shared';
+import { OrgName, OrgShort, useOrg } from '@/components/org-context';
 
 const VER_TONE: Record<string, string> = { verified: 'var(--accent)', probable: SLATE, inferred: AMBER };
 const VER_LABEL: Record<string, string> = { verified: 'documented', probable: 'undated', inferred: 'inferred' };
 
 export function RelationshipsView({ onFocus }: { onFocus: (f: { kind: 'person' | 'org'; id: string }) => void }) {
+  const org = useOrg();
   const [loaded, setLoaded] = useState<{ key: string; edges: EdgeRow[] } | null>(null);
   const [type, setType] = useState<string>('');
   const [ver, setVer] = useState<string>('');
@@ -32,7 +34,7 @@ export function RelationshipsView({ onFocus }: { onFocus: (f: { kind: 'person' |
   return (
     <div className="ni-root" style={{ padding: '24px 26px 60px' }}>
       <div style={{ marginBottom: 18 }}>
-        <Eyebrow style={{ display: 'block', margin: '0 0 9px' }}>Chicago Youth Centers · Network intelligence</Eyebrow>
+        <Eyebrow style={{ display: 'block', margin: '0 0 9px' }}><OrgName /> · Network intelligence</Eyebrow>
         <h1 style={{ fontFamily: SERIF, fontWeight: 400, fontSize: 'clamp(1.9rem,3vw,2.5rem)', lineHeight: 1.04, letterSpacing: '-.018em', margin: 0 }}>Relationships</h1>
         <p style={{ margin: '9px 0 0', fontSize: 13.5, lineHeight: 1.6, color: 'var(--text-secondary)', maxWidth: '64ch' }}>Every link Fundir derived, graded by how well it is documented: <b style={{ color: 'var(--accent)', fontWeight: 500 }}>documented</b> links have cited facts on both ends and dated overlap; <b style={{ color: SLATE, fontWeight: 500 }}>undated</b> ones are cited but cannot prove the overlap; <b style={{ color: AMBER, fontWeight: 500 }}>inferred</b> ones rest on an uncited fact.</p>
       </div>
@@ -42,7 +44,7 @@ export function RelationshipsView({ onFocus }: { onFocus: (f: { kind: 'person' |
         <span style={{ flex: 1 }} />
         <select className="ni-select" value={type} onChange={e => setType(e.target.value)} aria-label="Relationship type">
           <option value="">All types</option>
-          {['former_colleague', 'current_colleague', 'shared_employer', 'shared_board', 'shared_university', 'existing_cyc_relationship', 'corporate_connection', 'foundation_connection', 'philanthropic_overlap', 'geographic_overlap', 'second_degree'].map(t => <option key={t} value={t}>{relLabel(t)}</option>)}
+          {['former_colleague', 'current_colleague', 'shared_employer', 'shared_board', 'shared_university', 'existing_cyc_relationship', 'corporate_connection', 'foundation_connection', 'philanthropic_overlap', 'geographic_overlap', 'second_degree'].map(t => <option key={t} value={t}>{relLabel(t, org.short)}</option>)}
         </select>
       </div>
       <div className="ni-card" style={{ overflow: 'hidden' }}>
@@ -54,12 +56,12 @@ export function RelationshipsView({ onFocus }: { onFocus: (f: { kind: 'person' |
             <End e={e.a} />
             <span aria-hidden style={{ display: 'flex', justifyContent: 'center' }}><span style={{ width: 24, borderTop: `1.5px ${e.verification === 'verified' ? 'solid' : e.verification === 'probable' ? 'dashed' : 'dotted'} ${VER_TONE[e.verification]}` }} /></span>
             <End e={e.b} />
-            <span><Chip text={relLabel(e.type)} color={VER_TONE[e.verification]} border={`color-mix(in srgb, ${VER_TONE[e.verification]} 35%, transparent)`} /></span>
+            <span><Chip text={relLabel(e.type, org.short)} color={VER_TONE[e.verification]} border={`color-mix(in srgb, ${VER_TONE[e.verification]} 35%, transparent)`} /></span>
             <span data-ni-hide-md className="fd-caption" style={{ color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={e.summary ?? ''}>{e.summary ?? '—'}{e.source_type ? <span className="fd-mono" style={{ color: 'var(--text-tertiary)', fontSize: 9.5, marginLeft: 6 }}>· {e.source_type.replace(/_/g, ' ')}</span> : null}</span>
             <b className="fd-mono" style={{ fontSize: 11.5, color: 'var(--text-secondary)', textAlign: 'right', fontFamily: MONO }}>{Math.round(e.strength)}</b>
           </div>
         ))}
-        <div style={{ padding: '9px 16px', background: 'var(--bg-page)' }}><span className="fd-mono" style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>{visible.length} link{visible.length === 1 ? '' : 's'}{edges && edges.length >= 500 ? ' · showing the strongest 500' : ''} · types: {types.slice(0, 4).map(([t, n]) => `${relLabel(t)} ${n}`).join(' · ')}</span></div>
+        <div style={{ padding: '9px 16px', background: 'var(--bg-page)' }}><span className="fd-mono" style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>{visible.length} link{visible.length === 1 ? '' : 's'}{edges && edges.length >= 500 ? ' · showing the strongest 500' : ''} · types: {types.slice(0, 4).map(([t, n]) => `${relLabel(t, org.short)} ${n}`).join(' · ')}</span></div>
       </div>
     </div>
   );
@@ -71,7 +73,7 @@ function End({ e }: { e: EdgeRow['a'] }) {
       {e.kind === 'person' ? <Avatar name={e.name} size={24} own={e.own} /> : <OrgMark name={e.name} size={24} />}
       <span style={{ minWidth: 0 }}>
         <b style={{ display: 'block', fontSize: 12.5, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.name}</b>
-        {e.own && <span className="fd-mono" style={{ fontSize: 9, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--accent)' }}>CYC</span>}
+        {e.own && <span className="fd-mono" style={{ fontSize: 11.5, color: 'var(--accent)' }}><OrgShort /></span>}
       </span>
     </span>
   );

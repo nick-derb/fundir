@@ -8,8 +8,10 @@ import { useMemo } from 'react';
 import type { LeadRow } from '@/lib/network/queries';
 import { PathRail } from './path-rail';
 import { SERIF, Avatar, ConfChip, ScoreBar, TypeChip, Eyebrow } from './shared';
+import { OrgName, useOrg } from '@/components/org-context';
 
 export function WarmPathsView({ leads, selectedId, onOpen, onPerson }: { leads: LeadRow[]; selectedId: string | null; onOpen: (id: string) => void; onPerson: (id: string) => void }) {
+  const org = useOrg();
   const groups = useMemo(() => {
     const m = new Map<string, { via: NonNullable<LeadRow['via']>; leads: LeadRow[] }>();
     for (const l of leads) { if (!l.via || ['NOT_A_FIT', 'LOST'].includes(l.pipeline_status)) continue; const g = m.get(l.via.id) ?? { via: l.via, leads: [] }; g.leads.push(l); m.set(l.via.id, g); }
@@ -20,10 +22,10 @@ export function WarmPathsView({ leads, selectedId, onOpen, onPerson }: { leads: 
   return (
     <div className="ni-root" style={{ padding: '24px 26px 60px' }}>
       <div style={{ marginBottom: 20 }}>
-        <Eyebrow style={{ display: 'block', margin: '0 0 9px' }}>Chicago Youth Centers · Network intelligence</Eyebrow>
+        <Eyebrow style={{ display: 'block', margin: '0 0 9px' }}><OrgName /> · Network intelligence</Eyebrow>
         <h1 style={{ fontFamily: SERIF, fontWeight: 400, fontSize: 'clamp(1.9rem,3vw,2.5rem)', lineHeight: 1.04, letterSpacing: '-.018em', margin: 0 }}>Warm paths</h1>
         <p style={{ margin: '9px 0 0', fontSize: 13.5, lineHeight: 1.6, color: 'var(--text-secondary)', maxWidth: '64ch' }}>
-          {groups.length ? `${groups.length} CYC ${groups.length === 1 ? 'person opens' : 'people open'} doors at ${funders} funder${funders === 1 ? '' : 's'}. Each path is a shared room — an employer, a board — never an assumed friendship; the connector shows how well that room is documented.` : 'No warm paths yet. Map board members’ LinkedIn URLs and run a refresh; paths appear here as career histories overlap with funder trustees.'}
+          {groups.length ? `${groups.length} of your ${groups.length === 1 ? 'people opens' : 'people open'} doors at ${funders} funder${funders === 1 ? '' : 's'}. Each path is a shared room — an employer, a board — never an assumed friendship; the connector shows how well that room is documented.` : 'No warm paths yet. Map board members’ LinkedIn URLs and run a refresh; paths appear here as career histories overlap with funder trustees.'}
         </p>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -33,7 +35,7 @@ export function WarmPathsView({ leads, selectedId, onOpen, onPerson }: { leads: 
               <Avatar name={g.via.name} size={34} own />
               <span style={{ minWidth: 0, flex: 1 }}>
                 <b style={{ display: 'block', fontSize: 14.5, fontWeight: 500, letterSpacing: '-.008em' }}>Through {g.via.name}</b>
-                <span className="fd-caption" style={{ color: 'var(--text-tertiary)' }}>{g.via.role ? `CYC ${g.via.role}` : 'CYC'} · {g.leads.length} path{g.leads.length === 1 ? '' : 's'} · best {g.best}</span>
+                <span className="fd-caption" style={{ color: 'var(--text-tertiary)' }}>{g.via.role ?? org.short} · {g.leads.length} path{g.leads.length === 1 ? '' : 's'} · best {g.best}</span>
               </span>
             </button>
             {g.leads.map(l => (

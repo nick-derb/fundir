@@ -93,7 +93,8 @@ export const statusTone = (s: string) => (s === 'WON' ? 'var(--accent)' : s === 
 
 export const initialsOf = (name: string) => name.trim().split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase() || '—';
 export const typeLabel = (t: string | null | undefined) => (t ? t.replace(/_/g, ' ') : '');
-export const relLabel = (t: string) => ({ former_colleague: 'former colleagues', current_colleague: 'current colleagues', shared_employer: 'shared employer', shared_board: 'shared board', shared_university: 'shared university', shared_nonprofit: 'shared nonprofit', existing_cyc_relationship: 'CYC relationship', second_degree: 'second degree', corporate_connection: 'corporate tie', foundation_connection: 'foundation link', geographic_overlap: 'service area', philanthropic_overlap: 'funds CYC peers', seat: 'board seat', employment: 'employment', membership: 'CYC member', relationship: 'relationship', funding: 'funds', white_space: 'white space' } as Record<string, string>)[t] ?? t.replace(/_/g, ' ');
+/** Relationship-type label; `own` is the tenant's short name for the types that mention it. */
+export const relLabel = (t: string, own = 'our') => ({ former_colleague: 'former colleagues', current_colleague: 'current colleagues', shared_employer: 'shared employer', shared_board: 'shared board', shared_university: 'shared university', shared_nonprofit: 'shared nonprofit', existing_cyc_relationship: `${own} relationship`, second_degree: 'second degree', corporate_connection: 'corporate tie', foundation_connection: 'foundation link', geographic_overlap: 'service area', philanthropic_overlap: `funds ${own} peers`, seat: 'board seat', employment: 'employment', membership: `${own} member`, relationship: 'relationship', funding: 'funds', white_space: 'white space' } as Record<string, string>)[t] ?? t.replace(/_/g, ' ');
 
 // ── Atoms ───────────────────────────────────────────────────────────────────
 export function Chip({ text, color, border, tint, style }: { text: string; color: string; border: string; tint?: string; style?: CSSProperties }) {
@@ -102,7 +103,7 @@ export function Chip({ text, color, border, tint, style }: { text: string; color
 export function TypeChip({ type }: { type: string | null | undefined }) { const h = hueFor(type); return <Chip text={h.short} color={h.color} border={h.border} />; }
 export function ConfChip({ confidence }: { confidence: string | null | undefined }) {
   const c = confColor(confidence);
-  return <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontFamily: MONO, fontSize: 9.5, letterSpacing: '.05em', textTransform: 'uppercase', color: c, whiteSpace: 'nowrap' }}><span style={{ width: 6, height: 6, borderRadius: 3, background: c }} />{confidence ?? '—'}</span>;
+  return <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontFamily: MONO, fontSize: 11.5, color: c, whiteSpace: 'nowrap' }}><span style={{ width: 6, height: 6, borderRadius: 3, background: c }} />{confidence ?? '—'}</span>;
 }
 export function StatusChip({ status }: { status: string }) {
   const tone = statusTone(status);

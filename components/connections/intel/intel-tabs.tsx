@@ -27,7 +27,7 @@ type TabKey = 'discover' | 'pipeline' | 'paths' | 'people' | 'map' | 'organizati
 const TABS: Array<{ key: TabKey; label: string }> = [
   { key: 'discover', label: 'Discover' }, { key: 'pipeline', label: 'Pipeline' }, { key: 'paths', label: 'Warm paths' }, { key: 'people', label: 'People' }, { key: 'map', label: 'Map' },
   { key: 'organizations', label: 'Organizations' }, { key: 'relationships', label: 'Relationships' },
-  { key: 'network', label: 'CYC network' }, { key: 'funders', label: 'Funder boards' },
+  { key: 'network', label: 'Our network' }, { key: 'funders', label: 'Funder boards' },
 ];
 
 export interface IntelProps { people: CnPerson[]; kpis: CnKpis; network: NwState; leads: LeadRow[]; insights: InsightRow[]; readOnly?: boolean }
@@ -110,7 +110,7 @@ function IntelInner({ people, kpis, network, leads: initialLeads, insights: init
       {tab === 'pipeline' && <PipelineView leads={leads} team={team} selectedId={leadId} onOpen={openLead} onChanged={reload} readOnly={readOnly} />}
       {tab === 'paths' && <WarmPathsView leads={leads} selectedId={leadId} onOpen={openLead} onPerson={id => openMap({ kind: 'person', id })} />}
       {tab === 'people' && <PeopleView key={`${sp.get('kind') ?? ''}|${sp.get('q') ?? ''}`} selectedId={personId} onOpen={openPerson} onOpenLead={openLead} onFocus={openMap} initialQ={sp.get('q') ?? ''} initialKinds={sp.get('kind') ? [sp.get('kind')!] : []} />}
-      {tab === 'map' && <MapView focus={focus} onFocus={f => setParams({ focus: f ? `${f.kind}:${f.id}` : null })} onOpenLead={openLead} />}
+      {tab === 'map' && <MapView focus={focus} onFocus={f => setParams({ focus: f ? `${f.kind}:${f.id}` : null })} onOpenLead={openLead} onOpenPerson={openPerson} />}
       {tab === 'organizations' && <OrganizationsView onOpenLead={openLead} onFocus={openMap} />}
       {tab === 'relationships' && <RelationshipsView onFocus={openMap} />}
       {tab === 'network' && <NetworkView initial={network} />}

@@ -72,7 +72,7 @@ describe('map layout: white space and the strongest path', () => {
       links: [link('cyc', 'phil', { type: 'membership' }), link('phil', 'room', { type: 'employment' }), link('room', 'funderA', { type: 'seat' }), link('room', 'funderB', { type: 'seat' }), link('cyc', 'ws1', { type: 'white_space' })],
     };
     const lay = buildLayout(data, new Set(), false);
-    expect(lay.lanes.map(l => l.label)).toEqual(['CYC', 'Board & staff · Funders', 'Shared rooms', 'Funders']);
+    expect(lay.lanes.map(l => l.label)).toEqual([data.nodes.find(n => n.own && n.focus)!.label, 'Board & staff · Funders', 'Shared rooms', 'Funders']);
     const best = strongestPath(lay)!;
     expect(best.target.id).toBe('funderB');       // the white-space lead scores higher but has no path
     expect(best.ids).toEqual(['cyc', 'phil', 'room', 'funderB']);
