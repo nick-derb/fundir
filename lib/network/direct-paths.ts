@@ -13,12 +13,15 @@
 // answer corrected) is removed; one the team has already worked is kept.
 
 import type { createServerClient } from '@/lib/supabase';
+import { ownOrgNodeId } from '@/lib/known-funders';
 
 type Db = ReturnType<typeof createServerClient>;
 
 export const DIRECT_GENERATOR = 'direct:v1';
 export const DIRECT_VIA = 'Direct connection';
 const SOURCES = ['board_survey', 'cyc_workbook'];
+/** Only the organization's own people make a direct path; the same edge type also links a funder's trustee to the organization. */
+const OWN_KINDS = new Set(['board', 'auxiliary', 'council', 'staff']);
 
 export interface DirectReport { connections: number; leads: number; created: number; removed: number }
 
@@ -38,7 +41,9 @@ export async function syncDirectConnectionLeads(db: Db, orgId: string): Promise<
     .eq('org_id', orgId).eq('relationship_type', 'existing_cyc_relationship').in('source_type', SOURCES)
     .not('source_person_id', 'is', null).not('target_organization_id', 'is', null);
   if (error) throw new Error(`direct edges: ${error.message}`);
-  const list = (edges ?? []) as Array<{ id: string; source_person_id: string; target_organization_id: string; relationship_strength: number | null; confidence: number | null; evidence: Record<string, unknown> | null; source_type: string }>;
+  const ownNode = await ownOrgNodeId(db, orgId);
+  const list = ((edges ?? []) as Array<{ id: string; source_person_id: string; target_organization_id: string; relationship_strength: number | null; confidence: number | null; evidence: Record<string, unknown> | null; source_type: string }>)
+    .filter(e => e.target_organization_id !== ownNode);
   // Strongest edge per (person, foundation).
   const best = new Map<string, (typeof list)[number]>();
   for (const e of list) { const k = `${e.source_person_id}|${e.target_organization_id}`; const cur = best.get(k); if (!cur || directScore(e, false) > directScore(cur, false)) best.set(k, e); }
@@ -56,7 +61,7 @@ export async function syncDirectConnectionLeads(db: Db, orgId: string): Promise<
   const now = new Date().toISOString();
   for (const [k, e] of best) {
     const p = people.get(e.source_person_id), org = orgs.get(e.target_organization_id);
-    if (!p || !org) continue;
+    if (!p || !org || !OWN_KINDS.has(p.kind)) continue;
     const former = /^former/i.test(p.board_role ?? '');
     const ev = e.evidence ?? {};
     const rel = typeof ev.relationship === 'string' && ev.relationship.trim() ? ev.relationship.trim() : null;
