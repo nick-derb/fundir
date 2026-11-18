@@ -5,6 +5,8 @@ import { createServerClient } from '@/lib/supabase';
 export async function POST(req: NextRequest) {
   const ctx = await getAuthContext();
   if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  // An admin viewing the app as someone else must not show up as that person being active.
+  if (ctx.impersonating) return NextResponse.json({ ok: true, skipped: 'impersonating' });
 
   const body = await req.json().catch(() => ({})) as { currentPath?: string };
   const db = createServerClient();

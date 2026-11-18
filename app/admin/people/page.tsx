@@ -9,19 +9,25 @@ export const dynamic = 'force-dynamic';
 
 // Every account on the platform: who they are, which workspace they belong
 // to and with what role, whether they finished onboarding and connected a
-// calendar, and when they last signed in. Read-only apart from "View as".
+// calendar, when they were last active in the app and when they last signed
+// in. Read-only apart from "View as".
+//
+// "Last active" comes from the presence heartbeat the app shell sends every
+// minute while a page is open. "Last sign-in" only moves when someone enters
+// credentials again: sessions renew silently, so it can lag by weeks.
 
 export default async function AdminPeoplePage() {
   const ctx = await getAuthContext();
   // The real admin, even if they happen to be mid-impersonation.
   const meId = ctx?.realAdmin?.id ?? ctx?.userId;
   const db = createServerClient();
-  const [authRes, profilesRes, membersRes, integRes, allowRes] = await Promise.all([
+  const [authRes, profilesRes, membersRes, integRes, allowRes, presenceRes] = await Promise.all([
     db.auth.admin.listUsers({ perPage: 200 }),
     db.from('profiles').select('user_id, first_name, last_name, display_name, role, onboarded_at, avatar_url'),
     db.from('user_organizations').select('user_id, role, organizations(name, org_code)'),
     db.from('user_integrations').select('user_id').eq('provider', 'microsoft'),
     db.from('access_allowlist').select('email'),
+    db.from('user_presence').select('user_id, last_seen, current_path'),
   ]);
 
   const users = authRes.data?.users ?? [];
@@ -35,6 +41,7 @@ export default async function AdminPeoplePage() {
   }
   const calSet = new Set((integRes.data ?? []).map(i => i.user_id));
   const allowlisted = new Set((allowRes.data ?? []).map(a => String(a.email).toLowerCase()));
+  const presenceById = new Map((presenceRes.data ?? []).map(p => [p.user_id as string, { at: p.last_seen as string | null, path: p.current_path as string | null }]));
 
   const rows = users.map(u => {
     const p = profileById.get(u.id);
@@ -53,8 +60,10 @@ export default async function AdminPeoplePage() {
       provider: (u.app_metadata?.provider as string | undefined) ?? 'email',
       joined: u.created_at,
       lastSignIn: u.last_sign_in_at ?? null,
+      lastActive: presenceById.get(u.id)?.at ?? null,
+      lastPath: presenceById.get(u.id)?.path ?? null,
     };
-  }).sort((a, b) => (b.lastSignIn ?? '').localeCompare(a.lastSignIn ?? ''));
+  }).sort((a, b) => (b.lastActive ?? b.lastSignIn ?? '').localeCompare(a.lastActive ?? a.lastSignIn ?? ''));
 
   const noOrg = rows.filter(r => r.orgs.length === 0).length;
   const onboardedCount = rows.filter(r => r.onboarded).length;
@@ -74,7 +83,7 @@ export default async function AdminPeoplePage() {
             <table className="adm-table">
               <thead>
                 <tr>
-                  <th>Person</th><th>Workspace</th><th>Role</th><th>Setup</th><th>Joined</th><th>Last sign-in</th><th style={{ textAlign: 'right' }}></th>
+                  <th>Person</th><th>Workspace</th><th>Role</th><th>Setup</th><th>Joined</th><th>Last active</th><th>Last sign-in</th><th style={{ textAlign: 'right' }}></th>
                 </tr>
               </thead>
               <tbody>
@@ -110,6 +119,10 @@ export default async function AdminPeoplePage() {
                     <td style={{ color: '#94a3b8', whiteSpace: 'nowrap' }}>
                       <div>{fmtDate(r.joined)}</div>
                       <div style={{ fontSize: 11, color: '#64748b' }}>via {r.provider === 'azure' ? 'Microsoft' : r.provider === 'google' ? 'Google' : 'email'}</div>
+                    </td>
+                    <td style={{ whiteSpace: 'nowrap' }} title={r.lastActive ? fmtDate(r.lastActive) : undefined}>
+                      <div style={{ ...MONO, color: '#e2e8f0', fontSize: 12 }}>{timeAgo(r.lastActive)}</div>
+                      {r.lastPath && <div style={{ fontSize: 11, color: '#64748b' }}>{r.lastPath}</div>}
                     </td>
                     <td style={{ ...MONO, color: '#94a3b8', fontSize: 12, whiteSpace: 'nowrap' }}>{timeAgo(r.lastSignIn)}</td>
                     <td style={{ textAlign: 'right' }}>
