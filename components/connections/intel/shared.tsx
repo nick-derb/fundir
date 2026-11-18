@@ -80,6 +80,8 @@ export function hueFor(insightType: string | null | undefined): { color: string;
     case 'Repeated Peer Funder': return { color: AMBER, border: 'rgba(156,122,42,.36)', tint: 'rgba(156,122,42,.10)', short: 'Repeat funder' };
     case 'Emerging Funder': return { color: AMBER, border: 'rgba(156,122,42,.36)', tint: 'rgba(156,122,42,.10)', short: 'Emerging' };
     case 'Dormant Relationship': return { color: 'var(--critical)', border: 'rgba(194,78,62,.34)', tint: 'var(--critical-tint)', short: 'Dormant' };
+    case 'Lapsed Funder': return { color: 'var(--critical)', border: 'rgba(194,78,62,.34)', tint: 'var(--critical-tint)', short: 'Lapsed funder' };
+    case 'Current Funder': return { color: 'var(--accent)', border: 'rgba(12,107,90,.32)', tint: 'var(--accent-tint)', short: 'Current funder' };
     default: return { color: SLATE, border: 'rgba(91,115,131,.34)', tint: 'rgba(91,115,131,.10)', short: insightType ?? 'Lead' };
   }
 }

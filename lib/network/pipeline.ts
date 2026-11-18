@@ -35,6 +35,7 @@ export const DISMISSAL_REASONS = [
   { id: 'no_relationship_path', label: 'The path does not hold up', feeds: 'via' },
   { id: 'declined_before', label: 'Declined us before', feeds: 'target' },
   { id: 'already_in_progress', label: 'Already being worked elsewhere', feeds: null },
+  { id: 'already_funder', label: 'Already funds us', feeds: null },
   { id: 'duplicate', label: 'Duplicate of another lead', feeds: null },
   { id: 'other', label: 'Other', feeds: null },
 ] as const;

@@ -14,6 +14,9 @@ import { StrategyResources } from '@/components/strategy-resources';
 import { InstrumentlCard } from '@/components/instrumentl-card';
 import { CultivationCard } from '@/components/cultivation-card';
 import { GrantCalendarCard } from '@/components/grant-calendar-card';
+import { PastFundersCard } from '@/components/past-funders-card';
+import { BoardRosterCard } from '@/components/board-roster-card';
+import { BoardSurveyCard } from '@/components/board-survey-card';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Search, SlidersHorizontal, Upload, UploadCloud, X, MoreVertical, FileText,
@@ -245,6 +248,9 @@ export function DataHubView({ orgName, userEmail }: { orgName: string; userEmail
         <InstrumentlCard />
         <CultivationCard />
         <GrantCalendarCard />
+        <BoardRosterCard />
+        <BoardSurveyCard />
+        <PastFundersCard />
         <div className="bg-surface border border-hairline rounded-md p-8 text-center">
           <UploadCloud className="w-8 h-8 text-tertiary mx-auto mb-4" />
           <h2 className="text-[17px] font-semibold text-primary mb-2">Document storage needs Microsoft 365</h2>
@@ -355,13 +361,16 @@ export function DataHubView({ orgName, userEmail }: { orgName: string; userEmail
               <div className="flex items-baseline justify-between gap-3 mb-3">
                 <div>
                   <h2 className="text-[17px] font-semibold text-primary">Workbook imports</h2>
-                  <p className="text-[12px] text-tertiary mt-1">Swap the tracker exports Fundir reads from. Each shows what would change before it writes.</p>
+                  <p className="text-[12px] text-tertiary mt-1">Swap the tracker exports, the board roster, survey answers and donor records Fundir reads from. Each shows what would change before it writes.</p>
                 </div>
               </div>
               <div className="flex flex-col gap-3">
                 <InstrumentlCard />
                 <CultivationCard />
                 <GrantCalendarCard />
+                <BoardRosterCard />
+                <BoardSurveyCard />
+                <PastFundersCard />
               </div>
             </div>
 
