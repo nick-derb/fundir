@@ -26,7 +26,7 @@ import { normalizeOrgName } from '@/lib/network/normalize';
 type Db = ReturnType<typeof createServerClient>;
 
 export type KnownRelationship = 'current' | 'past';
-export type KnownSource = 'manual' | 'raisers_edge' | 'feedback';
+export type KnownSource = 'manual' | 'raisers_edge' | 'feedback' | 'grant_report';
 
 export interface KnownFunder {
   id: string; name: string; normalized_name: string; network_org_id: string | null;
@@ -84,7 +84,7 @@ export async function resolveFunderNode(db: Db, normalized: string): Promise<{ i
 }
 
 const describe = (r: Pick<KnownFunder, 'relationship' | 'last_gift_year' | 'source'>, own: string, funder: string) =>
-  `${funder} is on record as a ${r.relationship} ${own} funder${r.last_gift_year ? ` (last gift ${r.last_gift_year})` : ''}, per ${r.source === 'raisers_edge' ? "the Raiser's Edge export" : r.source === 'feedback' ? 'a correction from the team' : 'the team'}`;
+  `${funder} is on record as a ${r.relationship} ${own} funder${r.last_gift_year ? ` (last gift ${r.last_gift_year})` : ''}, per ${r.source === 'raisers_edge' ? "the Raiser's Edge export" : r.source === 'feedback' ? 'a correction from the team' : r.source === 'grant_report' ? 'the grant report' : 'the team'}`;
 
 async function writeEdge(db: Db, orgId: string, ownNode: string, target: { id: string; name: string }, r: Pick<KnownFunder, 'relationship' | 'last_gift_year' | 'source' | 'notes'>, own: string) {
   await db.from('network_relationships').delete().eq('org_id', orgId).eq('relationship_type', 'existing_cyc_relationship').eq('source_type', KNOWN_EDGE_SOURCE).eq('source_organization_id', ownNode).eq('target_organization_id', target.id);

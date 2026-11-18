@@ -14,7 +14,7 @@ import type { DonorPreview, KnownFunder } from '@/lib/known-funders';
 import { useOrg } from '@/components/org-context';
 
 const money = (n: number | null) => (n == null ? '' : n >= 1e6 ? `$${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `$${Math.round(n / 1e3)}K` : `$${Math.round(n)}`);
-const SOURCE: Record<string, string> = { raisers_edge: "Raiser's Edge", manual: 'Team', feedback: 'Correction' };
+const SOURCE: Record<string, string> = { raisers_edge: "Raiser's Edge", manual: 'Team', feedback: 'Correction', grant_report: 'Grant report' };
 
 export function PastFundersCard({ readOnly }: { readOnly?: boolean }) {
   const org = useOrg();

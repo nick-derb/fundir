@@ -10,6 +10,11 @@ import type { LeadRow, InsightRow } from '@/lib/network/queries';
 import { daysUntil } from '@/lib/network/pipeline';
 import { PathRail } from './path-rail';
 import { SERIF, MONO, ScoreBar, ConfChip, TypeChip, StatusChip, Eyebrow, hueFor, STATUS_LABEL, fmtDate } from './shared';
+
+const shortMoney = (n: number) => (n >= 1e6 ? `$${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `$${Math.round(n / 1e3)}K` : `$${Math.round(n)}`);
+/** "FY27 pending · $50K" for a lead whose funder is in this year's grant report. */
+const grantChip = (g: { fiscal_year: number; status: string; requested: number | null; awarded: number | null }) =>
+  `FY${String(g.fiscal_year).slice(2)} ${g.status}${g.status === 'awarded' && g.awarded ? ` · ${shortMoney(g.awarded)}` : g.status === 'pending' && g.requested ? ` · ${shortMoney(g.requested)}` : ''}`;
 import { OrgName, OrgPossessive, OrgShort } from '@/components/org-context';
 
 export interface DiscoverFilters { q: string; types: string[]; conf: string[]; min: number; status: 'open' | 'all' | 'active' | 'closed'; sort: 'score' | 'updated' | 'name' | 'confidence' }
@@ -150,6 +155,7 @@ export function DiscoverView({ leads, insights, filters, onFilters, selectedId, 
                 <b style={{ fontSize: 13.5, fontWeight: 500, letterSpacing: '-.006em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{l.target?.name ?? l.trustee?.name ?? '—'}</b>
                 <TypeChip type={l.insight_type} />
                 {l.known && l.insight_type !== 'Current Funder' && l.insight_type !== 'Lapsed Funder' && <span className="fd-tag" data-tone={l.known.relationship === 'current' ? 'accent' : undefined} title="On your own funder record">{l.known.relationship === 'current' ? 'Current funder' : 'Past funder'}{l.known.last_gift_year ? ` · ${l.known.last_gift_year}` : ''}</span>}
+                {l.grant && <span className="fd-tag" data-tone={l.grant.status === 'awarded' ? 'accent' : l.grant.status === 'pending' ? 'warning' : undefined} title="From your grant report">{grantChip(l.grant)}</span>}
               </div>
               <PathRail path={l.path.slice(1)} confidence={l.confidence} compact />
               {l.contacts && (

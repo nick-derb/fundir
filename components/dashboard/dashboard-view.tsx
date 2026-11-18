@@ -15,9 +15,10 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import {
   CalendarDays, Mail, Send, CheckCircle2, Hourglass, Radar, ArrowRight,
-  MessageSquare, Clock, Pencil, X, Plus, Trash2, FileEdit,
+  MessageSquare, Clock, Pencil, X, Plus, Trash2, FileEdit, XCircle,
 } from 'lucide-react';
 import type { Brief } from '@/lib/brief';
+import type { ReportSummary, Breakdown } from '@/lib/grant-report';
 import { CycHeroTransform } from '@/components/cyc-hero-transform';
 import { BRIEF_CSS, BriefSection, DoToday, AskYourBoard, useBriefSeen, useNow, briefSummary } from './brief-section';
 import { OrgName } from '@/components/org-context';
@@ -33,6 +34,8 @@ export interface DashGoal { id: string; label: string; current: number; target: 
 export interface DashData {
   greeting: string; firstName: string; today: string; isCyc: boolean;
   kpis: { label: string; value: string; sub: string; icon: string; accent?: boolean }[];
+  /** This fiscal year's grant report, when loaded: the funding numbers and breakdowns. */
+  report?: (ReportSummary & { imported_at: string | null }) | null;
   monthly: number[]; months: string[]; liveIdx: number;
   deadlines: { funder: string; type: string; due: string; days: number; stage: string; tone: Tone }[];
   goals: DashGoal[];
@@ -44,7 +47,7 @@ export interface DashData {
 type Tone = 'accent' | 'neutral' | 'info' | 'warning';
 
 const KPI_ICON: Record<string, React.ComponentType<{ style?: React.CSSProperties }>> = {
-  send: Send, 'check-circle-2': CheckCircle2, hourglass: Hourglass, radar: Radar,
+  send: Send, 'check-circle-2': CheckCircle2, hourglass: Hourglass, radar: Radar, 'x-circle': XCircle,
 };
 const TAG_TONE: Record<Tone, string | undefined> = { accent: 'accent', neutral: undefined, info: 'info', warning: 'warning' };
 
@@ -205,6 +208,9 @@ export function DashboardView({ data, brief, trackSeen = true }: { data: DashDat
               </div>
             )}
           </section>
+
+          {/* This year's funding, from the grant report */}
+          {data.report && <FundingSection r={data.report} />}
 
           {/* This week */}
           <section className="dv-section">
@@ -370,6 +376,64 @@ export function DashboardView({ data, brief, trackSeen = true }: { data: DashDat
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+const usd = (n: number) => (n >= 1e6 ? `$${(n / 1e6).toFixed(2)}M` : n >= 1e3 ? `$${Math.round(n / 1e3).toLocaleString('en-US')}K` : `$${Math.round(n)}`);
+
+/** The year's funding picture from the grant report: what was awarded against what was asked, split three ways. */
+function FundingSection({ r }: { r: ReportSummary & { imported_at: string | null } }) {
+  const fy = `FY${String(r.fiscal_year).slice(2)}`;
+  const share = r.requested ? Math.min(100, (r.awarded / r.requested) * 100) : 0;
+  const uploaded = r.imported_at ? new Date(r.imported_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : null;
+  return (
+    <section className="dv-section" aria-label={`${fy} funding`}>
+      <SectionHead title={`${fy} funding`} sub={`From your grant report${uploaded ? `, updated ${uploaded}` : ''}. Pending and awarded asks; declined ones are left out.`}
+        right={<Link href="/data#grant-report" className="fd-eyebrow dv-link">Update</Link>} />
+      <div style={{ padding: '0 18px 16px' }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap', marginBottom: 6 }}>
+          <b style={{ fontFamily: 'var(--font-mono)', fontSize: 20, fontWeight: 600, color: 'var(--accent)' }}>{usd(r.awarded)}</b>
+          <span style={{ fontSize: 12.5, color: 'var(--text-secondary)' }}>awarded of {usd(r.requested)} requested</span>
+          <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--text-tertiary)' }}>{usd(r.pending_requested)} still pending across {r.counts.pending} application{r.counts.pending === 1 ? '' : 's'}</span>
+        </div>
+        <div style={{ height: 6, borderRadius: 3, background: 'var(--bg-elevated)', overflow: 'hidden', marginBottom: 14 }}><i style={{ display: 'block', height: '100%', width: `${share}%`, background: 'var(--accent)' }} /></div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 18 }}>
+          <Split title="Restricted vs. unrestricted" rows={r.by_funding} />
+          <Split title="By ask type" rows={r.by_ask} />
+          <Split title="By purpose" rows={r.by_purpose.slice(0, 6)} />
+        </div>
+        {r.largest_pending.length > 0 && (
+          <p style={{ margin: '14px 0 0', fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.55 }}>
+            <span style={{ color: 'var(--text-tertiary)' }}>Largest pending: </span>
+            {r.largest_pending.map(p => `${p.funder} (${usd(p.requested)})`).join(' · ')}
+          </p>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function Split({ title, rows }: { title: string; rows: Breakdown[] }) {
+  const max = Math.max(1, ...rows.map(x => x.requested));
+  return (
+    <div style={{ minWidth: 0 }}>
+      <div className="fd-eyebrow" style={{ color: 'var(--text-tertiary)', marginBottom: 8 }}>{title}</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {rows.map(x => (
+          <div key={x.label}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, fontSize: 12.5 }}>
+              <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{x.label}</span>
+              <span style={{ marginLeft: 'auto', fontFamily: 'var(--font-mono)', fontSize: 11.5, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{usd(x.awarded)} <span style={{ color: 'var(--text-tertiary)' }}>/ {usd(x.requested)}</span></span>
+            </div>
+            <div style={{ height: 4, borderRadius: 2, background: 'var(--bg-elevated)', marginTop: 4, position: 'relative', overflow: 'hidden' }}>
+              <i style={{ position: 'absolute', inset: 0, width: `${(x.requested / max) * 100}%`, background: 'rgba(156,122,42,.35)' }} />
+              <i style={{ position: 'absolute', inset: 0, width: `${(Math.min(x.awarded, x.requested || x.awarded) / max) * 100}%`, background: 'var(--accent)' }} />
+            </div>
+          </div>
+        ))}
+      </div>
+      <div style={{ fontSize: 10.5, color: 'var(--text-tertiary)', marginTop: 6 }}>awarded / requested</div>
     </div>
   );
 }
