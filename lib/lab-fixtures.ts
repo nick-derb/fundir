@@ -6,6 +6,20 @@
 import type { Brief } from '@/lib/brief';
 import type { DashData } from '@/components/dashboard/dashboard-view';
 import type { GraphPayload } from '@/lib/network/queries';
+import { summarizeReport, type ReportRow } from '@/lib/grant-report';
+
+// A specimen grant report (fictional funders and amounts), so the dashboard's funding section renders on /lab.
+const R = (funder: string, status: ReportRow['status'], funding: string, purpose: string, ask: string, requested: number | null, awarded: number | null): ReportRow => ({ funder, normalized: funder.toLowerCase(), status, funding, purpose, purpose_group: purpose.split(' - ')[0], ask_type: ask, requested, requested_text: null, awarded, notes: null, row_order: 0 });
+const LAB_REPORT_ROWS: ReportRow[] = [
+  R('Lakeshore Community Fund', 'awarded', 'Unrestricted', 'General Operating', 'Renewal', 60000, 60000),
+  R('Harbor Light Foundation', 'awarded', 'Restricted', 'Afterschool - STEM Lab', 'New', 25000, 18000),
+  R('Prairie Arts Trust', 'awarded', 'Restricted', 'Arts', 'Renewal', 15000, 15000),
+  R('Northfield Family Foundation', 'declined', 'Restricted', 'Afterschool', 'New', 30000, 0),
+  R('Greenway Foundation', 'pending', 'Restricted', 'Afterschool - Summer', 'Renewal', 120000, null),
+  R('Westmoor Bank', 'pending', 'Unrestricted', 'General Operating', 'New', 10000, null),
+  R('Elm Street Fund', 'pending', 'Restricted', 'Early Learning', 'Re-engagement', 20000, null),
+  R('State Youth Grant', 'pending', 'Restricted', 'Afterschool', 'Renewal', 450000, null),
+];
 
 export const LAB_ORG = { name: 'Northside Youth Collaborative', code: 'NYC2026' };
 
@@ -41,6 +55,7 @@ export const labDash = (): DashData => ({
     events: i === 1 ? [{ title: 'Polk Bros. LOI review', time: '10:00', kind: 'grant' }] : i === 3 ? [{ title: 'Call with M. Hartigan', time: '14:30', kind: 'funder' }, { title: 'Board prep', time: '16:00', kind: 'internal' }] : i === 4 ? [{ title: 'Site visit · Uptown', time: '09:30', kind: 'site' }] : [],
   }; }),
   todayEvents: [{ time: '10:00', title: 'Polk Bros. LOI review', meta: 'Room 2', dot: 'off' }, { time: '14:30', title: 'Call with M. Hartigan', meta: 'Online', dot: 'on' }],
+  report: { ...summarizeReport(LAB_REPORT_ROWS, 2027), imported_at: new Date(Date.now() - 2 * 86400000).toISOString() },
   needs: [], calendarConnected: true,
 });
 

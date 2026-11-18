@@ -423,13 +423,27 @@ function FundingHistory({ lead, readOnly, onChanged }: { lead: LeadDetail; readO
             onChange={e => setYear(e.target.value.replace(/\D/g, '').slice(0, 4))}
             onBlur={() => { if ((year || '') !== String(k.last_gift_year ?? '') && (year === '' || year.length === 4)) set(k.relationship, year); }}
             style={{ width: 84, height: 26, paddingLeft: 8, fontSize: 12 }} aria-label="Last gift year" />
-          <span className="fd-caption" style={{ color: 'var(--text-tertiary)', fontSize: 11 }}>{k.source === 'raisers_edge' ? "From the Raiser's Edge import" : k.source === 'feedback' ? 'From a correction the team sent' : 'Recorded by the team'}</span>
+          <span className="fd-caption" style={{ color: 'var(--text-tertiary)', fontSize: 11 }}>{k.source === 'raisers_edge' ? "From the Raiser's Edge import" : k.source === 'feedback' ? 'From a correction the team sent' : k.source === 'grant_report' ? 'From the grant report' : 'Recorded by the team'}</span>
         </label>
       )}
       <p className="fd-caption" style={{ margin: 0, color: 'var(--text-tertiary)', fontSize: 11 }}>
         {on === 'current' ? `Saved to ${org.possessive} funder record. This funder no longer shows up as a new prospect.` : on === 'past' ? 'Saved. It reads as a lapsed funder worth re-engaging, not an untapped one.' : `Already gave to ${org.short}? Mark it here instead of sending feedback; it updates the leads and the map.`}
       </p>
+      {lead.grant && (
+        <p style={{ margin: 0, fontSize: 12.5, color: 'var(--text-primary)', borderTop: '1px solid var(--border-hairline)', paddingTop: 8 }}>
+          <b style={{ fontWeight: 500 }}>FY{String(lead.grant.fiscal_year).slice(2)} grant report:</b> {grantLine(lead.grant)}
+        </p>
+      )}
       {err && <p className="fd-caption" style={{ margin: 0, color: 'var(--critical)' }}>{err}</p>}
     </div>
   );
+}
+
+const dollars = (n: number) => `$${Math.round(n).toLocaleString('en-US')}`;
+/** "application pending, $50,000 requested · General Operating" */
+function grantLine(g: NonNullable<LeadDetail['grant']>): string {
+  const what = g.status === 'awarded' ? `awarded${g.awarded ? ` ${dollars(g.awarded)}` : ''}`
+    : g.status === 'pending' ? `application pending${g.requested ? `, ${dollars(g.requested)} requested` : ''}`
+    : `declined${g.requested ? ` (${dollars(g.requested)} requested)` : ''}`;
+  return `${what}${g.purpose ? ` · ${g.purpose}` : ''}`;
 }

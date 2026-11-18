@@ -13,6 +13,7 @@ import { loadCorpContacts } from '@/lib/network/corporate';
 import { contactTier } from '@/lib/network/targets';
 import { orgShortName } from '@/lib/org-label';
 import { listKnownFunders, knownIndex, type KnownTag } from '@/lib/known-funders';
+import { loadReport, fiscalYearOf, looseFunderKey } from '@/lib/grant-report';
 
 type Db = ReturnType<typeof createServerClient>;
 const CYC_EIN = '362344429';
@@ -49,6 +50,8 @@ export interface LeadRow {
   contacts: { count: number; bridged: number; top: string | null } | null;
   /** The target is on the tenant's own record as a current or past funder (lead click, Raiser's Edge import or a correction). */
   known: KnownTag | null;
+  /** This year's grant report has an application to this funder. */
+  grant: { fiscal_year: number; status: 'awarded' | 'declined' | 'pending'; requested: number | null; awarded: number | null; purpose: string | null } | null;
 }
 
 const LEAD_SELECT = 'id, lead_type, insight_type, pipeline_status, opportunity_score, evidence_confidence, score_breakdown, explanation, via_org, owner, next_action, next_action_date, outcome, dismissal_reason, updated_at, reason, target:network_organizations!network_leads_target_org_id_fkey(id, name, organization_type, city, state, website, metadata), via:network_people!network_leads_via_person_id_fkey(id, name, board_role, kind), person:network_people!network_leads_person_id_fkey(id, name, current_title, current_org, kind)';
@@ -102,8 +105,24 @@ function shapeLead(l: RawLead, own = 'our'): LeadRow {
     method: x?.method ?? null, claims: x ? { kept: x.validation.bullets_kept, total: x.validation.bullets_total } : null, evidence_count: x?.sources?.length ?? 0,
     owner: (l.owner as string | null) ?? null, next_action: (l.next_action as string | null) ?? null, next_action_date: (l.next_action_date as string | null) ?? null,
     outcome: (l.outcome as string | null) ?? null, dismissal_reason: (l.dismissal_reason as string | null) ?? null,
-    updated_at: String(l.updated_at ?? ''), path, contacts: null, known: null,
+    updated_at: String(l.updated_at ?? ''), path, contacts: null, known: null, grant: null,
   };
+}
+
+/** Tag leads whose funder has an application in this fiscal year's grant report. */
+async function attachGrant(db: Db, orgId: string, rows: LeadRow[]): Promise<void> {
+  let report: Awaited<ReturnType<typeof loadReport>>;
+  try { report = await loadReport(db, orgId, fiscalYearOf(new Date())); } catch { return; }
+  if (!report.rows.length) return;
+  const byOrg = new Map<string, (typeof report.rows)[number]>(), byName = new Map<string, (typeof report.rows)[number]>(), byLoose = new Map<string, (typeof report.rows)[number][]>();
+  for (const r of report.rows) { if (r.network_org_id) byOrg.set(r.network_org_id, r); byName.set(r.normalized, r); const k = looseFunderKey(r.normalized); if (k) (byLoose.get(k) ?? byLoose.set(k, []).get(k)!).push(r); }
+  for (const l of rows) {
+    if (!l.target) continue;
+    const n = normalizeOrgName(l.target.name);
+    const loose = byLoose.get(looseFunderKey(n));
+    const r = byOrg.get(l.target.id) ?? byName.get(n) ?? (loose && loose.length === 1 ? loose[0] : undefined);
+    if (r) l.grant = { fiscal_year: r.fiscal_year, status: r.status, requested: r.requested, awarded: r.awarded, purpose: r.purpose };
+  }
 }
 
 /**
@@ -114,6 +133,7 @@ function shapeLead(l: RawLead, own = 'our'): LeadRow {
  */
 async function attachKnown(db: Db, orgId: string, rows: LeadRow[], own: string): Promise<void> {
   if (!rows.some(r => r.target)) return;
+  await attachGrant(db, orgId, rows);
   let lookup: ReturnType<typeof knownIndex>;
   try { lookup = knownIndex(await listKnownFunders(db, orgId)); } catch { return; } // the label is an enrichment; never fail the list on it
   for (const r of rows) {

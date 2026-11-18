@@ -11,6 +11,7 @@ import { cookies } from 'next/headers';
 import { DashboardView, type DashData } from '@/components/dashboard/dashboard-view';
 import { buildBrief, type Brief } from '@/lib/brief';
 import { readBriefSeen, SEEN_COOKIE } from '@/lib/brief-seen';
+import { loadReport, summarizeReport, fiscalYearOf } from '@/lib/grant-report';
 
 const FY_MONTHS = ['Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
 const fyIndex = (m: number) => (m - 6 + 12) % 12;
@@ -68,12 +69,31 @@ export default async function DashboardPage() {
   const awardedAmt = subs.filter(x => st(x.status ?? '').startsWith('awarded'))
     .reduce((a, x) => a + (Number(x.amount_awarded) || 0), 0);
 
-  const kpis = [
+  let kpis = [
     { label: 'Submitted', value: String(submittedTotal), sub: `${awarded} awarded · ${declined} declined`, icon: 'send' },
     { label: 'Awarded', value: String(awarded), sub: awardedAmt ? `${money(awardedAmt)} secured` : 'this year', icon: 'check-circle-2', accent: true },
     { label: 'Awaiting decision', value: String(awaiting), sub: 'submitted, pending', icon: 'hourglass' },
     { label: 'In pipeline', value: String(pipeline), sub: `${researching} researching · ${planned} planned`, icon: 'radar' },
   ];
+
+  // ── This fiscal year's grant report, when one is loaded, is the better source for the funding numbers ──
+  const fy = fiscalYearOf(new Date());
+  const fyTag = `FY${String(fy).slice(2)}`;
+  let report: DashData['report'] = null;
+  try {
+    const r = await loadReport(db, ctx.orgId, fy);
+    if (r.rows.length) {
+      const s = summarizeReport(r.rows, fy);
+      report = { ...s, imported_at: r.imported_at };
+      const decided = s.counts.awarded + s.counts.declined;
+      kpis = [
+        { label: `Awarded ${fyTag}`, value: money(s.awarded), sub: `${s.counts.awarded} grant${s.counts.awarded === 1 ? '' : 's'}`, icon: 'check-circle-2', accent: true },
+        { label: 'Pending', value: String(s.counts.pending), sub: `${money(s.pending_requested)} requested`, icon: 'hourglass' },
+        { label: 'Declined', value: String(s.counts.declined), sub: s.win_rate == null ? 'nothing decided yet' : `${Math.round(s.win_rate * 100)}% win rate (${s.counts.awarded} of ${decided})`, icon: 'x-circle' },
+        { label: `Requested ${fyTag}`, value: money(s.requested), sub: 'pending and awarded', icon: 'send' },
+      ];
+    }
+  } catch { /* no report table or no rows: the Instrumentl numbers stand */ }
 
   // ── Next deadlines — earliest upcoming per opportunity, non-terminal ─────
   const now = new Date(); now.setHours(0, 0, 0, 0);
@@ -183,7 +203,7 @@ export default async function DashboardPage() {
   const data: DashData = {
     greeting, firstName: ctx.firstName || ctx.displayName || 'there', today: todayLabel,
     isCyc: ctx.orgCode?.toUpperCase().startsWith('CYC') ?? false,
-    kpis, monthly, months: FY_MONTHS, liveIdx, deadlines, goals, week, todayEvents, needs,
+    kpis, report, monthly, months: FY_MONTHS, liveIdx, deadlines, goals, week, todayEvents, needs,
     calendarConnected,
   };
 

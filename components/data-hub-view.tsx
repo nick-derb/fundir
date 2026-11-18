@@ -15,6 +15,7 @@ import { InstrumentlCard } from '@/components/instrumentl-card';
 import { CultivationCard } from '@/components/cultivation-card';
 import { GrantCalendarCard } from '@/components/grant-calendar-card';
 import { PastFundersCard } from '@/components/past-funders-card';
+import { GrantReportCard } from '@/components/grant-report-card';
 import { BoardRosterCard } from '@/components/board-roster-card';
 import { BoardSurveyCard } from '@/components/board-survey-card';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -245,6 +246,7 @@ export function DataHubView({ orgName, userEmail }: { orgName: string; userEmail
           <h1 style={{ fontFamily: SERIF, fontWeight: 400, fontSize: 'clamp(1.9rem,3vw,2.5rem)', lineHeight: 1.04, letterSpacing: '-.018em', margin: 0 }}>Data hub</h1>
           <p className="mt-2.5 text-[13.5px] leading-relaxed text-secondary max-w-[62ch]">Refresh the spreadsheets Fundir runs on here. Nothing is written until you have seen what would change.</p>
         </div>
+        <GrantReportCard />
         <InstrumentlCard />
         <CultivationCard />
         <GrantCalendarCard />
@@ -365,6 +367,7 @@ export function DataHubView({ orgName, userEmail }: { orgName: string; userEmail
                 </div>
               </div>
               <div className="flex flex-col gap-3">
+                <GrantReportCard />
                 <InstrumentlCard />
                 <CultivationCard />
                 <GrantCalendarCard />
