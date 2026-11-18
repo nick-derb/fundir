@@ -149,6 +149,7 @@ export function DiscoverView({ leads, insights, filters, onFilters, selectedId, 
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, minWidth: 0 }}>
                 <b style={{ fontSize: 13.5, fontWeight: 500, letterSpacing: '-.006em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{l.target?.name ?? l.trustee?.name ?? '—'}</b>
                 <TypeChip type={l.insight_type} />
+                {l.known && l.insight_type !== 'Current Funder' && l.insight_type !== 'Lapsed Funder' && <span className="fd-tag" data-tone={l.known.relationship === 'current' ? 'accent' : undefined} title="On your own funder record">{l.known.relationship === 'current' ? 'Current funder' : 'Past funder'}{l.known.last_gift_year ? ` · ${l.known.last_gift_year}` : ''}</span>}
               </div>
               <PathRail path={l.path.slice(1)} confidence={l.confidence} compact />
               {l.contacts && (

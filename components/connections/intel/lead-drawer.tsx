@@ -18,6 +18,7 @@ import type { GraphPayload } from '@/lib/network/queries';
 import { SERIF, MONO, ScoreRing, ConfChip, TypeChip, StatusChip, Eyebrow, SectionRule, Skeleton, STATUS_LABEL, fmtDate, hueFor, typeLabel, initialsOf, AMBER, Avatar, Chip, SLATE, INFO } from './shared';
 import { ReasonDialog, type TeamMember } from './pipeline-view';
 import { BOARD_COLUMNS, OPEN_STATES, daysUntil, dismissalLabel } from '@/lib/network/pipeline';
+import { useOrg } from '@/components/org-context';
 
 interface Props {
   leadId: string | null;
@@ -92,6 +93,13 @@ export function LeadDrawer({ leadId, onClose, onStep, onOpenMap, onOpenPerson, o
     } finally { setSaving(false); }
   }
 
+  /** Re-read the lead after a change made elsewhere (the funding-history record). */
+  async function reload() {
+    if (!lead) return;
+    const fresh = await fetch(`/api/network/leads/${lead.id}`).then(r => r.json()).catch(() => null);
+    if (fresh && !fresh.error) setLead(fresh); onChanged?.();
+  }
+
   if (!leadId) return null;
   const x = lead?.explanation ?? null;
   const hue = hueFor(lead?.insight_type);
@@ -132,9 +140,12 @@ export function LeadDrawer({ leadId, onClose, onStep, onOpenMap, onOpenPerson, o
               </div>
             </div>
 
+            {/* funding history: is this funder already on our own record? */}
+            {lead.target && <FundingHistory lead={lead} readOnly={readOnly} onChanged={reload} />}
+
             {/* rail */}
             <div className="ni-card" style={{ padding: '12px 14px', marginBottom: 6, background: 'var(--bg-page)' }}>
-              <Eyebrow style={{ display: 'block', marginBottom: 10 }}>{lead.insight_type === 'Untapped Funder' ? 'White space' : 'Introduction path'}</Eyebrow>
+              <Eyebrow style={{ display: 'block', marginBottom: 10 }}>{lead.insight_type === 'Untapped Funder' ? 'White space' : lead.insight_type === 'Current Funder' || lead.insight_type === 'Lapsed Funder' ? 'Funding history' : 'Introduction path'}</Eyebrow>
               <PathRail path={lead.path} confidence={lead.confidence} onNode={n => n.id && onOpenMap?.({ kind: n.kind, id: n.id })} />
             </div>
 
@@ -164,6 +175,9 @@ export function LeadDrawer({ leadId, onClose, onStep, onOpenMap, onOpenPerson, o
 
             {/* why */}
             <SectionRule label={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Sparkles style={{ width: 12, height: 12, color: hue.color }} />Why Fundir recommends this</span>} right={x ? <span className="fd-mono" style={{ fontSize: 11.5, color: 'var(--text-tertiary)', display: 'inline-flex', alignItems: 'center', gap: 5 }}><ShieldCheck style={{ width: 11, height: 11, color: 'var(--accent)' }} />{x.validation.bullets_kept} of {x.validation.bullets_total} claims verified</span> : null} />
+            {lead.known && x && /no (cyc |)funding|not (yet )?funded|no .* funding identified/i.test(x.thesis) && (
+              <p className="fd-caption" style={{ margin: '0 0 10px', color: 'var(--text-secondary)', fontSize: 12 }}>Written before this funder was recorded as a {lead.known.relationship} funder; where it says no funding was identified, your record supersedes it.</p>
+            )}
             {x ? (
               <>
                 <p style={{ fontFamily: SERIF, fontWeight: 400, fontSize: 'clamp(1.05rem,1.6vw,1.22rem)', lineHeight: 1.4, letterSpacing: '-.01em', margin: '0 0 16px', color: 'var(--text-primary)' }}><Cited text={x.thesis} onCite={cite} hi={hi} /></p>
@@ -357,3 +371,65 @@ function Cited({ text, onCite, hi }: { text: string; onCite: (id: string) => voi
 }
 
 export type { Explanation };
+
+/**
+ * "Funding history with <org>": one click records that this funder already
+ * gives (or gave) to the organization, so it stops reading as an untapped
+ * prospect. Saved to the organization's own funder record, not the feedback
+ * queue; a current funder's white-space lead closes as "Already funds us".
+ */
+function FundingHistory({ lead, readOnly, onChanged }: { lead: LeadDetail; readOnly?: boolean; onChanged: () => void }) {
+  const org = useOrg();
+  const k = lead.known;
+  const [year, setYear] = useState(k?.last_gift_year ? String(k.last_gift_year) : '');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const seen = `${lead.id}|${k?.id ?? ''}|${k?.last_gift_year ?? ''}`;
+  const [seenKey, setSeenKey] = useState(seen);
+  if (seen !== seenKey) { setSeenKey(seen); setYear(k?.last_gift_year ? String(k.last_gift_year) : ''); setErr(''); }
+  async function set(rel: 'current' | 'past' | null, y = year) {
+    if (readOnly || busy) return;
+    setBusy(true); setErr('');
+    try {
+      const res = rel === null
+        ? await fetch(`/api/network/known-funders?id=${k?.id ?? ''}`, { method: 'DELETE' })
+        : await fetch('/api/network/known-funders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lead_id: lead.id, relationship: rel, last_gift_year: y ? Number(y) : null }) });
+      const b = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(b?.error ?? 'Could not save');
+      onChanged();
+    } catch (e) { setErr(e instanceof Error ? e.message : 'Could not save'); }
+    finally { setBusy(false); }
+  }
+  const opts: Array<{ v: 'none' | 'past' | 'current'; label: string }> = [{ v: 'none', label: 'No gifts on record' }, { v: 'past', label: 'Past funder' }, { v: 'current', label: 'Current funder' }];
+  const on = k?.relationship ?? 'none';
+  return (
+    <div className="ni-card" style={{ padding: '10px 14px', marginBottom: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+        <Eyebrow style={{ flex: '1 1 160px' }}>Funding history with {org.short}</Eyebrow>
+        <div role="radiogroup" aria-label={`Funding history with ${org.short}`} style={{ display: 'inline-flex', border: '1px solid var(--border-hairline)', borderRadius: 'var(--radius-sm)', overflow: 'hidden' }}>
+          {opts.map(o => (
+            <button key={o.v} type="button" role="radio" aria-checked={on === o.v} disabled={readOnly || busy}
+              onClick={() => (o.v === on ? undefined : set(o.v === 'none' ? null : o.v))}
+              style={{ border: 'none', borderLeft: o.v === 'none' ? 'none' : '1px solid var(--border-hairline)', padding: '5px 10px', font: 'inherit', fontSize: 12, cursor: readOnly ? 'default' : 'pointer', background: on === o.v ? (o.v === 'current' ? 'var(--accent)' : o.v === 'past' ? 'var(--text-primary)' : 'var(--bg-elevated)') : 'var(--bg-surface)', color: on === o.v && o.v !== 'none' ? 'var(--bg-surface)' : 'var(--text-secondary)' }}>
+              {o.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      {k && (
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--text-secondary)' }}>
+          Last gift year
+          <input className="ni-input" inputMode="numeric" maxLength={4} placeholder="e.g. 2024" value={year} disabled={readOnly || busy}
+            onChange={e => setYear(e.target.value.replace(/\D/g, '').slice(0, 4))}
+            onBlur={() => { if ((year || '') !== String(k.last_gift_year ?? '') && (year === '' || year.length === 4)) set(k.relationship, year); }}
+            style={{ width: 84, height: 26, paddingLeft: 8, fontSize: 12 }} aria-label="Last gift year" />
+          <span className="fd-caption" style={{ color: 'var(--text-tertiary)', fontSize: 11 }}>{k.source === 'raisers_edge' ? "From the Raiser's Edge import" : k.source === 'feedback' ? 'From a correction the team sent' : 'Recorded by the team'}</span>
+        </label>
+      )}
+      <p className="fd-caption" style={{ margin: 0, color: 'var(--text-tertiary)', fontSize: 11 }}>
+        {on === 'current' ? `Saved to ${org.possessive} funder record. This funder no longer shows up as a new prospect.` : on === 'past' ? 'Saved. It reads as a lapsed funder worth re-engaging, not an untapped one.' : `Already gave to ${org.short}? Mark it here instead of sending feedback; it updates the leads and the map.`}
+      </p>
+      {err && <p className="fd-caption" style={{ margin: 0, color: 'var(--critical)' }}>{err}</p>}
+    </div>
+  );
+}

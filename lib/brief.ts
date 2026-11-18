@@ -70,6 +70,7 @@ export async function buildBrief(db: Db, orgId: string, opts: { seenAt: Date | n
     const c = createdAt.get(l.id);
     if (!c || new Date(c) < windowStart || !l.target) continue;
     if (['NOT_A_FIT', 'LOST'].includes(l.pipeline_status)) continue;
+    if (l.known?.relationship === 'current') continue; // a funder already giving is not news on the prospect list
     seenLeads.add(l.id);
     const viaLine = l.via ? `via ${l.via.name}${l.via.role ? ` (${l.via.role})` : ''}${l.via_org ? ` · ${l.via_org}` : ''}` : l.insight_type === 'Untapped Funder' ? 'funds your peers · no path yet' : null;
     signals.push({
@@ -173,7 +174,8 @@ export async function buildBrief(db: Db, orgId: string, opts: { seenAt: Date | n
   for (const d of opts.deadlines) if (d.days <= 14) todos.push({ id: `dl:${d.id}`, kind: 'deadline', text: `${d.type}: ${d.funder}`, sub: d.stage, href: '/calendar', days: d.days, tone: d.days <= 3 ? 'critical' : 'warning' });
 
   // ── Asks the board could make: open leads with a person to ask, grouped by that person ──
-  const askable = leads.filter(l => l.via && l.target && ['NEW', 'RESEARCHING', 'INTRODUCTION_NEEDED'].includes(l.pipeline_status));
+  // A current funder is stewardship, not an ask; a member who has rolled off the board is no longer "your board".
+  const askable = leads.filter(l => l.via && l.target && ['NEW', 'RESEARCHING', 'INTRODUCTION_NEEDED'].includes(l.pipeline_status) && l.known?.relationship !== 'current' && !/^former/i.test(l.via.role ?? ''));
   const byVia = new Map<string, BoardAsk>();
   for (const l of askable) {
     const a = byVia.get(l.via!.id) ?? { personId: l.via!.id, name: l.via!.name, role: l.via!.role, targets: [], total: 0 };

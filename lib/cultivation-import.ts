@@ -307,5 +307,7 @@ export async function commitCultivation(db: Db, orgId: string, buffer: Buffer): 
     if (error) throw new Error(error.message);
   }
   const { data: graph, error: ge } = await db.rpc('network_sync_funder_boards', { p_org_id: orgId });
+  // A Connection cell naming one of our people is a direct path: make it a warm-introduction lead now.
+  if (!ge) { try { const { syncDirectConnectionLeads } = await import('@/lib/network/direct-paths'); await syncDirectConnectionLeads(db, orgId); } catch { /* the graph is written; leads catch up on the next refresh */ } }
   return { foundations: rows.length, members: memberRows.length, removed: removedIds.length, graph: ge ? null : (graph as CultivationCommit['graph']), preview };
 }

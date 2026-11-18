@@ -12,6 +12,7 @@ import type { Explanation } from '@/lib/network/explain';
 import { loadCorpContacts } from '@/lib/network/corporate';
 import { contactTier } from '@/lib/network/targets';
 import { orgShortName } from '@/lib/org-label';
+import { listKnownFunders, knownIndex, type KnownTag } from '@/lib/known-funders';
 
 type Db = ReturnType<typeof createServerClient>;
 const CYC_EIN = '362344429';
@@ -46,6 +47,8 @@ export interface LeadRow {
   updated_at: string; path: PathNode[];
   /** Corporate Giving Opportunity only: the scanned contacts at the company — how many, how many share history with a CYC person, and the one to name first. */
   contacts: { count: number; bridged: number; top: string | null } | null;
+  /** The target is on the tenant's own record as a current or past funder (lead click, Raiser's Edge import or a correction). */
+  known: KnownTag | null;
 }
 
 const LEAD_SELECT = 'id, lead_type, insight_type, pipeline_status, opportunity_score, evidence_confidence, score_breakdown, explanation, via_org, owner, next_action, next_action_date, outcome, dismissal_reason, updated_at, reason, target:network_organizations!network_leads_target_org_id_fkey(id, name, organization_type, city, state, website, metadata), via:network_people!network_leads_via_person_id_fkey(id, name, board_role, kind), person:network_people!network_leads_person_id_fkey(id, name, current_title, current_org, kind)';
@@ -99,8 +102,35 @@ function shapeLead(l: RawLead, own = 'our'): LeadRow {
     method: x?.method ?? null, claims: x ? { kept: x.validation.bullets_kept, total: x.validation.bullets_total } : null, evidence_count: x?.sources?.length ?? 0,
     owner: (l.owner as string | null) ?? null, next_action: (l.next_action as string | null) ?? null, next_action_date: (l.next_action_date as string | null) ?? null,
     outcome: (l.outcome as string | null) ?? null, dismissal_reason: (l.dismissal_reason as string | null) ?? null,
-    updated_at: String(l.updated_at ?? ''), path, contacts: null,
+    updated_at: String(l.updated_at ?? ''), path, contacts: null, known: null,
   };
+}
+
+/**
+ * Label leads whose funder is on the tenant's own record. An untapped-funder
+ * lead's premise ("no funding identified") is wrong for a known funder, so its
+ * type, rail and one-line thesis are rewritten: a past funder reads as a lapsed
+ * funder worth re-engaging, a current one as a relationship to steward.
+ */
+async function attachKnown(db: Db, orgId: string, rows: LeadRow[], own: string): Promise<void> {
+  if (!rows.some(r => r.target)) return;
+  let lookup: ReturnType<typeof knownIndex>;
+  try { lookup = knownIndex(await listKnownFunders(db, orgId)); } catch { return; } // the label is an enrichment; never fail the list on it
+  for (const r of rows) {
+    const k = lookup(r.target);
+    if (!k) continue;
+    r.known = k;
+    if (r.insight_type !== 'Untapped Funder' || !r.target) continue;
+    const yr = k.last_gift_year ? ` (last gift ${k.last_gift_year})` : '';
+    r.insight_type = k.relationship === 'current' ? 'Current Funder' : 'Lapsed Funder';
+    r.thesis = k.relationship === 'current'
+      ? `${r.target.name} is a current ${own} funder${yr} and still funds ${own} peers: a relationship to steward, not a new prospect.`
+      : `${r.target.name} funded ${own} before${yr} and still funds ${own} peers: a lapsed funder worth re-engaging.`;
+    r.path = [
+      { kind: 'org', id: r.target.id, label: r.target.name, sub: `funds ${own} peers` },
+      { kind: 'org', id: null, label: own, own: true, sub: k.relationship === 'current' ? `current funder${yr}` : `past funder${yr}` },
+    ];
+  }
 }
 
 /** Corporate Giving Opportunity rows carry the scanned contacts at the company, so a row can say who the door is before it is opened. */
@@ -121,7 +151,7 @@ export async function listLeads(db: Db, orgId: string): Promise<LeadRow[]> {
   if (error) throw new Error(`leads: ${error.message}`);
   const own = await ownLabel(db, orgId);
   const rows = ((data ?? []) as unknown as RawLead[]).map(l => shapeLead(l, own));
-  await attachContacts(db, orgId, rows);
+  await Promise.all([attachContacts(db, orgId, rows), attachKnown(db, orgId, rows, own)]);
   return rows;
 }
 
@@ -151,8 +181,9 @@ export async function getLeadDetail(db: Db, orgId: string, id: string): Promise<
   if (error) throw new Error(`lead: ${error.message}`);
   if (!data) return null;
   const raw = data as unknown as RawLead;
-  const row = shapeLead(raw, await ownLabel(db, orgId));
-  await attachContacts(db, orgId, [row]);
+  const own = await ownLabel(db, orgId);
+  const row = shapeLead(raw, own);
+  await Promise.all([attachContacts(db, orgId, [row]), attachKnown(db, orgId, [row], own)]);
   const INS = 'id, insight_type, title, summary, score, confidence, lead_id';
   const [{ data: actions }, { data: byLead }, { data: byPath }, contact_list] = await Promise.all([
     db.from('network_actions').select('id, action, status, notes, actor, created_at').eq('lead_id', id).order('created_at', { ascending: false }).limit(50),
