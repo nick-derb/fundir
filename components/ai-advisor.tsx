@@ -133,13 +133,18 @@ export function AiAdvisor({ orgCode, orgId, orgName }: AiAdvisorProps) {
     <>
       {/* Floating trigger */}
       {!open && (
+        // Compact launcher in the brand accent: a 40px square that opens out to
+        // "Ask Fundir" on hover or keyboard focus, so it no longer sits on top
+        // of the right-hand column, the map controls or the last table row.
         <button
           onClick={() => setOpen(true)}
-          className="fixed bottom-6 right-6 z-[60] flex items-center gap-2 pl-3.5 pr-4 py-3 rounded-full shadow-lg text-white text-[13px] font-semibold transition-transform hover:scale-105"
-          style={{ background: 'linear-gradient(135deg, #0d9488, #0891b2)' }}
+          aria-label="Ask Fundir"
+          title="Ask Fundir"
+          className="group fixed bottom-5 right-5 z-[60] flex h-10 items-center overflow-hidden rounded-md text-[13px] font-semibold transition-colors"
+          style={{ background: 'var(--accent)', color: 'var(--accent-on, #fff)', boxShadow: 'var(--shadow-overlay, 0 1px 2px rgba(11,18,32,.06), 0 4px 12px rgba(11,18,32,.05))' }}
         >
-          <Sparkles className="w-4 h-4" />
-          Ask Fundir
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center"><Sparkles className="w-4 h-4" /></span>
+          <span className="max-w-0 whitespace-nowrap opacity-0 transition-all duration-200 group-hover:max-w-[120px] group-hover:pr-3.5 group-hover:opacity-100 group-focus-visible:max-w-[120px] group-focus-visible:pr-3.5 group-focus-visible:opacity-100">Ask Fundir</span>
         </button>
       )}
 

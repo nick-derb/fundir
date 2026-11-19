@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Table2, RefreshCw, Download, Lock, Pencil } from 'lucide-react';
+import { Table2, RefreshCw, Download, Lock, Pencil, Search, X } from 'lucide-react';
 import { IrsReplaceModal } from '@/components/prospecting/irs-replace-modal';
 import { OrgName, OrgShort } from '@/components/org-context';
 
@@ -43,11 +43,16 @@ export function ProspectingView({ sheets, instrumentl, bmfTotal, rowLimit, canRe
 }) {
   const [active, setActive] = useState(sheets[0]?.key ?? 'cultivation');
   const [replaceOpen, setReplaceOpen] = useState(false);
+  // Quick filter over the rows already loaded for the open sheet. It is cleared
+  // whenever the sheet changes, and row numbers keep their original position.
+  const [query, setQuery] = useState('');
 
   const sheet = sheets.find(s => s.key === active) ?? sheets[0];
   const lockAll = sheet.lock === 'all';
   const lockSet = lockAll ? null : new Set(sheet.lock as number[]);
   const shown = sheet.rows.length;
+  const needle = query.trim().toLowerCase();
+  const visible = sheet.rows.map((cells, ri) => ({ cells, ri })).filter(r => !needle || r.cells.some(c => c.toLowerCase().includes(needle)));
   const lockedSheets = sheets.filter(s => s.locked);
 
   return (
@@ -81,7 +86,7 @@ export function ProspectingView({ sheets, instrumentl, bmfTotal, rowLimit, canRe
         {/* tabs */}
         <div className="pr-tabs" role="tablist">
           {sheets.map(s => (
-            <button key={s.key} role="tab" aria-selected={s.key === active} className="pr-tab" onClick={() => setActive(s.key)}>
+            <button key={s.key} role="tab" aria-selected={s.key === active} className="pr-tab" onClick={() => { setActive(s.key); setQuery(''); }}>
               <span>{s.label}<i>{s.total}</i></span>
             </button>
           ))}
@@ -94,6 +99,12 @@ export function ProspectingView({ sheets, instrumentl, bmfTotal, rowLimit, canRe
             : <span className="fd-tag" data-tone="accent"><Pencil style={{ width: 10, height: 10 }} />Your columns · edit anytime</span>}
           <span className="pr-meta-note fd-caption" style={{ color: 'var(--text-tertiary)' }}>{sheet.note}</span>
           <span style={{ flex: 1 }} />
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6, height: 28, padding: '0 8px', border: '1px solid var(--border-hairline)', borderRadius: 'var(--radius-sm)', background: 'var(--bg-surface)', minWidth: 200 }}>
+            <Search style={{ width: 12, height: 12, color: 'var(--text-tertiary)' }} aria-hidden />
+            <input id="pr-filter" value={query} onChange={e => setQuery(e.target.value)} placeholder={`Filter ${sheet.label.toLowerCase()}`} aria-label={`Filter ${sheet.label}`}
+              style={{ border: 'none', outline: 'none', background: 'transparent', font: 'inherit', fontSize: 12.5, color: 'var(--text-primary)', width: '100%', minWidth: 0 }} />
+            {query && <button type="button" onClick={() => setQuery('')} aria-label="Clear filter" style={{ border: 'none', background: 'none', padding: 0, cursor: 'pointer', color: 'var(--text-tertiary)', display: 'flex' }}><X style={{ width: 12, height: 12 }} /></button>}
+          </label>
           <span className="fd-mono" style={{ fontSize: 10, color: 'var(--text-tertiary)', whiteSpace: 'nowrap' }}>{sheet.total} rows × {sheet.cols.length} cols</span>
         </div>
 
@@ -109,7 +120,9 @@ export function ProspectingView({ sheets, instrumentl, bmfTotal, rowLimit, canRe
             <tbody>
               {shown === 0 ? (
                 <tr><td colSpan={sheet.cols.length + 1} style={{ padding: '18px 14px', color: 'var(--text-tertiary)', fontSize: 13, whiteSpace: 'normal', maxWidth: 'none' }}>No rows loaded for this sheet.</td></tr>
-              ) : sheet.rows.map((cells, ri) => (
+              ) : visible.length === 0 ? (
+                <tr><td colSpan={sheet.cols.length + 1} style={{ padding: '18px 14px', color: 'var(--text-tertiary)', fontSize: 13, whiteSpace: 'normal', maxWidth: 'none' }}>No loaded rows match &ldquo;{query}&rdquo;. <button type="button" onClick={() => setQuery('')} style={{ border: 'none', background: 'none', padding: 0, color: 'var(--accent)', cursor: 'pointer', font: 'inherit' }}>Clear the filter</button></td></tr>
+              ) : visible.map(({ cells, ri }) => (
                 <tr key={ri}>
                   <td className="pr-n">{ri + 1}</td>
                   {cells.map((text, ci) => {
@@ -123,7 +136,7 @@ export function ProspectingView({ sheets, instrumentl, bmfTotal, rowLimit, canRe
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', borderTop: '1px solid var(--border-hairline)', flexWrap: 'wrap' }}>
-          <span className="fd-eyebrow" style={{ color: 'var(--text-tertiary)' }}>Showing {shown.toLocaleString('en-US')} of {sheet.total} rows{sheet.total !== shown.toLocaleString('en-US') ? ` · first ${rowLimit}` : ''}</span>
+          <span className="fd-eyebrow" style={{ color: 'var(--text-tertiary)' }}>{needle ? `${visible.length.toLocaleString('en-US')} match${visible.length === 1 ? '' : 'es'} · ` : ''}Showing {shown.toLocaleString('en-US')} of {sheet.total} rows{sheet.total !== shown.toLocaleString('en-US') ? ` · first ${rowLimit}` : ''}</span>
           <span style={{ flex: 1 }} />
           <a href="/data" className="fd-eyebrow" style={{ color: 'var(--accent)', textDecoration: 'none', whiteSpace: 'nowrap' }}>Open in data hub →</a>
         </div>

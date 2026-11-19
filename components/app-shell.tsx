@@ -407,7 +407,7 @@ export function AppShell({
           />
         </header>
 
-        <main className="flex-1 bg-page">
+        <main className="flex-1 bg-page pb-16">
           {children}
         </main>
       </div>

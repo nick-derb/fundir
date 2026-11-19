@@ -253,8 +253,13 @@ export function DashboardView({ data, brief, trackSeen = true }: { data: DashDat
           <section className="dv-section" style={{ padding: '0 0 16px' }}>
             <SectionHead title="Deadline load" sub="Upcoming application deadlines by month, FY27" right={<span className="fd-tag">FY27</span>} />
             <div style={{ padding: '0 18px' }}>
-              <canvas data-chart="bars" data-values={data.monthly.join(',')} data-live={data.liveIdx} style={{ display: 'block', width: '100%', height: 120 }} />
-              <div className="fd-mono" style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, fontSize: 11.5, color: 'var(--text-tertiary)' }}>
+              {/* Counts sit directly above each month's bar, and both rows share the bars'
+                  12-column rhythm, so a month's label lines up with its bar. */}
+              <div className="fd-mono" style={{ display: 'grid', gridTemplateColumns: `repeat(${data.months.length}, minmax(0, 1fr))`, columnGap: '1.2%', marginBottom: 4, fontSize: 11, color: 'var(--text-secondary)', textAlign: 'center' }}>
+                {data.monthly.map((v, i) => <span key={i} style={{ color: v ? undefined : 'var(--text-tertiary)' }}>{v || '·'}</span>)}
+              </div>
+              <canvas data-chart="bars" data-values={data.monthly.join(',')} data-live={data.liveIdx} aria-label={`Deadlines per month: ${data.months.map((m, i) => `${m} ${data.monthly[i]}`).join(', ')}`} role="img" style={{ display: 'block', width: '100%', height: 120 }} />
+              <div className="fd-mono" style={{ display: 'grid', gridTemplateColumns: `repeat(${data.months.length}, minmax(0, 1fr))`, columnGap: '1.2%', marginTop: 8, fontSize: 11.5, color: 'var(--text-tertiary)', textAlign: 'center' }}>
                 {data.months.map(m => <span key={m}>{m}</span>)}
               </div>
             </div>

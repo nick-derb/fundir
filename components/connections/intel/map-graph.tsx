@@ -219,14 +219,17 @@ export function strongestPath(lay: Layout): { ids: string[]; target: GraphNode }
 // Fit shrinks to the caller's floor (0.58 full, 0.5 compact) so the whole tree is
 // visible on first paint. A tree wider than the viewport at that floor is centred
 // on its root and the user pans along the layer.
-function fitView(lay: Layout, sz: { w: number; h: number }, gutter: number, minK: number) {
+// `reserve` keeps a band clear at the bottom for the legend and zoom tools, so
+// a fitted tree never parks its last row of cards underneath them.
+function fitView(lay: Layout, sz: { w: number; h: number }, gutter: number, minK: number, reserve = 0) {
   if (!lay.placed.length) return { x: 0, y: 0, k: 1 };
   const avail = sz.w - gutter - 24;
-  const k = Math.max(minK, Math.min(1, avail / lay.w, (sz.h - 24) / lay.h));
+  const availH = sz.h - reserve;
+  const k = Math.max(minK, Math.min(1, avail / lay.w, (availH - 24) / lay.h));
   const root = lay.placed.find(p => p.depth === 0) ?? lay.placed[0];
   const rootCx = root.x + lay.cardW / 2;
   const x = lay.w * k <= avail ? gutter + (avail - lay.w * k) / 2 + 12 : gutter + avail / 2 + 12 - rootCx * k;
-  const y = lay.h * k < sz.h - 24 ? (sz.h - lay.h * k) / 2 : 12;
+  const y = lay.h * k < availH - 24 ? (availH - lay.h * k) / 2 : 12;
   return { x, y, k };
 }
 
@@ -263,13 +266,13 @@ export function MapGraph({ data, height = 520, maxHeight = 720, selectedId, onSe
     const ro = new ResizeObserver(() => {
       const sz = { w: el.clientWidth, h: el.clientHeight };
       setSize(sz);
-      if (layoutRef.current) setView(fitView(layoutRef.current, sz, S.GUTTER, fitFloor));
+      if (layoutRef.current) setView(fitView(layoutRef.current, sz, S.GUTTER, fitFloor, compact ? 0 : 44));
     });
     ro.observe(el);
     return () => ro.disconnect();
-  }, [S.GUTTER, fitFloor]);
+  }, [S.GUTTER, fitFloor, compact]);
 
-  const fit = useCallback((lay: Layout | null) => { if (lay) setView(fitView(lay, size, S.GUTTER, fitFloor)); }, [size, S.GUTTER, fitFloor]);
+  const fit = useCallback((lay: Layout | null) => { if (lay) setView(fitView(lay, size, S.GUTTER, fitFloor, compact ? 0 : 44)); }, [size, S.GUTTER, fitFloor, compact]);
 
   // New payload: reset folds and fit (state adjusted during render, not in an effect). Fold changes keep the view.
   const dataKey = data ? `${data.mode}:${data.focus?.id ?? 'root'}:${data.nodes.length}` : '';
@@ -277,7 +280,7 @@ export function MapGraph({ data, height = 520, maxHeight = 720, selectedId, onSe
   if (dataKey !== seenKey) {
     setSeenKey(dataKey);
     setExpanded(new Set());
-    if (data) setView(fitView(buildLayout(data, new Set(), !!compact), size, S.GUTTER, fitFloor));
+    if (data) setView(fitView(buildLayout(data, new Set(), !!compact), size, S.GUTTER, fitFloor, compact ? 0 : 44));
   }
 
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {

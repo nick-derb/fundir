@@ -131,3 +131,88 @@ export const LAB_GRAPH: GraphPayload = {
     { source: 'o:root', target: 'o:w3', type: 'white_space', verification: 'probable', strength: 52, label: null },
   ],
 };
+
+// ── Prospecting + Calendar specimens (fictional), for /lab/prospecting and /lab/calendar ──
+
+import type { Sheet, InstrumentlSummary } from '@/components/prospecting/prospecting-view';
+import type { CalData } from '@/components/calendar/calendar-view';
+
+const FUNDERS_LAB: Array<[string, string, string, string, string, string]> = [
+  ['36-1110001', 'Lakeshore Community Fund', 'Community foundation', 'Chicago', '60601', '412,500,000'],
+  ['36-1110002', 'Harbor Light Foundation', 'Private foundation', 'Chicago', '60606', '188,200,000'],
+  ['36-1110003', 'Prairie Arts Trust', 'Family foundation', 'Evanston', '60201', '96,400,000'],
+  ['36-1110004', 'Northfield Family Foundation', 'Family foundation', 'Northfield', '60093', '74,900,000'],
+  ['36-1110005', 'Greenway Foundation', 'Private foundation', 'Chicago', '60611', '61,300,000'],
+  ['36-1110006', 'Westmoor Bank Charitable Trust', 'Corporate foundation', 'Oak Brook', '60523', '42,800,000'],
+  ['36-1110007', 'Elm Street Fund', 'Private foundation', 'Chicago', '60657', '27,100,000'],
+  ['36-1110008', 'Calumet River Foundation', 'Private foundation', 'Hammond', '46320', '19,600,000'],
+];
+
+export const labProspecting = (): { sheets: Sheet[]; instrumentl: InstrumentlSummary; bmfTotal: string } => ({
+  bmfTotal: '61,204',
+  instrumentl: {
+    awarded: 14, declined: 9, open: 7, winRate: 61,
+    projects: [
+      { project: 'Afterschool', sent: 11, won: 7, rate: 64 },
+      { project: 'General Operating', sent: 6, won: 4, rate: 67 },
+      { project: 'Early Learning', sent: 4, won: 2, rate: 50 },
+      { project: 'Summer', sent: 3, won: 1, rate: 33 },
+    ],
+  },
+  sheets: [
+    {
+      key: 'cultivation', label: 'Cultivation List', total: '42', locked: false,
+      note: 'Your working list. Joined to the IRS source on EIN.',
+      cols: ['Foundation Name', 'BMF EIN', 'In IL BMF?', 'Funder Type', 'Total Assets ($)', 'Funding Focus', 'Notes'],
+      lock: [1, 2],
+      rows: FUNDERS_LAB.map(([ein, name, type, , , assets], i) => [name, ein, 'Yes', type, assets, ['Youth development', 'Education', 'Arts', 'Early childhood'][i % 4], i % 3 === 0 ? 'Board connection via M. Hartigan' : '']),
+    },
+    {
+      key: 'board', label: 'Board Members', total: '118', locked: false,
+      note: 'Trustees pulled from filings. Connection fields are yours to fill.',
+      cols: ['Foundation Name', 'Board Member Name', 'Title', 'Connection to NYC?', 'Connection Type', 'Who at NYC Knows Them', 'Outreach Status'],
+      lock: [0, 1, 2],
+      rows: [
+        ['Lakeshore Community Fund', 'L. Marsh', 'Trustee', 'Yes', 'Former board colleague', 'M. Hartigan', 'Intro requested'],
+        ['Harbor Light Foundation', 'D. Keane', 'Trustee', 'Yes', 'Former employer', 'R. Okafor', 'Not started'],
+        ['Prairie Arts Trust', 'S. Iverson', 'Chair', '', '', '', ''],
+        ['Greenway Foundation', 'A. Delgado', 'Program officer', 'Yes', 'Association', 'J. Lindqvist', 'Contacted'],
+      ],
+    },
+    {
+      key: 'metro', label: 'Chicago Metro Funders', total: '2,316', locked: true,
+      note: 'Cleaned from the IRS Business Master File.',
+      cols: ['EIN', 'Organization Name', 'Funder Type', 'City', 'ZIP', 'Total Assets ($)', 'NTEE Code', 'Files 990-PF'],
+      lock: 'all',
+      rows: FUNDERS_LAB.map(([ein, name, type, city, zip, assets]) => [ein, name, type, city, zip, assets, 'T20', 'Yes']),
+    },
+  ],
+});
+
+export const labCalendar = (): CalData => {
+  const day = (n: number) => ymd(n);
+  return {
+    todayISO: day(0),
+    calendarConnected: true,
+    orgCode: LAB_ORG.code,
+    sources: [{ key: 'me', label: 'My calendar', count: 5 }, { key: 'deadline', label: 'Grant deadlines', count: 3 }],
+    todayEvents: [
+      { time: '10:00', title: 'Lakeshore LOI review', meta: 'Room 2', dot: 'on' },
+      { time: '14:30', title: 'Call with M. Hartigan', meta: 'Online', dot: 'off' },
+    ],
+    deadlines: [
+      { d: fmt(3), label: 'Lakeshore Community Fund · LOI', isNext: true },
+      { d: fmt(9), label: 'Northfield Family Foundation · Full proposal', isNext: false },
+      { d: fmt(16), label: 'Harbor Light Foundation · Pre-proposal', isNext: false },
+    ],
+    events: [
+      { date: day(0), title: 'Lakeshore LOI review', time: '10:00', kind: 'grant' },
+      { date: day(0), title: 'Call with M. Hartigan', time: '14:30', kind: 'funder' },
+      { date: day(1), title: 'Site visit · Uptown center', time: '09:30', kind: 'site' },
+      { date: day(2), title: 'Board prep', time: '16:00', kind: 'internal' },
+      { date: day(3), title: 'Lakeshore LOI due', time: '17:00', kind: 'grant' },
+      { date: day(6), title: 'Harbor Light debrief', time: '11:00', kind: 'funder' },
+      { date: day(9), title: 'Northfield proposal due', time: '17:00', kind: 'grant' },
+    ],
+  };
+};

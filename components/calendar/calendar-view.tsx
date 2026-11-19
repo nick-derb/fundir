@@ -301,11 +301,22 @@ export function CalendarView({ data }: { data: CalData }) {
               <span className="fd-eyebrow" style={{ color: 'var(--text-secondary)', display: 'block', marginBottom: 8 }}>Calendars</span>
               {data.sources.map(s => (
                 <div key={s.key} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '5px 0' }}>
-                  <i data-src={s.key} style={{ width: 8, height: 8, borderRadius: 2, flex: 'none' }} />
                   <span style={{ flex: 1, fontSize: 12.5, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.label}</span>
                   <span className="fd-mono" style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>{s.count}</span>
                 </div>
               ))}
+            </div>
+
+            {/* Event key: the same colours the grid uses, so a block's colour reads at a glance */}
+            <div className="cv-rail-sec">
+              <span className="fd-eyebrow" style={{ color: 'var(--text-secondary)', display: 'block', marginBottom: 8 }}>Key</span>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '6px 12px' }}>
+                {(['grant', 'funder', 'site', 'internal'] as const).map(k => (
+                  <span key={k} style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12, color: 'var(--text-secondary)' }}>
+                    <i className="cv-ev" data-kind={k} style={{ width: 12, height: 12, padding: 0, flex: 'none' }} />{kindLabel(k)[0].toUpperCase() + kindLabel(k).slice(1)}
+                  </span>
+                ))}
+              </div>
             </div>
 
             {/* Grant deadlines */}
@@ -320,7 +331,7 @@ export function CalendarView({ data }: { data: CalData }) {
               {data.deadlines.map((d, i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'baseline', gap: 10, padding: '7px 0', borderBottom: i < data.deadlines.length - 1 ? '1px solid var(--border-hairline)' : 'none' }}>
                   <span className="fd-mono" style={{ fontSize: 9.5, color: d.isNext ? 'var(--accent)' : 'var(--text-tertiary)', flex: 'none', width: 40 }}>{d.d}</span>
-                  <span style={{ flex: 1, fontSize: 12, color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.label}</span>
+                  <span style={{ flex: 1, fontSize: 12, lineHeight: 1.4, color: 'var(--text-secondary)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }} title={d.label}>{d.label}</span>
                 </div>
               ))}
             </div>
