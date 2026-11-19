@@ -16,6 +16,7 @@ import { readBriefSeen, writeBriefSeen, SEEN_COOKIE } from '@/lib/brief-seen';
 
 export const BRIEF_CSS = `
 .bf-filters{display:flex;gap:4px;flex-wrap:wrap;padding:0 18px 10px}
+@media (max-width:640px){.bf-filters{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}.bf-filters::-webkit-scrollbar{display:none}.bf-filters .bf-chip{flex:none}}
 .bf-chip{height:26px;padding:0 10px;border-radius:999px;border:1px solid var(--border-hairline);background:var(--bg-surface);font:inherit;font-size:12px;color:var(--text-secondary);cursor:pointer;display:inline-flex;align-items:center;gap:6px}
 .bf-chip i{font-style:normal;font-family:var(--font-mono);font-size:10px;color:var(--text-tertiary)}
 .bf-chip[aria-pressed="true"]{background:var(--text-primary);color:var(--bg-surface);border-color:var(--text-primary)}
